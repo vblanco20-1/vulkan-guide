@@ -534,10 +534,16 @@ void VulkanEngine::init()
 void VulkanEngine::draw() {
 	uint32_t idx;
 	
+	vkWaitForFences(device, 1, &render_fence, true, 999999999);
+	vkResetFences(device, 1, &render_fence);
 
-
+	vkResetCommandPool(device, commandPool, 0);
+		
+		
 	VK_CHECK( vkAcquireNextImageKHR(device, swapchain, 0, sema_present, NULL, &idx));	
 
+
+	
 	VkCommandBufferAllocateInfo cmdAllocInfo = VkInit::command_allocate_info(commandPool, 1);
 	VkCommandBuffer cmd;
 
@@ -558,7 +564,7 @@ void VulkanEngine::draw() {
 	rp_info.renderArea.extent = windowExtent;
 	rp_info.clearValueCount = 2;
 	rp_info.pClearValues = &clear_value;
-	rp_info.framebuffer = fbuffers[0];
+	rp_info.framebuffer = fbuffers[idx];
 
 
 	VK_CHECK(vkBeginCommandBuffer(cmd, &cmdBeginInfo));
@@ -584,8 +590,7 @@ void VulkanEngine::draw() {
 
 	vkQueueSubmit(graphicsQueue, 1, &submit, render_fence);
 	
-	vkWaitForFences(device, 1, &render_fence, true, 999999999);
-	vkResetFences(device, 1, &render_fence);
+	
 
 	VkPresentInfoKHR present_info = {  };
 	present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
