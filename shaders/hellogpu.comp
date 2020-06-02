@@ -1,0 +1,8 @@
+#version 450
+
+#extension GL_EXT_debug_printf : enable
+
+void main() {
+
+     debugPrintfEXT("hello gpu from thread: %i", gl_GlobalInvocationID.x);
+}

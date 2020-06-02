@@ -1,0 +1,483 @@
+﻿// vulkan_guide.cpp : Defines the entry point for the application.
+//
+
+#define VK_NO_PROTOTYPES
+
+#include "VkBootstrap.h"
+
+
+#include "vulkan_guide.h"
+#include <vector>
+#include <fstream>
+
+using namespace std;
+#define VK_CHECK(x)                                                 \
+	do                                                              \
+	{                                                               \
+		VkResult err = x;                                           \
+		if (err)                                                    \
+		{                                                           \
+			std::cout <<"Detected Vulkan error: " << err << std::endl; \
+			abort();                                                \
+		}                                                           \
+	} while (0)
+
+
+static VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT           messageSeverity,
+	VkDebugUtilsMessageTypeFlagsEXT                  messageTypes,
+	const VkDebugUtilsMessengerCallbackDataEXT * pCallbackData,
+	void* pUserData)
+{
+	if (pCallbackData->flags & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
+	{
+		std::cout << "Validation Layer: ERROR: "  << pCallbackData->pMessage << std::endl;
+	}
+	else if (pCallbackData->flags & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
+	{
+		std::cout << "Validation Layer: WARNING: "  << pCallbackData->pMessage << std::endl;
+	}
+	else
+	{		
+		std::cout << "Validation Layer: INFO: " << pCallbackData->pMessage << std::endl;
+	}
+	std::cout << std::endl;
+	return VK_FALSE;
+}
+namespace VkUtils {
+	struct QueueFamilyIndices {
+		uint32_t graphicsFamily;
+		//uint32_t presentFamily;
+	};
+#if 0
+	std::vector<VkPhysicalDevice> EnumeratePhysicalDevices(VkInstance instance) {
+
+		uint32_t deviceCount = 0;
+		vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
+
+		std::vector<VkPhysicalDevice> devices(deviceCount);
+		vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
+
+		return devices;
+	}
+
+	std::vector<VkQueueFamilyProperties> GetPhysicalQueryFamilyProperties(VkPhysicalDevice device) {
+		uint32_t queueFamilyCount = 0;
+		vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
+
+		std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
+		vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
+		return queueFamilies;
+	}
+
+	bool FindDedicatedGPU(const std::vector<VkPhysicalDevice>& devices, VkPhysicalDevice& outDevice) {
+		for (auto device : devices) {
+			VkPhysicalDeviceProperties deviceProperties;			
+			vkGetPhysicalDeviceProperties(device, &deviceProperties);
+			if (deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {
+				outDevice = device;
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	
+
+	QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice device) {
+		QueueFamilyIndices indices;
+
+		std::vector<VkQueueFamilyProperties> availibleQueueFamilies = GetPhysicalQueryFamilyProperties(device);
+
+
+		for (int i = 0; i < availibleQueueFamilies.size();i++) {
+			const auto& queueFamily = availibleQueueFamilies[i];
+
+			if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
+				indices.graphicsFamily = i;
+			}			
+		}
+
+		// Logic to find queue family indices to populate struct with
+		return indices;
+	}
+#endif
+	static std::vector<char> read_file(const std::string& filename) {
+		std::ifstream file(filename, std::ios::ate | std::ios::binary);
+
+		if (!file.is_open()) {
+			throw std::runtime_error("failed to open file!");
+		}
+
+		size_t fileSize = (size_t)file.tellg();
+		std::vector<char> buffer(fileSize);
+
+		file.seekg(0);
+		file.read(buffer.data(), fileSize);
+
+		file.close();
+
+		return buffer;
+	}
+
+	VkShaderModule create_shader_module(VkDevice device,const std::vector<char>& code) {
+		VkShaderModuleCreateInfo createInfo{};
+		createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+		createInfo.codeSize = code.size();
+		createInfo.pCode = reinterpret_cast<const uint32_t*>(code.data());
+		VkShaderModule shaderModule;
+		if (vkCreateShaderModule(device, &createInfo, nullptr, &shaderModule) != VK_SUCCESS) {
+			throw std::runtime_error("failed to create shader module!");
+		}
+		return shaderModule;
+	}
+}
+namespace VkInit {
+#if 0
+	VkApplicationInfo app_info(const char* AppName, uint32_t AppVersion, const char* EngineName, uint32_t EngineVersion) {
+		VkApplicationInfo info{};
+
+		info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+		info.pNext = nullptr;
+		info.pApplicationName = AppName;//"Hello Triangle";
+		info.applicationVersion = AppVersion;//VK_MAKE_VERSION(1, 0, 0);
+		info.pEngineName = EngineName;//"No Engine";
+		info.engineVersion = EngineVersion;//VK_MAKE_VERSION(1, 0, 0);
+		info.apiVersion = VK_API_VERSION_1_2;
+
+		return info;
+	}
+	VkInstanceCreateInfo instance_create_info(VkApplicationInfo* appInfo,const std::vector<const char*>& EnabledLayers,const std::vector<const char*> &EnabledExtensions, VkInstanceCreateFlags flags =0) {
+		VkInstanceCreateInfo info{};
+		info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+		info.pNext = nullptr;
+		info.pApplicationInfo = appInfo;
+		info.enabledExtensionCount = EnabledExtensions.size();
+		if (info.enabledExtensionCount > 0) {
+			info.ppEnabledExtensionNames = EnabledExtensions.data();
+		}
+		else {
+			info.ppEnabledExtensionNames = nullptr;
+		}
+		info.enabledLayerCount = EnabledLayers.size();
+		if (info.enabledLayerCount > 0) {
+			info.ppEnabledLayerNames = EnabledLayers.data();
+		}
+		else {
+			info.ppEnabledLayerNames = nullptr;
+		}
+		info.flags = flags;
+		
+		return info;
+	}
+
+	VkDeviceQueueCreateInfo queue_create_info(uint32_t familyIndex, std::vector<float> queuePriorities, VkDeviceQueueCreateFlags flags = 0) {
+		VkDeviceQueueCreateInfo info{};
+		info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+		info.pNext = nullptr;
+		info.queueFamilyIndex = familyIndex;
+		info.queueCount = queuePriorities.size();
+		info.pQueuePriorities = queuePriorities.data();
+		info.flags = flags;
+		return info;
+	}
+
+	VkDeviceCreateInfo device_create_info(const std::vector<VkDeviceQueueCreateInfo> & queues, VkPhysicalDeviceFeatures* features, const std::vector<const char*>& EnabledLayers, const std::vector<const char*>& EnabledExtensions) {
+		VkDeviceCreateInfo createInfo{};
+		createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+		createInfo.pNext = nullptr;
+
+		createInfo.pQueueCreateInfos = queues.data();
+		createInfo.queueCreateInfoCount = queues.size();
+
+		createInfo.pEnabledFeatures = features;
+
+		createInfo.enabledExtensionCount = EnabledExtensions.size();
+		if (createInfo.enabledExtensionCount > 0) {
+			createInfo.ppEnabledExtensionNames = EnabledExtensions.data();
+		}
+		else {
+			createInfo.ppEnabledExtensionNames = nullptr;
+		}
+		createInfo.enabledLayerCount = EnabledLayers.size();
+		if (createInfo.enabledLayerCount > 0) {
+			createInfo.ppEnabledLayerNames = EnabledLayers.data();
+		}
+		else {
+			createInfo.ppEnabledLayerNames = nullptr;
+		}
+		return createInfo;
+	}	
+#endif
+	VkPipelineShaderStageCreateInfo pipeline_shader_stage_create_info(VkShaderStageFlagBits stage,VkShaderModule module) {
+		VkPipelineShaderStageCreateInfo shaderStageInfo{};
+		shaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+		shaderStageInfo.pNext = nullptr;
+		shaderStageInfo.stage = stage;
+		shaderStageInfo.module = module;
+		shaderStageInfo.pName = "main";
+		return shaderStageInfo;
+	}
+
+	VkPipelineLayoutCreateInfo pipeline_layout_create_info() {
+		VkPipelineLayoutCreateInfo info{};
+		info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+		info.pNext = nullptr;
+		info.flags = 0;
+		info.setLayoutCount = 0;
+		info.pSetLayouts = nullptr;
+		info.pushConstantRangeCount = 0;
+		info.pPushConstantRanges = nullptr;
+		return info;
+	}
+
+	VkComputePipelineCreateInfo compute_pipeline_create_info(VkPipelineLayout layout,const VkPipelineShaderStageCreateInfo &computeStage) {
+		VkComputePipelineCreateInfo info{};
+		info.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+		info.pNext = nullptr;
+		info.layout = layout;
+		info.stage = computeStage;
+		return info;
+	}
+
+	VkCommandPoolCreateInfo command_pool_create_info(uint32_t queueFamilyIndex, VkCommandPoolResetFlags flags = 0) {
+		VkCommandPoolCreateInfo info{};
+		info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+		info.pNext = nullptr;
+		info.flags = flags;
+		return info;
+	}
+	VkCommandBufferAllocateInfo command_allocate_info(VkCommandPool pool, uint32_t count = 1, VkCommandBufferLevel level = VK_COMMAND_BUFFER_LEVEL_PRIMARY) {
+		VkCommandBufferAllocateInfo info{};
+		info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+		info.pNext = nullptr;
+		info.commandPool = pool;
+		info.commandBufferCount = count;
+		info.level = level;
+		return info;
+	}
+
+	VkCommandBufferBeginInfo command_buffer_begin_info(VkCommandBufferUsageFlags flags = 0) {
+		VkCommandBufferBeginInfo info{};
+		info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+		info.pNext = nullptr;
+		info.pInheritanceInfo = nullptr;
+		info.flags = flags;
+		return info;
+	}
+
+	VkSubmitInfo submit_info(VkCommandBuffer *cmd) {
+		VkSubmitInfo info{};
+		info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+		info.pNext = nullptr;
+		
+		info.waitSemaphoreCount = 0;
+		info.pWaitSemaphores = nullptr;
+		info.pWaitDstStageMask=nullptr;
+		info.commandBufferCount = 1;
+		info.pCommandBuffers = cmd;
+		info.signalSemaphoreCount = 0;
+		info.pSignalSemaphores = nullptr;
+
+		return info;
+	}
+}
+
+class VulkanEngine {
+public:
+	std::vector<const char*> EnabledLayers;
+	std::vector<const char*> InstanceExtensions;
+	std::vector<const char*> DeviceExtensions;
+
+	VkInstance instance;
+	VkDevice device;
+	VkQueue graphicsQueue;
+	VkDebugUtilsMessengerEXT debugCallback;
+
+	void init();
+	void cleanup();
+
+};
+
+void VulkanEngine::init()
+{
+	EnabledLayers.push_back("VK_LAYER_KHRONOS_validation");	
+
+	InstanceExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);	
+		
+	DeviceExtensions.push_back(VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME);
+
+	volkInitialize();
+
+	vkb::InstanceBuilder builder;
+
+	auto inst_ret = builder.set_app_name("Example Vulkan Application")
+		.set_headless(true)
+		.request_validation_layers()		
+		.use_default_debug_messenger()
+		.add_validation_feature_enable(VK_VALIDATION_FEATURE_ENABLE_DEBUG_PRINTF_EXT)
+		.add_debug_messenger_severity(VK_DEBUG_UTILS_MESSAGE_SEVERITY_FLAG_BITS_MAX_ENUM_EXT)
+		.add_debug_messenger_type(VK_DEBUG_UTILS_MESSAGE_TYPE_FLAG_BITS_MAX_ENUM_EXT)
+		.build();
+	if (!inst_ret) {
+		// error
+	}
+	vkb::Instance vkb_inst = inst_ret.value();
+
+	instance = vkb_inst.instance;
+	
+	volkLoadInstance(instance);
+#if 0
+	VkApplicationInfo appInfo = VkInit::app_info("tutorial app", VK_MAKE_VERSION(1, 0, 0), "no engine", VK_MAKE_VERSION(1, 0, 0));
+	VkInstanceCreateInfo instanceCreateInfo = VkInit::instance_create_info(&appInfo, EnabledLayers, InstanceExtensions);
+	
+	VkValidationFeatureEnableEXT enables[] =
+	{ VK_VALIDATION_FEATURE_ENABLE_DEBUG_PRINTF_EXT };
+	VkValidationFeaturesEXT validationfeatures = {};
+	validationfeatures.sType = VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT;
+	validationfeatures.enabledValidationFeatureCount = 1;
+	validationfeatures.pEnabledValidationFeatures = enables;
+	
+	instanceCreateInfo.pNext = &validationfeatures;
+	
+	VkDebugUtilsMessengerCreateInfoEXT	 callback1 = {
+			VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT,  // sType
+			NULL,                                                     // pNext
+			0,                                                        // flags
+			VK_DEBUG_UTILS_MESSAGE_SEVERITY_FLAG_BITS_MAX_ENUM_EXT  // messageSeverity
+			 
+			,
+		
+			// messageType
+			VK_DEBUG_UTILS_MESSAGE_TYPE_FLAG_BITS_MAX_ENUM_EXT,
+			debug_callback,                                      // pfnUserCallback
+			NULL                                                      // pUserData
+	};
+
+	volkInitialize();
+
+	VK_CHECK(vkCreateInstance(&instanceCreateInfo, nullptr, &instance));
+
+
+	volkLoadInstance(instance);
+	
+	VK_CHECK(vkCreateDebugUtilsMessengerEXT(instance, &callback1, nullptr, &debugCallback));
+
+#endif
+
+	VkPhysicalDevice dedicatedGPU;
+
+	vkb::PhysicalDeviceSelector selector{ vkb_inst };
+	auto phys_ret = selector//.set_surface(/* from user created window*/)
+		.set_minimum_version(1, 2) // require a vulkan 1.1 capable device		
+		.add_required_extension(VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME)
+		.select();
+
+	vkb::DeviceBuilder device_builder{ phys_ret.value() };
+	// automatically propagate needed data from instance & physical device
+	auto dev_ret = device_builder.build();
+
+	vkb::Device vkb_device = dev_ret.value();
+
+	// Get the VkDevice handle used in the rest of a vulkan application
+	device = vkb_device.device;
+
+	// Get the graphics queue with a helper function
+	auto graphics_queue_ret = vkb_device.get_queue(vkb::QueueType::graphics);
+
+	graphicsQueue = graphics_queue_ret.value();
+	VkUtils::QueueFamilyIndices queueFamilies;
+
+	queueFamilies.graphicsFamily = vkb_device.get_queue_index(vkb::QueueType::graphics).value();
+
+#if 0
+	std::vector<VkPhysicalDevice> devices = VkUtils::EnumeratePhysicalDevices(instance);
+	
+	VkUtils::FindDedicatedGPU(devices, dedicatedGPU);
+
+	queueFamilies= VkUtils::FindQueueFamilies(dedicatedGPU);
+
+	VkDeviceQueueCreateInfo queueCreateInfo = VkInit::queue_create_info(queueFamilies.graphicsFamily, { 1.f });
+
+	VkPhysicalDeviceFeatures features{};
+	features.fragmentStoresAndAtomics = true;
+	features.vertexPipelineStoresAndAtomics = true;
+	features.shaderInt64 = true;
+
+	std::vector<VkDeviceQueueCreateInfo> deviceQueues = { queueCreateInfo };
+
+	
+	VkDeviceCreateInfo deviceCreateInfo = VkInit::device_create_info(deviceQueues, &features, EnabledLayers, DeviceExtensions);
+
+	VK_CHECK(vkCreateDevice(dedicatedGPU,&deviceCreateInfo, nullptr, &device));
+
+	vkGetDeviceQueue(device, queueCreateInfo.queueFamilyIndex, 0, &graphicsQueue);
+#endif
+
+	auto compute_shader_code = VkUtils::read_file("K:/Programming/vulkan_guide/shaders/hellogpu.comp.spv");
+
+	VkShaderModule computeShader = VkUtils::create_shader_module(device, compute_shader_code);
+
+	VkPipelineShaderStageCreateInfo compShaderStageInfo = VkInit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_COMPUTE_BIT, computeShader);
+
+	VkPipelineLayout computeLayout;
+	VkPipelineLayoutCreateInfo computeLayoutInfo = VkInit::pipeline_layout_create_info();
+
+	VK_CHECK(vkCreatePipelineLayout(device, &computeLayoutInfo, nullptr, &computeLayout));
+
+	VkComputePipelineCreateInfo computePipelineInfo = VkInit::compute_pipeline_create_info(computeLayout, compShaderStageInfo);
+
+	VkPipeline computePipeline;
+	VK_CHECK(vkCreateComputePipelines(device,VK_NULL_HANDLE,1,&computePipelineInfo,nullptr,&computePipeline));
+
+	VkCommandPoolCreateInfo commandPoolInfo = VkInit::command_pool_create_info(queueFamilies.graphicsFamily, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
+	VkCommandPool commandPool;
+
+	VK_CHECK(vkCreateCommandPool(device, &commandPoolInfo, nullptr, &commandPool));
+
+	VkCommandBufferAllocateInfo cmdAllocInfo = VkInit::command_allocate_info(commandPool, 1);
+	VkCommandBuffer cmd;
+
+	VK_CHECK(vkAllocateCommandBuffers(device, &cmdAllocInfo, &cmd));
+
+	VkCommandBufferBeginInfo cmdBeginInfo = VkInit::command_buffer_begin_info();
+
+	VK_CHECK(vkBeginCommandBuffer(cmd, &cmdBeginInfo));
+
+	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, computePipeline);
+	vkCmdDispatch(cmd, 10, 1, 1);
+
+	VK_CHECK(vkEndCommandBuffer(cmd));
+
+	VkSubmitInfo submit = VkInit::submit_info(&cmd);
+
+	VkFence compute_fence;
+	VkFenceCreateInfo fenceCreateInfo{};
+	fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+	fenceCreateInfo.pNext = nullptr;
+	fenceCreateInfo.flags = 0;
+
+	vkCreateFence(device, &fenceCreateInfo, nullptr, &compute_fence);
+
+	vkQueueSubmit(graphicsQueue, 1, &submit, compute_fence);
+
+	vkWaitForFences(device, 1, &compute_fence, true, 0);
+}
+
+void VulkanEngine::cleanup()
+{
+	//vkDestroyDebugUtilsMessengerEXT(instance, debugCallback, nullptr);
+	
+	vkDestroyDevice(device, nullptr);
+	vkDestroyInstance(instance,nullptr);
+}
+
+int main()
+{
+	VulkanEngine engine;
+	engine.init();
+
+	engine.cleanup();
+
+	return 0;
+}
