@@ -3,8 +3,8 @@
 #include "volk.h"
 #define VK_NO_PROTOTYPES
 
-#define VMA_IMPLEMENTATION
-#include "vk_mem_alloc.h"
+//#define VMA_IMPLEMENTATION
+//#include "vk_mem_alloc.h"
 
 #include "VkBootstrap.h"
 
@@ -14,6 +14,9 @@
 
 #include <SDL.h>
 #include <SDL_vulkan.h>
+
+#include <chrono>
+#include <thread>
 
 using namespace std;
 #define VK_CHECK(x)                                                 \
@@ -28,7 +31,7 @@ using namespace std;
 	} while (0)
 
 
-namespace VkInit {
+namespace vkinit {
 
 	VkPipelineShaderStageCreateInfo pipeline_shader_stage_create_info(VkShaderStageFlagBits stage, VkShaderModule module) {
 		VkPipelineShaderStageCreateInfo shaderStageInfo{};
@@ -86,7 +89,38 @@ namespace VkInit {
 		info.flags = flags;
 		return info;
 	}
+	VkFramebufferCreateInfo framebuffer_create_info(VkRenderPass renderPass,VkExtent2D extent) {
+		VkFramebufferCreateInfo info = {};
+		info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+		info.pNext = nullptr;
 
+		info.renderPass = renderPass;
+		info.attachmentCount = 1;
+		info.width = extent.width;
+		info.height = extent.height;
+		info.layers = 1;
+
+		return info;
+	}
+
+	VkFenceCreateInfo fence_create_info(VkFenceCreateFlags flags = 0) {
+
+		VkFenceCreateInfo fenceCreateInfo{};
+		fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+		fenceCreateInfo.pNext = nullptr;
+		fenceCreateInfo.flags = flags;
+
+		return fenceCreateInfo;
+	}
+	VkSemaphoreCreateInfo semaphore_create_info(VkSemaphoreCreateFlags flags = 0) {
+		VkSemaphoreCreateInfo info = {};
+		info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+		info.pNext = nullptr;
+		info.flags = flags;
+		return info;
+	}
+	
+	
 	VkSubmitInfo submit_info(VkCommandBuffer* cmd) {
 		VkSubmitInfo info{};
 		info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -102,38 +136,22 @@ namespace VkInit {
 
 		return info;
 	}
-}
-namespace VkUtils {
+	VkPresentInfoKHR present_info() {
+		VkPresentInfoKHR info = {  };
+		info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+		info.pNext = nullptr;
+
+		info.swapchainCount = 0;
+		info.pSwapchains = nullptr;
+		info.pWaitSemaphores = nullptr;
+		info.waitSemaphoreCount = 0;
+		info.pImageIndices = nullptr;
+
+		return info;
+	}
 	
-	static std::vector<char> read_file(const std::string& filename) {
-		std::ifstream file(filename, std::ios::ate | std::ios::binary);
-
-		if (!file.is_open()) {
-			throw std::runtime_error("failed to open file!");
-		}
-
-		size_t fileSize = (size_t)file.tellg();
-		std::vector<char> buffer(fileSize);
-
-		file.seekg(0);
-		file.read(buffer.data(), fileSize);
-
-		file.close();
-
-		return buffer;
-	}
-
-	VkShaderModule create_shader_module(VkDevice device,const std::vector<char>& code) {
-		VkShaderModuleCreateInfo createInfo{};
-		createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-		createInfo.codeSize = code.size();
-		createInfo.pCode = reinterpret_cast<const uint32_t*>(code.data());
-		VkShaderModule shaderModule;
-		if (vkCreateShaderModule(device, &createInfo, nullptr, &shaderModule) != VK_SUCCESS) {
-			throw std::runtime_error("failed to create shader module!");
-		}
-		return shaderModule;
-	}
+}
+namespace vkutil {
 
 	VkRenderPass create_render_pass(VkDevice device, VkFormat image_format) {
 		VkAttachmentDescription color_attachment = {};
@@ -173,167 +191,44 @@ namespace VkUtils {
 		render_pass_info.pDependencies = &dependency;
 
 		VkRenderPass renderPass;
-		if (vkCreateRenderPass(device, &render_pass_info, nullptr, &renderPass) != VK_SUCCESS) {
-			std::cout << "failed to create render pass\n";
-		}
+		VK_CHECK(vkCreateRenderPass(device, &render_pass_info, nullptr, &renderPass));
 		return renderPass;
 	}
-
-
-	int create_graphics_pipeline(VkDevice device,VkExtent2D swapchainExtent, VkRenderPass renderPass,VkPipelineLayout* outPipelineLayout,VkPipeline* outPipeline) {
-		auto vert_code = read_file("vert.spv");
-		auto frag_code = read_file("frag.spv");
-
-		VkShaderModule vert_module = create_shader_module(device, vert_code);
-		VkShaderModule frag_module = create_shader_module(device, frag_code);
-		if (vert_module == VK_NULL_HANDLE || frag_module == VK_NULL_HANDLE) {
-			std::cout << "failed to create shader module\n";
-			return -1; // failed to create shader modules
-		}
-
-		VkPipelineShaderStageCreateInfo vert_stage_info = {};
-		vert_stage_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-		vert_stage_info.stage = VK_SHADER_STAGE_VERTEX_BIT;
-		vert_stage_info.module = vert_module;
-		vert_stage_info.pName = "main";
-
-		VkPipelineShaderStageCreateInfo frag_stage_info = {};
-		frag_stage_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-		frag_stage_info.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-		frag_stage_info.module = frag_module;
-		frag_stage_info.pName = "main";
-
-		VkPipelineShaderStageCreateInfo shader_stages[] = { vert_stage_info, frag_stage_info };
-
-		VkPipelineVertexInputStateCreateInfo vertex_input_info = {};
-		vertex_input_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-		vertex_input_info.vertexBindingDescriptionCount = 0;
-		vertex_input_info.vertexAttributeDescriptionCount = 0;
-
-		VkPipelineInputAssemblyStateCreateInfo input_assembly = {};
-		input_assembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-		input_assembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-		input_assembly.primitiveRestartEnable = VK_FALSE;
-
-		VkViewport viewport = {};
-		viewport.x = 0.0f;
-		viewport.y = 0.0f;
-		viewport.width = (float)swapchainExtent.width;
-		viewport.height = (float)swapchainExtent.height;
-		viewport.minDepth = 0.0f;
-		viewport.maxDepth = 1.0f;
-
-		VkRect2D scissor = {};
-		scissor.offset = { 0, 0 };
-		scissor.extent = swapchainExtent;
-
-		VkPipelineViewportStateCreateInfo viewport_state = {};
-		viewport_state.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-		viewport_state.viewportCount = 1;
-		viewport_state.pViewports = &viewport;
-		viewport_state.scissorCount = 1;
-		viewport_state.pScissors = &scissor;
-
-		VkPipelineRasterizationStateCreateInfo rasterizer = {};
-		rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-		rasterizer.depthClampEnable = VK_FALSE;
-		rasterizer.rasterizerDiscardEnable = VK_FALSE;
-		rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
-		rasterizer.lineWidth = 1.0f;
-		rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
-		rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;
-		rasterizer.depthBiasEnable = VK_FALSE;
-
-		VkPipelineMultisampleStateCreateInfo multisampling = {};
-		multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-		multisampling.sampleShadingEnable = VK_FALSE;
-		multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
-
-		VkPipelineColorBlendAttachmentState colorBlendAttachment = {};
-		colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
-			VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-		colorBlendAttachment.blendEnable = VK_FALSE;
-
-		VkPipelineColorBlendStateCreateInfo color_blending = {};
-		color_blending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-		color_blending.logicOpEnable = VK_FALSE;
-		color_blending.logicOp = VK_LOGIC_OP_COPY;
-		color_blending.attachmentCount = 1;
-		color_blending.pAttachments = &colorBlendAttachment;
-		color_blending.blendConstants[0] = 0.0f;
-		color_blending.blendConstants[1] = 0.0f;
-		color_blending.blendConstants[2] = 0.0f;
-		color_blending.blendConstants[3] = 0.0f;
-
-		VkPipelineLayoutCreateInfo pipeline_layout_info = {};
-		pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-		pipeline_layout_info.setLayoutCount = 0;
-		pipeline_layout_info.pushConstantRangeCount = 0;
-
-		if (vkCreatePipelineLayout(
-			device, &pipeline_layout_info, nullptr, outPipelineLayout) != VK_SUCCESS) {
-			std::cout << "failed to create pipeline layout\n";
-			return -1; // failed to create pipeline layout
-		}
-
-		VkGraphicsPipelineCreateInfo pipelineInfo = {};
-		pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-		pipelineInfo.stageCount = 2;
-		pipelineInfo.pStages = shader_stages;
-		pipelineInfo.pVertexInputState = &vertex_input_info;
-		pipelineInfo.pInputAssemblyState = &input_assembly;
-		pipelineInfo.pViewportState = &viewport_state;
-		pipelineInfo.pRasterizationState = &rasterizer;
-		pipelineInfo.pMultisampleState = &multisampling;
-		pipelineInfo.pColorBlendState = &color_blending;
-		pipelineInfo.layout = *outPipelineLayout;
-		pipelineInfo.renderPass = renderPass;
-		pipelineInfo.subpass = 0;
-		pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
-
-		if (vkCreateGraphicsPipelines(
-			device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, outPipeline) != VK_SUCCESS) {
-			std::cout << "failed to create pipline\n";
-			return -1; // failed to create graphics pipeline
-		}
-
-		vkDestroyShaderModule(device, frag_module, nullptr);
-		vkDestroyShaderModule(device, vert_module, nullptr);
-		return 0;
-	}
-
 }
 
 class VulkanEngine {
 public:
 	
-	VkInstance instance;
-	VkDevice device;
-	VkQueue graphicsQueue;
-	VkSwapchainKHR swapchain;
-	VkSemaphore sema_present, sema_render;
-	VkFence render_fence;
-	VkCommandPool commandPool;
-	VkRenderPass renderPass;
-	std::vector<VkFramebuffer> fbuffers;
-	VkExtent2D windowExtent;
-	std::vector<VkImage> sc_images;
-	std::vector<VkImageView> sc_imageviews;
+	VkInstance _instance;
+	VkDevice _device;
+	VkQueue _graphicsQueue;
+	VkSwapchainKHR _swapchain;
+	VkSemaphore _presentSemaphore, _renderSemaphore;
+	VkFence _renderFence;
+	VkCommandPool _commandPool;
+	VkRenderPass _renderPass;
+	std::vector<VkFramebuffer> _framebuffers;
+	VkExtent2D _windowExtent;
+	std::vector<VkImage> _swapchainImages;
+	std::vector<VkImageView> _swapchainImageViews;
+	VkCommandBuffer _mainCommandBuffer;
+
+	uint64_t _frameNumber;
 
 	void init();
 	void cleanup();
 	void draw();
-
 };
 SDL_Renderer* gRenderer;
 SDL_Window* gWindow;
 void VulkanEngine::init()
 {
 	SDL_Init(SDL_INIT_VIDEO);
-	SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_VULKAN);// | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
+	SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_VULKAN);
 
-	windowExtent.height = 900;
-	windowExtent.width = 1700;
+	_frameNumber = 0;
+	_windowExtent.height = 900;
+	_windowExtent.width = 1700;
 
 	gWindow = SDL_CreateWindow(
 		"Vulkan Engine",
@@ -350,7 +245,6 @@ void VulkanEngine::init()
 	vkb::InstanceBuilder builder;
 
 	auto inst_ret = builder.set_app_name("Example Vulkan Application")
-		//.set_headless(true)
 		.request_validation_layers()		
 		.use_default_debug_messenger()
 		.add_validation_feature_enable(VK_VALIDATION_FEATURE_ENABLE_DEBUG_PRINTF_EXT)
@@ -360,14 +254,14 @@ void VulkanEngine::init()
 	
 	vkb::Instance vkb_inst = inst_ret.value();
 
-	instance = vkb_inst.instance;
+	_instance = vkb_inst.instance;
 	
-	volkLoadInstance(instance);
+	volkLoadInstance(_instance);
 
 	VkPhysicalDevice dedicatedGPU;
 
 	VkSurfaceKHR vksurface;
-	if (!SDL_Vulkan_CreateSurface(gWindow, instance, &vksurface)) {
+	if (!SDL_Vulkan_CreateSurface(gWindow, _instance, &vksurface)) {
 		throw std::runtime_error("Failed to create surface");
 		// failed to create a surface!
 	}
@@ -380,241 +274,147 @@ void VulkanEngine::init()
 		.set_surface(vksurface)
 		.select();
 
-	vkb::DeviceBuilder device_builder{ phys_ret.value() };
+	vkb::DeviceBuilder deviceBuilder{ phys_ret.value() };
 	// automatically propagate needed data from instance & physical device
-	auto dev_ret = device_builder.build();
 
-	vkb::Device vkb_device = dev_ret.value();
+	vkb::Device vkbDevice = deviceBuilder.build().value();
 
 	// Get the VkDevice handle used in the rest of a vulkan application
-	device = vkb_device.device;
+	_device = vkbDevice.device;
 
-	VmaAllocatorCreateInfo allocatorInfo = {};
-	allocatorInfo.physicalDevice = phys_ret.value().physical_device;
-	allocatorInfo.device = device;
-	allocatorInfo.instance = instance;
+	vkb::SwapchainBuilder swapchainBuilder{ vkbDevice };
 
-	VmaAllocator allocator;
-	vmaCreateAllocator(&allocatorInfo, &allocator);
+	vkb::Swapchain vkbSwapchain = swapchainBuilder
+		.use_default_format_selection()
+		.use_default_present_mode_selection()
+		.set_desired_extent(_windowExtent.width, _windowExtent.height)
+		.build()
+		.value();
 
 	
+	_swapchain = vkbSwapchain.swapchain;
 
-	vkb::SwapchainBuilder swapchain_builder{ vkb_device };
-	auto swap_ret =
-		swapchain_builder.use_default_format_selection().use_default_present_mode_selection()
-		.set_desired_extent(windowExtent.width, windowExtent.height)
-		.build();
-	
-	swapchain = swap_ret.value().swapchain;
+	uint32_t swapchain_imagecount = vkbSwapchain.image_count;
 
-	uint32_t swapchain_imagecount = swap_ret.value().image_count;
+	_swapchainImages = vkbSwapchain.get_images().value();
+	_swapchainImageViews= vkbSwapchain.get_image_views().value();
+
+	_renderPass = vkutil::create_render_pass(_device, vkbSwapchain.image_format);
 
 
-	sc_images = swap_ret.value().get_images().value();
-	sc_imageviews= swap_ret.value().get_image_views().value();
-	
+	VkFramebufferCreateInfo fb_info = vkinit::framebuffer_create_info(_renderPass,_windowExtent);
 
-
-
-	renderPass = VkUtils::create_render_pass(device, swap_ret.value().image_format);
-
-
-	VkFramebufferCreateInfo fb_info = {};
-	fb_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-	fb_info.renderPass = renderPass;
-	fb_info.attachmentCount =1;
-	
-	fb_info.width = windowExtent.width;
-	fb_info.height = windowExtent.height;
-	fb_info.layers = 1;
-
-	fbuffers = std::vector<VkFramebuffer>(swapchain_imagecount);
+	_framebuffers = std::vector<VkFramebuffer>(swapchain_imagecount);
 
 	for (int i = 0; i < swapchain_imagecount; i++) {
 		
-		fb_info.pAttachments = &sc_imageviews[i];
-		VK_CHECK( vkCreateFramebuffer(device, &fb_info, NULL, &fbuffers[i]));		
+		fb_info.pAttachments = &_swapchainImageViews[i];
+		VK_CHECK( vkCreateFramebuffer(_device, &fb_info, NULL, &_framebuffers[i]));		
 	}
 
 	// Get the graphics queue with a helper function
-	auto graphics_queue_ret = vkb_device.get_queue(vkb::QueueType::graphics);
+	_graphicsQueue = vkbDevice.get_queue(vkb::QueueType::graphics).value();
 
-	graphicsQueue = graphics_queue_ret.value();
-	
+	uint32_t graphics_queue_family = vkbDevice.get_queue_index(vkb::QueueType::graphics).value();
 
-	uint32_t graphics_queue_family = vkb_device.get_queue_index(vkb::QueueType::graphics).value();
+	VkCommandPoolCreateInfo commandPoolInfo = vkinit::command_pool_create_info(graphics_queue_family, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
 
-	auto compute_shader_code = VkUtils::read_file("C:/Programming/vulkan-guide/shaders/hellogpu.comp.spv");
+	VK_CHECK(vkCreateCommandPool(_device, &commandPoolInfo, nullptr, &_commandPool));
 
-	VkShaderModule computeShader = VkUtils::create_shader_module(device, compute_shader_code);
+	VkCommandBufferAllocateInfo cmdAllocInfo = vkinit::command_allocate_info(_commandPool, 1);
 
-	VkPipelineShaderStageCreateInfo compShaderStageInfo = VkInit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_COMPUTE_BIT, computeShader);
+	VK_CHECK(vkAllocateCommandBuffers(_device, &cmdAllocInfo, &_mainCommandBuffer));
 
-	VkPipelineLayout computeLayout;
-	VkPipelineLayoutCreateInfo computeLayoutInfo = VkInit::pipeline_layout_create_info();
+	VkFenceCreateInfo fenceCreateInfo = vkinit::fence_create_info();
 
-	VK_CHECK(vkCreatePipelineLayout(device, &computeLayoutInfo, nullptr, &computeLayout));
+	vkCreateFence(_device, &fenceCreateInfo, nullptr, &_renderFence);
 
-	VkComputePipelineCreateInfo computePipelineInfo = VkInit::compute_pipeline_create_info(computeLayout, compShaderStageInfo);
+	VkSemaphoreCreateInfo sephoreCreateInfo = vkinit::semaphore_create_info();
 
-	VkPipeline computePipeline;
-	VK_CHECK(vkCreateComputePipelines(device,VK_NULL_HANDLE,1,&computePipelineInfo,nullptr,&computePipeline));
-
-	VkCommandPoolCreateInfo commandPoolInfo = VkInit::command_pool_create_info(graphics_queue_family, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
-	
-
-	VK_CHECK(vkCreateCommandPool(device, &commandPoolInfo, nullptr, &commandPool));
-
-	VkCommandBufferAllocateInfo cmdAllocInfo = VkInit::command_allocate_info(commandPool, 1);
-	VkCommandBuffer cmd;
-
-	VK_CHECK(vkAllocateCommandBuffers(device, &cmdAllocInfo, &cmd));
-
-	VkCommandBufferBeginInfo cmdBeginInfo = VkInit::command_buffer_begin_info();
-
-	VkClearValue clear_value;
-		
-		
-	
-	clear_value.color = { { 0.0f, 0.0f, 0.2f, 1.0f } };
-	
-
-	VkRenderPassBeginInfo rp_info = {  };
-	rp_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-	rp_info.renderPass = renderPass;
-	rp_info.renderArea.offset.x = 0;
-	rp_info.renderArea.offset.y = 0;
-	rp_info.renderArea.extent = windowExtent;
-	rp_info.clearValueCount = 2;
-	rp_info.pClearValues = &clear_value;
-	rp_info.framebuffer = fbuffers[0];
-
-
-	VK_CHECK(vkBeginCommandBuffer(cmd, &cmdBeginInfo));
-
-	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, computePipeline);
-	vkCmdDispatch(cmd, 10, 1, 1);
-
-	vkCmdBeginRenderPass(cmd, &rp_info, VK_SUBPASS_CONTENTS_INLINE);
-
-	vkCmdEndRenderPass(cmd);
-	VK_CHECK(vkEndCommandBuffer(cmd));
-
-	VkSubmitInfo submit = VkInit::submit_info(&cmd);
-
-	VkFence compute_fence;
-	VkFenceCreateInfo fenceCreateInfo{};
-	fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-	fenceCreateInfo.pNext = nullptr;
-	fenceCreateInfo.flags = 0;
-
-	vkCreateFence(device, &fenceCreateInfo, nullptr, &compute_fence);
-	vkCreateFence(device, &fenceCreateInfo, nullptr, &render_fence);
-	vkQueueSubmit(graphicsQueue, 1, &submit, compute_fence);
-
-	vkWaitForFences(device, 1, &compute_fence, true, 0);
-
-	vkDestroyPipelineLayout(device, computeLayout, nullptr);
-	vkDestroyShaderModule(device, computeShader, nullptr);
-	
-	vkDestroyPipeline(device, computePipeline, nullptr);
-	vkDestroyFence(device, compute_fence, nullptr);
-
-	vkDestroyDebugUtilsMessengerEXT(instance, vkb_inst.debug_messenger, nullptr);
-
-	VkSemaphoreCreateInfo bake_sema = {};
-	bake_sema.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-	bake_sema.pNext = nullptr;
-	bake_sema.flags = VK_FENCE_CREATE_SIGNALED_BIT;//0;
-
-	VK_CHECK(vkCreateSemaphore(device, &bake_sema, NULL, &sema_present));
-	VK_CHECK(vkCreateSemaphore(device, &bake_sema, NULL, &sema_render));
-	
+	VK_CHECK(vkCreateSemaphore(_device, &sephoreCreateInfo, NULL, &_presentSemaphore));
+	VK_CHECK(vkCreateSemaphore(_device, &sephoreCreateInfo, NULL, &_renderSemaphore));	
 }
-void VulkanEngine::draw() {
-	uint32_t idx;
+void VulkanEngine::draw() {	
 	
-	vkWaitForFences(device, 1, &render_fence, true, 999999999);
-	vkResetFences(device, 1, &render_fence);
+	vkWaitForFences(_device, 1, &_renderFence, true, 999999999);
+	vkResetFences(_device, 1, &_renderFence);
 
-	vkResetCommandPool(device, commandPool, 0);
+	vkResetCommandBuffer(_mainCommandBuffer, 0);	
 		
-		
-	VK_CHECK( vkAcquireNextImageKHR(device, swapchain, 0, sema_present, NULL, &idx));	
-
-
+	uint32_t imageIndex;
+	VK_CHECK( vkAcquireNextImageKHR(_device, _swapchain, 0, _presentSemaphore, NULL, &imageIndex));	
 	
-	VkCommandBufferAllocateInfo cmdAllocInfo = VkInit::command_allocate_info(commandPool, 1);
-	VkCommandBuffer cmd;
+	VkCommandBufferAllocateInfo cmdAllocInfo = vkinit::command_allocate_info(_commandPool, 1);
+	
+	VkCommandBuffer cmd = _mainCommandBuffer;
 
-	VK_CHECK(vkAllocateCommandBuffers(device, &cmdAllocInfo, &cmd));
+	VkCommandBufferBeginInfo cmdBeginInfo = vkinit::command_buffer_begin_info(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 
-	VkCommandBufferBeginInfo cmdBeginInfo = VkInit::command_buffer_begin_info();
+	VkClearValue clearValue;
 
-	VkClearValue clear_value;
+	float flash = abs(sin(_frameNumber / 120.f));
+	clearValue.color = { { 0.0f, 0.0f, flash, 1.0f } };
 
-	clear_value.color = { { 0.0f, 0.0f, 0.2f, 1.0f } };
-
-
-	VkRenderPassBeginInfo rp_info = {  };
-	rp_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-	rp_info.renderPass = renderPass;
-	rp_info.renderArea.offset.x = 0;
-	rp_info.renderArea.offset.y = 0;
-	rp_info.renderArea.extent = windowExtent;
-	rp_info.clearValueCount = 2;
-	rp_info.pClearValues = &clear_value;
-	rp_info.framebuffer = fbuffers[idx];
-
+	VkRenderPassBeginInfo rpInfo = {  };
+	rpInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+	rpInfo.renderPass = _renderPass;
+	rpInfo.renderArea.offset.x = 0;
+	rpInfo.renderArea.offset.y = 0;
+	rpInfo.renderArea.extent = _windowExtent;
+	rpInfo.clearValueCount = 2;
+	rpInfo.pClearValues = &clearValue;
+	rpInfo.framebuffer = _framebuffers[imageIndex];
 
 	VK_CHECK(vkBeginCommandBuffer(cmd, &cmdBeginInfo));
 
-	
-
-	vkCmdBeginRenderPass(cmd, &rp_info, VK_SUBPASS_CONTENTS_INLINE);
+	vkCmdBeginRenderPass(cmd, &rpInfo, VK_SUBPASS_CONTENTS_INLINE);
 
 	vkCmdEndRenderPass(cmd);
 	VK_CHECK(vkEndCommandBuffer(cmd));
 
-	VkSubmitInfo submit = VkInit::submit_info(&cmd);
-	VkPipelineStageFlags wait_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+	VkSubmitInfo submit = vkinit::submit_info(&cmd);
+	VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 	
-	submit.pWaitDstStageMask = &wait_stage;
+	submit.pWaitDstStageMask = &waitStage;
 
 	submit.waitSemaphoreCount = 1;
-	submit.pWaitSemaphores = &sema_present;
-
+	submit.pWaitSemaphores = &_presentSemaphore;
 
 	submit.signalSemaphoreCount = 1;
-	submit.pSignalSemaphores = &sema_render;
+	submit.pSignalSemaphores = &_renderSemaphore;
 
-	vkQueueSubmit(graphicsQueue, 1, &submit, render_fence);
-	
-	
+	VK_CHECK(vkQueueSubmit(_graphicsQueue, 1, &submit, _renderFence));
 
-	VkPresentInfoKHR present_info = {  };
-	present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-	present_info.swapchainCount = 1;
-	present_info.pSwapchains = &swapchain;
-	present_info.pWaitSemaphores = &sema_render;
-	present_info.waitSemaphoreCount = 1;
-	present_info.pImageIndices = &idx;
-	VK_CHECK (vkQueuePresentKHR(graphicsQueue, &present_info));
+	VkPresentInfoKHR presentInfo = vkinit::present_info();
 
+	presentInfo.pSwapchains = &_swapchain;
+	presentInfo.swapchainCount = 1;
 	
-	
+	presentInfo.pWaitSemaphores = &_renderSemaphore;
+	presentInfo.waitSemaphoreCount = 1;
+
+	presentInfo.pImageIndices = &imageIndex;
+
+	VK_CHECK (vkQueuePresentKHR(_graphicsQueue, &presentInfo));
+
+	_frameNumber++;
 }
 void VulkanEngine::cleanup()
 {
-	vkDestroyCommandPool(device, commandPool, nullptr);
-	vkDestroyDevice(device, nullptr);
-	vkDestroyInstance(instance,nullptr);
+	vkDestroyCommandPool(_device, _commandPool, nullptr);
+	vkDestroyDevice(_device, nullptr);
+	vkDestroyInstance(_instance,nullptr);
 }
 
 int main(int argc, char* argv[])
 {
+	using namespace std::chrono_literals;
+	using std::chrono::system_clock;
+
 	VulkanEngine engine;
 	engine.init();
+
+
 	SDL_Event e;
 	bool bQuit = false;
 	while (!bQuit)
@@ -626,6 +426,10 @@ int main(int argc, char* argv[])
 		}
 
 		engine.draw();
+
+		
+		//wait a few ms because it will go into the thousands otherwise
+		std::this_thread::sleep_for(10ms);
 	}
 
 	engine.cleanup();
