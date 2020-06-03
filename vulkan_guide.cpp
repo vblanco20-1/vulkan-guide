@@ -444,7 +444,7 @@ void VulkanEngine::init()
 
 	uint32_t graphics_queue_family = vkb_device.get_queue_index(vkb::QueueType::graphics).value();
 
-	auto compute_shader_code = VkUtils::read_file("K:/Programming/vulkan_guide/shaders/hellogpu.comp.spv");
+	auto compute_shader_code = VkUtils::read_file("C:/Programming/vulkan-guide/shaders/hellogpu.comp.spv");
 
 	VkShaderModule computeShader = VkUtils::create_shader_module(device, compute_shader_code);
 
