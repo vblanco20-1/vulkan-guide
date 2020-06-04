@@ -251,7 +251,7 @@ const char* to_string (SwapchainError err) {
 }
 
 SystemInfo::SystemInfo () {
-	auto available_extensions_ret =
+ 	auto available_extensions_ret =
 	    detail::get_vector<VkExtensionProperties> (vkEnumerateInstanceExtensionProperties, nullptr);
 	if (available_extensions_ret.has_value ()) {
 		this->available_extensions = available_extensions_ret.value ();

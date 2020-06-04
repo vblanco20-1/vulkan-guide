@@ -13,9 +13,12 @@ target_link_libraries(sdl2 INTERFACE SDL2 SDL2main)
 
 find_package(Vulkan REQUIRED)
 
+add_subdirectory(third_party)
 
 # Add source to this project's executable.
-add_executable (vulkan_guide "vulkan_guide.cpp" "vulkan_guide.h" "volk.h" "volk.c" "VkBootstrap.cpp" "VkBootstrap.h")
+add_executable (vulkan_guide "vulkan_guide.cpp" "vulkan_guide.h")
+
+target_link_libraries(vulkan_guide volk vkbootstrap)
 
 target_link_libraries(vulkan_guide Vulkan::Vulkan sdl2 )
 

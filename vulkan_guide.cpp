@@ -18,6 +18,7 @@
 #include <chrono>
 #include <thread>
 
+//we want to inmediately abord when there is an error. In normal engines this would give an error message to the user, or perform a dump of state.
 using namespace std;
 #define VK_CHECK(x)                                                 \
 	do                                                              \
@@ -33,48 +34,19 @@ using namespace std;
 
 namespace vkinit {
 
-	VkPipelineShaderStageCreateInfo pipeline_shader_stage_create_info(VkShaderStageFlagBits stage, VkShaderModule module) {
-		VkPipelineShaderStageCreateInfo shaderStageInfo{};
-		shaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-		shaderStageInfo.pNext = nullptr;
-		shaderStageInfo.stage = stage;
-		shaderStageInfo.module = module;
-		shaderStageInfo.pName = "main";
-		return shaderStageInfo;
-	}
-
-	VkPipelineLayoutCreateInfo pipeline_layout_create_info() {
-		VkPipelineLayoutCreateInfo info{};
-		info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-		info.pNext = nullptr;
-		info.flags = 0;
-		info.setLayoutCount = 0;
-		info.pSetLayouts = nullptr;
-		info.pushConstantRangeCount = 0;
-		info.pPushConstantRanges = nullptr;
-		return info;
-	}
-
-	VkComputePipelineCreateInfo compute_pipeline_create_info(VkPipelineLayout layout, const VkPipelineShaderStageCreateInfo& computeStage) {
-		VkComputePipelineCreateInfo info{};
-		info.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
-		info.pNext = nullptr;
-		info.layout = layout;
-		info.stage = computeStage;
-		return info;
-	}
-
 	VkCommandPoolCreateInfo command_pool_create_info(uint32_t queueFamilyIndex, VkCommandPoolResetFlags flags = 0) {
-		VkCommandPoolCreateInfo info{};
+		VkCommandPoolCreateInfo info = {};
 		info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 		info.pNext = nullptr;
+
 		info.flags = flags;
 		return info;
 	}
 	VkCommandBufferAllocateInfo command_allocate_info(VkCommandPool pool, uint32_t count = 1, VkCommandBufferLevel level = VK_COMMAND_BUFFER_LEVEL_PRIMARY) {
-		VkCommandBufferAllocateInfo info{};
+		VkCommandBufferAllocateInfo info = {};
 		info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
 		info.pNext = nullptr;
+
 		info.commandPool = pool;
 		info.commandBufferCount = count;
 		info.level = level;
@@ -82,9 +54,10 @@ namespace vkinit {
 	}
 
 	VkCommandBufferBeginInfo command_buffer_begin_info(VkCommandBufferUsageFlags flags = 0) {
-		VkCommandBufferBeginInfo info{};
+		VkCommandBufferBeginInfo info = {};
 		info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 		info.pNext = nullptr;
+
 		info.pInheritanceInfo = nullptr;
 		info.flags = flags;
 		return info;
@@ -104,13 +77,13 @@ namespace vkinit {
 	}
 
 	VkFenceCreateInfo fence_create_info(VkFenceCreateFlags flags = 0) {
+		VkFenceCreateInfo info = {};
+		info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+		info.pNext = nullptr;
 
-		VkFenceCreateInfo fenceCreateInfo{};
-		fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-		fenceCreateInfo.pNext = nullptr;
-		fenceCreateInfo.flags = flags;
+		info.flags = flags;
 
-		return fenceCreateInfo;
+		return info;
 	}
 	VkSemaphoreCreateInfo semaphore_create_info(VkSemaphoreCreateFlags flags = 0) {
 		VkSemaphoreCreateInfo info = {};
@@ -122,7 +95,7 @@ namespace vkinit {
 	
 	
 	VkSubmitInfo submit_info(VkCommandBuffer* cmd) {
-		VkSubmitInfo info{};
+		VkSubmitInfo info = {};
 		info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 		info.pNext = nullptr;
 
@@ -137,7 +110,7 @@ namespace vkinit {
 		return info;
 	}
 	VkPresentInfoKHR present_info() {
-		VkPresentInfoKHR info = {  };
+		VkPresentInfoKHR info = {};
 		info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 		info.pNext = nullptr;
 
@@ -154,6 +127,13 @@ namespace vkinit {
 namespace vkutil {
 
 	VkRenderPass create_render_pass(VkDevice device, VkFormat image_format) {
+
+		//we define an attachment description for our main color image
+		//the attachment is loaded as "clear" when renderpass start
+		//the attachment is stored when renderpass ends
+		//the attachment layout starts as "undefined", and transitions to "Present" so its possible to display it
+		//we dont care about stencil, and dont use multisampling
+
 		VkAttachmentDescription color_attachment = {};
 		color_attachment.format = image_format;
 		color_attachment.samples = VK_SAMPLE_COUNT_1_BIT;
@@ -168,11 +148,13 @@ namespace vkutil {
 		color_attachment_ref.attachment = 0;
 		color_attachment_ref.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
+		//we are going to create 1 subpass, which is the minimum you can do
 		VkSubpassDescription subpass = {};
 		subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
 		subpass.colorAttachmentCount = 1;
 		subpass.pColorAttachments = &color_attachment_ref;
 
+		//1 dependency, which is from "outside" into the subpass. And we can read or write color
 		VkSubpassDependency dependency = {};
 		dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
 		dependency.dstSubpass = 0;
@@ -180,6 +162,7 @@ namespace vkutil {
 		dependency.srcAccessMask = 0;
 		dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 		dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
 
 		VkRenderPassCreateInfo render_pass_info = {};
 		render_pass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
@@ -198,9 +181,10 @@ namespace vkutil {
 
 class VulkanEngine {
 public:
-	
+	VkSurfaceKHR _surface;
 	VkInstance _instance;
 	VkDevice _device;
+	VkDebugUtilsMessengerEXT _debugMessenger;
 	VkQueue _graphicsQueue;
 	VkSwapchainKHR _swapchain;
 	VkSemaphore _presentSemaphore, _renderSemaphore;
@@ -214,6 +198,7 @@ public:
 	VkCommandBuffer _mainCommandBuffer;
 
 	uint64_t _frameNumber;
+	bool _isInitialized = false;
 
 	void init();
 	void cleanup();
@@ -223,10 +208,13 @@ SDL_Renderer* gRenderer;
 SDL_Window* gWindow;
 void VulkanEngine::init()
 {
-	SDL_Init(SDL_INIT_VIDEO);
-	SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_VULKAN);
-
 	_frameNumber = 0;
+
+	// We initialize SDL and create a window with it. 
+	SDL_Init(SDL_INIT_VIDEO);
+
+	SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_VULKAN);
+	
 	_windowExtent.height = 900;
 	_windowExtent.width = 1700;
 
@@ -234,53 +222,64 @@ void VulkanEngine::init()
 		"Vulkan Engine",
 		SDL_WINDOWPOS_UNDEFINED,
 		SDL_WINDOWPOS_UNDEFINED,
-		1700,
-		900,
+		_windowExtent.width,
+		_windowExtent.height,
 		window_flags
 	);
 	assert(gWindow != nullptr);
 	
+	//Volk needs a pre-initialization before creating the vulkan instance, so that it can load the functions needed to init vulkan
 	volkInitialize();
 
 	vkb::InstanceBuilder builder;
 
+	//make the vulkan instance, with basic debug features
 	auto inst_ret = builder.set_app_name("Example Vulkan Application")
 		.request_validation_layers()		
 		.use_default_debug_messenger()
 		.add_validation_feature_enable(VK_VALIDATION_FEATURE_ENABLE_DEBUG_PRINTF_EXT)
-		.add_debug_messenger_severity(VK_DEBUG_UTILS_MESSAGE_SEVERITY_FLAG_BITS_MAX_ENUM_EXT)
-		.add_debug_messenger_type(VK_DEBUG_UTILS_MESSAGE_TYPE_FLAG_BITS_MAX_ENUM_EXT)
+		//.add_debug_messenger_severity(VK_DEBUG_UTILS_MESSAGE_SEVERITY_FLAG_BITS_MAX_ENUM_EXT)
+		//.add_debug_messenger_type(VK_DEBUG_UTILS_MESSAGE_TYPE_FLAG_BITS_MAX_ENUM_EXT)
 		.build();
 	
 	vkb::Instance vkb_inst = inst_ret.value();
 
+	//grab the instance and debug messenger
 	_instance = vkb_inst.instance;
+	_debugMessenger = vkb_inst.debug_messenger;
 	
+	//now that instance is loaded, use volk to load all the vulkan functions and extensions
 	volkLoadInstance(_instance);
 
-	VkPhysicalDevice dedicatedGPU;
+	
 
-	VkSurfaceKHR vksurface;
-	if (!SDL_Vulkan_CreateSurface(gWindow, _instance, &vksurface)) {
+	//request a Vulkan surface from SDL, this is the actual drawable window output
+	
+	if (!SDL_Vulkan_CreateSurface(gWindow, _instance, &_surface)) {
 		throw std::runtime_error("Failed to create surface");
 		// failed to create a surface!
 	}
 
-	
+	//use vkbootstrap to select a gpu. 
+	//We want a gpu that can write to the SDL surface and supports vulkan 1.2
 	vkb::PhysicalDeviceSelector selector{ vkb_inst };
-	auto phys_ret = selector//.set_surface(/* from user created window*/)
-		.set_minimum_version(1, 2) // require a vulkan 1.1 capable device		
+	auto phys_ret = selector
+		.set_minimum_version(1, 2)
 		.add_required_extension(VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME)
-		.set_surface(vksurface)
+		.set_surface(_surface)
 		.select();
 
-	vkb::DeviceBuilder deviceBuilder{ phys_ret.value() };
-	// automatically propagate needed data from instance & physical device
+	//create the final vulkan device
 
+	vkb::DeviceBuilder deviceBuilder{ phys_ret.value() };	
+	
 	vkb::Device vkbDevice = deviceBuilder.build().value();
 
 	// Get the VkDevice handle used in the rest of a vulkan application
 	_device = vkbDevice.device;
+
+	//now we begin to create the swapchain. We are going to use the lib so it configures everything for us
+	//we want a swapchain with the same size as the SDL window surface, and with default optimal formats
 
 	vkb::SwapchainBuilder swapchainBuilder{ vkbDevice };
 
@@ -292,18 +291,19 @@ void VulkanEngine::init()
 		.value();
 
 	
+	//store swapchain and its related images
 	_swapchain = vkbSwapchain.swapchain;
-
-	uint32_t swapchain_imagecount = vkbSwapchain.image_count;
-
 	_swapchainImages = vkbSwapchain.get_images().value();
 	_swapchainImageViews= vkbSwapchain.get_image_views().value();
 
+	//build the default render-pass we need to do rendering
 	_renderPass = vkutil::create_render_pass(_device, vkbSwapchain.image_format);
 
 
+	//create the framebuffers for the swapchain images. This will connect the render-pass to the images for rendering
 	VkFramebufferCreateInfo fb_info = vkinit::framebuffer_create_info(_renderPass,_windowExtent);
 
+	const uint32_t swapchain_imagecount = vkbSwapchain.image_count;
 	_framebuffers = std::vector<VkFramebuffer>(swapchain_imagecount);
 
 	for (int i = 0; i < swapchain_imagecount; i++) {
@@ -312,19 +312,25 @@ void VulkanEngine::init()
 		VK_CHECK( vkCreateFramebuffer(_device, &fb_info, NULL, &_framebuffers[i]));		
 	}
 
-	// Get the graphics queue with a helper function
+	// use vkbootstrap to get a Graphics queue
 	_graphicsQueue = vkbDevice.get_queue(vkb::QueueType::graphics).value();
 
 	uint32_t graphics_queue_family = vkbDevice.get_queue_index(vkb::QueueType::graphics).value();
 
+	//create a command pool for commands submitted to the graphics queue.
+	//we also want the pool to allow for resetting of individual command buffers
 	VkCommandPoolCreateInfo commandPoolInfo = vkinit::command_pool_create_info(graphics_queue_family, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
 
 	VK_CHECK(vkCreateCommandPool(_device, &commandPoolInfo, nullptr, &_commandPool));
 
+	//allocate the default command buffer that we will use for rendering
 	VkCommandBufferAllocateInfo cmdAllocInfo = vkinit::command_allocate_info(_commandPool, 1);
 
 	VK_CHECK(vkAllocateCommandBuffers(_device, &cmdAllocInfo, &_mainCommandBuffer));
 
+	//create syncronization structures
+	//one fence to control when the gpu has finished rendering the frame,
+	//and 2 semaphores to syncronize rendering with swapchain
 	VkFenceCreateInfo fenceCreateInfo = vkinit::fence_create_info();
 
 	vkCreateFence(_device, &fenceCreateInfo, nullptr, &_renderFence);
@@ -333,44 +339,60 @@ void VulkanEngine::init()
 
 	VK_CHECK(vkCreateSemaphore(_device, &sephoreCreateInfo, NULL, &_presentSemaphore));
 	VK_CHECK(vkCreateSemaphore(_device, &sephoreCreateInfo, NULL, &_renderSemaphore));	
+
+	//everything went fine
+	_isInitialized = true;
 }
 void VulkanEngine::draw() {	
 	
+	//wait until the gpu has finished rendering the last frame.
 	vkWaitForFences(_device, 1, &_renderFence, true, 999999999);
 	vkResetFences(_device, 1, &_renderFence);
 
+	//now that we are sure that the commands finished executing, we can safely reset the command buffer to begin recording again.
 	vkResetCommandBuffer(_mainCommandBuffer, 0);	
-		
+	
+	//request image from the swapchain
 	uint32_t imageIndex;
 	VK_CHECK( vkAcquireNextImageKHR(_device, _swapchain, 0, _presentSemaphore, NULL, &imageIndex));	
 	
-	VkCommandBufferAllocateInfo cmdAllocInfo = vkinit::command_allocate_info(_commandPool, 1);
-	
+	//naming it cmd for shorter writing
 	VkCommandBuffer cmd = _mainCommandBuffer;
 
+	//begin the command buffer recording. We will use this command buffer exactly once, so we want to let vulkan know that
 	VkCommandBufferBeginInfo cmdBeginInfo = vkinit::command_buffer_begin_info(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 
+	VK_CHECK(vkBeginCommandBuffer(cmd, &cmdBeginInfo));
+
+	//make a clear-color from frame number. This will flash with a 120 frame period.
 	VkClearValue clearValue;
-
 	float flash = abs(sin(_frameNumber / 120.f));
-	clearValue.color = { { 0.0f, 0.0f, flash, 1.0f } };
+	clearValue.color = { { 0.0f, 0.0f, flash, 1.0f } };	
 
+	//start the main renderpass. 
+	//We will use the clear color from above, and the framebuffer of the index the swapchain gave us
 	VkRenderPassBeginInfo rpInfo = {  };
 	rpInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 	rpInfo.renderPass = _renderPass;
 	rpInfo.renderArea.offset.x = 0;
 	rpInfo.renderArea.offset.y = 0;
 	rpInfo.renderArea.extent = _windowExtent;
-	rpInfo.clearValueCount = 2;
+	rpInfo.clearValueCount = 1;
 	rpInfo.pClearValues = &clearValue;
 	rpInfo.framebuffer = _framebuffers[imageIndex];
 
-	VK_CHECK(vkBeginCommandBuffer(cmd, &cmdBeginInfo));
-
 	vkCmdBeginRenderPass(cmd, &rpInfo, VK_SUBPASS_CONTENTS_INLINE);
 
+	//once we start adding rendering commands, they will go here
+
+	//finalize the render pass
 	vkCmdEndRenderPass(cmd);
+	//finalize the command buffer (we can no longer add commands, but it can now be executed)
 	VK_CHECK(vkEndCommandBuffer(cmd));
+
+	//prepare the submission to the queue. 
+	//we want to wait on the _presentSemaphore, as that semaphore is signaled when the swapchain is ready
+	//we will signal the _renderSemaphore, to signal that rendering has finished
 
 	VkSubmitInfo submit = vkinit::submit_info(&cmd);
 	VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
@@ -383,8 +405,14 @@ void VulkanEngine::draw() {
 	submit.signalSemaphoreCount = 1;
 	submit.pSignalSemaphores = &_renderSemaphore;
 
+	//submit command buffer to the queue and execute it.
+	// _renderFence will now block until the graphic commands finish execution
 	VK_CHECK(vkQueueSubmit(_graphicsQueue, 1, &submit, _renderFence));
 
+	//prepare present
+	// this will put the image we just rendered to into the visible window.
+	// we want to wait on the _renderSemaphore for that, 
+	// as its necessary that drawing commands have finished before the image is displayed to the user
 	VkPresentInfoKHR presentInfo = vkinit::present_info();
 
 	presentInfo.pSwapchains = &_swapchain;
@@ -397,13 +425,42 @@ void VulkanEngine::draw() {
 
 	VK_CHECK (vkQueuePresentKHR(_graphicsQueue, &presentInfo));
 
+	//increase the number of frames drawn
 	_frameNumber++;
 }
 void VulkanEngine::cleanup()
-{
+{	
+	//make sure the gpu has stopped doing its things
+	vkWaitForFences(_device, 1, &_renderFence, true, 999999999);
+
 	vkDestroyCommandPool(_device, _commandPool, nullptr);
+
+	//destroy sync objects
+	vkDestroyFence(_device, _renderFence, nullptr);
+	vkDestroySemaphore(_device, _renderSemaphore, nullptr);
+	vkDestroySemaphore(_device, _presentSemaphore, nullptr);
+	
+	vkDestroySwapchainKHR(_device, _swapchain, nullptr);
+
+	vkDestroyRenderPass(_device, _renderPass, nullptr);
+	
+	//destroy swapchain resources
+	for (int i = 0; i < _framebuffers.size(); i++) {
+		vkDestroyFramebuffer(_device, _framebuffers[i], nullptr);
+
+		vkDestroyImageView(_device, _swapchainImageViews[i], nullptr);
+	}
+
+	vkDestroySurfaceKHR(_instance, _surface, nullptr);
+
+	//destroy debug utils
+	vkDestroyDebugUtilsMessengerEXT(_instance, _debugMessenger, nullptr);
+
 	vkDestroyDevice(_device, nullptr);
-	vkDestroyInstance(_instance,nullptr);
+	vkDestroyInstance(_instance,nullptr);	
+	
+	SDL_DestroyWindow(gWindow);
+	
 }
 
 int main(int argc, char* argv[])
@@ -417,22 +474,30 @@ int main(int argc, char* argv[])
 
 	SDL_Event e;
 	bool bQuit = false;
+	//main loop
 	while (!bQuit)
 	{		
 		//Handle events on queue
 		while (SDL_PollEvent(&e) != 0)
 		{
+			//close the window when user alt-f4s or clicks the X button
 			if (e.type == SDL_QUIT) bQuit = true;
 		}
 
 		engine.draw();
 
 		
-		//wait a few ms because it will go into the thousands otherwise
+		//wait a few ms because it will go into the thousands otherwise.
+		// We can remove this if we use vsync or have heavier render commands
 		std::this_thread::sleep_for(10ms);
 	}
 
-	engine.cleanup();
+	if (engine._isInitialized) {
+
+		//make sure to release the resources of the engine properly if it was initialized well		
+		engine.cleanup();
+	}
+	
 
 	return 0;
 }
