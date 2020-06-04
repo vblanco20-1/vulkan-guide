@@ -122,6 +122,21 @@ namespace vkinit {
 
 		return info;
 	}
+	VkRenderPassBeginInfo renderpass_begin_info(VkRenderPass renderPass,VkExtent2D windowExtent,VkFramebuffer framebuffer) {
+		VkRenderPassBeginInfo info = {};
+		info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+		info.pNext = nullptr;
+
+		info.renderPass = renderPass;
+		info.renderArea.offset.x = 0;
+		info.renderArea.offset.y = 0;
+		info.renderArea.extent = windowExtent;
+		info.clearValueCount = 1;
+		info.pClearValues =nullptr;
+		info.framebuffer = framebuffer;
+
+		return info;
+	}
 	
 }
 namespace vkutil {
@@ -331,9 +346,10 @@ void VulkanEngine::init()
 	//create syncronization structures
 	//one fence to control when the gpu has finished rendering the frame,
 	//and 2 semaphores to syncronize rendering with swapchain
-	VkFenceCreateInfo fenceCreateInfo = vkinit::fence_create_info();
+	//we want the fence to start signalled so we can wait on it on the first frame
+	VkFenceCreateInfo fenceCreateInfo = vkinit::fence_create_info(VK_FENCE_CREATE_SIGNALED_BIT);
 
-	vkCreateFence(_device, &fenceCreateInfo, nullptr, &_renderFence);
+	VK_CHECK(vkCreateFence(_device, &fenceCreateInfo, nullptr, &_renderFence));
 
 	VkSemaphoreCreateInfo sephoreCreateInfo = vkinit::semaphore_create_info();
 
@@ -346,15 +362,15 @@ void VulkanEngine::init()
 void VulkanEngine::draw() {	
 	
 	//wait until the gpu has finished rendering the last frame.
-	vkWaitForFences(_device, 1, &_renderFence, true, 999999999);
-	vkResetFences(_device, 1, &_renderFence);
+	VK_CHECK(vkWaitForFences(_device, 1, &_renderFence, true, 999999999));
+	VK_CHECK(vkResetFences(_device, 1, &_renderFence));
 
 	//now that we are sure that the commands finished executing, we can safely reset the command buffer to begin recording again.
-	vkResetCommandBuffer(_mainCommandBuffer, 0);	
+	VK_CHECK(vkResetCommandBuffer(_mainCommandBuffer, 0));
 	
 	//request image from the swapchain
-	uint32_t imageIndex;
-	VK_CHECK( vkAcquireNextImageKHR(_device, _swapchain, 0, _presentSemaphore, NULL, &imageIndex));	
+	uint32_t swapchainImageIndex;
+	VK_CHECK( vkAcquireNextImageKHR(_device, _swapchain, 0, _presentSemaphore, NULL, &swapchainImageIndex));	
 	
 	//naming it cmd for shorter writing
 	VkCommandBuffer cmd = _mainCommandBuffer;
@@ -371,15 +387,11 @@ void VulkanEngine::draw() {
 
 	//start the main renderpass. 
 	//We will use the clear color from above, and the framebuffer of the index the swapchain gave us
-	VkRenderPassBeginInfo rpInfo = {  };
-	rpInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-	rpInfo.renderPass = _renderPass;
-	rpInfo.renderArea.offset.x = 0;
-	rpInfo.renderArea.offset.y = 0;
-	rpInfo.renderArea.extent = _windowExtent;
+	VkRenderPassBeginInfo rpInfo = vkinit::renderpass_begin_info(_renderPass,_windowExtent,_framebuffers[swapchainImageIndex]);
+	
+	//connect clear values
 	rpInfo.clearValueCount = 1;
-	rpInfo.pClearValues = &clearValue;
-	rpInfo.framebuffer = _framebuffers[imageIndex];
+	rpInfo.pClearValues = &clearValue;	
 
 	vkCmdBeginRenderPass(cmd, &rpInfo, VK_SUBPASS_CONTENTS_INLINE);
 
@@ -421,7 +433,7 @@ void VulkanEngine::draw() {
 	presentInfo.pWaitSemaphores = &_renderSemaphore;
 	presentInfo.waitSemaphoreCount = 1;
 
-	presentInfo.pImageIndices = &imageIndex;
+	presentInfo.pImageIndices = &swapchainImageIndex;
 
 	VK_CHECK (vkQueuePresentKHR(_graphicsQueue, &presentInfo));
 
