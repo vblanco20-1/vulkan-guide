@@ -1,10 +1,5 @@
-﻿// vulkan_guide.cpp : Defines the entry point for the application.
-//
-#include "volk.h"
+﻿#include "volk.h"
 #define VK_NO_PROTOTYPES
-
-//#define VMA_IMPLEMENTATION
-//#include "vk_mem_alloc.h"
 
 #include "VkBootstrap.h"
 
@@ -15,8 +10,6 @@
 #include <SDL.h>
 #include <SDL_vulkan.h>
 
-#include <chrono>
-#include <thread>
 
 //we want to immediately abort when there is an error. In normal engines this would give an error message to the user, or perform a dump of state.
 using namespace std;
@@ -486,12 +479,8 @@ void VulkanEngine::cleanup()
 
 int main(int argc, char* argv[])
 {
-	using namespace std::chrono_literals;
-	using std::chrono::system_clock;
-
 	VulkanEngine engine;
 	engine.init();
-
 
 	SDL_Event e;
 	bool bQuit = false;
