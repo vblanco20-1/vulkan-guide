@@ -18,7 +18,7 @@
 #include <chrono>
 #include <thread>
 
-//we want to inmediately abord when there is an error. In normal engines this would give an error message to the user, or perform a dump of state.
+//we want to immediately abort when there is an error. In normal engines this would give an error message to the user, or perform a dump of state.
 using namespace std;
 #define VK_CHECK(x)                                                 \
 	do                                                              \
@@ -308,7 +308,8 @@ void VulkanEngine::init()
 
 	vkb::Swapchain vkbSwapchain = swapchainBuilder
 		.use_default_format_selection()
-		.use_default_present_mode_selection()
+		//use vsync present mode
+		.set_desired_present_mode(VK_PRESENT_MODE_FIFO_KHR)
 		.set_desired_extent(_windowExtent.width, _windowExtent.height)
 		.build()
 		.value();
@@ -332,7 +333,7 @@ void VulkanEngine::init()
 	for (int i = 0; i < swapchain_imagecount; i++) {
 		
 		fb_info.pAttachments = &_swapchainImageViews[i];
-		VK_CHECK( vkCreateFramebuffer(_device, &fb_info, NULL, &_framebuffers[i]));		
+		VK_CHECK( vkCreateFramebuffer(_device, &fb_info, nullptr, &_framebuffers[i]));		
 	}
 
 	// use vkbootstrap to get a Graphics queue
@@ -361,16 +362,16 @@ void VulkanEngine::init()
 
 	VkSemaphoreCreateInfo sephoreCreateInfo = vkinit::semaphore_create_info();
 
-	VK_CHECK(vkCreateSemaphore(_device, &sephoreCreateInfo, NULL, &_presentSemaphore));
-	VK_CHECK(vkCreateSemaphore(_device, &sephoreCreateInfo, NULL, &_renderSemaphore));	
+	VK_CHECK(vkCreateSemaphore(_device, &sephoreCreateInfo, nullptr, &_presentSemaphore));
+	VK_CHECK(vkCreateSemaphore(_device, &sephoreCreateInfo, nullptr, &_renderSemaphore));	
 
 	//everything went fine
 	_isInitialized = true;
 }
 void VulkanEngine::draw() {	
 	
-	//wait until the gpu has finished rendering the last frame.
-	VK_CHECK(vkWaitForFences(_device, 1, &_renderFence, true, 999999999));
+	//wait until the gpu has finished rendering the last frame. Timeout of 1 second
+	VK_CHECK(vkWaitForFences(_device, 1, &_renderFence, true, 1000000000));
 	VK_CHECK(vkResetFences(_device, 1, &_renderFence));
 
 	//now that we are sure that the commands finished executing, we can safely reset the command buffer to begin recording again.
@@ -378,7 +379,7 @@ void VulkanEngine::draw() {
 	
 	//request image from the swapchain
 	uint32_t swapchainImageIndex;
-	VK_CHECK( vkAcquireNextImageKHR(_device, _swapchain, 0, _presentSemaphore, NULL, &swapchainImageIndex));	
+	VK_CHECK( vkAcquireNextImageKHR(_device, _swapchain, 0, _presentSemaphore, nullptr , &swapchainImageIndex));	
 	
 	//naming it cmd for shorter writing
 	VkCommandBuffer cmd = _mainCommandBuffer;
@@ -504,12 +505,7 @@ int main(int argc, char* argv[])
 			if (e.type == SDL_QUIT) bQuit = true;
 		}
 
-		engine.draw();
-
-		
-		//wait a few ms because it will go into the thousands otherwise.
-		// We can remove this if we use vsync or have heavier render commands
-		std::this_thread::sleep_for(10ms);
+		engine.draw();	
 	}
 
 	if (engine._isInitialized) {
