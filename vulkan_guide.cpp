@@ -31,6 +31,8 @@ using namespace std;
 		}                                                           \
 	} while (0)
 
+//set to false to disable validation layers
+const bool bUseValidationLayers = true;
 
 namespace vkinit {
 
@@ -196,21 +198,27 @@ namespace vkutil {
 
 class VulkanEngine {
 public:
-	VkSurfaceKHR _surface;
+
+	
 	VkInstance _instance;
 	VkDevice _device;
-	VkDebugUtilsMessengerEXT _debugMessenger;
-	VkQueue _graphicsQueue;
-	VkSwapchainKHR _swapchain;
+	VkDebugUtilsMessengerEXT _debugMessenger;	
+	
 	VkSemaphore _presentSemaphore, _renderSemaphore;
-	VkFence _renderFence;
+	VkFence _renderFence;	
+
+	VkQueue _graphicsQueue;
 	VkCommandPool _commandPool;
+	VkCommandBuffer _mainCommandBuffer;
+
+	VkSurfaceKHR _surface;
 	VkRenderPass _renderPass;
-	std::vector<VkFramebuffer> _framebuffers;
 	VkExtent2D _windowExtent;
+	VkSwapchainKHR _swapchain;
+	std::vector<VkFramebuffer> _framebuffers;
 	std::vector<VkImage> _swapchainImages;
 	std::vector<VkImageView> _swapchainImageViews;
-	VkCommandBuffer _mainCommandBuffer;
+	
 
 	uint64_t _frameNumber;
 	bool _isInitialized = false;
@@ -219,7 +227,7 @@ public:
 	void cleanup();
 	void draw();
 };
-SDL_Renderer* gRenderer;
+
 SDL_Window* gWindow;
 void VulkanEngine::init()
 {
@@ -250,7 +258,7 @@ void VulkanEngine::init()
 
 	//make the vulkan instance, with basic debug features
 	auto inst_ret = builder.set_app_name("Example Vulkan Application")
-		.request_validation_layers()		
+		.request_validation_layers(bUseValidationLayers)
 		.use_default_debug_messenger()
 		.add_validation_feature_enable(VK_VALIDATION_FEATURE_ENABLE_DEBUG_PRINTF_EXT)
 		//.add_debug_messenger_severity(VK_DEBUG_UTILS_MESSAGE_SEVERITY_FLAG_BITS_MAX_ENUM_EXT)
