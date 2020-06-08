@@ -8,7 +8,7 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Fusce pharetra risus vi
 
 - Project setup: 
 
-- Libraries and build scripts: {% post_url 2020-06-08-post-libraries %}
+- Libraries and build scripts: [link]({% post_url 2020-06-08-post-libraries %})
 
 
 
