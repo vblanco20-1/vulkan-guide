@@ -30,3 +30,5 @@ It doesnt matter where its installed. Once its installed and the PC is rebooted,
 Now that the dependencies are set, you can proceed with CMake and Configure then Generate the project files for visual studio (or your IDE of choice). 
 
 From visual studio, select the vulkan-guide target, set as Startup Project, and you can now compile and execute it by just hitting F5 (start debugging)
+
+If you get the message of SDL2 dll missing, go to your sdl folder, lib directory, and grab the dlls from there. Paste them on vulkan_guide/bin/Debug/ folder. (Or Release) . The dll has to be by the side of the vulkan_guide.exe
