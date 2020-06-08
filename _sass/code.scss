@@ -250,6 +250,7 @@ figure.highlight {
 
   + .highlighter-rouge,
   + figure.highlight {
+    line-height: initial;
     position: relative;
     margin-top: -$sp-4;
     border-right: 1px solid $border-color;
