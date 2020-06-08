@@ -1,0 +1,110 @@
+// Header text feature
+.call-out {
+    @extend %padding-regular;
+    display: inline-block;
+    width: 100%;
+    height: 100%;
+    font-size: 1.2em;
+    text-align: center;
+    color: $header-desc-text-color;
+    background: $header-desc-background-color no-repeat;
+    background-size: $feature-image-size;
+
+    /* --- Responsive --- */
+    @media screen and (max-width: 850px) {
+        background-size: 100% auto;
+    } 
+    
+    //For white images
+    p,
+    a,
+    li,
+    h1,
+    h2,
+    h3,
+    h4,
+    h5 {
+        @extend .header-txt-shadow;
+    }
+
+    p:last-child {
+        margin-bottom: 0;
+    }
+}
+
+#main {
+    background-position: 100% 0, 0 center, center top;
+}
+
+// Post listing
+.posts {
+    .post-teaser {
+        @extend %padding-regular;
+        width: 100%;
+        margin-bottom: 0;
+        display: inline-block;
+        background-size: $feature-image-size;
+        border-bottom: 1px solid $border-color;
+        p a {
+            @extend .body-link;
+        }
+        img {
+            padding: 0;
+            vertical-align: middle;
+        }
+
+        .post-img {
+            vertical-align: middle;
+            border-radius: 25px;
+            overflow: hidden;
+
+            @media (min-width: $break) {
+                height: 250px;
+            } //Smaller screen
+            @media screen and (max-width: $break) {
+                height: 150px;
+            }
+        }
+
+        .post-img img {
+            //max-width: 100%;
+            -moz-transform: scale(1);
+            -webkit-transform: scale(1);
+            transform: scale(1);
+
+            -moz-transition-timing-function: ease-out;
+            -webkit-transition-timing-function: ease-out;
+            transition-timing-function: ease-out;
+
+            -moz-transition: all 5s;
+            -webkit-transition: all 5s;
+            transition: all 5s;
+
+            &:hover {
+                -moz-transform: scale(1.3);
+                -webkit-transform: scale(1.3);
+                transform: scale(1.3);
+            }
+        }
+    }
+    .excerpt {
+        margin-top: 1em;
+    }
+}
+
+// Pagination
+.pagination {
+    padding: $padding-small $padding-large 0 $padding-large;
+    text-align: center;
+    @media (max-width: 600px) {
+        padding: $padding-small;
+    }
+
+    .button {
+        margin: 0 1.5em;
+        i {
+            vertical-align: middle;
+        }
+    }
+
+}

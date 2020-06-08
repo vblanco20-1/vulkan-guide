@@ -1,0 +1,54 @@
+---
+layout: page
+---
+
+<!-- Html Elements for Search -->
+<input type="text" id="search-input" placeholder="Enter keywords..." class="search-bar">
+<br>
+<br>
+<ul id="results-container"></ul>
+
+<section>
+    <!-- Script pointing to jekyll-search.js -->
+    <script src="{{ site.baseurl }}/assets/js/simple-jekyll-search.min.js" type="text/javascript"></script>
+
+    <script type="text/javascript">
+        SimpleJekyllSearch({
+            searchInput: document.getElementById('search-input'),
+            resultsContainer: document.getElementById('results-container'),
+            json: [
+                    {% if site.theme_settings.search %}
+                     {% for post in site.posts %}
+                        {
+                          "title"    : "{{ post.title | escape }}",
+                          "category" : "{{ post.category }}",
+                          "tags"     : "{{ post.tags | join: ', ' | prepend: " " }}",
+                          "url"      : "{{ site.baseurl }}{{ post.url }}",
+                          "date"     : "{{ post.date | date: "%B %-d, %Y" }}",
+                          "excerpt"  : "{{ post.content | strip_html | strip_newlines | replace: '"', '\\"' | truncate: '250'}}",
+                          "content"  : "{{ post.content | strip_html | strip_newlines | replace: '"', '\\"' }}"
+                        } {% unless forloop.last %},{% endunless %}
+                     {% endfor %},
+                     {% for page in site.portfolio %}
+                       {
+                         {% if page.title != nil %}
+                            "title"    : "{{ page.title | escape }}",
+                            "category" : "{{ page.category }}",
+                            "tags"     : "{{ page.tags | join: ', ' | prepend: " " }}",
+                            "url"      : "{{ site.baseurl }}{{ page.url }}",
+                            "date"     : "{{ page.date | date: "%B %-d, %Y" }}",
+                            "excerpt"  : "{{ post.content | strip_html | strip_newlines | replace: '"', '\\"' | truncate: '250'}}",
+                            "content"  : "{{ page.content | strip_html | strip_newlines | replace: '"', '\\"' }}"
+                         {% endif %}
+                       } {% unless forloop.last %},{% endunless %}
+                     {% endfor %}
+                    {% endif %}
+                  ],
+            searchResultTemplate: '<div class="search-title"><a href="{url}"><h3> {title}</h3></a><div class="meta">{date} <div class="right"><i class="fa fa-tag"></i> {tags}</div></div><p>{excerpt}</p></div><hr> ',
+            noResultsText: 'No results found',
+            limit: 10,
+            fuzzy: false,
+            exclude: []
+        })
+    </script>
+</section>

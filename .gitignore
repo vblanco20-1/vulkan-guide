@@ -1,0 +1,22 @@
+# Idea files
+.idea/*
+
+# Mac files
+.DS_Store
+
+# Byte-compiled / optimized / DLL files
+*.manifest
+*.spec
+
+# Jekyll dev or build files
+_site/*
+_development_tool/*
+.sass-cache/*
+*.css.map
+*.scssc
+
+# Theme Gem files
+Gemfile.lock
+*.gem
+
+victorblog.code-workspace

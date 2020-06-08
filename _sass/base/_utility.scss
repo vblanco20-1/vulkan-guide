@@ -1,0 +1,71 @@
+// Mix-ins
+%padding-small {
+    padding: $padding-x-small $padding-x-small * 2;
+    @media (max-width: 1000px) {
+        padding: $padding-x-small $padding-x-small;
+    }
+}
+
+%padding-regular {
+    padding: $padding-small $padding-large;
+    @media (max-width: 1000px) {
+        padding: $padding-small * 1.5 $padding-large / 1.6;
+    }
+    @media (max-width: 576px) {
+        padding: $padding-small;
+    }
+}
+
+.header-txt-shadow {
+    text-shadow: 1px 1px 2px $text-shadow;
+}
+
+// Buttons
+.button {
+    border-radius: 0.3em;
+    border: 1px solid;
+    display: inline-block;
+    margin: 1em 0;
+    padding: 0.5em 0.75em;
+}
+
+a.button {
+    @extend .button-link;
+}
+
+.button-link {
+    &:hover {
+        background: $link-color;
+        border: 1px solid $link-color;
+        color: $background-color;
+        text-decoration: none;
+    }
+}
+
+.body-link {
+    &:hover {
+        text-decoration: underline;
+        color: darken($link-color, 15%);
+    }
+}
+
+.post-link {
+    &:hover {
+        text-decoration: none;
+        color: lighten($link-color, 10%);
+    }
+}
+
+// States
+.disabled {
+    opacity: 0.7;
+}
+
+// Custom
+.text-center {
+    text-align: center;
+}
+
+.right {
+    float: right;
+}

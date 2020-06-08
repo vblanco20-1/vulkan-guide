@@ -1,0 +1,19 @@
+language: ruby
+rvm:
+- 2.3.3
+script: "bundle install & bundle exec jekyll build"
+
+notifications:
+  email: false
+
+# branch whitelist, only for GitHub Pages
+branches:
+  only:
+  - gh-pages
+  - master
+
+env:
+  global:
+  - NOKOGIRI_USE_SYSTEM_LIBRARIES=true # speeds up installation of html-proofer
+
+sudo: false # route your build to the container-based infrastructure for a faster build

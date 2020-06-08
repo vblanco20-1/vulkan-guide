@@ -1,0 +1,144 @@
+.site-header {
+    padding: $padding-x-small;
+    background: $brand-color;
+    display: inline-block;
+    float: left;
+    width: 100%;
+
+    .separator {
+        user-select: none;
+        opacity: $navbar-separator-opacity;
+
+        &:first-child {
+            display: none;
+        }
+    }
+
+    a {
+        color: $header-link-color;
+    }
+
+    .avatar {
+        height: 3em;
+        width: 3em;
+        float: left;
+        margin-top: -13px;
+        border-radius: 0.2em;
+        margin-right: 0.5em;
+        padding: 10px 10px;
+
+    }
+
+    .site-title {
+        float: left;
+        font-weight: bold;
+        font-size: 1em;
+        line-height: 1.5;
+    }
+
+    nav {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        ul {
+            margin: 0;
+            padding: 0;
+            list-style: none;
+            line-height: 1.5;
+            float: right;
+            text-align: right;
+        }
+        li {
+            display: inline;
+            float: left;
+            margin-right: 0.4em;
+        }
+        a {
+            &:hover {
+                color: $link-color;
+            }
+            &#pull {
+                i {
+                    margin-top: 13px;
+                    float: right;
+                }
+
+            }
+
+        }
+    }
+}
+
+
+// To clear things when we float the element inisde nav and ul 
+.clear {
+    *zoom: 1;
+
+    &:after {
+        clear: both;
+    }
+
+    &:before,
+    &:after {
+        content: " ";
+        display: table;
+    }
+}
+
+/* ---- Responsive ---- */
+
+@media (min-width: $break) {
+    a#pull {
+        display: none;
+    }
+}
+
+@media screen and (max-width: $break) {
+    .site-header {
+        img.avatar {
+            margin-top: -7px
+        }
+        .site-title {
+            margin-top: 7px;
+        }
+    }
+
+    nav {
+        height: auto;
+
+        .separator {
+            display: none !important;
+        }
+
+        ul {
+            width: 100%;
+            display: none;
+            height: auto;
+        }
+
+        li {
+            width: 100%;
+            float: left;
+            position: relative;
+        }
+
+        a {
+            text-align: left;
+            width: 100%;
+
+            &#pull {
+                display: block;
+                width: 100%;
+                position: relative;
+
+                &:after {
+                    content: "";
+                    display: inline-block;
+                    position: absolute;
+                    right: 15px;
+                    top: 10px;
+                }
+            }
+        }
+    }
+}

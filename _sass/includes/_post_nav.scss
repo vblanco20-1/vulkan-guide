@@ -1,0 +1,22 @@
+#post-nav {
+    width: 100%;
+    display: inline-block;
+    @extend %padding-small;
+   
+    a {
+        width: 100%;
+        padding: 0;
+        margin: 0;
+    }
+    p {
+        @extend .meta;
+    }
+    
+    #previous-post {
+        float: left;
+    }
+    
+    #next-post {
+        float: right;
+    }
+}

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+    <channel>
+        <title>{{ site.theme_settings.title | xml_escape }}</title>
+        <atom:link href="{{ "/feed.xml" | relative_url }}" rel="self" type="application/rss+xml"/>
+        <link>{{ site.url }}{{ site.baseurl }}/</link>
+        <description>{{ site.theme_settings.description | xml_escape }}</description>
+        <pubDate>{{ site.time | date_to_rfc822 }}</pubDate>
+        {% for post in site.posts limit:15 %}
+        <item>
+            <title>{{ post.title | xml_escape }}</title>
+            <link>{{ post.url | relative_url }}</link>
+            <guid isPermaLink="true">{{ post.url | relative_url }}</guid>
+            <description>{{ post.content | xml_escape }}</description>
+            <pubDate>{{ post.date | date_to_rfc822 }}</pubDate>
+        </item>
+        {% endfor %}
+    </channel>
+</rss>

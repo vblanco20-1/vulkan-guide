@@ -1,0 +1,73 @@
+// Typography
+$font-family-main: 'Source Sans Pro', Helvetica, Arial, sans-serif;
+$font-family-headings: 'Source Sans Pro', Helvetica, Arial, sans-serif;
+$font-size: 1.25em;
+
+
+// Padding
+$padding-large: 20%;
+$padding-small: 5%;
+$padding-x-small: 3%;
+
+// Brand colours
+$brand-color: #fff;
+$background-color: #fff;
+$border-color: rgba(0, 0, 0, 0.1); // rgba recommended if using feature images
+
+// Typography colours
+$text-color: #383838;
+$link-color: #507492; // #1ABC9C;
+$selection-color: #D4D4D4; // visible when highlighting text
+$blockquote-color: #EEF7FA; // $background-color;
+
+//Search color
+$link-shadow: transparentize($link-color, .6); //rgba(26, 188, 156, 0.6);
+$text-shadow: #3f3f3f;
+$search-color: #999;
+
+// Header colours
+$header-link-color: #383838;
+$navbar-separator-opacity: 0;
+
+// Feature image for articles
+$feature-image-text-color: #fff;
+$feature-image-size: cover; // options include "cover", "contain", "auto"
+// Header description box
+$header-desc-background-color: #507492;
+$header-desc-text-color: #FFF;
+
+// Mobile display
+$break: 768px;
+$sm-break: 450px;
+
+
+/*  Syntax highlighting  */
+// Syntax typography
+$monospace: Monaco, Consolas, "Lucida Console", monospace !default;
+$font-size-code: 0.75em !default; // ~12px
+$border-radius: 4px !default;
+
+
+
+// base16 Material Theme
+$base00: #263238 !default;  // Default Background
+$base01: #2E3C43 !default;  // Lighter Background (Used for status bars)
+$base02: #314549 !default;  // Selection Background
+$base03: #546E7A !default;  // Comments, Invisibles, Line Highlighting
+$base04: #B2CCD6 !default;  // Dark Foreground (Used for status bars)
+$base05: #EEFFFF !default;  // Default Foreground, Caret, Delimiters, Operators
+$base06: #EEFFFF !default;  // Light Foreground (Not often used)
+$base07: #FFFFFF !default;  // Light Background (Not often used)
+$base08: #F07178 !default;  // Variables, XML Tags, Markup Link Text, Markup Lists, Diff Deleted
+$base09: #F78C6C !default;  // Integers, Boolean, Constants, XML Attributes, Markup Link Url
+$base0a: #FFCB6B !default;  // Classes, Markup Bold, Search Text Background
+$base0b: #98C379 !default;  // Strings, Inherited Class, Markup Code, Diff Inserted
+$base0c: #89DDFF !default;  // Support, Regular Expressions, Escape Characters, Markup Quotes
+$base0d: #82AAFF !default;  // Functions, Methods, Attribute IDs, Headings
+$base0e: #C792EA !default;  // Keywords, Storage, Selector, Markup Italic, Diff Changed
+$base0f: #FF5370 !default;  // Deprecated, Opening/Closing Embedded Language Tags e.g.
+
+
+
+
+

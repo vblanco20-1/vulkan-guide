@@ -1,5 +1,8 @@
-remote_theme: poole/hyde
-url: "http://victor.madtriangles.com/vulkan_guide/"
+# SITE CONFIGURATION
+#baseurl: "/Type-on-Strap"
+url: "http://victor.madtriangles.com/vulkan-guide/"
+title: Victors Blog # site's title
+description: "Victor Blanco blog website" # used by search engines
 
 
 # THEME-SPECIFIC CONFIGURATION
