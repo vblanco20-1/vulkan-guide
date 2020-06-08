@@ -4,7 +4,7 @@
 // stylelint-disable selector-no-qualifying-type, declaration-block-semicolon-newline-after,declaration-block-single-line-max-declarations, selector-no-type, selector-max-type
 
 code {
-  line-height: 1;
+  
   padding: 0.0em 0.0em;
   font-weight: 400;
   background-color: $code-background-color;
@@ -248,10 +248,10 @@ figure.highlight {
   overflow: auto;
   border: 1px solid $border-color;
   border-radius: $border-radius;
-
+  line-height: 1;
   + .highlighter-rouge,
   + figure.highlight {
-    line-height: initial;
+    line-height: 1.0;
     position: relative;
     margin-top: -$sp-4;
     border-right: 1px solid $border-color;
