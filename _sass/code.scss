@@ -10,6 +10,7 @@ code {
   background-color: $code-background-color;
   border: $border $border-color;
   border-radius: $border-radius;
+  line-height: 1.0;
 }
 
 pre.highlight,
@@ -19,7 +20,9 @@ figure.highlight {
   -webkit-overflow-scrolling: touch;
   background-color: $code-background-color;
 
+  line-height: 1.0;
   code {
+    line-height: 1.0;
     padding: 0;
     border: 0;
   }
