@@ -1,5 +1,5 @@
 # SITE CONFIGURATION
-#baseurl: "/Type-on-Strap"
+baseurl: "/vulkan-guide"
 url: "http://victor.madtriangles.com/vulkan-guide/ "
 title: Vulkan Guide # site's title
 description: "Brand new guide to vulkan graphics programming" # used by search engines
