@@ -1,12 +1,18 @@
-## Welcome to GitHub Pages
+## Welcome to VulkanGuide
 
-You can use the [editor on GitHub](https://github.com/vblanco20-1/vulkan-guide/edit/master/index.md) to maintain and preview the content for your website in Markdown files.
+WIP
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Fusce pharetra risus vitae metus fermentum, rutrum blandit nisi lobortis. Sed vel mi vitae felis condimentum accumsan. Duis non felis eu odio gravida molestie ac ut ante. Fusce quis tincidunt diam, eu ultrices nibh. Cras sem magna, lacinia convallis molestie non, condimentum ut velit. Aenean semper aliquet metus ac blandit. In nisi neque, molestie accumsan gravida eget, suscipit ut metus. Pellentesque vitae sollicitudin dui, sed dignissim lorem. Vivamus sit amet dignissim diam, ut semper lectus. Aenean interdum aliquet lacus vel rhoncus. Aliquam mollis blandit sapien quis sagittis.
 
-Whenever you commit to this repository, GitHub Pages will run [Jekyll](https://jekyllrb.com/) to rebuild the pages in your site, from the content in your Markdown files.
+### Index
 
-### Markdown
 
-Markdown is a lightweight and easy-to-use syntax for styling your writing. It includes conventions for
+- Project setup: 
+
+- Libraries and build scripts: {% post_url 2020-06-08-post-libraries %}
+
+
+
+
 
 ```markdown
 Syntax highlighted code block
