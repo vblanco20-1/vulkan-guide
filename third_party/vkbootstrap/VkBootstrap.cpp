@@ -1,7 +1,7 @@
 
-#define VK_NO_PROTOTYPES
+//#define VK_NO_PROTOTYPES
 #include "VkBootstrap.h"
-#include "volk.h"
+//#include "volk.h"
 #include <stdio.h>
 #include <string.h>
 
