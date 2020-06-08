@@ -1,4 +1,4 @@
-theme: jekyll-theme-dinky
+remote_theme: poole/hyde
 url: "http://victor.madtriangles.com/vulkan_guide/"
 
 
