@@ -9,7 +9,7 @@ nav_order: 1
 ## Vulkan initialization
 Unlike Opengl, which allowed you to execute graphics commands near-inmediately, vulkan has a lenghty setup phase. To shorten this phase, we are going to use the library VkBootstrap, which helps a lot with all of this boilerplate.
 
-As vulkan is a very explicit API that gives very "direct" control, you need to initialize it to do things such as load exceptions, select which gpu (or multiple!) you are going to use, and create the initial VkInstance and VkDevice structures that you can then use with vulkan commands.
+As vulkan is a very explicit API that gives very "direct" control, you need to initialize it to do things such as load extensions, select which gpu (or multiple!) you are going to use, and create the initial VkInstance and VkDevice structures that you can then use with vulkan commands.
 
 Vulkan has no global state, unlike OpenGL, so you need to send the VkDevice or VkInstance to the API functions. In this guide, we are going to link to the vulkan-1.dll directly, but this is not neccesary. You can load the function pointers "manually". Linking to vulkan-1.dll will also not load the extension functions, which you will have to load yourself.
 
