@@ -7,24 +7,24 @@ nav_order: 2
 
 # Building the project
 
-Start by syncing git project at https://github.com/vblanco20-1/vulkan-guide/tree/chapter-0
+Start by syncing git project at <https://github.com/vblanco20-1/vulkan-guide/tree/chapter-0>
 Make sure you are getting the chapter-0 branch, which is the starting point of this guide.
 
 You will need Visual Studio to build the project. The code in the project should work multiplatform, but this guide is windows-centric.
 
 
-To start, grab CMake, as its the build system we are going to use. https://cmake.org/
+To start, grab CMake, as its the build system we are going to use. <https://cmake.org/>
 
 Once CMake is installed, use CMake-gui to open the project root CMakeLists. Press Configure
 At this point, it should give you an error about missing SDL 2
 
 SDL2 is a library dependency that we need to get separately from the rest.
 
-You can grab it here https://www.libsdl.org/download-2.0.php . I recomend you just take the development libraries.
+You can grab it here <https://www.libsdl.org/download-2.0.php> . I recomend you just take the development libraries.
 Once you have unzipped SDL somewhere, put the root path in the SDL2_dir variable of CMake.
 Note, this is not the /libs or similar folder, but the root folder of SDL itself.
 
-Only one thing left, and thats the Vulkan SDK. Get it from here and install it https://vulkan.lunarg.com/sdk/home
+Only one thing left, and thats the Vulkan SDK. Get it from here and install it <https://vulkan.lunarg.com/sdk/home>
 It doesnt matter where its installed. Once its installed and the PC is rebooted, CMake will pick up vulkan automatically.
 
 Now that the dependencies are set, you can proceed with CMake and Configure then Generate the project files for visual studio (or your IDE of choice). 
