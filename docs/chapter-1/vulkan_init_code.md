@@ -43,7 +43,7 @@ using namespace std;
 ```
 
 The macro really only checks if there is a VkResult that isnt 0, and exits app directly.
-Most vulkan functions that can error out will return a VkResult. This is really just an integer error code. If the error code isnt 0, something is going badly. 
+All vulkan functions that can error out will return a VkResult. This is really just an integer error code. If the error code isnt 0, something is going badly. 
 
 With those two done, we can go forward with initialization proper.
 
