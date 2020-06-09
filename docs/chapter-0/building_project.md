@@ -20,7 +20,7 @@ At this point, it should give you an error about missing SDL 2
 
 SDL2 is a library dependency that we need to get separately from the rest.
 
-You can grab it here https://www.libsdl.org/download-2.0.php . I recomend you just take the precompiled libraries.
+You can grab it here https://www.libsdl.org/download-2.0.php . I recomend you just take the development libraries.
 Once you have unzipped SDL somewhere, put the root path in the SDL2_dir variable of CMake.
 Note, this is not the /libs or similar folder, but the root folder of SDL itself.
 
