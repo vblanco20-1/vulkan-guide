@@ -43,9 +43,9 @@ During this guide we will explain the things that are most different beetween th
 ## Validation layers
 
 A lot of the vulkan functionalities map to *nothing* on the actual GPU hardware. Renderpasses on desktop gpus (specially NVidia ones) are such an example. 
-There is a significant amount of things in the vulkan API that you have to do, but they actually do nothing on the real hardware. This means that even on some wrong code, it can still run just fine on some hardware, but break spectacularly on others.
+There is a significant amount of things in the vulkan API that you have to do, but they actually do nothing on the real hardware. This means that even on some wrong code, it can still run just fine on some hardware, but break spectacularly on others. This is specially bad on syncronization code, which is very hard to get right, and it can run very different depending on the hardware unless you do everything according to the spec.
 
-This is one of the main reasons vulkan comes with a set of "Validation Layers" those are hooked beetween the API calls from your code, and the actual gpu driver, and they check that you are doing the correct things according to the vulkan spec. While developing, its imperative to use them to make sure you arent doing the wrong things. They can be enabled and disabled at startup, so when profiling or releasing the aplication, you would usually disable them. They do bring a significant hit to performance due to all that checking.
+Those are some of the main reasons vulkan comes with a set of "Validation Layers". They are hooked beetween the API calls from your code, and the actual gpu driver, and they check that you are doing the correct things according to the vulkan spec. While developing, its imperative to use them to make sure you arent doing the wrong things. They can be enabled and disabled at startup, so when profiling or releasing the aplication, you would usually disable them. They do bring a significant hit to performance due to all that checking. 
 
 ## Usage and general mindset
 In the vulkan api, almost everything is designed around objects that you create manually and then use. This is not only for the actual gpu resources such as Images/Textures and Buffers (for memory or things like Vertex data). But also for a lot of "internal" configuration structures.
