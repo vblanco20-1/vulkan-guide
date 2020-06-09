@@ -2,7 +2,7 @@
 layout: default
 title: Vulkan Initialization Code
 parent: chapter_1
-nav_order: 1
+nav_order: 2
 ---
 
 
@@ -58,13 +58,12 @@ class VulkanEngine {
 public:
 
     // --- ommited --- 
-
-	VkInstance _instance; // vulkan library handle
+    VkInstance _instance; // vulkan library handle
 	VkPhysicalDevice _chosenGPU; // gpu chosen as the default device
 	VkDevice _device; // vulkan device for commands
 private:
-    
-    void init_vulkan();
+		
+	void init_vulkan();
 ```
 
 vk_engine.cpp
@@ -85,7 +84,7 @@ void VulkanEngine::init()
 		window_flags
 	);
 
-    //load the core vulkan structures
+	//load the core vulkan structures
 	init_vulkan();
 
 	//everything went fine
@@ -106,7 +105,7 @@ Now that our new init_vulkan function is added, we can start filling it.
 
 
 ```cpp
-    vkb::InstanceBuilder builder;
+	vkb::InstanceBuilder builder;
 
 	//make the vulkan instance, with basic debug features
 	auto inst_ret = builder.set_app_name("Example Vulkan Application")
@@ -116,8 +115,8 @@ Now that our new init_vulkan function is added, we can start filling it.
 
 	vkb::Instance vkb_inst = inst_ret.value();
 
-    //store the instance 
-    _instance = vkb_inst.instance;
+	//store the instance 
+	_instance = vkb_inst.instance;
 ```
 
 We are going to create a vkb::InstanceBuilder, which is from the VkBootstrap library, and simplifies the creation of a vulkan VkInstance.
@@ -135,10 +134,10 @@ We then just grab the actual VkInstance handle from the vkb result object.
 ## Device
 
 ```cpp
-    // get the surface of the window we opened with SDL    
-    SDL_Vulkan_CreateSurface(_window, _instance, &_surface);
+	// get the surface of the window we opened with SDL    
+	SDL_Vulkan_CreateSurface(_window, _instance, &_surface);
 
-    //use vkbootstrap to select a gpu. 
+	//use vkbootstrap to select a gpu. 
 	//We want a gpu that can write to the SDL surface and supports vulkan 1.2
 	vkb::PhysicalDeviceSelector selector{ vkb_inst };
 	vkb::PhysicalDevice physicalDevice = selector
@@ -180,15 +179,9 @@ For that, go to the `VulkanEngine::cleanup()` function
 void VulkanEngine::cleanup()
 {	
 	if (_isInitialized) {
-			
-		
-
 		vkDestroyDevice(_device, nullptr);
-
-        vkDestroySurfaceKHR(_instance, _surface, nullptr);
-
+		vkDestroySurfaceKHR(_instance, _surface, nullptr);
 		vkDestroyInstance(_instance, nullptr);
-
 		SDL_DestroyWindow(_window);
 	}
 }
@@ -210,14 +203,10 @@ Just to check that our validation layers are working, lets try to call the destr
 void VulkanEngine::cleanup()
 {	
 	if (_isInitialized) {
-			
-        //ERROR - Instance destroyed before Device
+		//ERROR - Instance destroyed before Device
 		vkDestroyInstance(_instance, nullptr);
-
 		vkDestroyDevice(_device, nullptr);
-
-        vkDestroySurfaceKHR(_instance, _surface, nullptr);	
-
+		vkDestroySurfaceKHR(_instance, _surface, nullptr);	
 		SDL_DestroyWindow(_window);
 	}
 }
