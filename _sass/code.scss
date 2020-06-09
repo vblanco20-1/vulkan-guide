@@ -11,6 +11,7 @@ code {
   border: $border $border-color;
   border-radius: $border-radius;
   line-height: 1.0;
+  tab-size: 4;
 }
 
 pre.highlight,
@@ -19,9 +20,10 @@ figure.highlight {
   margin-bottom: 0;
   -webkit-overflow-scrolling: touch;
   background-color: $code-background-color;
-
+  tab-size: 4;
   line-height: 1.0;
   code {
+    tab-size: 4;
     line-height: 1.0;
     padding: 0;
     border: 0;
@@ -32,6 +34,7 @@ figure.highlight {
   margin-bottom: $sp-3;
   overflow: hidden;
   border-radius: $border-radius;
+  tab-size: 4;
 }
 
 .highlight .c {
@@ -252,8 +255,10 @@ figure.highlight {
   border: 1px solid $border-color;
   border-radius: $border-radius;
   line-height: 1;
+  tab-size: 4;
   + .highlighter-rouge,
   + figure.highlight {
+    tab-size: 4;
     line-height: 1.0;
     position: relative;
     margin-top: -$sp-4;
