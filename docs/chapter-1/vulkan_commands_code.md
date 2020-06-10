@@ -93,7 +93,7 @@ void VulkanEngine::init_commands()
 }
 ```
 
-Most vulkan Info structures, used for all of the VkCreateX functions, and a lot of the other vulkan structures, need sType and pNext set. This is used for extensions, as some extensions will still call the VkCreateX function, but with structs of a different type than the normal one.
+Most vulkan Info structures, used for all of the VkCreateX functions, and a lot of the other vulkan structures, need sType and pNext set. This is used for extensions, as some extensions will still call the VkCreateX function, but with structs of a different type than the normal one. The sType helps the implementation know what struct is being used in the function.
 
 With vulkan structures, it is very important that we do this
 ```cpp
