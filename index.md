@@ -27,8 +27,6 @@ IMAGE
 ![My helpful screenshot](/diagrams/test.png)
 SVG
 
-![My helpful screenshot](/diagrams/test.svg)
-
 ```markdown
 Syntax highlighted code block
 
