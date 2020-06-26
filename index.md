@@ -12,6 +12,8 @@ permalink: /
 WIP
 Lorem ipsum dolor sit amet, consectetur adipiscing elit. Fusce pharetra risus vitae metus fermentum, rutrum blandit nisi lobortis. Sed vel mi vitae felis condimentum accumsan. Duis non felis eu odio gravida molestie ac ut ante. Fusce quis tincidunt diam, eu ultrices nibh. Cras sem magna, lacinia convallis molestie non, condimentum ut velit. Aenean semper aliquet metus ac blandit. In nisi neque, molestie accumsan gravida eget, suscipit ut metus. Pellentesque vitae sollicitudin dui, sed dignissim lorem. Vivamus sit amet dignissim diam, ut semper lectus. Aenean interdum aliquet lacus vel rhoncus. Aliquam mollis blandit sapien quis sagittis.
 
+
+
 ### Index
 
 
@@ -20,8 +22,12 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Fusce pharetra risus vi
 - Libraries and build scripts: [link]({% post_url 2020-06-08-post-libraries %})
 
 
+![Image of Yaktocat](https://octodex.github.com/images/yaktocat.png)
+IMAGE
+![My helpful screenshot](/diagrams/test.png)
+SVG
 
-
+![My helpful screenshot](/diagrams/test.svg)
 
 ```markdown
 Syntax highlighted code block
