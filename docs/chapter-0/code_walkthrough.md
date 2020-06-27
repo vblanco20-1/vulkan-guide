@@ -211,6 +211,10 @@ There is really only one thing that can be added to this at this point, and is e
 
 As an excersise, go into the documentation of SDL2, and try to get keypress events, just logged with std::cout 
 
+Now we can move forward to the first chapter, and get a render loop going.
+
+Next: [Initializing vulkan]({{ site.baseurl }}{% link docs/chapter-1/vulkan_init_code.md %})
+
 
 
 
