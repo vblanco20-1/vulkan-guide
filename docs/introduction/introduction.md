@@ -6,7 +6,7 @@ has_children: true
 permalink: /docs/introduction
 ---
 
-# INTRODUCTION
+# INTRODUCTION INDEX
 
 
 {: .fs-6 .fw-300 }
