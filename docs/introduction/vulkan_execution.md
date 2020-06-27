@@ -77,3 +77,4 @@ VkQueuePresent(graphicsQueue, renderSemaphore);
 VkWaitForFence(renderFence);
 ```
 
+Next: [Project Libraries]({{ site.baseurl }}{% link docs/introduction/project_libs.md %})
