@@ -235,3 +235,5 @@ the `vkQueuePresentKHR` function displays an image to the screen. We have to tel
 We also need to set the WaitSemaphore correctly with the `_renderSemaphore` we signal from the VkQueueSubmit of the main rendering. This will tell the GPU to only display the image to the screen once the main render work has finished execution.
 
 We finally have something rendering! You should be seeing a flashing blue screen.
+
+Next: [Chapter 2: Vulkan Pipelines]({{ site.baseurl }}{% link docs/chapter-2/pipeline_walkthrough.md %})

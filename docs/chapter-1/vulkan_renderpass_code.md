@@ -185,3 +185,5 @@ in `VulkanEngine::Cleanup()`
 		}
 ```
 
+
+Next: [Main Loop]({{ site.baseurl }}{% link docs/chapter-1/vulkan_mainloop.md %})

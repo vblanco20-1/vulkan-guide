@@ -77,3 +77,5 @@ We will begin the render loop by requesting the image, which will give us a inte
 Then we reset the command buffer, and start rendering commands. Once rendering commands is finished, we submit them to the graphics queue, and then we Present the image we just rendered to the window by calling `VkQueuePresent()`
 
 Lets begin the code for the renderloop.
+
+Next: [Programming render loop]({{ site.baseurl }}{% link docs/chapter-1/vulkan_mainloop_code.md %})
