@@ -53,4 +53,4 @@ Once a command buffer has been submitted, its still "alive", and being consumed 
 
 To reset a command buffer, you use `VkResetCommandBuffer()`
 
-Next: [Vulkan commands code]({{ site.baseurl }}{% link docs/chapter-1/vulkan_command_code.md %})
+Next: [Vulkan commands code]({{ site.baseurl }}{% link docs/chapter-1/vulkan_commands_code.md %})
