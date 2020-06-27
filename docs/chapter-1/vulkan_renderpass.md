@@ -48,4 +48,4 @@ In this first chapter, we are only going to use a few image layouts
 - `VK_IMAGE_LAYOUT_PRESENT_SRC_KHR` : Image is on a layout that allows displaying the image on the screen.
 - `VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL` : (Used later) Image is on a format optimized to be read from shaders.
 
-Next: Setting up render pass in the code
+Next: [Setting up render passes]({{ site.baseurl }}{% link docs/chapter-1/vulkan_renderpass_code.md %})

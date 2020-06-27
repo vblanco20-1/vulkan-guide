@@ -238,3 +238,6 @@ VkQueue-s also cant be destroyed, as, like with the VkPhysicalDevice, they arent
 Now that we have the Queue and the CommandBuffer, we are ready to start executing commands, but their usability will be limited, as we still lack the structures needed to execute graphics commands.
 
 At this point, it is possible to execute pure-compute commands, if you wanted to perform offline computation.
+
+
+Next: [Vulkan render passes]({{ site.baseurl }}{% link docs/chapter-1/vulkan_renderpass.md %})

@@ -55,3 +55,6 @@ VK_PRESENT_MODE_IMMEDIATE_KHR is rarely used due to its tearing. Only in extreme
 Normal applications will use either MAILBOX or one of the 2 FIFO modes. Mostly depends if you want a hard-vsync or you prefer triple-buffering.
 
 In this guide, we will be using the FIFO_RELAXED mode, because it implements a upper cap on our rendering speed, and as we arent going to render many objects, its best if the framerate is capped and not reaching 5000 FPS which can cause issues. On real applications that have some work to do, MAILBOX is the preferred mode by default.
+
+
+Next: [Initializing vulkan code]({{ site.baseurl }}{% link docs/chapter-1/vulkan_init_code.md %})

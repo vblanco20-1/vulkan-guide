@@ -52,3 +52,5 @@ To submit the command buffer, you call `VkQueueSubmit()`, using both the command
 Once a command buffer has been submitted, its still "alive", and being consumed by the GPU, at this point it is NOT safe to reset the command buffer yet. You need to make sure that the GPU has finished executing all of the commands from that command buffer until you can reset it and reuse.
 
 To reset a command buffer, you use `VkResetCommandBuffer()`
+
+Next: [Vulkan commands code]({{ site.baseurl }}{% link docs/chapter-1/vulkan_command_code.md %})

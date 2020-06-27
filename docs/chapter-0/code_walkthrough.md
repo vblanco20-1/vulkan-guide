@@ -213,7 +213,7 @@ As an excersise, go into the documentation of SDL2, and try to get keypress even
 
 Now we can move forward to the first chapter, and get a render loop going.
 
-Next: [Initializing vulkan]({{ site.baseurl }}{% link docs/chapter-1/vulkan_init_code.md %})
+Next: [Initializing vulkan]({{ site.baseurl }}{% link docs/chapter-1/vulkan_init_flow.md %})
 
 
 
