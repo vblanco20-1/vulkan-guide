@@ -27,4 +27,4 @@ The guide is separated into multiple chapters. Each chapter focuses on a narrow 
 -  **Chapter 4**: (TBA) Vulkan shader input/output.
 -  **Chapter 5**: (TBA) Vulkan textured rendering
 
-Next: [Vulkan API Overview]({{ site.baseurl }}{% link docs/introduction/vulkan_overview.md %})
+Next: [Introduction]({{ site.baseurl }}{% link docs/introduction/introduction.md %})

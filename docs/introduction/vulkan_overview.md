@@ -61,5 +61,3 @@ When doing actual GPU commands, all of the work has to be done on a CommandBuffe
 There is no concept of frames in vulkan. This means that the way you render is entirely up to you. The only thing that matters is when you have to display the frame to the screen, which is done through a Swapchain. But there is no fundamental difference beetween rendering and then sending the images over the network, or saving the images into a file, or displaying it into the screen through the Swapchain.
 
 Its possible to use vulkan in an entirely headless mode, not even displaying anything to the user. You can render to images and then store them into disk (very useful for testing!) or  use vulkan as a way to perform GPU calculations such as a raytracer.
-
-Next: [Vulkan Render flow]({{ site.baseurl }}{% link docs/introduction/vulkan_execution.md %})
