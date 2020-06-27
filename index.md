@@ -9,50 +9,22 @@ permalink: /
 
 ## Welcome to VulkanGuide
 
-WIP
-Lorem ipsum dolor sit amet, consectetur adipiscing elit. Fusce pharetra risus vitae metus fermentum, rutrum blandit nisi lobortis. Sed vel mi vitae felis condimentum accumsan. Duis non felis eu odio gravida molestie ac ut ante. Fusce quis tincidunt diam, eu ultrices nibh. Cras sem magna, lacinia convallis molestie non, condimentum ut velit. Aenean semper aliquet metus ac blandit. In nisi neque, molestie accumsan gravida eget, suscipit ut metus. Pellentesque vitae sollicitudin dui, sed dignissim lorem. Vivamus sit amet dignissim diam, ut semper lectus. Aenean interdum aliquet lacus vel rhoncus. Aliquam mollis blandit sapien quis sagittis.
+Welcome to a new work-in-progress vulkan guide. The focus of this guide is to understand vulkan correctly, and act as a stepping stone for then working in your own projects. Unlike most samples and other vulkan guides, which like to hardcode rendering loops, in here we will have a focus around dynamic rendering, so that it can act as a better base code for a game engine.
 
+While the guide is focused around game rendering, its concepts can be used in CAD and visualization just fine.
 
+We will be using C++, but we arent doing complex C++ unique features, so following this guide on C or Rust can be doable.
 
-### Index
+This guide is meant for the people who already know the basics about 3d graphics, and have worked with either Opengl or Directx in the past. This guide will not explain 3d rendering basics such as linear algebra math.
 
+The guide is separated into multiple chapters. Each chapter focuses on a narrow part of vulkan.
 
-- Project setup: 
+- **Introduction**: Overview about vulkan API and the libraries used by this project
+-  **Chapter 0**: Setting up the guide initial code
+-  **Chapter 1**: Vulkan initialization and render loop setup. (Draws a flashing clear color)
+-  **Chapter 2**: Vulkan triangle drawing (Draws a hardcoded triangle)
+-  **Chapter 3**: (TBA) Vulkan mesh drawing (Draws meshes loaded from .obj files)
+-  **Chapter 4**: (TBA) Vulkan shader input/output.
+-  **Chapter 5**: (TBA) Vulkan textured rendering
 
-- Libraries and build scripts: [link]({% post_url 2020-06-08-post-libraries %})
-
-
-![Image of Yaktocat](https://octodex.github.com/images/yaktocat.png)
-IMAGE
-![My helpful screenshot](/diagrams/test.png)
-SVG
-
-![My helpful screenshot](/diagrams/test.svg)
-
-```markdown
-Syntax highlighted code block
-
-# Header 1
-## Header 2
-### Header 3
-
-- Bulleted
-- List
-
-1. Numbered
-2. List
-
-**Bold** and _Italic_ and `Code` text
-
-[Link](url) and ![Image](src)
-```
-
-For more details see [GitHub Flavored Markdown](https://guides.github.com/features/mastering-markdown/).
-
-### Jekyll Themes
-
-Your Pages site will use the layout and styles from the Jekyll theme you have selected in your [repository settings](https://github.com/vblanco20-1/vulkan-guide/settings). The name of this theme is saved in the Jekyll `_config.yml` configuration file.
-
-### Support or Contact
-
-Having trouble with Pages? Check out our [documentation](https://help.github.com/categories/github-pages-basics/) or [contact support](https://github.com/contact) and we’ll help you sort it out.
+Next: [Introduction]({{ site.baseurl }}{% link docs/introduction/introduction.md %})
