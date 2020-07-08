@@ -32,7 +32,7 @@ Now that the dependencies are set, you can proceed with CMake and Configure then
 Cmake should look like this:
 
 
-![cmake]({{site.url}}/assets/images/Cmakesetup.png)
+![cmake]({{site.baseurl}}/assets/images/Cmakesetup.png)
 
 From visual studio, select the vulkan-guide target, set as Startup Project, and you can now compile and execute it by just hitting F5 (start debugging)
 
