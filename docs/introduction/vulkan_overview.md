@@ -5,6 +5,8 @@ nav_order: 1
 parent: introduction
 ---
 
+![VulkanLogo](/assets/images/Vulkan_170px_Dec16.jpg)
+
 ## What is vulkan?
 
 Vulkan is a multiplatform API (application program interface) created as successor of OpenGl, and created by the same authors at the Khronos comitee.
