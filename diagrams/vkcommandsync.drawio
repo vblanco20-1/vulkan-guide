@@ -1,0 +1,42 @@
+<mxfile host="embed.diagrams.net" modified="2020-07-09T18:36:22.443Z" agent="5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.46.1 Chrome/78.0.3904.130 Electron/7.3.1 Safari/537.36" etag="LGwMVRXLf1S6TTjCf7Nm" version="13.4.1">
+    <diagram id="6hGFLwfOUW9BJ-s0fimq" name="Page-1">
+        <mxGraphModel dx="795" dy="792" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="29" value="TIMELINE" style="swimlane;html=1;childLayout=stackLayout;resizeParent=1;resizeParentMax=0;startSize=20;" vertex="1" parent="1">
+                    <mxGeometry x="460" y="100" width="240" height="390" as="geometry"/>
+                </mxCell>
+                <mxCell id="30" value="CPU" style="swimlane;html=1;startSize=20;" vertex="1" parent="29">
+                    <mxGeometry y="20" width="120" height="370" as="geometry"/>
+                </mxCell>
+                <mxCell id="35" value="CPU Work" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#647687;strokeColor=#314354;fontColor=#ffffff;" vertex="1" parent="30">
+                    <mxGeometry y="20" width="120" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="41" value="vkWaitForFences" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="30">
+                    <mxGeometry y="120" width="120" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="42" value="CPU Work" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#647687;strokeColor=#314354;fontColor=#ffffff;" vertex="1" parent="30">
+                    <mxGeometry y="210" width="120" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="32" value="GPU" style="swimlane;html=1;startSize=20;" vertex="1" parent="29">
+                    <mxGeometry x="120" y="20" width="120" height="370" as="geometry">
+                        <mxRectangle x="240" y="20" width="30" height="460" as="alternateBounds"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="33" value="IDLE" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="32">
+                    <mxGeometry y="20" width="120" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="38" value="GPU WORK" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#6d8764;strokeColor=#3A5431;fontColor=#ffffff;" vertex="1" parent="32">
+                    <mxGeometry y="120" width="120" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="43" value="IDLE" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="32">
+                    <mxGeometry y="210" width="120" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="37" value="vkQueueSubmit" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e51400;strokeColor=#B20000;fontColor=#ffffff;" vertex="1" parent="1">
+                    <mxGeometry x="460" y="210" width="120" height="30" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

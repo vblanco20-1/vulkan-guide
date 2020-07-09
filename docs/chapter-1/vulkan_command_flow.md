@@ -22,7 +22,7 @@ The general flow to execute commands is:
 It is possible to submit the same command buffer multiple times. In tutorials and samples its very common to record the commands once, and then submit them every frame in the render loop.
 In this tutorial, we are going to record the commands every frame, as its more relevant to how a real render engine works.
 
-Recording commands in vulkan is relatively cheap. Most of the work goes into the `VkQueueSubmit` call, where the commands are validated in the driver and translated into real gpu commands.
+Recording commands in vulkan is relatively cheap. Most of the work goes into the `vkQueueSubmit` call, where the commands are validated in the driver and translated into real gpu commands.
 
 One very important part with command buffers, is that they can be recorded in parallel. You can record different command buffers from different threads safely. To do that, you need to have 1 VkCommandPool and 1 VkCommandBuffer per thread (minimum), and make sure that each thread only uses their own resources. Once that is done, its possible to submit the multiple command buffers in one of the threads. VkQueueSubmit is not threadsafe, only one thread can push the commands at once. 
 
@@ -48,13 +48,13 @@ Commands are typically allocated sparingly, and then reset every time. The fast-
 
 All commands for gpu get recorded in a VkCommandBuffer. All of the functions that will execute gpu work wont do anything until the command buffer is submitted to the GPU. 
 
-CommandBuffers start at the Ready state. Once a command is on Ready state, you can `VkBeginCommandBuffer()` to put it into a Recording state. Now you can start inputting commands into it.
-Once you are done, you call `VkEndCommandBuffer()` to finish the recording the commands, and put it on a state where it can be submitted into the GPU.
+CommandBuffers start at the Ready state. Once a command is on Ready state, you can `vkBeginCommandBuffer()` to put it into a Recording state. Now you can start inputting commands into it.
+Once you are done, you call `vkEndCommandBuffer()` to finish the recording the commands, and put it on a state where it can be submitted into the GPU.
 
-To submit the command buffer, you call `VkQueueSubmit()`, using both the command and the queue to submit into. VkQueueSubmit also accepts submitting multiple command buffers at once.
+To submit the command buffer, you call `vkQueueSubmit()`, using both the command and the queue to submit into. VkQueueSubmit also accepts submitting multiple command buffers at once.
 
 Once a command buffer has been submitted, its still "alive", and being consumed by the GPU, at this point it is NOT safe to reset the command buffer yet. You need to make sure that the GPU has finished executing all of the commands from that command buffer until you can reset it and reuse.
 
-To reset a command buffer, you use `VkResetCommandBuffer()`
+To reset a command buffer, you use `vkResetCommandBuffer()`
 
 Next: [Vulkan commands code]({{ site.baseurl }}{% link docs/chapter-1/vulkan_commands_code.md %})

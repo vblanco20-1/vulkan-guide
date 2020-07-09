@@ -13,8 +13,13 @@ All vulkan commands that are executed will go into a queue and will be executed 
 
 Some times, you explicitly want to make sure some operations have finished before executing new ones. While operations done to a given VkQueue happen linearly, if you have multiple queues, the order is not guaranteed. For that, and for the communication with the CPU, we have two structures
 
+
 ## VkFence
 This is used for GPU -> CPU communication. A lot of vulkan operations, such as vkQueueSubmit allow an *optional* fence parameter. If this is set, we can know from the CPU if the gpu has finished these operations. We will use it to sync the main loop in the CPU with the GPU.
+
+
+![cmake]({{site.baseurl}}/diagrams/commandtimeline.png)
+
 
 Pseudocode example:
 ```cpp
@@ -29,6 +34,8 @@ VkWaitForFences(myFence);
 //fences allways have to be reset before they can be used again
 VkResetFences(myFence);
 ```
+
+
 
 ## VkSemaphore
 This is used for GPU to GPU sync. Semaphores allow defining order of operations on gpu commands, and for them to run one after another. Some vulkan operations (like VkQueueSubmit) support to either Signal or Wait semaphores. 
