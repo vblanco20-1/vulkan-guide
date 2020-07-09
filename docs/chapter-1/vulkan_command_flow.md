@@ -6,6 +6,10 @@ nav_order: 10
 ---
 
 
+![cmake]({{site.baseurl}}/diagrams/vkcommands.png)
+
+
+
 ## Vulkan Command Execution
 Unlike opengl or directX pre-11, in vulkan, all gpu commands have to go through a command buffer.
 Command buffers are allocated from a Command Pool, and executed into queues.
