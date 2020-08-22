@@ -15,7 +15,7 @@ set (CMAKE_RUNTIME_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/bin")
 add_subdirectory(chapter-0)
 add_subdirectory(chapter-1)
 add_subdirectory(chapter-2)
-
+add_subdirectory(chapter-3)
 
 if (${CMAKE_HOST_SYSTEM_PROCESSOR} STREQUAL "AMD64")
   set(GLSL_VALIDATOR "$ENV{VULKAN_SDK}/Bin/glslangValidator.exe")
