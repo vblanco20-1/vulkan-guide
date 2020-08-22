@@ -12,7 +12,7 @@ For the vulkan engine, we use a specific folder layout.
 - `/assets` will contain textures and 3d models that we use over the guide
 - `/bin` is where the executables will get built. We dont use the normal CMake build folders to simplify the paths to assets and shaders
 - `/shaders` will contain all our shaders, and their compiled output
-- `/src` contains the source code for the main application and engine
+- `/chapter-N` folders contain the code for each of the chapters of the guide
 - `/third_party` contains all of the libraries we use, vendored in
 
 ## Libraries 
