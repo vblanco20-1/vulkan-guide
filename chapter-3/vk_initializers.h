@@ -38,5 +38,9 @@ namespace vkinit {
 	VkPipelineColorBlendAttachmentState color_blend_attachment_state();
 
 	VkPipelineLayoutCreateInfo pipeline_layout_create_info();
+
+	VkPipelineDepthStencilStateCreateInfo depth_stencil_create_info(bool bDepthTest, bool bDepthWrite, VkCompareOp compareOp);
+
+	VkImageCreateInfo image_create_info(VkFormat format, VkImageUsageFlags usageFlags, VkExtent3D extent);
 }
 

@@ -19,6 +19,7 @@ public:
 	VkRect2D _scissor;
 	VkPipelineRasterizationStateCreateInfo _rasterizer;
 	VkPipelineColorBlendAttachmentState _colorBlendAttachment;
+	VkPipelineDepthStencilStateCreateInfo _depthStencil;
 	VkPipelineMultisampleStateCreateInfo _multisampling;
 	VkPipelineLayout _pipelineLayout;
 
@@ -79,6 +80,9 @@ public:
 	std::vector<VkImage> _swapchainImages;
 	std::vector<VkImageView> _swapchainImageViews;
 
+	VkImageView _depthImageView;
+	AllocatedImage _depthImage;
+
 	VkPipelineLayout _trianglePipelineLayout;
 	VkPipelineLayout _meshPipelineLayout;
 
@@ -101,6 +105,8 @@ public:
 
 	//draw loop
 	void draw();
+
+	void draw_mesh(VkCommandBuffer cmd);
 
 	//run main loop
 	void run();
