@@ -9,7 +9,7 @@ nav_order: 12
 
 Now that we can load the shaders we needed for the triangle, we have to build the VkPipeline to render it.
 
-The VkPipeline is a *huge* object in vulkan that encompasses the configuration of the entire GPU for the draw. Building them is very expensive, as it will fully convert the shader module into the gpu instructions, and will validate the setup for it.
+The VkPipeline is a *huge* object in vulkan that encompasses the configuration of the entire GPU for the draw. Building them can be very expensive, as it will fully convert the shader module into the gpu instructions, and will validate the setup for it.
 
 Once a pipeline is built, it can be bound inside a command buffer, and then when you draw anything it will use the bound pipeline.
 
@@ -52,7 +52,7 @@ We are going to start with the initializer for `VkPipelineShaderStageCreateInfo`
 This CreateInfo will hold information about a single shader stage for the pipeline. We build it from a shader stage and a shader module.
 
 ```cpp
-VkPipelineShaderStageCreateInfo vkinit::pipeline_shader_stage_create_info(VkShaderStageFlagBits stage, VkShaderModule module) {
+VkPipelineShaderStageCreateInfo vkinit::pipeline_shader_stage_create_info(VkShaderStageFlagBits stage, VkShaderModule shaderModule) {
 
 		VkPipelineShaderStageCreateInfo info{};
 		info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -61,7 +61,7 @@ VkPipelineShaderStageCreateInfo vkinit::pipeline_shader_stage_create_info(VkShad
 		//shader stage
 		info.stage = stage;
 		//module containing the code for this shader stage
-		info.module = module;
+		info.module = shaderModule;
 		//the entry point of the shader
 		info.pName = "main";
 		return info;
@@ -372,7 +372,7 @@ void VulkanEngine::init_pipelines()
 	pipelineBuilder._pipelineLayout = _trianglePipelineLayout;
 
 	//finally build the pipeline
-	_trianglePipeline = pipelineBuilder.build_pipeline(_device, renderPass);
+	_trianglePipeline = pipelineBuilder.build_pipeline(_device, _renderPass);
 }
 ```
 
