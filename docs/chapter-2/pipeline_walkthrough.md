@@ -400,3 +400,11 @@ vkCmdBingPipeline sets the pipeline to be used on the further rendering commands
 vkCmdDraw executes a draw, in this case we are drawing 1 object with 3 vertices.
 
 Run it, and you should see a red triangle with a flashing blue background.
+
+![triangle]({{site.baseurl}}/diagrams/redTriangle.png)
+
+Congratulations on your first triangle! 
+We can now proceed to do interesting things with the shaders to make it more interesting.
+
+
+Next: [Passing data through shader stages]({{ site.baseurl }}{% link docs/chapter-2/passing_data.md %})
