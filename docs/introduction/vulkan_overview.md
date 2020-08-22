@@ -36,7 +36,7 @@ It is a spec based on the C language, so it can be used from almost every langua
 
 ## Multiplatform
 
-Vulkan is unique in its design, vs other GPU apis, in that its the same api for both Mobile GPUs, and Desktop CPUs. Almost every feature in vulkan is an optional feature, because phones dont support it, while PC CPUs might. In this tutorial, we are focusing on PC, so we are going to do things that wont directly run in smartphones and tablets.
+Vulkan is unique in its design, vs other GPU apis, in that its the same api for both Mobile GPUs, and Desktop CPUs. Almost every feature in vulkan is an optional feature, because phones dont support it, while PC GPUs might. In this tutorial, we are focusing on PC, so we are going to do things that wont directly run in smartphones and tablets.
 
 If you are looking to have an application that will run on both PC and smartphones, its recomended that you have 2 core render paths. As the api its the same, a lot of code can be shared directly, but the differences in features and fast-paths beetween the 2 targets will mean that if you try to have just one render code, it will be suboptimal on one of the two. 
 

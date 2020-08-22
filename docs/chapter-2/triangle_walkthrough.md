@@ -228,4 +228,4 @@ If you run the code at this point, you should see the "succesfully loaded" outpu
 
 
 
-Next: [Setting up Render pipelines]({{ site.baseurl }}{% link docs/chapter-2/pipeline?walkthrough.md %})
+Next: [Setting up Render pipelines]({{ site.baseurl }}{% link docs/chapter-2/pipeline_walkthrough.md %})
