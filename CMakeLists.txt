@@ -12,8 +12,9 @@ add_subdirectory(third_party)
 
 set (CMAKE_RUNTIME_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/bin")
 
-add_subdirectory(src)
-
+add_subdirectory(chapter-0)
+add_subdirectory(chapter-1)
+add_subdirectory(chapter-2)
 
 
 if (${CMAKE_HOST_SYSTEM_PROCESSOR} STREQUAL "AMD64")
