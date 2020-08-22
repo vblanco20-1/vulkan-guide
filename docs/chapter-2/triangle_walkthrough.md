@@ -227,6 +227,7 @@ void VulkanEngine::init()
 If you run the code at this point, you should see the "succesfully loaded" outputs in the console window.
 
 
+![triangle]({{site.baseurl}}/diagrams/redTriangle.png)
 
-
-
+Congratulations on your first triangle! 
+We can now proceed to do interesting things with the shaders to make it more interesting.
