@@ -41,10 +41,10 @@ while (SDL_PollEvent(&e) != 0)
 	{
 		if (e.key.keysym.sym == SDLK_SPACE)
 		{
-			engine._selectedShader += 1;
-			if(engine._selectedShader > 1)
+			_selectedShader += 1;
+			if(_selectedShader > 1)
 			{
-				engine._selectedShader = 0;
+				_selectedShader = 0;
 			}
 		}
 	}
@@ -94,7 +94,7 @@ void VulkanEngine::init_pipelines()
 		std::cout << "Triangle vertex shader succesfully loaded" << std::endl;
 	}
 
-	//compile colored triangle modules
+	//compile red triangle modules
 	VkShaderModule redTriangleFragShader;
 	if (!load_shader_module("../../shaders/colored_triangle.frag.spv", &redTriangleFragShader))
 	{
@@ -135,7 +135,7 @@ void VulkanEngine::init_pipelines()
 
 	//add the other shaders
 	pipelineBuilder._shaderStages.push_back(
-		vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_VERTEX_BIT, redTriangleVertexShader));
+		vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_VERTEX_BIT, redTriangleVertShader));
 
 	pipelineBuilder._shaderStages.push_back(
 		vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT, redTriangleFragShader));
