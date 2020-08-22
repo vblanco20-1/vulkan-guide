@@ -33,7 +33,7 @@ When beggining a renderpass, you set the target framebuffer, and the clear color
 
 ## Subpasses
 A renderpass also contains subpasses, which are a bit like the rendering "steps". They can be very useful in mobile GPUs, as they allow the driver to optimize things quite a lot. 
-In desktop GPUs, they dont really do anything, so we arent going to use them. When creating the renderpass, it will only have 1 subpass which is the minimum.
+In desktop GPUs, they are less important, so we arent going to use them. When creating the renderpass, it will only have 1 subpass which is the minimum required for rendering.
 
 ## Image Layouts
 A very important thing that the renderpass does, is that it performs image layout changes when entering and exiting the renderpass.
