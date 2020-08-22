@@ -69,6 +69,11 @@ void VulkanEngine::cleanup()
 		//make sure the gpu has stopped doing its things
 		vkWaitForFences(_device, 1, &_renderFence, true, 1000000000);
 
+		vkDestroyPipeline(_device, _trianglePipeline, nullptr);
+		vkDestroyPipeline(_device, _redTrianglePipeline, nullptr);
+
+		vkDestroyPipelineLayout(_device, _trianglePipelineLayout, nullptr);
+
 		vkDestroyCommandPool(_device, _commandPool, nullptr);
 
 		//destroy sync objects
@@ -481,6 +486,13 @@ void VulkanEngine::init_pipelines()
 
 	//build the red triangle pipeline
 	_redTrianglePipeline = pipelineBuilder.build_pipeline(_device, _renderPass);
+
+
+	vkDestroyShaderModule(_device, redTriangleVertShader, nullptr);
+	vkDestroyShaderModule(_device, redTriangleFragShader, nullptr);
+    vkDestroyShaderModule(_device, triangleFragShader, nullptr);
+    vkDestroyShaderModule(_device, triangleVertexShader, nullptr);
+
 }
 
 bool VulkanEngine::load_shader_module(const char* filePath, VkShaderModule* outShaderModule)
