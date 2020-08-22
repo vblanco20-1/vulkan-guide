@@ -2,7 +2,7 @@
 layout: default
 title: Setting up shaders
 parent: chapter_2
-nav_order: 12
+nav_order: 11
 ---
 
 ## Pipelines

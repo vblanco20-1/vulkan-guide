@@ -2,7 +2,7 @@
 layout: default
 title: Passing data beetween shader stages
 parent: chapter_2
-nav_order: 12
+nav_order: 14
 ---
 
 We have been able to render a red triangle, but this is too boring. Now, we will add more color to it, converting it into the classic RGB triangle.
