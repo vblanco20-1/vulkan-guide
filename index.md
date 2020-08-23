@@ -23,7 +23,7 @@ The guide is separated into multiple chapters. Each chapter focuses on a narrow 
 -  **Chapter 0**: Setting up the guide initial code
 -  **Chapter 1**: Vulkan initialization and render loop setup. (Draws a flashing clear color)
 -  **Chapter 2**: Vulkan triangle drawing (Draws a hardcoded triangle)
--  **Chapter 3**: (TBA) Vulkan mesh drawing (Draws meshes loaded from .obj files)
+-  **Chapter 3**: Vulkan mesh drawing (Draws meshes loaded from .obj files)
 -  **Chapter 4**: (TBA) Vulkan shader input/output.
 -  **Chapter 5**: (TBA) Vulkan textured rendering
 
