@@ -16,7 +16,7 @@ One way of implementing said deletion queue is by having arrays with the vulkan 
 
 The way we are going to implement it is by having a queue of std::function lambdas, that will get called in order FIFO (first in, first out). This way is not the most efficient, but it is good enough for a small engine.
 
-<vulkan_engine.h>
+`vulkan_engine.h`
 ```cpp
 struct DeletionQueue
 {
@@ -48,14 +48,12 @@ Make sure to `#include <functional>` so that you can use std::function, and `#in
 This is the implementation of the deletion queue we will use from now on. The usage is this
 
 ```cpp
-
 VkSomething something;
 VkCreateSomething(&something);
 
 _mainDeletionQueue.push_function([=](){
 VkDeleteSomething(something);
 });
-
 ```
 
 And then, as part of our cleanup function, we `flush()` the deletion queue, which will call the lambdas in the order they were enqueued. 
@@ -86,7 +84,6 @@ void VulkanEngine::cleanup()
 		SDL_DestroyWindow(_window);
 	}
 }
-
 ```
 
 We are not going to put everything in the deletion queue, so we will keep the Surface, Device, Instance, and the SDL window.
