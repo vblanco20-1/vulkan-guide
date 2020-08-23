@@ -5,7 +5,8 @@
 
 #include <vk_types.h>
 #include <vector>
-
+#include <functional>
+#include <deque>
 class PipelineBuilder {
 public:
 
@@ -20,6 +21,24 @@ public:
 	VkPipelineLayout _pipelineLayout;
 
 	VkPipeline build_pipeline(VkDevice device, VkRenderPass pass);
+};
+
+struct DeletionQueue
+{
+    std::deque<std::function<void()>> deletors;
+
+    void push_function(std::function<void()>&& function) {
+        deletors.push_back(function);
+    }
+
+    void flush() {
+        // reverse iterate the deletion queue to execute all the functions
+        for (auto it = deletors.rbegin(); it != deletors.rend(); it++) {
+            (*it)(); //call functors
+        }
+
+        deletors.clear();
+    }
 };
 
 class VulkanEngine {
@@ -60,6 +79,8 @@ public:
 
 	VkPipeline _trianglePipeline;
 	VkPipeline _redTrianglePipeline;
+
+    DeletionQueue _mainDeletionQueue;
 
 	//initializes everything in the engine
 	void init();
