@@ -1,9 +1,9 @@
 ---
 layout: default
-title: chapter_4
+title: chapter_3
 nav_order: 5
 has_children: true
-permalink: /docs/chapter_4
+permalink: /docs/chapter_3
 ---
 
 # Chapter 3 : Drawing meshes
