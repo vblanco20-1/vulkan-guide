@@ -15,7 +15,7 @@ The files are all stored in the project/src/ folder
 - vk_types.h : As the tutorial continues, we will add the "basic" types such as Vertex definitions here.
 - main.cpp : entry point for the code. Has nothing but just calls into vk_engine code
 
-Physical design (how the project is laid out) is very important for complex projects. We will call a pair of matched .h/.cpp files as a "module". It doesnt neccesarely have to be only one class, or a class at all. We will have them be generally standalone when possible. The reason for calling them modules is that they will likely *be* modules once Cpp 20 modules become a thing.
+Physical design (how the project is laid out) is very important for complex projects. We will call a pair of matched .h/.cpp files as a "module". It doesnt necessarily have to be only one class, or a class at all. We will have them be generally standalone when possible. The reason for calling them modules is that they will likely *be* modules once Cpp 20 modules become a thing.
 
 The vk_types is completely standalone (depends on nothing), and so will be the vk_initializers component. Once they grow, you can safely keep them for your own projects as your own small abstractions.
 vk_engine will be the "end point" of almost everything. It will depend on most parts of the project.

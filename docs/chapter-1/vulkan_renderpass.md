@@ -38,7 +38,7 @@ In desktop GPUs, they are less important, so we arent going to use them. When cr
 ## Image Layouts
 A very important thing that the renderpass does, is that it performs image layout changes when entering and exiting the renderpass.
 
-Images in the GPU arent neccesarely in the format you would expect. For optimization purposes, the GPUs perform a lot of transformation and reshuffling of them into internal opaque formats. For example, some gpus will compress textures whenever they can, and will reorder the way the pixels are arranged so that they mipmap better.
+Images in the GPU arent necessarily in the format you would expect. For optimization purposes, the GPUs perform a lot of transformation and reshuffling of them into internal opaque formats. For example, some gpus will compress textures whenever they can, and will reorder the way the pixels are arranged so that they mipmap better.
 In Vulkan, you dont have control of that, but there is control over the layout for the image, which lets the driver transform the image to those optimized internal formats.
 
 In this first chapter, we are only going to use a few image layouts

@@ -18,7 +18,7 @@ Vulkan cuts the design decisions of OpenGL, and starts brand new. It is designed
 ## When to use Vulkan
 
 While Vulkan is the newest API, you should not be using Vulkan if you dont need its features.
-Writing a Vulkan engine is an order of magnitude harder than using Opengl, and the GPU-side performance will not neccesarely be better.
+Writing a Vulkan engine is an order of magnitude harder than using Opengl, and the GPU-side performance will not necessarily be better.
 
 The main thing Vulkan improves is CPU overheads and multithreading, and control over GPU hitches.
 When Vulkan is used right, it is possible to almost completely eliminate hitches, achieving a very smooth framerate, on very low CPU overhead.

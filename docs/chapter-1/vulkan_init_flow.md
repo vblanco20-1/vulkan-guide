@@ -41,7 +41,7 @@ A swapchain is created on a given size, and if the window resizes, you will have
 
 The format that the swapchain exposes for its images can be different between platforms and even gpus, so its necessary that you store the image format that the swapchain wants, as rendering on a different format will cause artifacts or crashes.
 
-Swapchains are really a list of images, readable by the operating system for display to the screen. You can create swapchains with more or less images, but generally you will want only 2 or 3 images to perform double-buffer or triple-buffer rendering.
+Swapchains are a list of images, accesible by the operating system for display to the screen. You can create swapchains with more or less images, but generally you will want only 2 or 3 images to perform double-buffer or triple-buffer rendering.
 
 The most important thing when creating a swapchain is to select a Present Mode, this is how the swapchain "works" logically.
 

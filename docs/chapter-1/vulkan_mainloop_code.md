@@ -75,11 +75,11 @@ void VulkanEngine::draw()
 }
 ```
 
-we use `vkWaitForFences()` to wait for the GPU to have finished its work, and after it we reset the fence.
+We use `vkWaitForFences()` to wait for the GPU to have finished its work, and after it we reset the fence.
 Fences have to be reset between uses, you cant use the same fence on multiple gpu commands without resetting it in the middle.
 
 The timeout of the WaitFences call is of 1 second. Its using nanoseconds for the wait time.
-If you call the function with 0 as the timeout, you can use it to know of the GPU is still executing the command or not.
+If you call the function with 0 as the timeout, you can use it to know if the GPU is still executing the command or not.
 
 Next, we are going to request a image index from the swapchain
 
@@ -120,11 +120,11 @@ Once the command buffer is reset, we can begin it.
 ```
 
 Yet another Vulkan info structure, so typical sType and pNext values.
-Inheritance info on a command buffer is used for secondary command buffers, but we arent going to use them, so leave it nullptr;
+Inheritance info on a command buffer is used for secondary command buffers, but we arent going to use them, so leave it nullptr.
 For flags, we want to let Vulkan know that this command buffer will be submitted once.
-As we are going to be recording the command buffer every frame, its best if Vulkan knows that this command will only execute once, as it can allow for great optimization in the driver.
+As we are going to be recording the command buffer every frame, its best if Vulkan knows that this command will only execute once, as it can allow for great optimization by the driver.
 
-With the command buffer recording started, lets add commands to it. We are going to launch the render-pass, with a clear color that flashes over time.
+With the command buffer recording started, lets add commands to it. We are going to launch the render pass, with a clear color that flashes over time.
 
 ```cpp
 	//start the main renderpass. 
@@ -161,7 +161,7 @@ Set sType and pNext as usual
 
 Lastly, we are going to create a VkClearValue of a flashing blue color, and connect it to the info.
 
-The `vkCmdBeginRenderPass()` function will bind the framebuffers, clear the image, and put the images in the layout we specified when creating the renderpass. We can now start rendering commands... but we dont have anything to render yet. thats the chapter 2
+The `vkCmdBeginRenderPass()` function will bind the framebuffers, clear the image, and put the images in the layout we specified when creating the renderpass. We can now start rendering commands... but we dont have anything to render yet. That will be on next chapter.
 
 We can now end the render pass, and also end the command buffer
 ```cpp
@@ -171,7 +171,7 @@ We can now end the render pass, and also end the command buffer
 	VK_CHECK(vkEndCommandBuffer(cmd));
 ```
 
-calling `vkCmdEndRenderPass()` finishes the rendering, and transitions the image to what we specified, which is "ready to be displayed". As the work is now done, we can `vkEndCommandBuffer()` to finish the command buffer.
+Calling `vkCmdEndRenderPass()` finishes the rendering, and transitions the image to what we specified, which is "ready to be displayed". As the work is now done, we can `vkEndCommandBuffer()` to finish the command buffer.
 
 With the buffer finished, we can execute it by submitting it into the GPU
 
@@ -231,7 +231,7 @@ After the commands are submitted, we now display the image to the screen
 
 ```
 
-the `vkQueuePresentKHR` function displays an image to the screen. We have to tell it what swapchain we are using for the call, and what is the image index.
+The `vkQueuePresentKHR` function displays an image to the screen. We have to tell it what swapchain we are using for the call, and what is the image index.
 We also need to set the WaitSemaphore correctly with the `_renderSemaphore` we signal from the VkQueueSubmit of the main rendering. This will tell the GPU to only display the image to the screen once the main render work has finished execution.
 
 We finally have something rendering! You should be seeing a flashing blue screen.

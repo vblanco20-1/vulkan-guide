@@ -6,7 +6,7 @@ nav_order: 21
 ---
 
 
-Lets start by adding the new members we are going to need to the class
+Lets start by adding the new members we are going to need to the class.
 
 vk_engine.h
 ```cpp
@@ -29,7 +29,7 @@ private:
 We add a handle to the RenderPass we are going to create, and an array of framebuffers. This array will be equivalent to the _swapchainImages and _swapchainImageViews.
 
 
-On the cpp side, we add it to the init function, after the others
+On the cpp side, we add it to the init function, after the others.
 vk_engine.cpp
 
 ```cpp
@@ -89,7 +89,7 @@ The image will use the format we got from the swapchain (so its compatible), and
 
 Before the renderpass, the image layout will be undefined, which means "we dont care". And after the renderpass ends, the layout will be ready to be displayed with the swapchain.
 
-Now that our main image target is defined, we need to add 1 subpass that will render into it. This goes right after defining the attachment
+Now that our main image target is defined, we need to add a subpass that will render into it. This goes right after defining the attachment
 
 ```cpp
 	VkAttachmentReference color_attachment_ref = {};
@@ -132,7 +132,7 @@ Now that the main attachment and the subpass is done, we can create the renderpa
 Thats it, we have now created our very basic renderpass. We will go back to this code later when we add depth testing, which needs more attachments defined.
 
 ## Framebuffers
-Once the renderpass is made, we can use it to create the framebuffers. Framebuffers are created from a given renderpass, and they act as link between the Attachments of the renderpass and the real images that they should render to.
+Once the renderpass is made, we can use it to create the framebuffers. Framebuffers are created from a given renderpass, and they act as link between the attachments of the renderpass and the real images that they should render to.
 
 ```cpp
 void VulkanEngine::init_framebuffers()

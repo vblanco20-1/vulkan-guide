@@ -42,12 +42,11 @@ using namespace std;
 	} while (0)
 ```
 
-The macro really only checks if there is a VkResult that isnt 0, and exits app directly.
-All Vulkan functions that can error out will return a VkResult. This is really just an integer error code. If the error code isnt 0, something is going badly. 
+All Vulkan functions that can error out will return a VkResult. This is really just an integer error code. If the error code isnt 0, something is going badly and we just abort with an error message. 
 
-With those two done, we can go forward with initialization proper.
+With those two done, we can go forward with initialization of the basic structures for Vulkan.
 
-# Initializing core Vulkan handles
+# Initializing core Vulkan structures
 
 
 The first thing we are going to intialize, is the Vulkan instance. For that, lets start by adding a new function and the stored handles to the VulkanEngine class
@@ -125,11 +124,11 @@ For the creation of the instance, we want it to have the name "Example Vulkan Ap
 The "Example Vulkan Application" name is completely meaningless. If you want to change it to anything, it wont be a problem.
 When initializing a VkInstance, the name of the application and engine is supplied. This is so driver vendors can detect the names of AAA games, so they can tweak internal driver logic for them alone. For normal people, its not really important.
 
-We want to enable validation layers by default, hardcoded. With what we are going to do during the guide, there is no need to ever turn them off, as they will catch our errors very nicely.
+We want to enable validation layers by default, hardcoded. With what we are going to do during the guide, there is no need to ever turn them off, as they will catch our errors very nicely. On a more advanced engine, you would only enable the layers in debug mode, or with a specific configuration parameter.
 
-Lastly, we tell the library that we want the debug debug messenger. This is what catches the logs that the validation layers will output. Because we have no need for a dedicated one, we will just let the library use one that just directly outputs to console.
+Lastly, we tell the library that we want the debug messenger. This is what catches the log messages that the validation layers will output. Because we have no need for a dedicated one, we will just let the library use one that just directly outputs to console.
 
-We then just grab the actual VkInstance handle from the vkb result object.
+We then just grab the actual VkInstance handle from the vkb::Instance object.
 
 ## Device
 
@@ -138,7 +137,7 @@ We then just grab the actual VkInstance handle from the vkb result object.
 	SDL_Vulkan_CreateSurface(_window, _instance, &_surface);
 
 	//use vkbootstrap to select a gpu. 
-	//We want a gpu that can write to the SDL surface and supports Vulkan 1.2
+	//We want a gpu that can write to the SDL surface and supports Vulkan 1.1
 	vkb::PhysicalDeviceSelector selector{ vkb_inst };
 	vkb::PhysicalDevice physicalDevice = selector
 		.set_minimum_version(1, 1)
@@ -158,9 +157,9 @@ We then just grab the actual VkInstance handle from the vkb result object.
 
 To select a gpu to use, we are going to use vkb::PhysicalDeviceSelector.
 
-First of all, we need to create a VkSurfaceKHR Object from the SDL window. This is the actual window we will be rendering to, so we need to tell the physical device selector to grab a gpu that can render to said window.
+First of all, we need to create a VkSurfaceKHR object from the SDL window. This is the actual window we will be rendering to, so we need to tell the physical device selector to grab a gpu that can render to said window.
 
-For the gpu selector, we just want Vulkan 1.1 support + the window surface, so there is not much to find. The library will make sure to select the dedicated gpu in the system.
+For the gpu selector, we just want Vulkan 1.1 support and the window surface, so there is not much to find. The library will make sure to select the dedicated gpu in the system.
 
 Once we have a VkPhysicalDevice, we can directly build a VkDevice from it. 
 
@@ -170,7 +169,7 @@ Thats it, we have initialized Vulkan. We can now start calling Vulkan commands.
 
 But before we start executing commands, there is one last thing to do.
 
-## Setting up swapchain
+## Setting up the swapchain
 
 Last thing from the core initialization is to initialize the swapchain, so we can have something to render into.
 
@@ -199,11 +198,11 @@ private:
 
 ```
 
-We are storing the VkSwapchainKHR itself, alongside the format that the swapchain images need so they are understood by the OS. 
+We are storing the VkSwapchainKHR itself, alongside the format that the swapchain images use when rendering to them.
 
-We also store 2 arrays, one of Images, and other of ImageViews. 
+We also store 2 arrays, one of Images, and another of ImageViews. 
 
-A VkImage is a handle to the actual image object to use as texture or to render into. A VkImageView is a wrapper for that image. It allows to do things like swap the colors.
+A VkImage is a handle to the actual image object to use as texture or to render into. A VkImageView is a wrapper for that image. It allows to do things like swap the colors. We will go into detail about it on chapter 5 when explaining textures.
 
 We call `init_swapchain()` on the main init function, right after calling `init_vulkan()`
 
@@ -263,7 +262,7 @@ Once the swapchain is built, we just store all of its stuff into the members of 
 
 
 ## Cleaning up resources
-We need to make sure that all of the Vulkan resources we create are correctly deleted when the app exists.
+We need to make sure that all of the Vulkan resources we create are correctly deleted, when the app exists.
 
 For that, go to the `VulkanEngine::cleanup()` function
 
@@ -288,7 +287,7 @@ void VulkanEngine::cleanup()
 }
 ```
 
-It is imperative that objects are destroyed in the opposite order that they are created. In some cases, if you know what you are doing, the order can be changed a bit and it will be fine, but the sure-way to clean up properly is to do it in reverse order.
+It is imperative that objects are destroyed in the opposite order that they are created. In some cases, if you know what you are doing, the order can be changed a bit and it will be fine, but destroying the objects in reverse order is an easy way to have it work.
 
 VkPhysicalDevice cant be destroyed, as its not a Vulkan resource per-se, its more like just a handle to a gpu in the system.
 
