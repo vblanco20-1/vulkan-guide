@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Vertex buffers
-parent: chapter_3
+parent: Chapter 3
 nav_order: 14
 ---
 
