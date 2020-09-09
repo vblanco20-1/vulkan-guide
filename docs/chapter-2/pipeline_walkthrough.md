@@ -137,7 +137,7 @@ VkPipelineRasterizationStateCreateInfo vkinit::rasterization_state_create_info(V
 	}
 ```
 
-We are just going to leave polygonMode as editable input, to be able to toggle beetween wireframe and solid drawing.
+We are just going to leave polygonMode as editable input, to be able to toggle between wireframe and solid drawing.
 
 cullMode is used to cull backfaces or frontpages, but in here we are going to leave it with no cull by default. We are also not using any depth bias here, so we are going to set all of that to 0.
 
@@ -380,7 +380,7 @@ We have finally created the pipeline we needed to draw the triangle, so we can f
 
 Lets go to our main `draw()` function, and execute the draw
 
-We need to add the draw commands beetween VkCmdBeginRenderPass and vkCmdEndRenderPass
+We need to add the draw commands between VkCmdBeginRenderPass and vkCmdEndRenderPass
 ```cpp
 
 vkCmdBeginRenderPass(cmd, &rpInfo, VK_SUBPASS_CONTENTS_INLINE);

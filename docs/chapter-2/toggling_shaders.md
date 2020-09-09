@@ -5,14 +5,14 @@ parent: Chapter 2
 nav_order: 15
 ---
 
-Right now, we have 2 different shader sets for our triangle, but we do them hardcoded at compile time, and cant switch beetween them.
+Right now, we have 2 different shader sets for our triangle, but we do them hardcoded at compile time, and cant switch between them.
 Lets create a system that lets us toggle the shaders for our triangle by pressing the Spacebar key.
 
 
 ## SDL Input events
 Because we want to use the spacebar, we need to run code whenever the key is pressed. Thankfully, the SDL library we are using can do that easily. 
 
-Lets first add a integer variable in VulkanEngine to use for choosing beetween the shaders.
+Lets first add a integer variable in VulkanEngine to use for choosing between the shaders.
 
 ```cpp
 int _selectedShader{ 0 };
@@ -179,4 +179,4 @@ void VulkanEngine::draw()
 }
 ```
 
-If we now run the application, we should be able to toggle beetween the 2 shaders that we have and see it display accordingly.
+If we now run the application, we should be able to toggle between the 2 shaders that we have and see it display accordingly.

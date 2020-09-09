@@ -21,7 +21,7 @@ In general, applications only need to create a single VkInstance for their entir
 ## VkPhysicalDevice
 Once we have created a VkInstance, we can query it for what gpus are available in the system. 
 
-Vulkan allows us to get a list of what gpus are in a system, and what their stats and features are. All of this information is represented on the VkPhysicalDevice handle, which is a reference to the "actual" GPU. For example, in a dedicated gaming PC, there will likely only be 1 VkPhysicalDevice available, which is the dedicated gaming GPU. In this case, there is no need to choose beetween GPUs, as there is only one. 
+Vulkan allows us to get a list of what gpus are in a system, and what their stats and features are. All of this information is represented on the VkPhysicalDevice handle, which is a reference to the "actual" GPU. For example, in a dedicated gaming PC, there will likely only be 1 VkPhysicalDevice available, which is the dedicated gaming GPU. In this case, there is no need to choose between GPUs, as there is only one. 
 
 Where things get more interesting is in devices such as a laptop. Laptops commonly have 2 gpus, one being the CPU integrated one (low power), and other being the dedicated GPU (high power). In such a case, an application will need to decide what gpu to use for the rendering, and optimally, leave the choice for the user, in the case he might want to use the less powerful dedicated CPU to preserve battery life.
 
@@ -31,7 +31,7 @@ Apart from choosing a GPU to use, VkPhysicalDevice lets us query the features it
 Once we have the VkPhysicalDevice of the GPU we are going to use, we can create a VkDevice from it. This is the actual GPU driver on the gpu hardware, and the way we communicate with said GPU.
 Most of Vulkan commands outside of debug utils or initialization stuff need the VkDevice. A device is created with a list of extensions that you want to enable. It is highly recomended you do not enable extensions you dont need, as they can cause the driver to be slower due to checking extra things.
 
-One of the most important goals of Vulkan when it was created, is that multi-gpu can be done "manually". This is done by creating a VkDevice for each of the GPUs you want to use, and then it is possible to share data beetween VkDevices. A candidate for this would be to create a VkDevice on your main dedicated GPU for the actual graphics, but keep a VkDevice for the integrated GPU to use to run some physics calculations or other data.
+One of the most important goals of Vulkan when it was created, is that multi-gpu can be done "manually". This is done by creating a VkDevice for each of the GPUs you want to use, and then it is possible to share data between VkDevices. A candidate for this would be to create a VkDevice on your main dedicated GPU for the actual graphics, but keep a VkDevice for the integrated GPU to use to run some physics calculations or other data.
 
 ## Swapchain
 Initializing the GPU is nice, but we want to actually perform some rendering into the screen. This is where the swapchain comes.
@@ -39,7 +39,7 @@ Swapchains are not into the core Vulkan spec, because they are optional, and oft
 
 A swapchain is created on a given size, and if the window resizes, you will have to recreate the swapchain again. 
 
-The format that the swapchain exposes for its images can be different beetween platforms and even gpus, so its neccesary that you store the image format that the swapchain wants, as rendering on a different format will cause artifacts or crashes.
+The format that the swapchain exposes for its images can be different between platforms and even gpus, so its neccesary that you store the image format that the swapchain wants, as rendering on a different format will cause artifacts or crashes.
 
 Swapchains are really a list of images, readable by the operating system for display to the screen. You can create swapchains with more or less images, but generally you will want only 2 or 3 images to perform double-buffer or triple-buffer rendering.
 

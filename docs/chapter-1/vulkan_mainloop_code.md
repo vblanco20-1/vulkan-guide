@@ -76,7 +76,7 @@ void VulkanEngine::draw()
 ```
 
 we use `vkWaitForFences()` to wait for the GPU to have finished its work, and after it we reset the fence.
-Fences have to be reset beetween uses, you cant use the same fence on multiple gpu commands without resetting it in the middle.
+Fences have to be reset between uses, you cant use the same fence on multiple gpu commands without resetting it in the middle.
 
 The timeout of the WaitFences call is of 1 second. Its using nanoseconds for the wait time.
 If you call the function with 0 as the timeout, you can use it to know of the GPU is still executing the command or not.

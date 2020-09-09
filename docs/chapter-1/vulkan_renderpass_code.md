@@ -132,7 +132,7 @@ Now that the main attachment and the subpass is done, we can create the renderpa
 Thats it, we have now created our very basic renderpass. We will go back to this code later when we add depth testing, which needs more attachments defined.
 
 ## Framebuffers
-Once the renderpass is made, we can use it to create the framebuffers. Framebuffers are created from a given renderpass, and they act as link beetween the Attachments of the renderpass and the real images that they should render to.
+Once the renderpass is made, we can use it to create the framebuffers. Framebuffers are created from a given renderpass, and they act as link between the Attachments of the renderpass and the real images that they should render to.
 
 ```cpp
 void VulkanEngine::init_framebuffers()
