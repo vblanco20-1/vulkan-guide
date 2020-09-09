@@ -28,7 +28,7 @@ For the Vulkan engine, we use a specific folder layout.
 
 On the engine, we use a set of libraries, most stored in `/third_party`. The only library that isnt vendored-in is SDL
 
-All the libraries in third-party are vendored in, and cmake will build them automatically. For SDL, its required to build it separated from the project, and tell Cmake where to find it.
+All the libraries in third-party are vendored in, and Cmake will build them automatically. For SDL, its required to build it separated from the project, and tell Cmake where to find it.
 
 - [GLM (openGL Mathematics)](https://github.com/g-truc/glm) Mathematics library, Header only. We use this library to use its matrix and vector math functionality. Its a library that contains types that are directly compatible with GLSL types in most cases. For example, a `glm::mat4` has similar operations and is directly compatible with a `mat4` in a shader. It says OpenGL in the name, but it works great with Vulkan too.
 - [SDL](https://www.libsdl.org/) Windowing and input library, Separate build. SDL is one of the most used libraries to create a window and have input on a crossplatform way. SDL works in almost every platform, and its generally very well supported. Used in Unreal Engine, Unity, Source, and others. We use it in the project to have a easy and fast way to open a window, and have detailed keyboard input.

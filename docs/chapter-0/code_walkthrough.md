@@ -53,7 +53,7 @@ vk_init.h holds this
 #include <vulkan/vulkan.h>
 ```
 
-We include the main header for Vulkan, which is that `<vulkan/vulkan.h>` you can see. That will include all of Vulkan function definitions and types that we will need for everything.
+We include the main header for Vulkan, which is that `<vulkan/vulkan.h>` you can see. That will include all the Vulkan function definitions and types that we will need for everything.
 `#pragma once` is a preprocessor directive that tells the compiler to never include this twice into the same file. Its equivalent to include guards, but cleaner.
 
 vk_initializers.h sees this
@@ -69,7 +69,7 @@ namespace vkinit {
 
 We include the vk_types header, which brings Vulkan itself (we will need it), and we declare a namespace for the functions we will add here later.
 
-finally, we get into vk_engine.h, the main class
+Finally, we get into vk_engine.h, the main class
 
 ```cpp
 
@@ -165,7 +165,7 @@ void VulkanEngine::cleanup()
 }
 ```
 In a similar way that we did `SDL_CreateWindow`, we need to do `SDL_DestroyWindow` This will destroy the window for the program.
-Over time, we will add more logic into this cleanup function. While its not completely neccesary to cleanup properly (the OS will delete everything for us anyway), its good practise to do it.
+Over time, we will add more logic into this cleanup function. While its not completely necessary to cleanup properly (the OS will delete everything for us anyway), its good practise to do it.
 
 
 ```cpp

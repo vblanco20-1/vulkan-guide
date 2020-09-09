@@ -40,7 +40,7 @@ VkResetFences(myFence);
 ## VkSemaphore
 This is used for GPU to GPU sync. Semaphores allow defining order of operations on gpu commands, and for them to run one after another. Some Vulkan operations (like VkQueueSubmit) support to either Signal or Wait semaphores. 
 
-If you set it to Signal a semaphore, this means the operation will inmediately "lock" said semaphore when it executes, and unlock once it finishes execution.
+If you set it to Signal a semaphore, this means the operation will immediately "lock" said semaphore when it executes, and unlock once it finishes execution.
 
 If you set it to Wait on a semaphore, it means that the operation will wait until that semaphore is unlocked to begin execution.
 

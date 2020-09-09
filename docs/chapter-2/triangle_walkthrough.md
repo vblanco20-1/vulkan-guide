@@ -72,7 +72,7 @@ In here, we are declaring the variable for the output of the fragment shader. We
 ## Compiling the shaders.
 
 If the shaders are on the correct folder, project/shaders, they will be detected by CMake.
-Re-generate the cmake visual studio project, and they should be detected. 
+Re-generate the Cmake visual studio project, and they should be detected. 
 Check the project "Shaders" on the generated visual studio solution, and the new 2 files should be in there. If you rebuild the Shaders project, the shaders should be compiled. In the build output it will give the errors if they happen.
 
 If you look at the CMakeLists.txt at the root project folder, you will see that its creating a custom Shader targets building from grabbing all the files that end in *.frag and *.vert from the shaders/ folder. I recommend you read that section. It is commented explaining how it works.

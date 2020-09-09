@@ -88,7 +88,7 @@ void main()
 
 We can now read the color in the fragment shader, and output it as the final color.
 
-Make sure to rebuild the Shaders target in cmake, as we need it to compile the new things. It shouldnt have any error
+Make sure to rebuild the Shaders target in Cmake, as we need it to compile the new things. It shouldnt have any error
 
 ## Changing the shaders in code
 Now, lets change the shaders used in the code, to switch the red triangle shader into a colored triangle shader.

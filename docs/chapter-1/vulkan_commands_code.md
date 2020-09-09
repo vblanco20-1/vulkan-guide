@@ -108,7 +108,7 @@ We are also setting somethin in the .flags parameter. A lot of Vulkan structures
 
 At the end, we finally call VkCreateCommandPool, giving it our VkDevice, the commandPoolInfo for create parameters, and a pointer to the _commandPool member, which will get overwritten if it succeeds.
 
-To check if the command succeeds, we use the VK_CHECK() macro. It will just inmediately abort if something happens.
+To check if the command succeeds, we use the VK_CHECK() macro. It will just immediately abort if something happens.
 
 ## Creating a VkCommandBuffer
 
