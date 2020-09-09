@@ -9,7 +9,7 @@ Right now, we are rendering triangles by hardcoding the vertex arrays in the sha
 
 ## Vertex buffers
 In Vulkan, you can allocate memory on the GPU, and read it from the shaders. There are 2 main types of memory you can use, Images and Buffers.
-We have already been using images a bit as part of the renderpass and the swapchain, but using them in the shaders can be complicated so we leave it for a later chapter. Images are used mostly for 2d or 3d data, like textures, where you want to access any part of it from the shaders.
+We have already been using images a bit as part of the render pass and the swapchain, but using them in the shaders can be complicated so we leave it for a later chapter. Images are used mostly for 2d or 3d data, like textures, where you want to access any part of it from the shaders.
 
 The other type is buffers, which are just a bunch of memory that the GPU can see and write/read to. There are multiple types of buffers, and they can be used in different ways. In here, we are going to create a buffer and use it as a Vertex Buffer, which will allow the GPU to read the data from the buffer and send it to our vertex shader.
 
