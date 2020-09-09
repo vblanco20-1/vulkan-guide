@@ -8,5 +8,6 @@ permalink: /docs/chapter_0
 
 # Chapter 0 index
 
+In this chapter, we setup the build toolchain to compile the project
 
 {: .fs-6 .fw-300 }

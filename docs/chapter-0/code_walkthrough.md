@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Code Walktrhough
-parent: Chapter 1
+parent: Chapter 0
 nav_order: 2
 ---
 
