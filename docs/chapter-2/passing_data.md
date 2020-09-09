@@ -7,7 +7,7 @@ nav_order: 14
 
 We have been able to render a red triangle, but this is too boring. Now, we will add more color to it, converting it into the classic RGB triangle.
 
-To do that, we are going to need to pass more data from the vertex shader to the fragment shader. At the moment we only pass the position, which is a default vulkan variable, but there isnt a color variable we can use, so we need to make our own.
+To do that, we are going to need to pass more data from the vertex shader to the fragment shader. At the moment we only pass the position, which is a default Vulkan variable, but there isnt a color variable we can use, so we need to make our own.
 
 All shader stages can pass data beetween them by using input and output variables. If in the vertex shader we create an output variable, we will be able to read it on the fragment shader as an input variable.
 

@@ -7,7 +7,7 @@ nav_order: 10
 
 At this point, we managed to setup the main render loop, so its the time to start rendering things. 
 
-To render things, we have to understand how the vulkan rendering pipeline works. 
+To render things, we have to understand how the Vulkan rendering pipeline works. 
 
 ## The render pipeline
 The GPU has a lot of functionality used for rendering objects. This is not only the shaders (programs that run on the gpu), but also functionality for the hardware itself.

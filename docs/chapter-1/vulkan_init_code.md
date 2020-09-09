@@ -22,7 +22,7 @@ For that, go to the top of vk_engine.cpp, and just include the `"VkBootstrap.h"`
 
 ```
 
-Next thing we are going to do is to add a VK_CHECK macro to the top of vk_engine.cpp . This will just immediately crash whenever a vulkan error is not handled, useful as errors are likely here.
+Next thing we are going to do is to add a VK_CHECK macro to the top of vk_engine.cpp . This will just immediately crash whenever a Vulkan error is not handled, useful as errors are likely here.
 
 
 ```cpp
@@ -43,14 +43,14 @@ using namespace std;
 ```
 
 The macro really only checks if there is a VkResult that isnt 0, and exits app directly.
-All vulkan functions that can error out will return a VkResult. This is really just an integer error code. If the error code isnt 0, something is going badly. 
+All Vulkan functions that can error out will return a VkResult. This is really just an integer error code. If the error code isnt 0, something is going badly. 
 
 With those two done, we can go forward with initialization proper.
 
-# Initializing core vulkan handles
+# Initializing core Vulkan handles
 
 
-The first thing we are going to intialize, is the vulkan instance. For that, lets start by adding a new function and the stored handles to the VulkanEngine class
+The first thing we are going to intialize, is the Vulkan instance. For that, lets start by adding a new function and the stored handles to the VulkanEngine class
 
 vk_engine.h
 ```cpp
@@ -58,9 +58,9 @@ class VulkanEngine {
 public:
 
     // --- ommited --- 
-    VkInstance _instance; // vulkan library handle
+    VkInstance _instance; // Vulkan library handle
 	VkPhysicalDevice _chosenGPU; // gpu chosen as the default device
-	VkDevice _device; // vulkan device for commands
+	VkDevice _device; // Vulkan device for commands
 private:
 		
 	void init_vulkan();
@@ -84,7 +84,7 @@ void VulkanEngine::init()
 		window_flags
 	);
 
-	//load the core vulkan structures
+	//load the core Vulkan structures
 	init_vulkan();
 
 	//everything went fine
@@ -101,13 +101,13 @@ We have added 3 handles to the main class, VkDevice, VkPhysicalDevice, and VkIns
 
 ## Instance
 
-Now that our new init_vulkan function is added, we can start filling it.
+Now that our new init_Vulkan function is added, we can start filling it.
 
 
 ```cpp
 	vkb::InstanceBuilder builder;
 
-	//make the vulkan instance, with basic debug features
+	//make the Vulkan instance, with basic debug features
 	auto inst_ret = builder.set_app_name("Example Vulkan Application")
 		.request_validation_layers(true)
 		.use_default_debug_messenger()
@@ -119,7 +119,7 @@ Now that our new init_vulkan function is added, we can start filling it.
 	_instance = vkb_inst.instance;
 ```
 
-We are going to create a vkb::InstanceBuilder, which is from the VkBootstrap library, and simplifies the creation of a vulkan VkInstance.
+We are going to create a vkb::InstanceBuilder, which is from the VkBootstrap library, and simplifies the creation of a Vulkan VkInstance.
 
 For the creation of the instance, we want it to have the name "Example Vulkan Application", have validation layers enabled, and use default debug logger.
 The "Example Vulkan Application" name is completely meaningless. If you want to change it to anything, it wont be a problem.
@@ -138,7 +138,7 @@ We then just grab the actual VkInstance handle from the vkb result object.
 	SDL_Vulkan_CreateSurface(_window, _instance, &_surface);
 
 	//use vkbootstrap to select a gpu. 
-	//We want a gpu that can write to the SDL surface and supports vulkan 1.2
+	//We want a gpu that can write to the SDL surface and supports Vulkan 1.2
 	vkb::PhysicalDeviceSelector selector{ vkb_inst };
 	vkb::PhysicalDevice physicalDevice = selector
 		.set_minimum_version(1, 1)
@@ -146,12 +146,12 @@ We then just grab the actual VkInstance handle from the vkb result object.
 		.select()
 		.value();
 
-	//create the final vulkan device
+	//create the final Vulkan device
 	vkb::DeviceBuilder deviceBuilder{ physicalDevice };
 
 	vkb::Device vkbDevice = deviceBuilder.build().value();
 
-	// Get the VkDevice handle used in the rest of a vulkan application
+	// Get the VkDevice handle used in the rest of a Vulkan application
 	_device = vkbDevice.device;
 	_chosenGPU = physicalDevice.physical_device;
 ```
@@ -166,7 +166,7 @@ Once we have a VkPhysicalDevice, we can directly build a VkDevice from it.
 
 And at the end, we store the handles in the class.
 
-Thats it, we have initialized vulkan. We can now start calling vulkan commands.
+Thats it, we have initialized Vulkan. We can now start calling Vulkan commands.
 
 But before we start executing commands, there is one last thing to do.
 
@@ -214,7 +214,7 @@ void VulkanEngine::init()
 {
 	// --- SDL stuff ----
 
-	//load the core vulkan structures
+	//load the core Vulkan structures
 	init_vulkan();
 
 	//create the swapchain
@@ -263,7 +263,7 @@ Once the swapchain is built, we just store all of its stuff into the members of 
 
 
 ## Cleaning up resources
-We need to make sure that all of the vulkan resources we create are correctly deleted when the app exists.
+We need to make sure that all of the Vulkan resources we create are correctly deleted when the app exists.
 
 For that, go to the `VulkanEngine::cleanup()` function
 
@@ -290,7 +290,7 @@ void VulkanEngine::cleanup()
 
 It is imperative that objects are destroyed in the opposite order that they are created. In some cases, if you know what you are doing, the order can be changed a bit and it will be fine, but the sure-way to clean up properly is to do it in reverse order.
 
-VkPhysicalDevice cant be destroyed, as its not a vulkan resource per-se, its more like just a handle to a gpu in the system.
+VkPhysicalDevice cant be destroyed, as its not a Vulkan resource per-se, its more like just a handle to a gpu in the system.
 
 Because our initialization order was SDL Window -> Instance -> Surface -> Device -> Swapchain, we are doing exactly the opposite order for destruction.
 
@@ -335,7 +335,7 @@ If you get one of those errors about a VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT no
 
 
 
-With the vulkan initialization completed and the layers working, we can begin to prepare the actual render loop and command execution.
+With the Vulkan initialization completed and the layers working, we can begin to prepare the actual render loop and command execution.
 
 
 Next: [Vulkan commands]({{ site.baseurl }}{% link docs/chapter-1/vulkan_command_flow.md %})

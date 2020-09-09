@@ -23,10 +23,10 @@ parent: introduction
 - VkSemaphore : syncronizes GPU to Gpu execution of commands (used for executing multiple submits one after other or similar)
 - VkFence : Syncronizes Gpu to CPU execution of commands (used to know if an execution has finished)
 
-# High level vulkan application flow
+# High level Vulkan application flow
 
 ## Engine initialization
-First, everything is initialized. To initialize vulkan, you start by creating a VkInstance. From the VkInstance, you query the VkPhysicalDevice availible in the machine (there is a VkPhysicalDevice for dedicated GPU, and another for integrated GPU). Once you query the limits and features of the availible VkPhysicalDevice, you create a VkDevice from it.
+First, everything is initialized. To initialize Vulkan, you start by creating a VkInstance. From the VkInstance, you query the VkPhysicalDevice available in the machine (there is a VkPhysicalDevice for dedicated GPU, and another for integrated GPU). Once you query the limits and features of the available VkPhysicalDevice, you create a VkDevice from it.
 Once you have a VkDevice, you create some VkQueues that will allow you to execute commands on it, and initialize the VkSwapchain. Alongside the VkQueues, you create some VkCommandPool that will allow you to allocate VkCommandBuffer from them. 
 
 ## Asset initialization

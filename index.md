@@ -9,7 +9,7 @@ permalink: /
 
 ## Welcome to VulkanGuide
 
-Welcome to a new work-in-progress vulkan guide. The focus of this guide is to understand vulkan correctly, and act as a stepping stone for then working in your own projects. Unlike most samples and other vulkan guides, which like to hardcode rendering loops, in here we will have a focus around dynamic rendering, so that it can act as a better base code for a game engine.
+Welcome to a new work-in-progress Vulkan guide. The focus of this guide is to understand Vulkan correctly, and act as a stepping stone for then working in your own projects. Unlike most samples and other Vulkan guides, which like to hardcode rendering loops, in here we will have a focus around dynamic rendering, so that it can act as a better base code for a game engine.
 
 While the guide is focused around game rendering, its concepts can be used in CAD and visualization just fine.
 
@@ -17,9 +17,9 @@ We will be using C++, but we arent doing complex C++ unique features, so followi
 
 This guide is meant for the people who already know the basics about 3d graphics, and have worked with either Opengl or Directx in the past. This guide will not explain 3d rendering basics such as linear algebra math.
 
-The guide is separated into multiple chapters. Each chapter focuses on a narrow part of vulkan.
+The guide is separated into multiple chapters. Each chapter focuses on a narrow part of Vulkan.
 
-- **Introduction**: Overview about vulkan API and the libraries used by this project
+- **Introduction**: Overview about Vulkan API and the libraries used by this project
 -  **Chapter 0**: Setting up the guide initial code
 -  **Chapter 1**: Vulkan initialization and render loop setup. (Draws a flashing clear color)
 -  **Chapter 2**: Vulkan triangle drawing (Draws a hardcoded triangle)

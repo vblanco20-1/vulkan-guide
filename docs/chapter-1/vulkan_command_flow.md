@@ -11,7 +11,7 @@ nav_order: 10
 
 
 ## Vulkan Command Execution
-Unlike opengl or directX pre-11, in vulkan, all gpu commands have to go through a command buffer.
+Unlike opengl or directX pre-11, in Vulkan, all gpu commands have to go through a command buffer.
 Command buffers are allocated from a Command Pool, and executed into queues.
 
 The general flow to execute commands is:
@@ -22,14 +22,14 @@ The general flow to execute commands is:
 It is possible to submit the same command buffer multiple times. In tutorials and samples its very common to record the commands once, and then submit them every frame in the render loop.
 In this tutorial, we are going to record the commands every frame, as its more relevant to how a real render engine works.
 
-Recording commands in vulkan is relatively cheap. Most of the work goes into the `vkQueueSubmit` call, where the commands are validated in the driver and translated into real gpu commands.
+Recording commands in Vulkan is relatively cheap. Most of the work goes into the `vkQueueSubmit` call, where the commands are validated in the driver and translated into real gpu commands.
 
 One very important part with command buffers, is that they can be recorded in parallel. You can record different command buffers from different threads safely. To do that, you need to have 1 VkCommandPool and 1 VkCommandBuffer per thread (minimum), and make sure that each thread only uses their own resources. Once that is done, its possible to submit the multiple command buffers in one of the threads. VkQueueSubmit is not threadsafe, only one thread can push the commands at once. 
 
 ## VkQueue
-Queues in vulkan are a "execution port" for GPUs. Every gpu has multiple queues availible, and you can even use them at once to execute different command streams. Commands submitted to separated queues may execute at once. This is very useful if you are doing background work that doesnt exactly map to the main frame loop. You can create a VkQueue specifically for said background work, and have it separated from the normal rendering.
+Queues in Vulkan are a "execution port" for GPUs. Every gpu has multiple queues available, and you can even use them at once to execute different command streams. Commands submitted to separated queues may execute at once. This is very useful if you are doing background work that doesnt exactly map to the main frame loop. You can create a VkQueue specifically for said background work, and have it separated from the normal rendering.
 
-All queues in vulkan come from a queue Family. A queue family is the "type" of queue it is, and what type of commands it supports. What we want in the guide is a queue that supports both Graphics and Present, this will mean that the same queue will be used for both rendering, and to display images into the screen.
+All queues in Vulkan come from a queue Family. A queue family is the "type" of queue it is, and what type of commands it supports. What we want in the guide is a queue that supports both Graphics and Present, this will mean that the same queue will be used for both rendering, and to display images into the screen.
 
 Different GPUs support different queue families, an example is this NVidia GT 750ti from Vulkan Harware Info <https://vulkan.gpuinfo.org/displayreport.php?id=8859#queuefamilies>
 2 Queue families, one that supports  up to 16 ! queues that have all features, and then a family that can support 1 queue for transfer only.

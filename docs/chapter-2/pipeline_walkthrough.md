@@ -9,7 +9,7 @@ nav_order: 11
 
 Now that we can load the shaders we needed for the triangle, we have to build the VkPipeline to render it.
 
-The VkPipeline is a *huge* object in vulkan that encompasses the configuration of the entire GPU for the draw. Building them can be very expensive, as it will fully convert the shader module into the gpu instructions, and will validate the setup for it.
+The VkPipeline is a *huge* object in Vulkan that encompasses the configuration of the entire GPU for the draw. Building them can be very expensive, as it will fully convert the shader module into the gpu instructions, and will validate the setup for it.
 
 Once a pipeline is built, it can be bound inside a command buffer, and then when you draw anything it will use the bound pipeline.
 
@@ -40,7 +40,7 @@ public:
 
 ```
 
-The pipeline builder is a class with all the needed vulkan structs stored inside (this is a basic set, there are more, but for now these are the ones we will need to fill). And a build_pipeline function that will finalize it and build it. 
+The pipeline builder is a class with all the needed Vulkan structs stored inside (this is a basic set, there are more, but for now these are the ones we will need to fill). And a build_pipeline function that will finalize it and build it. 
 If you want, you can put the builder in its own file (recomended vk_pipeline.h) but we arent doing it to keep number of files low.
 
 We will now go to vk_initializers.h and start writing an initializer for each of those structs.
@@ -274,7 +274,7 @@ VkPipelineLayoutCreateInfo vkinit::pipeline_layout_create_info() {
 ```
 We are setting pSetLayouts and pPushConstantRanges both to null because our shader has no inputs, but we will soon add something to here.
 
-It is needed that we store the pipeline layout somewhere, as there are a lot of vulkan commands that need it, so lets add a member to our VulkanEngine class for it
+It is needed that we store the pipeline layout somewhere, as there are a lot of Vulkan commands that need it, so lets add a member to our VulkanEngine class for it
 
 
 ```cpp

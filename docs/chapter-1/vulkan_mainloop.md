@@ -5,17 +5,17 @@ parent: Chapter 1
 nav_order: 30
 ---
 
-We have our renderpass, we also have our command buffer, and we have vulkan itself initialized. It is time to actually begin writing the render loop itself.
+We have our renderpass, we also have our command buffer, and we have Vulkan itself initialized. It is time to actually begin writing the render loop itself.
 
 # Synchronization
 Vulkan offers explicit sync structures to allow the CPU to sync execution of commands with the GPU. And also to control the order of executions in the GPU.
-All vulkan commands that are executed will go into a queue and will be executed "non-stop", and in an undefined order.
+All Vulkan commands that are executed will go into a queue and will be executed "non-stop", and in an undefined order.
 
 Some times, you explicitly want to make sure some operations have finished before executing new ones. While operations done to a given VkQueue happen linearly, if you have multiple queues, the order is not guaranteed. For that, and for the communication with the CPU, we have two structures
 
 
 ## VkFence
-This is used for GPU -> CPU communication. A lot of vulkan operations, such as vkQueueSubmit allow an *optional* fence parameter. If this is set, we can know from the CPU if the gpu has finished these operations. We will use it to sync the main loop in the CPU with the GPU.
+This is used for GPU -> CPU communication. A lot of Vulkan operations, such as vkQueueSubmit allow an *optional* fence parameter. If this is set, we can know from the CPU if the gpu has finished these operations. We will use it to sync the main loop in the CPU with the GPU.
 
 
 ![cmake]({{site.baseurl}}/diagrams/commandtimeline.png)
@@ -38,7 +38,7 @@ VkResetFences(myFence);
 
 
 ## VkSemaphore
-This is used for GPU to GPU sync. Semaphores allow defining order of operations on gpu commands, and for them to run one after another. Some vulkan operations (like VkQueueSubmit) support to either Signal or Wait semaphores. 
+This is used for GPU to GPU sync. Semaphores allow defining order of operations on gpu commands, and for them to run one after another. Some Vulkan operations (like VkQueueSubmit) support to either Signal or Wait semaphores. 
 
 If you set it to Signal a semaphore, this means the operation will inmediately "lock" said semaphore when it executes, and unlock once it finishes execution.
 
@@ -77,7 +77,7 @@ If you dont use semaphores in this case, the commands of the 3 operations might 
 # Render Loop
 In the render loop, we are going to use a single fence to wait until the GPU has finished executing the render work. Because this project is a simple tutorial, we arent going to do anything advanced, and just wait until the work we sent to the GPU is executed to start preparing the next frame.
 
-When doing the render loop, we need to request a image from the swapchain. Requesting an image from the swapchain will block the CPU thread until the image is availible. Using vsync-d modes will fully block the CPU, while other modes (like Mailbox) will return almost immediately.
+When doing the render loop, we need to request a image from the swapchain. Requesting an image from the swapchain will block the CPU thread until the image is available. Using vsync-d modes will fully block the CPU, while other modes (like Mailbox) will return almost immediately.
 
 We will begin the render loop by requesting the image, which will give us a integer image index. We  then use this index with the Framebuffer array we made.
 

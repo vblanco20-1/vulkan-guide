@@ -109,7 +109,7 @@ The image life will go something like this:
 
 UNDEFINED -> RenderPass Begins -> Subpass 0 begins (Transition to Attachment Optimal)  -> Subpass 0 renders -> Subpass 0 ends -> Renderpass Ends (Transitions to Present Source)
 
-The vulkan driver will perform the layout transitions for us when using the renderpass. If we werent using a renderpass (drawing from compute shaders) we would need to do the same transitions explicitly.
+The Vulkan driver will perform the layout transitions for us when using the renderpass. If we werent using a renderpass (drawing from compute shaders) we would need to do the same transitions explicitly.
 
 Now that the main attachment and the subpass is done, we can create the renderpass
 

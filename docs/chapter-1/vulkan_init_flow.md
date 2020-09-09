@@ -7,35 +7,35 @@ nav_order: 1
 
 
 ## Vulkan initialization
-Unlike Opengl, which allowed you to execute graphics commands near-inmediately, vulkan has a lenghty setup phase. To shorten this phase, we are going to use the library VkBootstrap, which helps a lot with all of this boilerplate.
+Unlike Opengl, which allowed you to execute graphics commands near-inmediately, Vulkan has a lenghty setup phase. To shorten this phase, we are going to use the library VkBootstrap, which helps a lot with all of this boilerplate.
 
-As vulkan is a very explicit API that gives very "direct" control, you need to initialize it to do things such as load extensions, select which gpu (or multiple!) you are going to use, and create the initial VkInstance and VkDevice structures that you can then use with vulkan commands.
+As Vulkan is a very explicit API that gives very "direct" control, you need to initialize it to do things such as load extensions, select which gpu (or multiple!) you are going to use, and create the initial VkInstance and VkDevice structures that you can then use with Vulkan commands.
 
 Vulkan has no global state, unlike OpenGL, so you need to send the VkDevice or VkInstance to the API functions. In this guide, we are going to link to the vulkan-1.dll directly, but this is not neccesary. You can load the function pointers "manually". Linking to vulkan-1.dll will also not load the extension functions, which you will have to load yourself.
 
 ## VkInstance
-The root of everything is the VkInstance. This represents the vulkan library itself. When creating a VkInstance, you can enable validation layers if you want, and also hook a logger of your choosing for when the vulkan driver has errors or needs to log something. Mostly used for the validation layers.
+The root of everything is the VkInstance. This represents the Vulkan library itself. When creating a VkInstance, you can enable validation layers if you want, and also hook a logger of your choosing for when the Vulkan driver has errors or needs to log something. Mostly used for the validation layers.
 
 In general, applications only need to create a single VkInstance for their entire run, as its just the global Vulkan context for your application.
 
 ## VkPhysicalDevice
-Once we have created a VkInstance, we can query it for what gpus are availible in the system. 
+Once we have created a VkInstance, we can query it for what gpus are available in the system. 
 
-Vulkan allows us to get a list of what gpus are in a system, and what their stats and features are. All of this information is represented on the VkPhysicalDevice handle, which is a reference to the "actual" GPU. For example, in a dedicated gaming PC, there will likely only be 1 VkPhysicalDevice availible, which is the dedicated gaming GPU. In this case, there is no need to choose beetween GPUs, as there is only one. 
+Vulkan allows us to get a list of what gpus are in a system, and what their stats and features are. All of this information is represented on the VkPhysicalDevice handle, which is a reference to the "actual" GPU. For example, in a dedicated gaming PC, there will likely only be 1 VkPhysicalDevice available, which is the dedicated gaming GPU. In this case, there is no need to choose beetween GPUs, as there is only one. 
 
 Where things get more interesting is in devices such as a laptop. Laptops commonly have 2 gpus, one being the CPU integrated one (low power), and other being the dedicated GPU (high power). In such a case, an application will need to decide what gpu to use for the rendering, and optimally, leave the choice for the user, in the case he might want to use the less powerful dedicated CPU to preserve battery life.
 
-Apart from choosing a GPU to use, VkPhysicalDevice lets us query the features it has, things like memory sizes, or what extensions are availible. This is very important for advanced applications where you want to know exactly how much VRAM you have availible, and if the GPU supports advanced features. 
+Apart from choosing a GPU to use, VkPhysicalDevice lets us query the features it has, things like memory sizes, or what extensions are available. This is very important for advanced applications where you want to know exactly how much VRAM you have available, and if the GPU supports advanced features. 
 
 ## VkDevice
 Once we have the VkPhysicalDevice of the GPU we are going to use, we can create a VkDevice from it. This is the actual GPU driver on the gpu hardware, and the way we communicate with said GPU.
-Most of vulkan commands outside of debug utils or initialization stuff need the VkDevice. A device is created with a list of extensions that you want to enable. It is highly recomended you do not enable extensions you dont need, as they can cause the driver to be slower due to checking extra things.
+Most of Vulkan commands outside of debug utils or initialization stuff need the VkDevice. A device is created with a list of extensions that you want to enable. It is highly recomended you do not enable extensions you dont need, as they can cause the driver to be slower due to checking extra things.
 
 One of the most important goals of Vulkan when it was created, is that multi-gpu can be done "manually". This is done by creating a VkDevice for each of the GPUs you want to use, and then it is possible to share data beetween VkDevices. A candidate for this would be to create a VkDevice on your main dedicated GPU for the actual graphics, but keep a VkDevice for the integrated GPU to use to run some physics calculations or other data.
 
 ## Swapchain
 Initializing the GPU is nice, but we want to actually perform some rendering into the screen. This is where the swapchain comes.
-Swapchains are not into the core vulkan spec, because they are optional, and often unique to the different platforms. If you run vulkan headless, for example to render images and saving them to disk, or performing offline calculations, its not needed that you create a swapchain, as swapchains are just for sending the images into the screen.
+Swapchains are not into the core Vulkan spec, because they are optional, and often unique to the different platforms. If you run Vulkan headless, for example to render images and saving them to disk, or performing offline calculations, its not needed that you create a swapchain, as swapchains are just for sending the images into the screen.
 
 A swapchain is created on a given size, and if the window resizes, you will have to recreate the swapchain again. 
 

@@ -5,14 +5,14 @@ parent: Chapter 2
 nav_order: 20
 ---
 
-If you have run the triangle with layers enabled, you have probably seen that when you close the application, the layers complain about pipelines and other objects not being deleted. Given how far the amount of vulkan objects we have is growning, it is time to do a small refactor, and implement a better system to take care of those deletions.
+If you have run the triangle with layers enabled, you have probably seen that when you close the application, the layers complain about pipelines and other objects not being deleted. Given how far the amount of Vulkan objects we have is growning, it is time to do a small refactor, and implement a better system to take care of those deletions.
 
 ## Deletion queue
-In vulkan, we cant delete any object until we are sure that the GPU isnt using it. Deleting the objects out of order is also a big issue, as it will make the layers complain and might crash the drivers. For those reasons, using normal Cpp destructors is out of the question, and not doable. We need a better system to delete objects.
+In Vulkan, we cant delete any object until we are sure that the GPU isnt using it. Deleting the objects out of order is also a big issue, as it will make the layers complain and might crash the drivers. For those reasons, using normal Cpp destructors is out of the question, and not doable. We need a better system to delete objects.
 
 A very common implementation is to create a deletion queue. When creating objects, we will also add the objects to the queue, and then at some point in the application, once we are sure that the GPU is finished, we go through the queue deleting everything. 
 
-One way of implementing said deletion queue is by having arrays with the vulkan objects, and then deleting those in order. But we need something far more simple for now. 
+One way of implementing said deletion queue is by having arrays with the Vulkan objects, and then deleting those in order. But we need something far more simple for now. 
 
 The way we are going to implement it is by having a queue of std::function lambdas, that will get called in order FIFO (first in, first out). This way is not the most efficient, but it is good enough for a small engine.
 

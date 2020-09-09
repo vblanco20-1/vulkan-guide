@@ -78,9 +78,9 @@ Check the project "Shaders" on the generated visual studio solution, and the new
 If you look at the CMakeLists.txt at the root project folder, you will see that its creating a custom Shader targets building from grabbing all the files that end in *.frag and *.vert from the shaders/ folder. I recommend you read that section. It is commented explaining how it works.
 
 ## Vulkan Shader workflow
-Vulkan doesnt understand GLSL directly, it understands SPIRV. SPIRV is shader bytecode for vulkan. Think of SPIRV as a binary optimized version of GLSL. 
+Vulkan doesnt understand GLSL directly, it understands SPIRV. SPIRV is shader bytecode for Vulkan. Think of SPIRV as a binary optimized version of GLSL. 
 
-We need to convert the GLSL we have just written into spirv, so that vulkan can understand it. Thats what we did above, and the result is some .spv files that we can load onto vulkan.
+We need to convert the GLSL we have just written into spirv, so that Vulkan can understand it. Thats what we did above, and the result is some .spv files that we can load onto Vulkan.
 
 The Vulkan SDL comes with a built version of the glslang shader compiler, which is what we are using here to compile the shaders offline. It is possible to use the same compiler as a library, and compile GLSL shaders on-the-fly in your game engine, but we are not going to do that *yet*. 
 
@@ -88,7 +88,7 @@ The Vulkan SDL comes with a built version of the glslang shader compiler, which 
 
 Now that we have our .spv files, we can attempt to load them.
 
-In vulkan, loaded shaders are stored in a VkShaderModule. You can use and combine multiple of them with multiple pipelines, so we are going to begin by creating a "load_module()" function that will load and compile the SPIRV file into a VkShaderModule
+In Vulkan, loaded shaders are stored in a VkShaderModule. You can use and combine multiple of them with multiple pipelines, so we are going to begin by creating a "load_module()" function that will load and compile the SPIRV file into a VkShaderModule
 
 Lets begin by adding a new function to our VulkanEngine class 
 ```cpp
@@ -146,7 +146,7 @@ file.close();
 
 ```
 
-With this, we now have loaded the entire shader file into the `buffer` std vector, and can load it onto vulkan.
+With this, we now have loaded the entire shader file into the `buffer` std vector, and can load it onto Vulkan.
 
 
 ```cpp
@@ -172,7 +172,7 @@ return true;
 
 Its very common to have errors in the shader that will give a fail on vkCreateShaderModule, so we will not use the VK_Check macro here. 
 
-Creating a VkShaderModule is very straightforward, we just need to fill the create info with the typical vulkan sType and pnext boilerplate, and then set the code pointer to the vector where we are storing the file. 
+Creating a VkShaderModule is very straightforward, we just need to fill the create info with the typical Vulkan sType and pnext boilerplate, and then set the code pointer to the vector where we are storing the file. 
 Then we just call the function with it to get the result.
 
 

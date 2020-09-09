@@ -16,7 +16,7 @@ tags:
 
 ## Project layout
 
-For the vulkan engine, we use a specific folder layout.
+For the Vulkan engine, we use a specific folder layout.
 
 - `/assets` will contain textures and 3d models that we use over the guide
 - `/bin` is where the executables will get built. We dont use the normal CMake build folders to simplify the paths to assets and shaders
@@ -38,6 +38,6 @@ All the libraries in third-party are vendored in, and cmake will build them auto
 
 - [Tiny Obj Loader](https://github.com/tinyobjloader/tinyobjloader) .Obj model loader library, header only. Fast and small library to load the .obj 3d model format that we will use when loading 3d models. 
 
-- [Vk Bootstrap](https://github.com/charles-lunarg/vk-bootstrap/blob/master/src/VkBootstrap.cpp) Abstracts a big amount of boilerplate that Vulkan has when setting up. Most of that code is written once and never touched again, so we will skip most of it using this library. This library simplifies instance creation, swapchain creation, and extension loading. It will be removed from the project eventually in an optional chapter that explains how to initialize that vulkan boilerplate the "manual" way.
+- [Vk Bootstrap](https://github.com/charles-lunarg/vk-bootstrap/blob/master/src/VkBootstrap.cpp) Abstracts a big amount of boilerplate that Vulkan has when setting up. Most of that code is written once and never touched again, so we will skip most of it using this library. This library simplifies instance creation, swapchain creation, and extension loading. It will be removed from the project eventually in an optional chapter that explains how to initialize that Vulkan boilerplate the "manual" way.
 
-- [VMA (vulkan memory allocator)](https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator) Implements memory allocators for Vulkan, header only. In vulkan, the user has to deal with the memory allocation of buffers, images, and other resources on their own. This can be very difficult to get right in a performant and safe way. Vulkan Memory Allocator does it for us and allows us to simplify the creation of images and other resources. Widely used in personal vulkan engines or smaller scale projects like emulators. Very high end projects like Unreal Engine or AAA engines write their own memory allocators.
+- [VMA (Vulkan memory allocator)](https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator) Implements memory allocators for Vulkan, header only. In Vulkan, the user has to deal with the memory allocation of buffers, images, and other resources on their own. This can be very difficult to get right in a performant and safe way. Vulkan Memory Allocator does it for us and allows us to simplify the creation of images and other resources. Widely used in personal Vulkan engines or smaller scale projects like emulators. Very high end projects like Unreal Engine or AAA engines write their own memory allocators.

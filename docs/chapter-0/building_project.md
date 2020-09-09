@@ -25,12 +25,12 @@ Once you have unzipped SDL somewhere, put the root path in the SDL2_dir variable
 Note, this is not the /libs or similar folder, but the root folder of SDL itself.
 
 Only one thing left, and thats the Vulkan SDK. Get it from here and install it <https://vulkan.lunarg.com/sdk/home>
-It doesnt matter where its installed. Once its installed and the PC is rebooted, CMake will pick up vulkan automatically.
+It doesnt matter where its installed. Once its installed and the PC is rebooted, CMake will pick up Vulkan automatically.
 
 Now that the dependencies are set, you can proceed with CMake and Configure then Generate the project files for visual studio (or your IDE of choice). 
 
 Cmake should look like this:
-
+ 
 
 ![cmake]({{site.baseurl}}/assets/images/Cmakesetup.png)
 

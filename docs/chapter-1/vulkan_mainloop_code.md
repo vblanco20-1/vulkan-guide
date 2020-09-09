@@ -108,7 +108,7 @@ Once the command buffer is reset, we can begin it.
 	//naming it cmd for shorter writing
 	VkCommandBuffer cmd = _mainCommandBuffer;
 
-	//begin the command buffer recording. We will use this command buffer exactly once, so we want to let vulkan know that
+	//begin the command buffer recording. We will use this command buffer exactly once, so we want to let Vulkan know that
 	VkCommandBufferBeginInfo cmdBeginInfo= {};
 	info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 	info.pNext = nullptr;
@@ -119,10 +119,10 @@ Once the command buffer is reset, we can begin it.
 	VK_CHECK(vkBeginCommandBuffer(cmd, &cmdBeginInfo));
 ```
 
-Yet another vulkan info structure, so typical sType and pNext values.
+Yet another Vulkan info structure, so typical sType and pNext values.
 Inheritance info on a command buffer is used for secondary command buffers, but we arent going to use them, so leave it nullptr;
-For flags, we want to let vulkan know that this command buffer will be submitted once.
-As we are going to be recording the command buffer every frame, its best if vulkan knows that this command will only execute once, as it can allow for great optimization in the driver.
+For flags, we want to let Vulkan know that this command buffer will be submitted once.
+As we are going to be recording the command buffer every frame, its best if Vulkan knows that this command will only execute once, as it can allow for great optimization in the driver.
 
 With the command buffer recording started, lets add commands to it. We are going to launch the render-pass, with a clear color that flashes over time.
 

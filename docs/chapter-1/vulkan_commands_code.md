@@ -1,6 +1,6 @@
 ---
 layout: default
-title: Setting up vulkan commands
+title: Setting up Vulkan commands
 parent: Chapter 1
 nav_order: 11
 ---
@@ -45,7 +45,7 @@ void VulkanEngine::init()
 
 Luckily, the VkBootstrap library does allow us to get the Queue and Family directly.
 
-Go to the end of the `init_vulkan()` function, where we initalized the core vulkan structures. 
+Go to the end of the `init_vulkan()` function, where we initalized the core Vulkan structures. 
 
 At the end of it, add this code
 
@@ -57,7 +57,7 @@ void VulkanEngine::init_vulkan(){
 
 	vkb::Device vkbDevice = deviceBuilder.build().value();
 
-	// Get the VkDevice handle used in the rest of a vulkan application
+	// Get the VkDevice handle used in the rest of a Vulkan application
 	_device = vkbDevice.device;
 	_chosenGPU = physicalDevice.physical_device;
 
@@ -74,7 +74,7 @@ We are requesting a graphics queue, which supports all we need for the guide.
 
 ## Creating the VkCommandPool
 
-For the pool, we start adding code into `init_commands()` unlike before, from now on the VkBootstrap library will not do anything for us, and we will start calling the vulkan commands directly.
+For the pool, we start adding code into `init_commands()` unlike before, from now on the VkBootstrap library will not do anything for us, and we will start calling the Vulkan commands directly.
 
 ```cpp
 void VulkanEngine::init_commands()
@@ -93,18 +93,18 @@ void VulkanEngine::init_commands()
 }
 ```
 
-Most vulkan Info structures, used for all of the VkCreateX functions, and a lot of the other vulkan structures, need sType and pNext set. This is used for extensions, as some extensions will still call the VkCreateX function, but with structs of a different type than the normal one. The sType helps the implementation know what struct is being used in the function.
+Most Vulkan Info structures, used for all of the VkCreateX functions, and a lot of the other Vulkan structures, need sType and pNext set. This is used for extensions, as some extensions will still call the VkCreateX function, but with structs of a different type than the normal one. The sType helps the implementation know what struct is being used in the function.
 
-With vulkan structures, it is very important that we do this
+With Vulkan structures, it is very important that we do this
 ```cpp
 VkCommandPoolCreateInfo commandPoolInfo = {};
 ```
 
-By doing that ` = {}` thing, we are letting the compiler initialize the entire struct to zero. This is critical, as in general vulkan structs will have their defaults set in a way that 0 is relatively safe. By doing that, we make sure we dont leave unitialized data in the struct.
+By doing that ` = {}` thing, we are letting the compiler initialize the entire struct to zero. This is critical, as in general Vulkan structs will have their defaults set in a way that 0 is relatively safe. By doing that, we make sure we dont leave unitialized data in the struct.
 
 We set queueFamilyIndex to the _graphicsQueueFamily that we grabbed before. This means that the command pool will create commands that are compatible with any queue of that "graphics" family.
 
-We are also setting somethin in the .flags parameter. A lot of vulkan structures will have that .flags parameter, for extra options. We are sending VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT , which tells vulkan that we expect to be able to reset individual command buffers made from that pool.
+We are also setting somethin in the .flags parameter. A lot of Vulkan structures will have that .flags parameter, for extra options. We are sending VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT , which tells Vulkan that we expect to be able to reset individual command buffers made from that pool.
 
 At the end, we finally call VkCreateCommandPool, giving it our VkDevice, the commandPoolInfo for create parameters, and a pointer to the _commandPool member, which will get overwritten if it succeeds.
 
@@ -140,7 +140,7 @@ void VulkanEngine::init_commands()
 
 As with the command pool, we need to fill the sType and pNext parameters, and then continue the rest of the Info struct.
 
-We let vulkan know that the parent of our command will be the _commandPool we just created, and we want to create only one command buffer.
+We let Vulkan know that the parent of our command will be the _commandPool we just created, and we want to create only one command buffer.
 
 The .commandBufferCount parameter allows you to allocate multiple buffers at once. Make sure that the pointer you send to VkAllocateCommandBuffer has space for those. 
 
@@ -150,7 +150,7 @@ Secondary level are ones that can act as "subcommands" to a primary buffer. They
 
 ## The VkInit module
 
-If you remember the article that explored the project files, we commented that the vk_initializers module will contain abstraction over the initialization of vulkan structures. Lets go abstract the 2 Info structures into there, for easier readability.
+If you remember the article that explored the project files, we commented that the vk_initializers module will contain abstraction over the initialization of Vulkan structures. Lets go abstract the 2 Info structures into there, for easier readability.
 
 
 vk_initializers.h
@@ -230,7 +230,7 @@ void VulkanEngine::cleanup()
 }
 ```
 
-As the command pool is the most recent vulkan object, we need to destroy it before the other objects.
+As the command pool is the most recent Vulkan object, we need to destroy it before the other objects.
 Its not possible to individually destroy VkCommandBuffer, as destroying their parent pool will destroy all of the command buffers allocated from it.
 
 VkQueue-s also cant be destroyed, as, like with the VkPhysicalDevice, they arent really created objects, more like a handle to something that already exists.

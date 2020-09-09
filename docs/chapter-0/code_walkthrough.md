@@ -11,7 +11,7 @@ Because we are starting this chapter with an already made code skeleton, we are 
 The files are all stored in the project/src/ folder
 
 - vk_engine.h/cpp : this will be the main class for the engine, and where most of the code of the entire tutorial will go
-- vk_initializers.h/cpp : vulkan initialization of types gets very verbose, so we will create some small helpers here. There are a lot of them, so it really needs to be its own thing
+- vk_initializers.h/cpp : Vulkan initialization of types gets very verbose, so we will create some small helpers here. There are a lot of them, so it really needs to be its own thing
 - vk_types.h : As the tutorial continues, we will add the "basic" types such as Vertex definitions here.
 - main.cpp : entry point for the code. Has nothing but just calls into vk_engine code
 
@@ -42,7 +42,7 @@ int main(int argc, char* argv[])
 }
 ```
 
-We start with something simple, main.cpp. We do nothing here except immediately call into the vulkan engine methods. 
+We start with something simple, main.cpp. We do nothing here except immediately call into the Vulkan engine methods. 
 
 On the future, this could be a good place to set some configuration parameters brought from the commandline arguments at argc/argv.
 
@@ -53,7 +53,7 @@ vk_init.h holds this
 #include <vulkan/vulkan.h>
 ```
 
-We include the main header for vulkan, which is that `<vulkan/vulkan.h>` you can see. That will include all of vulkan function definitions and types that we will need for everything.
+We include the main header for Vulkan, which is that `<vulkan/vulkan.h>` you can see. That will include all of Vulkan function definitions and types that we will need for everything.
 `#pragma once` is a preprocessor directive that tells the compiler to never include this twice into the same file. Its equivalent to include guards, but cleaner.
 
 vk_initializers.h sees this
@@ -67,7 +67,7 @@ namespace vkinit {
 }
 ```
 
-We include the vk_types header, which brings vulkan itself (we will need it), and we declare a namespace for the functions we will add here later.
+We include the vk_types header, which brings Vulkan itself (we will need it), and we declare a namespace for the functions we will add here later.
 
 finally, we get into vk_engine.h, the main class
 
@@ -100,11 +100,11 @@ public:
 };
 ```
 
-As with vk_init, we include vk_types. We already need a vulkan type in VkExtent2D.
-The vulkan engine will be the core of everything we will be doing.
+As with vk_init, we include vk_types. We already need a Vulkan type in VkExtent2D.
+The Vulkan engine will be the core of everything we will be doing.
 We have a flag to know if the engine is initialized, a frame number integer (very useful!) and the size of the window we are going to open, in pixels. 
 
-The declaration ` struct SDL_Window* _window;` is of some special interest. Note the `struct` at the beggining. This is called a forward-declaration, and its what allows us to have the SDL_Window pointer in the class, without including SDL on the vulkan engine header. This variable holds the window that we create for the application.
+The declaration ` struct SDL_Window* _window;` is of some special interest. Note the `struct` at the beggining. This is called a forward-declaration, and its what allows us to have the SDL_Window pointer in the class, without including SDL on the Vulkan engine header. This variable holds the window that we create for the application.
 
 With the header seen, lets go to the cpp
 
@@ -119,7 +119,7 @@ vk_engine.cpp line 1
 #include <vk_initializers.h>
 ```
 Unlike in the other files, in this one we include a few more things.
-We include both `<SDL.h>` and `<SDL_vulkan.h>`. SDL.h holds the main SDL library data  for opening a window and input, while SDL_vulkan.h holds the vulkan-specific flags and functionality for opening a vulkan-compatible window and other vulkan-specific things.
+We include both `<SDL.h>` and `<SDL_vulkan.h>`. SDL.h holds the main SDL library data  for opening a window and input, while SDL_vulkan.h holds the Vulkan-specific flags and functionality for opening a Vulkan-compatible window and other Vulkan-specific things.
 
 vk_engine.cpp, line 10
 
