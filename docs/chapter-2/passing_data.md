@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Passing data beetween shader stages
-parent: chapter_2
+parent: Chapter 2
 nav_order: 14
 ---
 

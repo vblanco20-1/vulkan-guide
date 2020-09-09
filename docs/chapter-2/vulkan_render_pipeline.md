@@ -1,7 +1,7 @@
 ---
 layout: default
 title: The render pipeline
-parent: chapter_2
+parent: Chapter 2
 nav_order: 10
 ---
 
