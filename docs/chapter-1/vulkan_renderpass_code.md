@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Setting up renderpass code
-parent: chapter_1
+parent: Chapter 1
 nav_order: 21
 ---
 

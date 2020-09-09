@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Vulkan Initialization
-parent: chapter_1
+parent: Chapter 1
 nav_order: 1
 ---
 

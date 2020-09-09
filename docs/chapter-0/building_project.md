@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Building Project
-parent: chapter_0
+parent: Chapter 1
 nav_order: 2
 ---
 

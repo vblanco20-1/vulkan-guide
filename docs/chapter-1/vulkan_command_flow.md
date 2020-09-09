@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Executing Vulkan Commands
-parent: chapter_1
+parent: Chapter 1
 nav_order: 10
 ---
 
