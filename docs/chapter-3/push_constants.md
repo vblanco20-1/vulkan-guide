@@ -56,7 +56,7 @@ To initialize it, we create it inside the `init_pipelines()` function
     //size of a MeshPushConstant struct
     push_constant.size = sizeof(MeshPushConstants);
     //for the vertex shader
-    push_constant.stageFlags = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT;
+    push_constant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 
 	mesh_pipeline_layout_info.pPushConstantRanges = &push_constant;
 	mesh_pipeline_layout_info.pushConstantRangeCount = 1;
@@ -127,7 +127,7 @@ MeshPushConstants constants;
 constants.render_matrix = mesh_matrix;
 
 //upload the matrix to the gpu via pushconstants
-vkCmdPushConstants(cmd, _meshPipelineLayout, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, sizeof(MeshPushConstants), &constants);
+vkCmdPushConstants(cmd, _meshPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(MeshPushConstants), &constants);
 
 //we can now draw
 vkCmdDraw(cmd, _triangleMesh._vertices.size(), 1, 0, 0);
