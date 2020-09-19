@@ -55,7 +55,7 @@ To initialize it, we create it inside the `init_pipelines()` function
     push_constant.offset = 0;
     //size of a MeshPushConstant struct
     push_constant.size = sizeof(MeshPushConstants);
-    //for the fragment shader
+    //for the vertex shader
     push_constant.stageFlags = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT;
 
 	mesh_pipeline_layout_info.pPushConstantRanges = &push_constant;
@@ -134,7 +134,7 @@ vkCmdDraw(cmd, _triangleMesh._vertices.size(), 1, 0, 0);
 
 ```
 
-In the push-constant call, we need to set the pointer to the data and its size ( a lot like memcpy), and also VK_PIPELINE_STAGE_VERTEX_BIT. This is because our push constant is on the vertex shader, so we need to let vulkan know that. If we have the same push-constant on both vertex and fragment shader, we would need to have both of those there.
+In the push-constant call, we need to set the pointer to the data and its size ( a lot like memcpy), and also VK_PIPELINE_STAGE_VERTEX_BIT. This is because our push constant is on the vertex shader, so we need to let Vulkan know that. If we have the same push-constant on both vertex and fragment shader, we would need to have both of those flags there.
 
 If you now run the program, you will see that the triangle is offset in the X axis. If you change the vec4 offset, it will reflect in the shader, and this will be done at runtime, so you can setup some keybinds to move the triangle with WASD
 
