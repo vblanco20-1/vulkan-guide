@@ -6,7 +6,7 @@ nav_order: 12
 ---
 
 The first thing we are going to need to draw our first triangle, is to set the shaders that it will use.
-Foe the triangle, we will only need 2 shaders, which is the minimum to render 3d objects.
+For the triangle, we will only need 2 shaders, which is the minimum to render 3d objects.
 We are going to have a fragment shader that just colors the fragment red, and a vertex shader that forms a triangle.
 
 Shaders are written in GLSL, which is OpenGL Shading Language. Its similar to C, but with some small differences. 

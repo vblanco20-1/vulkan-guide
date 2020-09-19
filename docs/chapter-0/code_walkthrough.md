@@ -46,7 +46,7 @@ We start with something simple, main.cpp. We do nothing here except immediately 
 
 On the future, this could be a good place to set some configuration parameters brought from the commandline arguments at argc/argv.
 
-vk_init.h holds this
+vk_initializers.h holds this
 
 ```cpp
 #pragma once
