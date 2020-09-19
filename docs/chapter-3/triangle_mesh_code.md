@@ -279,10 +279,10 @@ VertexInputDescription Vertex::get_vertex_description()
 
     //Position will be stored at Location 2
 	VkVertexInputAttributeDescription colorAttribute = {};
-	normalAttribute.binding = 0;
-	normalAttribute.location = 2;
-	normalAttribute.format = VK_FORMAT_R32G32B32_SFLOAT;
-	normalAttribute.offset = offsetof(Vertex, color);
+	colorAttribute.binding = 0;
+	colorAttribute.location = 2;
+	colorAttribute.format = VK_FORMAT_R32G32B32_SFLOAT;
+	colorAttribute.offset = offsetof(Vertex, color);
 
 	description.attributes.push_back(positionAttribute);
 	description.attributes.push_back(normalAttribute);
