@@ -33,12 +33,13 @@ For now, we are going to be allocating our buffers all on CPU side RAM, as its s
 
 ## Vertex Input Layout
 If you come from OpenGL, you may know about vertex attributes, where you let OpenGL know how should vertex data be read on your vertex shader, and then OpenGL fetches the data for you.
-In Vulkan, it works in a very similar way. When you create the pipeline, one of the editable objects is the Vertex Input Layout, which we are leaving empty now. In there, you put the data to let vulkan know how to intepret the vertex data for your shader.
+In Vulkan, it works in a very similar way. When you create the pipeline, one of the editable objects is the Vertex Input Layout, which we are leaving empty now. In there, you put the data to let Vulkan know how to intepret the vertex data for your shader.
 
-When the driver compiles a pipeline, it will patch the vertex shader with the code needed to fetch the vertex data you have configured. In modern GPUs, you dont need to use it, and you can just fetch the data from a buffer yourself in the shader. Similar to what we are doing with our triangle, but using a Buffer instead of having the data in a hardcoded array. Doing that is known as "vertex pulling", opposed to the typical vertex attribute way, which is known as "vertex pushing". On older gpus, using vertex attributes will have higher performance than doing it yourself. From personal benchmarking (https://github.com/nlguillemot/ProgrammablePulling) GPUs from the nvidia Turing family (RTX 2060 and more) will have the same performance. While older gpus such as a 970 GTX will see a 20-30% perf hit.
+When the driver compiles a pipeline, it will patch the vertex shader with the code needed to fetch the vertex data you have configured. In modern GPUs, you dont need to use it, and you can just fetch the data from a buffer yourself in the shader. Similar to what we are doing with our triangle, but using a Buffer instead of having the data in a hardcoded array. Doing that is known as "vertex pulling", opposed to the typical vertex attribute way, which is known as "vertex pushing". On older gpus, using vertex attributes will have higher performance than doing it yourself. From personal benchmarking (https://github.com/nlguillemot/ProgrammablePulling) GPUs from the NVidia Turing family (RTX 2060 and more) will have the same performance. While older gpus such as a 970 GTX will see a 20-30% perf hit.
 
 Lets go ahead and implement what we need to turn our hardcoded triangle into a non-hardcoded one
 
+Next: [Implementing vertex buffers]({{ site.baseurl }}{% link docs/chapter-3/triangle_mesh_code.md %})
 
 
 

@@ -407,7 +407,6 @@ With that call, we tell Vulkan where to fetch the vertex data from, connecting t
 
 
 
-Next: [Rendering meshes]({{ site.baseurl }}{% link docs/chapter-3/triangle_mesh_code.md %})
 
  
 
