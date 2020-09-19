@@ -2,7 +2,7 @@
 layout: default
 title: Rendering Loop
 parent: Chapter 1
-nav_order: 30
+nav_order: 40
 ---
 
 We have our render pass, we also have our command buffer, and we have Vulkan itself initialized. It is time to actually begin writing the render loop itself.

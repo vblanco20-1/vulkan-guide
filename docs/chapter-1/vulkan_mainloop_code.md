@@ -2,7 +2,7 @@
 layout: default
 title: Mainloop Code
 parent: Chapter 1
-nav_order: 31
+nav_order: 41
 ---
 
 We are going to need a couple more members in our VulkanEngine class, to hold the synchronization structures (Semaphore and Fence) that we will need for the main loop. Plus the function to initalize them.

@@ -2,7 +2,7 @@
 layout: default
 title: Setting up Vulkan commands
 parent: Chapter 1
-nav_order: 11
+nav_order: 31
 ---
 
 We will first start by adding the handles we are going to need to the VulkanEngine class, and the `init_commands()` function

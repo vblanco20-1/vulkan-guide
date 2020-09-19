@@ -7,7 +7,7 @@ nav_order: 2
 
 
 ## Starting point
-The explanations assume that you start from the code of chapter-0. If you dont have the project setup, please grab the code of chapter-0 and compile it.
+The explanations assume that you start from the code of chapter-0. If you don't have the project setup, please grab the code of chapter-0 and compile it.
 
 The first thing to do, is to `#include` the vkBootstrap library that we will be using to simplify the initialization code.
 For that, go to the top of vk_engine.cpp, and just include the `"VkBootstrap.h"` header
@@ -330,7 +330,7 @@ We are now destroying the Instance before the Device and the Surface (which was 
 Validation Error: [ VUID-vkDestroyInstance-instance-00629 ] Object 0: handle = 0x24ff02340c0, type = VK_OBJECT_TYPE_INSTANCE; Object 1: handle = 0xf8ce070000000002, type = VK_OBJECT_TYPE_SURFACE_KHR; | MessageID = 0x8b3d8e18 | OBJ ERROR : For VkInstance 0x24ff02340c0[], VkSurfaceKHR 0xf8ce070000000002[] has not been destroyed. The Vulkan spec states: All child objects created using instance must have been destroyed prior to destroying instance (https://www.khronos.org/registry/vulkan/specs/1.1-extensions/html/vkspec.html#VUID-vkDestroyInstance-instance-00629)
 ```
 
-If you get one of those errors about a VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT not being deleted, dont worry, thats just the debug logger, and its not important.
+If you get one of those errors about a VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT not being deleted, don't worry, that's just the debug logger, and its not important.
 
 
 
