@@ -240,4 +240,4 @@ Now that we have the Queue and the CommandBuffer, we are ready to start executin
 At this point, it is possible to execute pure-compute commands, if you wanted to perform offline computation.
 
 
-Next: [Vulkan render passes]({{ site.baseurl }}{% link docs/chapter-1/vulkan_renderpass.md %})
+Next: [Main Loop]({{ site.baseurl }}{% link docs/chapter-1/vulkan_mainloop.md %})

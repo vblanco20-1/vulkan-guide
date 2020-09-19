@@ -337,4 +337,4 @@ If you get one of those errors about a VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT no
 With the Vulkan initialization completed and the layers working, we can begin to prepare the actual render loop and command execution.
 
 
-Next: [Vulkan commands]({{ site.baseurl }}{% link docs/chapter-1/vulkan_command_flow.md %})
+Next: [Vulkan Render Passes]({{ site.baseurl }}{% link docs/chapter-1/vulkan_renderpass.md %})

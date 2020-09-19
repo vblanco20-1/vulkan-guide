@@ -185,5 +185,5 @@ in `VulkanEngine::Cleanup()`
 		}
 ```
 
+Next: [Vulkan Commands]({{ site.baseurl }}{% link docs/chapter-1/vulkan_command_flow.md %})
 
-Next: [Main Loop]({{ site.baseurl }}{% link docs/chapter-1/vulkan_mainloop.md %})
