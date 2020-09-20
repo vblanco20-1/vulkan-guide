@@ -40,3 +40,7 @@ GPUs, unlike CPUs, have a lot of cores, and those cores are very wide cores, exe
 
 On this tutorial, we are focusing on the minimum we need to render, which is Fragment Shaders and Vertex Shaders
 
+
+
+Next: [Setting up triangle shaders]({{ site.baseurl }}{% link docs/chapter-2/triangle_walkthrough.md %})
+

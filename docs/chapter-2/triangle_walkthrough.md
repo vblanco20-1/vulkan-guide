@@ -1,6 +1,6 @@
 ---
 layout: default
-title: Drawing a triangle
+title: Setting up Triangle shaders
 parent: Chapter 2
 nav_order: 12
 ---
