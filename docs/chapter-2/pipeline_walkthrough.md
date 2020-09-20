@@ -2,7 +2,7 @@
 layout: default
 title: Setting up render pipeline
 parent: Chapter 2
-nav_order: 11
+nav_order: 12
 ---
 
 ## Pipelines

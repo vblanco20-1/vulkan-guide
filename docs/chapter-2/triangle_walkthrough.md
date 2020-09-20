@@ -2,7 +2,7 @@
 layout: default
 title: Setting up Triangle shaders
 parent: Chapter 2
-nav_order: 12
+nav_order: 11
 ---
 
 The first thing we are going to need to draw our first triangle, is to set the shaders that it will use.
