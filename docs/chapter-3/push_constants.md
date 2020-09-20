@@ -117,26 +117,34 @@ in `draw()` function, right before the vkCmdDraw call, we are going to prepare a
 ```cpp
 
 
-//just an small offset on X
-glm::vec4 offset = { 0.5f,0.0f,0.f,0 };
+    //make a model view matrix for rendering the object
+    //camera position
+    glm::vec3 camPos = { 0.f,0.f,-2.f };
 
-//build a translation matrix from that
-glm::mat4 mesh_matrix = glm::translate(glm::mat4(1.f), offset);
+    glm::mat4 view = glm::translate(glm::mat4(1.f), camPos);
+    //camera projection
+    glm::mat4 projection = glm::perspective(glm::radians(70.f), 1700.f / 900.f, 0.1f, 200.0f);
+    projection[1][1] *= -1;
+    //model rotation
+    glm::mat4 model = glm::rotate(glm::mat4{ 1.0f }, glm::radians(_frameNumber * 0.4f), glm::vec3(0, 1, 0));
 
-MeshPushConstants constants;
-constants.render_matrix = mesh_matrix;
+    //calculate final mesh matrix
+    glm::mat4 mesh_matrix = projection * view * model;
 
-//upload the matrix to the gpu via pushconstants
-vkCmdPushConstants(cmd, _meshPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(MeshPushConstants), &constants);
+    MeshPushConstants constants;
+    constants.render_matrix = mesh_matrix;
 
-//we can now draw
-vkCmdDraw(cmd, _triangleMesh._vertices.size(), 1, 0, 0);
+    //upload the matrix to the gpu via pushconstants
+    vkCmdPushConstants(cmd, _meshPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(MeshPushConstants), &constants);
+
+    //we can now draw
+    vkCmdDraw(cmd, _triangleMesh._vertices.size(), 1, 0, 0);
 
 ```
 
 In the push-constant call, we need to set the pointer to the data and its size ( a lot like memcpy), and also VK_PIPELINE_STAGE_VERTEX_BIT. This is because our push constant is on the vertex shader, so we need to let Vulkan know that. If we have the same push-constant on both vertex and fragment shader, we would need to have both of those flags there.
 
-If you now run the program, you will see that the triangle is offset in the X axis. If you change the vec4 offset, it will reflect in the shader, and this will be done at runtime, so you can setup some keybinds to move the triangle with WASD
+If you now run the program, you will see the triangle spinning in the window. By modifying camPos and the View matrix in general, you can now create a 3d camera.
 
 
 
