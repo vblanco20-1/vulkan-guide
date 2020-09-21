@@ -371,3 +371,5 @@ VulkanEngine::draw(){
 We will clear the depth buffer at 1.0 (max depth), and add it to the clear values of the renderpass init info.
 
 If you now execute the application, and everything went well, you should be seeing a very beautiful spinning monkey head.
+
+Next: Scene management
