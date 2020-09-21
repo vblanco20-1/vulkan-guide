@@ -217,7 +217,9 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd,RenderObject* first, int cou
 	
 	Mesh* lastMesh = nullptr;
 	Material* lastMaterial = nullptr;
-	for (RenderObject& object : _renderables) {
+	for(int i = 0; i < count ;i++)
+	{
+		RenderObject& object = *first[i];	
 		
 		//only bind the pipeline if it doesnt match with the already bound one
 		if (object.material != lastMaterial) {
@@ -266,7 +268,14 @@ Last thing is to replace the old code in the `draw()` function with calling this
 
 Now that we have changed the code, you can try to remove the _triangleMesh, _monkeyMesh, and their hardcoded pipelines from Vulkan Engine class. We no longer need any of that, as we have a simple system to manage the meshes and pipelines now.
 
-Feel free to play around with the amount of triangles and monkeys created in the load_scene function, or to change how they are generated. You will find you can reach object counts in the hundreds of thousands before it gets slow.
+Feel free to play around with the amount of triangles and monkeys created in the load_scene function, or to change how they are generated. You will find you can reach object counts in the hundreds of thousands before it gets slow if you disable the debug layers and run in release mode. In debug mode with layers it wont be that fast.
+
+Now that we have an engine that actually does something. There are some exercises you can try to do.
+- Clean up all the hardcoded pipelines and meshes from VulkanEngine class
+- Create multiple pipelines with newer shaders, and use them to render monkeys each with a different material each
+- Load more meshes. As long as its a obj with TRIANGLE meshes, it should work fine. Make sure on export that the obj includes normals and colors
+- Add WASD controls to the camera. For that, you would need to modify the camera matrices in the draw functions.
+- Sort the renderables array before rendering by Pipeline and Mesh, to reduce number of binds.
 
 
 
