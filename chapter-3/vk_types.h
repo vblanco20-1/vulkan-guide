@@ -18,3 +18,5 @@ struct AllocatedImage {
     VkImage _image;
     VmaAllocation _allocation;
 };
+
+

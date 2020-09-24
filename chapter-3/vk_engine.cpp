@@ -68,6 +68,7 @@ void VulkanEngine::init()
 
 	load_meshes();
 
+	init_scene();
 	//everything went fine
 	_isInitialized = true;
 }
@@ -147,7 +148,8 @@ void VulkanEngine::draw()
 
 	vkCmdBeginRenderPass(cmd, &rpInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-	draw_mesh(cmd);
+	
+	draw_objects(cmd,_renderables.data(), _renderables.size());
 
 	//finalize the render pass
 	vkCmdEndRenderPass(cmd);
@@ -198,26 +200,32 @@ void VulkanEngine::draw_mesh(VkCommandBuffer cmd)
 {
     vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _meshPipeline);
 
-    _monkeyMesh.bind_vertex_buffer(cmd);
+   
 
     //make a model view matrix for rendering the object
     //camera view
-    glm::vec3 camPos = { 0.f,0.f,-2.f };
+    glm::vec3 camPos = { 0.f,-6.f,-10.f };
 
     glm::mat4 view = glm::translate(glm::mat4(1.f), camPos);
     //camera projection
     glm::mat4 projection = glm::perspective(glm::radians(70.f), 1700.f / 900.f, 0.1f, 200.0f);
     projection[1][1] *= -1;
     //model rotation
-    glm::mat4 model = glm::rotate(glm::mat4{ 0.1f }, glm::radians(_frameNumber * 0.4f), glm::vec3(0, 1, 0));
+    glm::mat4 model = glm::rotate(glm::mat4{ 1.0f }, glm::radians(_frameNumber * 0.1f), glm::vec3(0, 1, 0));
 
     glm::mat4 mesh_matrix = projection * view * model;
 
-    //upload the mesh to the gpu via pushconstants
-    vkCmdPushConstants(cmd, _meshPipelineLayout, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, sizeof(glm::mat4), &mesh_matrix);
 
+	MeshPushConstants constants;
+	constants.render_matrix = mesh_matrix;
+	
+
+    //upload the mesh to the gpu via pushconstants
+    vkCmdPushConstants(cmd, _meshPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(MeshPushConstants), &constants);
+
+	_monkeyMesh.bind_vertex_buffer(cmd);
     //we can now draw
-    vkCmdDraw(cmd, _monkeyMesh._indices.size(), 1, 0, 0);
+    vkCmdDraw(cmd, _monkeyMesh._vertices.size(), 1, 0, 0);
 }
 
 void VulkanEngine::run()
@@ -252,6 +260,87 @@ void VulkanEngine::run()
 		draw();
 	}
 }
+
+
+Material* VulkanEngine::create_material(VkPipeline pipeline, VkPipelineLayout layout, const std::string& name)
+{
+	Material mat;
+	mat.pipeline = pipeline;
+	mat.pipelineLayout = layout;
+	_materials[name] = mat;
+	return &_materials[name];
+}
+
+Material* VulkanEngine::get_material(const std::string& name)
+{
+	auto it = _materials.find(name);
+	if (it == _materials.end()) {
+		return nullptr;
+	}
+	else {
+		return &(*it).second;
+	}
+}
+
+
+Mesh* VulkanEngine::get_mesh(const std::string& name)
+{
+	auto it = _meshes.find(name);
+	if (it == _meshes.end()) {
+		return nullptr;
+	}
+	else {
+		return &(*it).second;
+	}
+}
+
+void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderObject* first, int count)
+{
+	//make a model view matrix for rendering the object
+	//camera view
+	glm::vec3 camPos = { 0.f,-6.f,-10.f };
+
+	glm::mat4 view = glm::translate(glm::mat4(1.f), camPos);
+	//camera projection
+	glm::mat4 projection = glm::perspective(glm::radians(70.f), 1700.f / 900.f, 0.1f, 200.0f);
+	projection[1][1] *= -1;
+
+	Mesh* lastMesh = nullptr;
+	Material* lastMaterial = nullptr;
+	for (int i = 0; i < count; i++)
+	{
+		RenderObject& object = first[i];
+
+		//only bind the pipeline if it doesnt match with the already bound one
+		if (object.material != lastMaterial) {
+
+			vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipeline);
+			lastMaterial = object.material;
+		}
+
+
+		glm::mat4 model = object.transformMatrix;
+		//final render matrix, that we are calculating on the cpu
+		glm::mat4 mesh_matrix = projection * view * model;
+
+		MeshPushConstants constants;
+		constants.render_matrix = mesh_matrix;
+
+		//upload the mesh to the gpu via pushconstants
+		vkCmdPushConstants(cmd, object.material->pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(MeshPushConstants), &constants);
+
+		//only bind the mesh if its a different one from last bind
+		if (object.mesh != lastMesh) {
+			//bind the mesh vertex buffer with offset 0
+			VkDeviceSize offset = 0;
+			vkCmdBindVertexBuffers(cmd, 0, 1, &object.mesh->_vertexBuffer._buffer, &offset);
+			lastMesh = object.mesh;
+		}
+		//we can now draw
+		vkCmdDraw(cmd, object.mesh->_vertices.size(), 1, 0, 0);
+	}
+}
+
 
 void VulkanEngine::init_vulkan()
 {
@@ -472,6 +561,8 @@ void VulkanEngine::init_sync_structures()
 
 	VK_CHECK(vkCreateSemaphore(_device, &semaphoreCreateInfo, nullptr, &_presentSemaphore));
 	VK_CHECK(vkCreateSemaphore(_device, &semaphoreCreateInfo, nullptr, &_renderSemaphore));
+
+
 }
 
 
@@ -580,7 +671,7 @@ void VulkanEngine::init_pipelines()
 
 	//build the mesh pipeline
 
-    VertexInputDescription vertexDescription = Vertex::getVertexInputState();
+    VertexInputDescription vertexDescription = Vertex::get_vertex_description();
 
     pipelineBuilder._vertexInputInfo.pVertexAttributeDescriptions = vertexDescription.attributes.data();
     pipelineBuilder._vertexInputInfo.vertexAttributeDescriptionCount = vertexDescription.attributes.size();
@@ -626,9 +717,9 @@ void VulkanEngine::init_pipelines()
     //offset 0
     push_constant.offset = 0;
     //size of 1 mat4
-    push_constant.size = sizeof(glm::mat4);
+    push_constant.size = sizeof(MeshPushConstants);
     //for the fragment shader
-    push_constant.stageFlags = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT;
+    push_constant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 
 	mesh_pipeline_layout_info.pPushConstantRanges = &push_constant;
 	mesh_pipeline_layout_info.pushConstantRangeCount = 1;
@@ -640,39 +731,74 @@ void VulkanEngine::init_pipelines()
 
     //build the red triangle pipeline
     _meshPipeline = pipelineBuilder.build_pipeline(_device, _renderPass);
+
+	create_material(_meshPipeline, _meshPipelineLayout, "defaultmesh");
+}
+
+void VulkanEngine::init_scene()
+{
+	RenderObject monkey;
+	monkey.mesh = get_mesh("monkey");
+	monkey.material = get_material("defaultmesh");
+	monkey.transformMatrix = glm::mat4{ 1.0f };
+
+	_renderables.push_back(monkey);
+
+	for (int x = -10; x <= 10; x++) {
+		for (int y = -10; y <= 10; y++) {
+
+			RenderObject tri;
+			tri.mesh = get_mesh("triangle");
+			tri.material = get_material("defaultmesh");
+			glm::mat4 translation = glm::translate(glm::mat4{ 1.0 }, glm::vec3(x, 0, y));
+			glm::mat4 scale = glm::scale(glm::mat4{ 1.0 }, glm::vec3(0.2, 0.2, 0.2));
+			tri.transformMatrix = translation * scale;
+
+			_renderables.push_back(tri);
+		}
+	}
 }
 
 void VulkanEngine::load_meshes()
 {
 	
+	_triangleMesh._vertices.resize(3);
 
-    std::vector<Vertex> vertices;
-    std::vector<uint32_t> indices;
+	_triangleMesh._vertices[0].position = { 1.f,1.f, 0.5f };
+	_triangleMesh._vertices[1].position = { -1.f,1.f, 0.5f };
+	_triangleMesh._vertices[2].position = { 0.f,-1.f, 0.5f };
 
-    vkutil::load_mesh_from_obj("../../assets/monkey_smooth.obj", vertices, indices);
+	_triangleMesh._vertices[0].color = { 0.f,1.f, 0.0f }; //pure green
+	_triangleMesh._vertices[1].color = { 0.f,1.f, 0.0f }; //pure green
+	_triangleMesh._vertices[2].color = { 0.f,1.f, 0.0f }; //pure green
 
-    upload_mesh(vertices, indices, _monkeyMesh);
+
+	_monkeyMesh.load_from_obj("../../assets/monkey_smooth.obj");
+	
+
+    upload_mesh(_triangleMesh);
+	upload_mesh(_monkeyMesh);
+
+	//note that we are copying them. Eventually we will delete the hardcoded _monkey and _triangle meshes, so its no problem now.
+	_meshes["monkey"] = _monkeyMesh;
+	_meshes["triangle"] = _triangleMesh;
 }
 
 
-bool VulkanEngine::upload_mesh(const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices, Mesh& outMesh)
+bool VulkanEngine::upload_mesh(Mesh& outMesh)
 {
-    outMesh._vertices = vertices;
-    outMesh._indices = indices;
-
     //allocate vertex buffer
     VkBufferCreateInfo bufferInfo = {};
     bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    bufferInfo.size = vertices.size() * sizeof(Vertex);
+    bufferInfo.size = outMesh._vertices.size() * sizeof(Vertex);
     bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
     bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-    VkBufferCreateInfo vkbinfo = bufferInfo;
 
     VmaAllocationCreateInfo vmaallocInfo = {};
-    vmaallocInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY;
+    vmaallocInfo.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
 
-    VK_CHECK(vmaCreateBuffer(_allocator, &vkbinfo, &vmaallocInfo, &outMesh._vertexBuffer._buffer, &outMesh._vertexBuffer._allocation, nullptr));
+    VK_CHECK(vmaCreateBuffer(_allocator, &bufferInfo, &vmaallocInfo, &outMesh._vertexBuffer._buffer, &outMesh._vertexBuffer._allocation, nullptr));
 
     //add the destruction of mesh buffer
     _mainDeletionQueue.push_function([=]() {
@@ -685,7 +811,7 @@ bool VulkanEngine::upload_mesh(const std::vector<Vertex>& vertices, const std::v
     void* data;
     vmaMapMemory(_allocator, outMesh._vertexBuffer._allocation, &data);
 
-    memcpy(data, _monkeyMesh._vertices.data(), _monkeyMesh._vertices.size() * sizeof(Vertex));
+    memcpy(data, outMesh._vertices.data(), outMesh._vertices.size() * sizeof(Vertex));
 
     vmaUnmapMemory(_allocator, outMesh._vertexBuffer._allocation);
 
