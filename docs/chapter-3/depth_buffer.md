@@ -372,4 +372,5 @@ We will clear the depth buffer at 1.0 (max depth), and add it to the clear value
 
 If you now execute the application, and everything went well, you should be seeing a very beautiful spinning monkey head.
 
-Next: Scene management
+
+Next: [Scene management]({{ site.baseurl }}{% link docs/chapter-3/scene_management.md %})

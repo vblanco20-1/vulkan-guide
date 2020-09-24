@@ -149,5 +149,5 @@ If you now run the program, you will see the triangle spinning in the window. By
 
 
 Next up, loading meshes from OBJ
-
+Next: [Push Constants]({{ site.baseurl }}{% link docs/chapter-3/obj_loading.md %})
 

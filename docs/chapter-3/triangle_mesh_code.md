@@ -72,7 +72,7 @@ struct Vertex {
     glm::vec3 position;
     glm::vec3 normal;
     glm::vec3 color;
-}
+};
 
 struct Mesh {
 	std::vector<Vertex> _vertices;
@@ -404,6 +404,8 @@ The magic of it, is that this triangle is not hardcoded. It doesn't even have to
 
 The draw code is almost the same as before, except we now do vkCmdBindVertexBuffers
 With that call, we tell Vulkan where to fetch the vertex data from, connecting the shaders to the buffer where we stored the triangle data.
+
+Next: [Push Constants]({{ site.baseurl }}{% link docs/chapter-3/push_constants.md %})
 
 
 
