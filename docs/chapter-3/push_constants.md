@@ -32,6 +32,9 @@ VkPipelineLayout _meshPipelineLayout;
 We are also going to create a struct to hold it in `vk_engine.h`
 
 ```cpp
+//add the include for glm to get matrices
+#include <glm/glm.hpp>
+
 struct MeshPushConstants {
     glm::vec4 data;
     glm::mat4 render_matrix;
@@ -62,6 +65,14 @@ To initialize it, we create it inside the `init_pipelines()` function
 	mesh_pipeline_layout_info.pushConstantRangeCount = 1;
 
     VK_CHECK(vkCreatePipelineLayout(_device, &mesh_pipeline_layout_info, nullptr, &_meshPipelineLayout));
+
+    //later ....
+    //remember it has to be destroyed
+    _mainDeletionQueue.push_function([=]() {
+        //other deletions
+
+		vkDestroyPipelineLayout(_device, _meshPipelineLayout, nullptr);
+	});
 
 ```
 
@@ -141,12 +152,19 @@ in `draw()` function, right before the vkCmdDraw call, we are going to prepare a
     vkCmdDraw(cmd, _triangleMesh._vertices.size(), 1, 0, 0);
 
 ```
+You will also need to add 
+
+```cpp
+#include <glm/gtx/transform.hpp>
+``` 
+To the vk_engine.cpp file so that you can use all those glm transformation matrices
 
 In the push-constant call, we need to set the pointer to the data and its size ( a lot like memcpy), and also VK_PIPELINE_STAGE_VERTEX_BIT. This is because our push constant is on the vertex shader, so we need to let Vulkan know that. If we have the same push-constant on both vertex and fragment shader, we would need to have both of those flags there.
 
-If you now run the program, you will see the triangle spinning in the window. By modifying camPos and the View matrix in general, you can now create a 3d camera.
+If you now run the program, you will see the triangle spinning in the window, upside down. By modifying camPos and the View matrix in general, you can now create a 3d camera.
 
 
+![triangle]({{site.baseurl}}/diagrams/spinTriangle.gif)
 
 Next: [Loading OBJ Meshes]({{ site.baseurl }}{% link docs/chapter-3/obj_loading.md %})
 
