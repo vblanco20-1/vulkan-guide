@@ -5,18 +5,13 @@
 
 #include <vulkan/vulkan.h>
 #include <vk_mem_alloc.h>
-#include <glm/vec3.hpp>
-
-//we will add our main reusable types here
 
 struct AllocatedBuffer {
-    VkBuffer _buffer;
-    VmaAllocation _allocation;
+	VkBuffer _buffer;
+	VmaAllocation _allocation;
 };
 
 struct AllocatedImage {
-    VkImage _image;
-    VmaAllocation _allocation;
+	VkImage _image;
+	VmaAllocation _allocation;
 };
-
-
