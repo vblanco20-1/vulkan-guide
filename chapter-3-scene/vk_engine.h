@@ -7,6 +7,12 @@
 #include <vector>
 #include <functional>
 #include <deque>
+#include <vk_mesh.h>
+#include <unordered_map>
+
+#include <glm/glm.hpp>
+#include <glm/gtx/transform.hpp>
+
 class PipelineBuilder {
 public:
 
@@ -19,7 +25,7 @@ public:
 	VkPipelineColorBlendAttachmentState _colorBlendAttachment;
 	VkPipelineMultisampleStateCreateInfo _multisampling;
 	VkPipelineLayout _pipelineLayout;
-
+	VkPipelineDepthStencilStateCreateInfo _depthStencil;
 	VkPipeline build_pipeline(VkDevice device, VkRenderPass pass);
 };
 
@@ -43,6 +49,24 @@ struct DeletionQueue
     }
 };
 
+struct MeshPushConstants {
+	glm::vec4 data;
+	glm::mat4 render_matrix;
+};
+
+
+struct Material {
+	VkPipeline pipeline;
+	VkPipelineLayout pipelineLayout;
+};
+
+struct RenderObject {
+	Mesh* mesh;
+
+	Material* material;
+
+	glm::mat4 transformMatrix;
+};
 
 class VulkanEngine {
 public:
@@ -76,14 +100,18 @@ public:
 
 	std::vector<VkFramebuffer> _framebuffers;
 	std::vector<VkImage> _swapchainImages;
-	std::vector<VkImageView> _swapchainImageViews;
-
-	VkPipelineLayout _trianglePipelineLayout;
-
-	VkPipeline _trianglePipeline;
-	VkPipeline _redTrianglePipeline;
+	std::vector<VkImageView> _swapchainImageViews;	
 
     DeletionQueue _mainDeletionQueue;
+	
+	VmaAllocator _allocator; //vma lib allocator
+
+	//depth resources
+	VkImageView _depthImageView;
+	AllocatedImage _depthImage;
+
+	//the format for the depth image
+	VkFormat _depthFormat;
 
 	//initializes everything in the engine
 	void init();
@@ -96,6 +124,26 @@ public:
 
 	//run main loop
 	void run();
+
+
+	//default array of renderable objects
+	std::vector<RenderObject> _renderables;
+
+	std::unordered_map<std::string, Material> _materials;
+	std::unordered_map<std::string, Mesh> _meshes;
+	//functions
+
+	//create material and add it to the map
+	Material* create_material(VkPipeline pipeline, VkPipelineLayout layout, const std::string& name);
+
+	//returns nullptr if it cant be found
+	Material* get_material(const std::string& name);
+
+	//returns nullptr if it cant be found
+	Mesh* get_mesh(const std::string& name);
+
+	//our draw function
+	void draw_objects(VkCommandBuffer cmd, RenderObject* first, int count);
 
 private:
 
@@ -113,6 +161,12 @@ private:
 
 	void init_pipelines();
 
+	void init_scene();
+
 	//loads a shader module from a spir-v file. Returns false if it errors
 	bool load_shader_module(const char* filePath, VkShaderModule* outShaderModule);
+
+	void load_meshes();
+
+	void upload_mesh(Mesh& mesh);
 };
