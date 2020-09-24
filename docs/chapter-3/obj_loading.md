@@ -2,7 +2,7 @@
 layout: default
 title: OBJ Loading
 parent: Chapter 3
-nav_order: 16
+nav_order: 13
 ---
 
 

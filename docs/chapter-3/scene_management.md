@@ -2,7 +2,7 @@
 layout: default
 title: Scene Management
 parent: Chapter 3
-nav_order: 18
+nav_order: 20
 ---
 
 We have arbitrary mesh rendering with depth buffers and materials, but at the moment, each object is hardcoded.

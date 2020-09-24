@@ -2,7 +2,7 @@
 layout: default
 title: Implementing vertex buffers
 parent: Chapter 3
-nav_order: 16
+nav_order: 11
 ---
 
 

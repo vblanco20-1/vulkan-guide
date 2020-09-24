@@ -2,7 +2,7 @@
 layout: default
 title: Vertex buffers
 parent: Chapter 3
-nav_order: 14
+nav_order: 10
 ---
 
 Right now, we are rendering triangles by hardcoding the vertex arrays in the shader. We are now going to change the code to render the triangles in the same way, but without hardcoding the vertices, using CPU arrays for them, and vertex input layouts.

@@ -2,7 +2,7 @@
 layout: default
 title: Setting up depth buffer
 parent: Chapter 3
-nav_order: 17
+nav_order: 15
 ---
 
 When we created the renderpass in chapter 1, there is something we skipped to keep the code shorter, the depth buffer.
