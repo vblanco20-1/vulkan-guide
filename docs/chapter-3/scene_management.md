@@ -36,6 +36,8 @@ struct RenderObject {
 In the VulkanEngine class, lets add a few members and functions to handle those.
 
 ```cpp
+//add unordered_map to the headers on top
+#include <unordered_map>
 
 class VulkanEngine {
 public:
@@ -57,7 +59,7 @@ Material* get_material(const std::string& name);
 Mesh* get_mesh(const std::string& name);
 
 //our draw function
-void draw_objects(RenderObject* first, int count);
+void draw_objects(VkCommandBuffer cmd,RenderObject* first, int count);
 };
 ```
 
@@ -69,6 +71,7 @@ Material* VulkanEngine::create_material(VkPipeline pipeline, VkPipelineLayout la
 	mat.pipeline = pipeline;
 	mat.pipelineLayout = layout;
 	_materials[name] = mat;
+	return &_materials[name];
 }
 
 Material* VulkanEngine::get_material(const std::string& name)
@@ -96,7 +99,7 @@ Mesh* VulkanEngine::get_mesh(const std::string& name)
 }
 
 
-void VulkanEngine::draw_objects(RenderObject* first, int count)
+void VulkanEngine::draw_objects(VkCommandBuffer cmd,RenderObject* first, int count)
 {
 	//empty for now
 }
@@ -214,21 +217,21 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd,RenderObject* first, int cou
 	//camera projection
 	glm::mat4 projection = glm::perspective(glm::radians(70.f), 1700.f / 900.f, 0.1f, 200.0f);
 	projection[1][1] *= -1;
-	
+
 	Mesh* lastMesh = nullptr;
 	Material* lastMaterial = nullptr;
-	for(int i = 0; i < count ;i++)
+	for (int i = 0; i < count; i++)
 	{
-		RenderObject& object = *first[i];	
-		
+		RenderObject& object = first[i];
+
 		//only bind the pipeline if it doesnt match with the already bound one
 		if (object.material != lastMaterial) {
-			
+
 			vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipeline);
 			lastMaterial = object.material;
-		}		
+		}
 
-	
+
 		glm::mat4 model = object.transformMatrix;
 		//final render matrix, that we are calculating on the cpu
 		glm::mat4 mesh_matrix = projection * view * model;
@@ -277,6 +280,7 @@ Now that we have an engine that actually does something. There are some exercise
 - Add WASD controls to the camera. For that, you would need to modify the camera matrices in the draw functions.
 - Sort the renderables array before rendering by Pipeline and Mesh, to reduce number of binds.
 
+In the github repo of the chapters, the chapter-3-scene will have the full refactor done. But not the other optional features.
 
 
 
