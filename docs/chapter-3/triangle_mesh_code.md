@@ -40,6 +40,12 @@ void VulkanEngine::init_vulkan()
 ```
 
 With that, the allocator is set and we can now use it to allocate buffers.
+If you try to compile the project now, you will find that vma is missing function definitions and giving linker errors. To solve that, add this to one .cpp file in the project (its recomended you add it to vk_engine.cpp, but can be other)
+```cpp
+#define VMA_IMPLEMENTATION
+#include "vk_mem_alloc.h"
+```
+This will include the implementation of the vma library itself.
 
 As the last thing for the allocator, we are going to add a struct to hold an allocated buffer to vk_types.h
 
@@ -58,7 +64,8 @@ VkBuffer is a handle to a GPU side Vulkan buffer, and VmaAllocation holds the st
 
 ## the Mesh class
 
-As we are going to have a lot of mesh related code, we are going to create some new files, `vk_mesh.h` and `vk_mesh.cpp`, where we are going to put the mesh related logic and structures. We are going to place those files alongside the rest of engine files. You can look at the github code as example.
+As we are going to have a lot of mesh related code, we are going to create some new files, `vk_mesh.h` and `vk_mesh.cpp`, where we are going to put the mesh related logic and structures. We are going to place those files alongside the rest of engine files. You can look at the github code as example. 
+Make sure to add it to the CMake and re-run it so that the project updates.
 
 `vk_mesh.h`
 ```cpp
@@ -66,6 +73,7 @@ As we are going to have a lot of mesh related code, we are going to create some 
 
 #include <vk_types.h>
 #include <vector>
+#include <glm/vec3.hpp>
 
 struct Vertex {
 
@@ -100,6 +108,9 @@ Back on VulkanEngine class, we are going to add a triangle mesh member, and a fu
 
 `vk_engine.h`
 ```cpp
+//add the include for the vk_mesh header
+#include <vk_mesh.h>
+
 class VulkanEngine {
 public:
 
@@ -370,11 +381,28 @@ void VulkanEngine::init_pipelines()
 
     //build the mesh triangle pipeline
     _meshPipeline = pipelineBuilder.build_pipeline(_device, _renderPass);
+
+    //deleting all of the vulkan shaders
+    vkDestroyShaderModule(_device, meshVertShader, nullptr);
+	vkDestroyShaderModule(_device, redTriangleVertShader, nullptr);
+	vkDestroyShaderModule(_device, redTriangleFragShader, nullptr);
+	vkDestroyShaderModule(_device, triangleFragShader, nullptr);
+	vkDestroyShaderModule(_device, triangleVertexShader, nullptr);
+
+    //adding the pipelines to the deletion queue
+	_mainDeletionQueue.push_function([=]() {
+		vkDestroyPipeline(_device, _redTrianglePipeline, nullptr);
+		vkDestroyPipeline(_device, _trianglePipeline, nullptr);
+		vkDestroyPipeline(_device, _meshPipeline, nullptr);
+
+		vkDestroyPipelineLayout(_device, _trianglePipelineLayout, nullptr);
+	});
 }
 ```
 
 There is not much here, other than connecting the vertex input info to the pipeline builder. With that and adding the tri_mesh vertex shader, thats all we need.
-Now we are holding a _meshPipeline that knows how to render a colored mesh. Lets use it. Lets replace the inner loop of draw() function to use the new pipeline and draw the mesh.
+Now we are holding a _meshPipeline that knows how to render a colored mesh. Lets use it. Lets replace the inner loop of draw() function to use the new pipeline and draw the mesh. 
+Make sure that each shader module is correctly deleted at the end of the function.
 
 
 ```cpp
@@ -398,6 +426,10 @@ VulkanEngine::draw()
     // other code...
 }
 ```
+
+
+![triangle]({{site.baseurl}}/diagrams/greenTriangle.png)
+
 
 That's it, if you run this, you should see a green triangle.
 The magic of it, is that this triangle is not hardcoded. It doesn't even have to be a triangle. With this you can render any mesh you want.
