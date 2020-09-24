@@ -30,15 +30,15 @@ Next, we are going to add a function to our Mesh object, to initialize it from a
 struct Mesh {
 	// other code .....
 
-	bool load_from_obj(const std::string& filename);
+	bool load_from_obj(const char* filename);
 };
 ```
 
 ```cpp
 //make sure that you are including the library 
 #include <tiny_obj_loader.h>
-
-bool Mesh::load_from_obj(const std::string& filename)
+#include <iostream>
+bool Mesh::load_from_obj(const char* filename)
 {
     return false;
 }
@@ -52,7 +52,7 @@ In this tutorial, we load a single obj file into a single mesh, and all of the o
 
 lets continue filling the load function
 ```cpp
-bool Mesh::load_from_obj(const std::string& filename)
+bool Mesh::load_from_obj(const char* filename)
 {
     //attrib will contain the vertex arrays of the file
 	tinyobj::attrib_t attrib;
@@ -66,7 +66,7 @@ bool Mesh::load_from_obj(const std::string& filename)
 	std::string err;
 
     //load the OBJ file
-	tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, filename.c_str(),
+	tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, filename.
 		nullptr);
     //make sure to output the warnings to the console, in case there are issues with the file
 	if (!warn.empty()) {
@@ -181,6 +181,7 @@ Its the same as the triangle, but we now use the monkey instead of the triangleM
 You should be seeing a rotating monkey head. But with a glitch, some faces draw on top of each other.
 That's caused by the lack of a depth buffer that we have right now, so lets fix that on the next article.
 
+![triangle]({{site.baseurl}}/diagrams/monkeyGlitch.png)
 
 Next: [Setting up Depth Buffer]({{ site.baseurl }}{% link docs/chapter-3/depth_buffer.md %})
 

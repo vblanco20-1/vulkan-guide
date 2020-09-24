@@ -217,11 +217,11 @@ void VulkanEngine::upload_mesh(Mesh& mesh)
 
     //copy vertex data
     void* data;
-    vmaMapMemory(_allocator, _triangleMesh._vertexBuffer._allocation, &data);
+    vmaMapMemory(_allocator, mesh._vertexBuffer._allocation, &data);
 
-    memcpy(data, _triangleMesh._vertices.data(), _triangleMesh._vertices.size() * sizeof(Vertex));
+    memcpy(data, mesh._vertices.data(), mesh._vertices.size() * sizeof(Vertex));
 
-    vmaUnmapMemory(_allocator, _triangleMesh._vertexBuffer._allocation);
+    vmaUnmapMemory(_allocator, mesh._vertexBuffer._allocation);
 }
 ```
 
