@@ -9,57 +9,61 @@ parent: introduction
 
 ## What is Vulkan?
 
-Vulkan is a multiplatform API (application program interface) created as a successor to OpenGl by the same authors at the Khronos committee.
+Vulkan is a multiplatform API (Application Program Interface) created as a successor to OpenGl by the same authors at the Khronos Group.
 Vulkan is developed by a committee of GPU vendors and other partners, and the API is a standard that anyone can implement.
 
-Vulkan cuts the design decisions of OpenGL, and starts brand new. It is designed for multithreaded high performance applications, and its much more explicit API is made so that drivers have much less guesswork to do. If used right, Vulkan can provide a really high level of performance.
+Vulkan is a fresh start that breaks away from the design decisions of OpenGL. It is designed for multithreaded high performance applications, and the much more explicit API helps drivers have much less guesswork to do. If used right, Vulkan can provide a really high level of performance, low latency, and more consistent frametimes.
 
 
 ## When to use Vulkan
 
-While Vulkan is the newest API, you should not be using Vulkan if you dont need its features.
-Writing a Vulkan engine is an order of magnitude harder than using Opengl, and the GPU-side performance will not necessarily be better.
+While Vulkan is the newest API, you should not be using Vulkan if you don't need its features.
+Writing a Vulkan engine is an order of magnitude harder than using OpenGl, and the GPU-side performance will not necessarily be better.
 
-The main thing Vulkan improves is CPU overheads and multithreading, and control over GPU hitches.
-When Vulkan is used right, it is possible to almost completely eliminate hitches, achieving a very smooth framerate, on very low CPU overhead.
+The big things Vulkan improves is CPU overhead, multithreading, and control over GPU hitches.
+When Vulkan is used right, it is possible to almost completely eliminate hitches, achieving a very smooth framerate, with a very low CPU overhead.
 
-If your target application is a GPU bound application, Vulkan is not likely to improve things in a way that its worth the extra complexity.
+If your application is GPU bound, where the performance is limited to fast your GPU runs, Vulkan's extra complexity is unlikely to improve performance enough to be worth it.
 
-If you want to make big maps and dynamic worlds, or CAD type scenes with a lot of objects, the multithread capabilities of Vulkan will likely be very useful.
+If you want to make big maps and dynamic worlds, or CAD type scenes with a lot of objects, the multithreaded capabilities of Vulkan will likely be very useful.
 
-On the mobile market, there is the problem of fragmentation. Not every phone implements Vulkan (old phones dont), and of those that do, you might run into problems with driver quality. On the phones that implement Vulkan decently well, the lowered CPU overhead and the better map to the hardware will mean you can improve the performance and battery usage of the application extensively.
+On the mobile market, there is the problem of fragmentation. Not every phone implements Vulkan (especially older phones) and of those that do, you may have problems with driver quality. On the phones that do implement Vulkan and have good drivers, the lower CPU overhead and the better mapping to mobile hardware will mean you can improve the performance of the application extensively all while using less battery.
 
 
 # Overview of Vulkan API
-Vulkan is an API, which means its essentially just a list of functions to call, and parameters to those.
-It is a spec based on the C language, so it can be used from almost every language. While this tutorial is written in C++, what is done here can be relatively easily done from other low level languages such as Rust or just plain C.
+
+Vulkan is an API, which means its essentially a list of functions to call, the parameters to pass in, and what return values you receive. 
+The API is based on the C programming language, so it can be used from almost every other language. While this tutorial is written in C++, what is done here can be relatively easily written in other low level languages such as Rust or even plain C.
 
 ## Multiplatform
 
-Vulkan is uniquely designed compared to other GPU APIs, in that its the same API for both Mobile GPUs, and Desktop CPUs. Almost every feature in Vulkan is an optional feature, because phones dont support it, while PC GPUs might. In this tutorial, we are focusing on PC, so we are going to do things that wont directly run in smartphones and tablets.
+Vulkan is unique in its design compared to other GPU APIs because it has the same API for Mobile and Desktop GPUs. Due to that design, many features in Vulkan are optional and using them requires explicitly turning them on. It is not uncommon to have a feature which no Mobile GPU supports but is available on most desktop GPUs. In this tutorial, we are focusing on the Desktop side of things, so we can use features that wont directly run on smartphones and tablets. 
 
-If you are looking to have an application that will run on both PC and smartphones, its recomended that you have 2 core render paths. As the API its the same, a lot of code can be shared directly, but the differences in features and fast-paths between the 2 targets will mean that if you try to have just one render code, it will be suboptimal on one of the two. 
+If you wish to have a Vulkan application that will run on both Desktop and Mobile GPUs, its recommended to have two core render paths. As the API is the same, much of code can be shared, but the differences in features and fast-paths between the 2 targets means that having just one render code path will have suboptimal performance on at least one of the two platforms. 
 
-During this guide we will explain the things that are most different between the 2 types of GPUs.
+During this guide we will explain many of the differences between the two types of GPUs.
 
 ## Validation layers
 
-There is a significant amount of things in the Vulkan API that you have to do, but they actually do nothing on the real hardware. This means that even on some wrong code, it can still run just fine on some hardware, but break spectacularly on others. This is specially bad on syncronization code, which is very hard to get right, and it can run very different depending on the hardware unless you do everything according to the spec. Something that runs fine on a Nvidia card might break on an AMD card, and its the same in reverse.
+The Vulkan API is very large and rather easy to make mistakes with. Fortunately, when Vulkan was being designed, the creators realized that and made the Validation Layers to fix it. The Validation Layers is a bunch of error checking code that detects and reports 'invalid usage' of the API. They check for all kinds of errors such as using the wrong enums, threading violations, and object lifetimes. The layers are separate from the driver, and to work, they must intercept every function call, perform validation, then call the driver for you. The reason for that is when you want to turn off validation, you Vulkan calls go directly to the driver and can run as fast as possible.
 
-Those are some of the main reasons Vulkan comes with a set of "Validation Layers". They are hooked between the API calls from your code, and the actual gpu driver, and they check that you are doing the correct things according to the Vulkan spec. While developing, its imperative to use them to make sure you arent doing the wrong things. They can be enabled and disabled at startup, so when profiling or releasing the aplication, you would usually disable them. They do bring a significant hit to performance due to all that checking. 
+While developing a Vulkan application, you should have the Validation Layers enabled. The obvious reason is that they detect bugs, but another big reason is that by having a clean validation output you can reasonably assume your application will work across a wide variety of hardware. This is especially important for synchronization, which is tricky to get right, and what may work perfectly fine on one GPU may fail spectacularly on another GPU.
+
+It is important to note that the Validation Layers can't catch every possible bug, like uninitialized memory and bad pointers. There are tools that can check for these bugs, such as Address Sanitizer and valgrind, and using them is highly advised. Unfortunately, graphics drivers often create false positives while using these tools, making their output quite noisy. 
 
 ## Usage and general mindset
-In the Vulkan API, almost everything is designed around objects that you create manually and then use. This is not only for the actual gpu resources such as Images/Textures and Buffers (for memory or things like Vertex data). But also for a lot of "internal" configuration structures.
 
-For example, things like gpu draw parameters are stored into a Pipeline object, holding shaders and other configuration. In Opengl and DX11, this is calculated "on the fly" while rendering.
-When  you use Vulkan, you need to think if its worth to cache these objects, or create them while rendering on-the-fly. Some objects like Pipelines are very expensive to create, so its best to create them on load screens or background threads. Other objects are cheaper to create, such as DescriptorSets, so its fine to create them at runtime.
+In the Vulkan API, almost everything is designed around objects that you create manually and then use. This is not only for the actual gpu resources such as Images/Textures and Buffers (for memory or things like Vertex data) but also for a lot of "internal" configuration structures.
+
+For example, things like gpu fixed function, like rasterizer mode, are stored into a Pipeline object which holds shaders and other configuration. In Opengl and DX11, this is calculated "on the fly" while rendering.
+When you use Vulkan, you need to think if its worth to cache these objects, or create them while rendering on-the-fly. Some objects like Pipelines are expensive to create, so its best to create them on load screens or background threads. Other objects are cheaper to create, such as DescriptorSets and its fine to create them when you need them during rendering.
 
 Because everything in Vulkan is "pre-built" by default, it means that most of the state validation in the GPU will be done when you create the object, and the rendering itself does less work and is faster. Good understanding of how these objects are created and used will allow you to control how everything executes in a way that will make the framerate smooth.
 
-When doing actual GPU commands, all of the work has to be done on a CommandBuffer, and submitted into a Queue. You first allocate a command buffer, then start encoding things on it, and then you execute it by adding it into a Queue. When you submit a command buffer into a queue, it will immediately start executing on the GPU side. You have tools to control when that execution has finished. If you submit multiple command buffers into different queues, it is possible that they execute in parallel. 
+When doing actual GPU commands, all of the work on the gpu has to be recorded into a CommandBuffer, and submitted into a Queue. You first allocate a command buffer, start encoding things on it, and then you execute it by adding it to a Queue. When you submit a command buffer into a queue, it will start executing on the GPU side. You have tools to control when that execution has finished. If you submit multiple command buffers into different queues, it is possible that they execute in parallel.
 
-There is no concept of frames in Vulkan. This means that the way you render is entirely up to you. The only thing that matters is when you have to display the frame to the screen, which is done through a swapchain. But there is no fundamental difference between rendering and then sending the images over the network, or saving the images into a file, or displaying it into the screen through the swapchain.
+There is no concept of a frame in Vulkan. This means that the way you render is entirely up to you. The only thing that matters is when you have to display the frame to the screen, which is done through a swapchain. But there is no fundamental difference between rendering and then sending the images over the network, or saving the images into a file, or displaying it into the screen through the swapchain.
 
-Its possible to use Vulkan in an entirely headless mode, not even displaying anything to the user. You can render to images and then store them into disk (very useful for testing!) or  use Vulkan as a way to perform GPU calculations such as a raytracer.
+This means it is possible to use Vulkan in an entirely headless mode, where nothing is displayed to the screen. You can render the images and then store them onto the disk (very useful for testing!) or use Vulkan as a way to perform GPU calculations such as a raytracer or other compute tasks.
 
 Next: [Vulkan Render flow]({{ site.baseurl }}{% link docs/introduction/vulkan_execution.md %})
