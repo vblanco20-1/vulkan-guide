@@ -104,7 +104,7 @@ As with vk_init, we include vk_types. We already need a Vulkan type in VkExtent2
 The Vulkan engine will be the core of everything we will be doing.
 We have a flag to know if the engine is initialized, a frame number integer (very useful!) and the size of the window we are going to open, in pixels. 
 
-The declaration ` struct SDL_Window* _window;` is of some special interest. Note the `struct` at the beggining. This is called a forward-declaration, and its what allows us to have the SDL_Window pointer in the class, without including SDL on the Vulkan engine header. This variable holds the window that we create for the application.
+The declaration `struct SDL_Window* _window;` is of some special interest. Note the `struct` at the beggining. This is called a forward-declaration, and its what allows us to have the SDL_Window pointer in the class, without including SDL on the Vulkan engine header. This variable holds the window that we create for the application.
 
 With the header seen, lets go to the cpp
 
