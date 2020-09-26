@@ -60,7 +60,9 @@ void VulkanEngine::init()
 
 	init_sync_structures();
 
-	init_pipelines();
+	init_descriptors();
+
+	init_pipelines();	
 
 	load_meshes();
 
@@ -432,7 +434,7 @@ void VulkanEngine::init_commands()
 	//we also want the pool to allow for resetting of individual command buffers
 	VkCommandPoolCreateInfo commandPoolInfo = vkinit::command_pool_create_info(_graphicsQueueFamily, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
 
-	for (int i = 0; i < 2; i++) {
+	for (int i = 0; i < FRAME_OVERLAP; i++) {
 
 	
 		VK_CHECK(vkCreateCommandPool(_device, &commandPoolInfo, nullptr, &frames[i]._commandPool));
@@ -458,7 +460,7 @@ void VulkanEngine::init_sync_structures()
 
 	VkSemaphoreCreateInfo semaphoreCreateInfo = vkinit::semaphore_create_info();
 
-	for (int i = 0; i < 2; i++) {
+	for (int i = 0; i < FRAME_OVERLAP; i++) {
 
 	
 
@@ -491,7 +493,7 @@ void VulkanEngine::init_pipelines()
 	}
 
 	VkShaderModule meshVertShader;
-	if (!load_shader_module("../../shaders/tri_mesh_pushconstants.vert.spv", &meshVertShader))
+	if (!load_shader_module("../../shaders/tri_mesh_descriptors.vert.spv", &meshVertShader))
 	{
 		std::cout << "Error when building the mesh vertex shader module" << std::endl;
 	}
@@ -522,8 +524,10 @@ void VulkanEngine::init_pipelines()
 	mesh_pipeline_layout_info.pPushConstantRanges = &push_constant;
 	mesh_pipeline_layout_info.pushConstantRangeCount = 1;
 
-	VkPipelineLayout meshPipLayout;
+	mesh_pipeline_layout_info.setLayoutCount = 1;
+	mesh_pipeline_layout_info.pSetLayouts = &_globalSetLayout;
 
+	VkPipelineLayout meshPipLayout;
 	VK_CHECK(vkCreatePipelineLayout(_device, &mesh_pipeline_layout_info, nullptr, &meshPipLayout));
 
 	//hook the push constants layout
@@ -801,6 +805,20 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd,RenderObject* first, int cou
 
 	Mesh* lastMesh = nullptr;
 	Material* lastMaterial = nullptr;
+
+	GPUCameraData camData;
+	camData.proj = projection;
+	camData.view = view;
+	camData.viewproj = projection * view;
+
+
+	void* data;
+	vmaMapMemory(_allocator, get_current_frame().cameraBuffer._allocation, &data);
+
+	memcpy(data, &camData, sizeof(GPUCameraData));
+
+	vmaUnmapMemory(_allocator, get_current_frame().cameraBuffer._allocation);
+	
 	for (int i = 0; i < count; i++)
 	{
 		RenderObject& object = first[i];
@@ -810,12 +828,13 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd,RenderObject* first, int cou
 
 			vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipeline);
 			lastMaterial = object.material;
+			vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipelineLayout, 0, 1, &get_current_frame().globalDescriptor, 0, nullptr);
 		}
 
 
 		glm::mat4 model = object.transformMatrix;
 		//final render matrix, that we are calculating on the cpu
-		glm::mat4 mesh_matrix = projection * view * model;
+		glm::mat4 mesh_matrix = model;
 
 		MeshPushConstants constants;
 		constants.render_matrix = mesh_matrix;
@@ -834,6 +853,7 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd,RenderObject* first, int cou
 		vkCmdDraw(cmd, object.mesh->_vertices.size(), 1, 0, 0);
 	}
 }
+
 
 
 void VulkanEngine::init_scene()
@@ -857,5 +877,102 @@ void VulkanEngine::init_scene()
 
 			_renderables.push_back(tri);
 		}
+	}
+}
+
+AllocatedBuffer VulkanEngine::create_buffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage)
+{
+	//allocate vertex buffer
+	VkBufferCreateInfo bufferInfo = {};
+	bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+	bufferInfo.pNext = nullptr;
+	bufferInfo.size = allocSize;
+
+	bufferInfo.usage = usage;
+
+
+	//let the VMA library know that this data should be writeable by CPU, but also readable by GPU
+	VmaAllocationCreateInfo vmaallocInfo = {};
+	vmaallocInfo.usage = memoryUsage;
+
+	AllocatedBuffer newBuffer;
+
+	//allocate the buffer
+	VK_CHECK(vmaCreateBuffer(_allocator, &bufferInfo, &vmaallocInfo,
+		&newBuffer._buffer,
+		&newBuffer._allocation,
+		nullptr));
+
+	return newBuffer;
+}
+
+void VulkanEngine::init_descriptors()
+{
+
+	//create a descriptor pool that will hold 10 uniform buffers
+	std::vector<VkDescriptorPoolSize> sizes =
+	{
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 10 }
+	};
+
+	VkDescriptorPoolCreateInfo pool_info = {};
+	pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+	pool_info.flags = 0;
+	pool_info.maxSets = 10;
+	pool_info.poolSizeCount = (uint32_t)sizes.size();
+	pool_info.pPoolSizes = sizes.data();
+	
+	vkCreateDescriptorPool(_device, &pool_info, nullptr, &_descriptorPool);
+
+
+	
+	
+	VkDescriptorSetLayoutBinding setbind;
+	setbind.binding=  0;
+	setbind.descriptorCount = 1;
+	setbind.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	setbind.pImmutableSamplers = nullptr;
+	setbind.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+	
+	
+	VkDescriptorSetLayoutCreateInfo setinfo;
+	setinfo.bindingCount = 1;
+	setinfo.flags = 0;
+	setinfo.pNext = nullptr;
+	setinfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+	setinfo.pBindings = &setbind;
+
+	vkCreateDescriptorSetLayout(_device, &setinfo, nullptr, &_globalSetLayout);
+
+	for (int i = 0; i < FRAME_OVERLAP; i++)
+	{
+		frames[i].cameraBuffer = create_buffer(sizeof(GPUCameraData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+
+		VkDescriptorSetAllocateInfo allocInfo;
+		allocInfo.pNext = nullptr;
+		allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+		allocInfo.descriptorPool = _descriptorPool;
+		allocInfo.descriptorSetCount = 1;
+		allocInfo.pSetLayouts = &_globalSetLayout;
+
+		vkAllocateDescriptorSets(_device, &allocInfo, &frames[i].globalDescriptor);
+
+
+		VkDescriptorBufferInfo binfo;
+		binfo.buffer = frames[i].cameraBuffer._buffer;
+		binfo.offset = 0;
+		binfo.range = sizeof(GPUCameraData);
+
+		VkWriteDescriptorSet setWrite = {};
+		setWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		setWrite.pNext = nullptr;
+
+		setWrite.dstBinding = 0;
+		setWrite.dstSet = frames[i].globalDescriptor;
+		setWrite.descriptorCount = 1;
+		setWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		setWrite.pBufferInfo = &binfo;
+
+		vkUpdateDescriptorSets(_device, 1, &setWrite, 0, nullptr);
 	}
 }

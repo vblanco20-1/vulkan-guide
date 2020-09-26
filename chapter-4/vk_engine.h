@@ -77,8 +77,18 @@ struct FrameData {
 
 	VkCommandPool _commandPool;
 	VkCommandBuffer _mainCommandBuffer;
+
+	AllocatedBuffer cameraBuffer;
+	VkDescriptorSet globalDescriptor;
 };
 
+struct GPUCameraData{
+	glm::mat4 view;
+	glm::mat4 proj;
+	glm::mat4 viewproj;
+};
+
+constexpr unsigned int FRAME_OVERLAP = 2;
 
 class VulkanEngine {
 public:
@@ -95,7 +105,7 @@ public:
 	VkPhysicalDevice _chosenGPU;
 	VkDevice _device;
 
-	FrameData frames[2];
+	FrameData frames[FRAME_OVERLAP];
 	
 	VkQueue _graphicsQueue;
 	uint32_t _graphicsQueueFamily;
@@ -120,6 +130,10 @@ public:
 
 	//the format for the depth image
 	VkFormat _depthFormat;
+
+	VkDescriptorPool _descriptorPool;
+
+	VkDescriptorSetLayout _globalSetLayout;
 
 	//initializes everything in the engine
 	void init();
@@ -155,6 +169,8 @@ public:
 	//our draw function
 	void draw_objects(VkCommandBuffer cmd, RenderObject* first, int count);
 
+	AllocatedBuffer create_buffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage);
+
 private:
 
 	void init_vulkan();
@@ -172,6 +188,8 @@ private:
 	void init_pipelines();
 
 	void init_scene();
+
+	void init_descriptors();
 
 	//loads a shader module from a spir-v file. Returns false if it errors
 	bool load_shader_module(const char* filePath, VkShaderModule* outShaderModule);
