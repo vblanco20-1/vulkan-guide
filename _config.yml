@@ -1,6 +1,6 @@
 # SITE CONFIGURATION
 #baseurl: /vulkan-guide
-url = "//vkguide.dev"
+url: "//vkguide.dev"
 title: Vulkan Guide # site's title
 description: "Brand new guide to vulkan graphics programming" # used by search engines
 
