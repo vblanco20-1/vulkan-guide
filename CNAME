@@ -1,0 +1,1 @@
+vkguide.dev
