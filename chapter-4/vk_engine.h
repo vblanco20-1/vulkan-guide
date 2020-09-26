@@ -68,6 +68,18 @@ struct RenderObject {
 	glm::mat4 transformMatrix;
 };
 
+
+struct FrameData {
+	VkSemaphore _presentSemaphore, _renderSemaphore;
+	VkFence _renderFence;
+
+	DeletionQueue _frameDeletionQueue;
+
+	VkCommandPool _commandPool;
+	VkCommandBuffer _mainCommandBuffer;
+};
+
+
 class VulkanEngine {
 public:
 
@@ -83,14 +95,10 @@ public:
 	VkPhysicalDevice _chosenGPU;
 	VkDevice _device;
 
-	VkSemaphore _presentSemaphore, _renderSemaphore;
-	VkFence _renderFence;
-
+	FrameData frames[2];
+	
 	VkQueue _graphicsQueue;
 	uint32_t _graphicsQueueFamily;
-
-	VkCommandPool _commandPool;
-	VkCommandBuffer _mainCommandBuffer;
 	
 	VkRenderPass _renderPass;
 
@@ -124,7 +132,9 @@ public:
 
 	//run main loop
 	void run();
-
+	
+	FrameData& get_current_frame();
+	FrameData& get_last_frame();
 
 	//default array of renderable objects
 	std::vector<RenderObject> _renderables;
