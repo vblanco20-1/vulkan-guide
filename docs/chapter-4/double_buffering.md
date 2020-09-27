@@ -137,5 +137,12 @@ Example:
 
     //now that we are sure that the commands finished executing, we can safely reset the command buffer to begin recording again.
 	VK_CHECK(vkResetCommandBuffer(get_current_frame()._mainCommandBuffer, 0));
-
 ```
+
+At this moment, the frame overlap should be working fine. Try to compile and run the program, and check that the validation layers dont complain about anything. If in doubt, compare it with the example code for the chapter.
+
+You can try to increase the FRAME_OVERLAP value. By increasing it, you will add more latency to the program in cases where the CPU goes faster than the GPU. Keeping it at 2, and maybe increasing it to 3 if you have jittery framerate is the normal thing. You can also set it to 1 to completely disable all frame overlapping.
+
+Now that we have done better cpu-gpu work overlap, it is time to do descriptor sets.
+
+Next: Descriptor sets
