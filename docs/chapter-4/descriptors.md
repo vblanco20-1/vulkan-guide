@@ -45,3 +45,4 @@ Used in both the pipelines and when allocating descriptors, a descriptor set lay
 
 ## Uniform buffers
 Descriptor sets point into buffers, but we didnt explain that. Right now we are creating GPU buffers that hold vertex data, but you can also create buffers that hold arbitrary data for you to use in the shaders. For that type of data, Uniform Buffers are the common thing. They are small size (up to a few kilobytes), but are very fast to read, so they are perfect for shader parameters. By creating a Uniform Buffer and writing to it from the CPU, you can send data to the GPU in a much more efficient way than push constants. We will be using it for the camera information.
+It is possible to have multiple descriptor sets pointing to one uniform buffer, and its also possible to have a big uniform buffer, and then each descriptor sets point to a section of the buffer. The shader will not know the difference.
