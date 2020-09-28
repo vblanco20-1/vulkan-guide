@@ -43,6 +43,8 @@ Run this now, and note what the alignement for the uniform buffers is. In a Nvid
 
 Now that we know whats the offset alignement that we need, we are going to create a struct to hold our SceneParameters, and bind it to the shaders. Lets begin by creating a new struct to hold the state we are going to be used in the shaders.
 
+## Setting up Scene Data
+
 ```cpp
 struct GPUSceneData {
 	glm::vec4 fogColor; // w is for exponent
@@ -186,6 +188,8 @@ Writing the descriptor set is same as before, but instead of writing 1 binding, 
 
 Now we need to modify the shader so that it uses something from the scene parameter buffer. We are going to do the simplest thing, which is to add the ambient color to the pixel color.
 
+## New shaders
+
 We are going to copy the shader that we were using until now, colored_triangle.frag, and we will call it default_lit.frag, as we will be adding lighting to it.
 
 default_lit.frag
@@ -250,4 +254,73 @@ On `draw_objects()` , before or after when we map the camera buffer and write to
 We need to do evil pointer arithmetic to offset the data pointer and make it point where we want to. Other than that, its more or less the same as the camera buffer.
 
 If you run this now, you will see that the objects have a tint that changes across time.
+
+![colors]({{site.baseurl}}/diagrams/ambientcolor.gif)
+
+There is one last thing we can do to this.
+Right now, we are hardcoding the buffer offsets when writing the descriptor sets. But this is not neccesary.
+By using descriptors of type Dynamic Uniform Buffer, it is possible to set the buffer offsets when you bind the buffer. This lets you use 1 buffer for many different offsets.
+
+
+## Dynamic Uniform Buffer.
+
+Lets refactor the code for the scene buffer to use dynamic uniform descriptor and not hardcode the offsets.
+
+The first thing to do is to reserve some size for dynamic uniform descriptors in the descriptor pool.
+
+In `init_descriptors()`, change the descriptor sizes for creating the descriptor pool to this
+```cpp
+//create a descriptor pool that will hold 10 uniform buffers and 10 dynamic uniform buffers
+	std::vector<VkDescriptorPoolSize> sizes =
+	{
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 10 },
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 10 }
+	};
+```
+Dynamic uniform buffers are a different descriptor type, so we need to add some of them when creating the pool.
+Now, we need to change the descriptor type for the scene binding when creating the descriptor set layout so that its uniform buffer dynamic.
+
+```cpp
+VkDescriptorSetLayoutBinding sceneBind = vkinit::descriptorset_layout_binding(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 1);	
+
+```
+We changed from `VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER` to `VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC`
+
+Now we go into the place where we write the descriptors, and we remove the hardcoded offset, and change type to dynamic
+
+```cpp
+VkDescriptorBufferInfo sceneInfo;
+sceneInfo.buffer = _sceneParameterBuffer._buffer;
+sceneInfo.offset = 0;
+sceneInfo.range = sizeof(GPUSceneData);
+
+VkWriteDescriptorSet sceneWrite = vkinit::write_descriptor_buffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, _frames[i].globalDescriptor, &sceneInfo, 1);
+```
+
+Thats it, now our descriptor is created as dynamic. Now, when binding the descriptor set, we can tell it what offset to use.
+
+Lets go to `draw_objects` function, and modify the place where the descriptor set is bound so that it uses the offsets.
+```cpp
+
+//only bind the pipeline if it doesnt match with the already bound one
+if (object.material != lastMaterial) {
+
+vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipeline);
+lastMaterial = object.material;
+
+//offset for our scene buffer
+uint32_t uniform_offset = pad_uniform_buffer_size(sizeof(GPUSceneData)) * frameIndex;
+
+vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipelineLayout, 0, 1, &get_current_frame().globalDescriptor, 1, &uniform_offset);
+}
+```
+
+We need to send the offset to the vkCmdBindDescriptorSets call. The offsets will be done by order. Because the binding number 0 has no dynamic offset, sending 1 offset to  the function will affect the second binding, where we do have the dynamic descriptor.
+
+If we had a descriptor set that had binding 0, 2 and 3 using static uniform buffer, and bindings 1,4,5 usiung dynamic descriptors, we would need to send 3 uint32_t to the bind function.
+
+Dynamic uniform buffer bindings can be slightly slower than hardcoded ones, but in general is such a low difference that its hard to measure.
+Due to their dynamic and not hardcoded nature, they are very popular to use in game engines. Some game engines dont even use the normal uniform buffer descriptors, and prefer to use strictly only dynamic ones.
+
+One of the things dynamic uniform buffer bindings let you do, is that you can allocate and write into a buffer at runtime while rendering, and bind exactly the offsets you write into. 
 
