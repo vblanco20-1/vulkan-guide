@@ -259,3 +259,13 @@ if (object.material != lastMaterial) {
 //we can now draw	
 vkCmdDraw(cmd, object.mesh->_vertices.size(), 1,0 , i);
 ```
+
+We are using the index in the loop on the vkCmdDraw call to send the instance index to the shader.
+
+Now we have multiple buffers of different kinds, and on different descriptor sets, implemented.
+
+The last step for the tutorial is textures, which will go into the next chapter. But before going there, i heavily recomend you try to do some things with the codebase.
+
+Right now, we have one descriptor set per frame for the Set 0 (camera and scene buffers). Try to refactor it so it only uses 1 descriptor set and 1 buffer both both camera and scene buffers, packing both the structs for all frames into the same uniform buffer, and then using dynamic offsets.
+
+Alternatively, try to create another SSBO that holds something like ObjectColor, to use on a per-object basis, and try to use it to color the objects in different ways by modifying the shaders.
