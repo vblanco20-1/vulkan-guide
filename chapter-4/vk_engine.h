@@ -105,7 +105,7 @@ public:
 	VkPhysicalDevice _chosenGPU;
 	VkDevice _device;
 
-	FrameData frames[FRAME_OVERLAP];
+	FrameData _frames[FRAME_OVERLAP];
 	
 	VkQueue _graphicsQueue;
 	uint32_t _graphicsQueueFamily;
