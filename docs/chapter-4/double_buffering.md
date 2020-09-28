@@ -145,4 +145,4 @@ You can try to increase the FRAME_OVERLAP value. By increasing it, you will add 
 
 Now that we have done better cpu-gpu work overlap, it is time to do descriptor sets.
 
-Next: Descriptor sets
+Next: [Descriptor sets]({{ site.baseurl }}{% link docs/chapter-4/descriptors.md %})
