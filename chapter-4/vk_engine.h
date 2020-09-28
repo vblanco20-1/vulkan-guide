@@ -88,6 +88,15 @@ struct GPUCameraData{
 	glm::mat4 viewproj;
 };
 
+
+struct GPUSceneData {
+	glm::vec4 fogColor; // w is for exponent
+	glm::vec4 fogDistances; //x for min, y for max, zw unused.
+	glm::vec4 ambientColor;
+	glm::vec4 sunlightDirection; //w for sun power
+	glm::vec4 sunlightColor;
+};
+
 constexpr unsigned int FRAME_OVERLAP = 2;
 
 class VulkanEngine {
@@ -104,6 +113,8 @@ public:
 	VkInstance _instance;
 	VkPhysicalDevice _chosenGPU;
 	VkDevice _device;
+
+	VkPhysicalDeviceProperties _gpuProperties;
 
 	FrameData _frames[FRAME_OVERLAP];
 	
@@ -134,6 +145,9 @@ public:
 	VkDescriptorPool _descriptorPool;
 
 	VkDescriptorSetLayout _globalSetLayout;
+
+	GPUSceneData _sceneParameters;
+	AllocatedBuffer _sceneParameterBuffer;
 
 	//initializes everything in the engine
 	void init();
@@ -171,6 +185,7 @@ public:
 
 	AllocatedBuffer create_buffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage);
 
+	size_t pad_uniform_buffer_size(size_t originalSize);
 private:
 
 	void init_vulkan();
