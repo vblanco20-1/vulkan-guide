@@ -64,8 +64,7 @@ void VulkanEngine::init()
 
 	init_descriptors();
 
-	init_pipelines();	
-
+	init_pipelines();
 
 	load_images();
 
@@ -566,6 +565,18 @@ void VulkanEngine::init_pipelines()
 	VkPipelineLayout meshPipLayout;
 	VK_CHECK(vkCreatePipelineLayout(_device, &mesh_pipeline_layout_info, nullptr, &meshPipLayout));
 
+
+	//we start from  the normal mesh layout
+	VkPipelineLayoutCreateInfo textured_pipeline_layout_info = mesh_pipeline_layout_info;
+		
+	VkDescriptorSetLayout texturedSetLayouts[] = { _globalSetLayout, _objectSetLayout,_singleTextureSetLayout };
+
+	textured_pipeline_layout_info.setLayoutCount = 3;
+	textured_pipeline_layout_info.pSetLayouts = texturedSetLayouts;
+
+	VkPipelineLayout texturedPipeLayout;
+	VK_CHECK(vkCreatePipelineLayout(_device, &textured_pipeline_layout_info, nullptr, &texturedPipeLayout));
+
 	//hook the push constants layout
 	pipelineBuilder._pipelineLayout = meshPipLayout;
 
@@ -624,8 +635,9 @@ void VulkanEngine::init_pipelines()
 	pipelineBuilder._shaderStages.push_back(
 		vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT, texturedMeshShader));
 
+	pipelineBuilder._pipelineLayout = texturedPipeLayout;
 	VkPipeline texPipeline = pipelineBuilder.build_pipeline(_device, _renderPass);
-	create_material(texPipeline, meshPipLayout, "texturedmesh");
+	create_material(texPipeline, texturedPipeLayout, "texturedmesh");
 
 
 	vkDestroyShaderModule(_device, meshVertShader, nullptr);
@@ -774,8 +786,12 @@ void VulkanEngine::load_meshes()
 
 void VulkanEngine::load_images()
 {
-	AllocatedImage lostEmpire;
-	vkutil::load_image_from_file(*this, "../../assets/lost_empire-RGBA.png", lostEmpire);
+	Texture lostEmpire;
+	
+	vkutil::load_image_from_file(*this, "../../assets/lost_empire-RGBA.png", lostEmpire.image);
+	
+	VkImageViewCreateInfo imageinfo = vkinit::imageview_create_info(VK_FORMAT_R8G8B8A8_UNORM, lostEmpire.image._image, 0);
+	vkCreateImageView(_device, &imageinfo, nullptr, &lostEmpire.imageView);
 
 	_loadedTextures["empire_diffuse"] = lostEmpire;
 }
@@ -953,6 +969,12 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd,RenderObject* first, int cou
 		
 			//object data descriptor
 			vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipelineLayout, 1, 1, &get_current_frame().objectDescriptor, 0, nullptr);
+
+			if (object.material->textureSet != VK_NULL_HANDLE) {
+				//texture descriptor
+				vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipelineLayout, 2, 1, &object.material->textureSet, 0, nullptr);
+
+			}
 		}
 
 		glm::mat4 model = object.transformMatrix;
@@ -1008,6 +1030,32 @@ void VulkanEngine::init_scene()
 			_renderables.push_back(tri);
 		}
 	}
+
+
+	Material* texturedMat=	get_material("texturedmesh");
+
+	VkDescriptorSetAllocateInfo allocInfo = {};
+	allocInfo.pNext = nullptr;
+	allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+	allocInfo.descriptorPool = _descriptorPool;
+	allocInfo.descriptorSetCount = 1;
+	allocInfo.pSetLayouts = &_singleTextureSetLayout;
+
+	vkAllocateDescriptorSets(_device, &allocInfo, &texturedMat->textureSet);
+
+	VkSamplerCreateInfo samplerInfo = vkinit::sampler_create_info(VK_FILTER_NEAREST);
+
+	VkSampler blockySampler;
+	vkCreateSampler(_device, &samplerInfo, nullptr, &blockySampler);
+
+	VkDescriptorImageInfo imageBufferInfo;
+	imageBufferInfo.sampler = blockySampler;
+	imageBufferInfo.imageView = _loadedTextures["empire_diffuse"].imageView;
+	imageBufferInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+	VkWriteDescriptorSet texture1 = vkinit::write_descriptor_image(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, texturedMat->textureSet, &imageBufferInfo, 0);
+
+	vkUpdateDescriptorSets(_device, 1, &texture1, 0, nullptr);
 }
 
 AllocatedBuffer VulkanEngine::create_buffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage)
@@ -1089,7 +1137,8 @@ void VulkanEngine::init_descriptors()
 	{
 		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 10 },
 		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 10 },
-		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 10 }
+		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 10 },
+		{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 10 }
 	};
 
 	VkDescriptorPoolCreateInfo pool_info = {};
@@ -1125,6 +1174,17 @@ void VulkanEngine::init_descriptors()
 	set2info.pBindings = &objectBind;
 
 	vkCreateDescriptorSetLayout(_device, &set2info, nullptr, &_objectSetLayout);
+
+	VkDescriptorSetLayoutBinding textureBind = vkinit::descriptorset_layout_binding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0);
+
+	VkDescriptorSetLayoutCreateInfo set3info = {};
+	set3info.bindingCount = 1;
+	set3info.flags = 0;
+	set3info.pNext = nullptr;
+	set3info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+	set3info.pBindings = &textureBind;
+
+	vkCreateDescriptorSetLayout(_device, &set3info, nullptr, &_singleTextureSetLayout);
 
 
 	const size_t sceneParamBufferSize = FRAME_OVERLAP * pad_uniform_buffer_size(sizeof(GPUSceneData));

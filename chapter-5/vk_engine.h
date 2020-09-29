@@ -56,11 +56,15 @@ struct MeshPushConstants {
 
 
 struct Material {
+	VkDescriptorSet textureSet{VK_NULL_HANDLE};
 	VkPipeline pipeline;
 	VkPipelineLayout pipelineLayout;
 };
 
-
+struct Texture {
+	AllocatedImage image;
+	VkImageView imageView;
+};
 
 struct RenderObject {
 	Mesh* mesh;
@@ -68,6 +72,8 @@ struct RenderObject {
 	Material* material;
 
 	glm::mat4 transformMatrix;
+
+	
 };
 
 
@@ -159,6 +165,7 @@ public:
 
 	VkDescriptorSetLayout _globalSetLayout;
 	VkDescriptorSetLayout _objectSetLayout;
+	VkDescriptorSetLayout _singleTextureSetLayout;
 
 	GPUSceneData _sceneParameters;
 	AllocatedBuffer _sceneParameterBuffer;
@@ -184,7 +191,7 @@ public:
 
 	std::unordered_map<std::string, Material> _materials;
 	std::unordered_map<std::string, Mesh> _meshes;
-	std::unordered_map<std::string, AllocatedImage> _loadedTextures;
+	std::unordered_map<std::string, Texture> _loadedTextures;
 	//functions
 
 	//create material and add it to the map
