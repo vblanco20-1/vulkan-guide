@@ -60,6 +60,8 @@ struct Material {
 	VkPipelineLayout pipelineLayout;
 };
 
+
+
 struct RenderObject {
 	Mesh* mesh;
 
@@ -87,9 +89,7 @@ struct FrameData {
 
 struct UploadContext {
 	VkFence _uploadFence;
-	VkCommandPool _commandPool;
-
-	
+	VkCommandPool _commandPool;	
 };
 struct GPUCameraData{
 	glm::mat4 view;
@@ -184,6 +184,7 @@ public:
 
 	std::unordered_map<std::string, Material> _materials;
 	std::unordered_map<std::string, Mesh> _meshes;
+	std::unordered_map<std::string, AllocatedImage> _loadedTextures;
 	//functions
 
 	//create material and add it to the map
@@ -202,7 +203,7 @@ public:
 
 	size_t pad_uniform_buffer_size(size_t originalSize);
 
-	void inmediate_submit(std::function<void(VkCommandBuffer cmd)>&& function);
+	void immediate_submit(std::function<void(VkCommandBuffer cmd)>&& function);
 private:
 
 	void init_vulkan();
@@ -227,6 +228,8 @@ private:
 	bool load_shader_module(const char* filePath, VkShaderModule* outShaderModule);
 
 	void load_meshes();
+
+	void load_images();
 
 	void upload_mesh(Mesh& mesh);
 };

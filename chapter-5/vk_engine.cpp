@@ -12,6 +12,8 @@
 #include <iostream>
 #include <fstream>
 
+#include "vk_textures.h"
+
 #define VMA_IMPLEMENTATION
 #include "vk_mem_alloc.h"
 
@@ -63,6 +65,9 @@ void VulkanEngine::init()
 	init_descriptors();
 
 	init_pipelines();	
+
+
+	load_images();
 
 	load_meshes();
 
@@ -441,12 +446,7 @@ void VulkanEngine::init_commands()
 	//we also want the pool to allow for resetting of individual command buffers
 	VkCommandPoolCreateInfo commandPoolInfo = vkinit::command_pool_create_info(_graphicsQueueFamily, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
 
-	//create pool for upload context
-	VK_CHECK(vkCreateCommandPool(_device, &commandPoolInfo, nullptr, &_uploadContext._commandPool));
-
-	_mainDeletionQueue.push_function([=]() {
-		vkDestroyCommandPool(_device, _uploadContext._commandPool, nullptr);
-		});
+	
 	for (int i = 0; i < FRAME_OVERLAP; i++) {
 
 	
@@ -461,6 +461,15 @@ void VulkanEngine::init_commands()
 			vkDestroyCommandPool(_device, _frames[i]._commandPool, nullptr);
 		});
 	}
+
+
+	VkCommandPoolCreateInfo uploadCommandPoolInfo = vkinit::command_pool_create_info(_graphicsQueueFamily);
+	//create pool for upload context
+	VK_CHECK(vkCreateCommandPool(_device, &uploadCommandPoolInfo, nullptr, &_uploadContext._commandPool));
+
+	_mainDeletionQueue.push_function([=]() {
+		vkDestroyCommandPool(_device, _uploadContext._commandPool, nullptr);
+	});
 }
 
 void VulkanEngine::init_sync_structures()
@@ -475,9 +484,7 @@ void VulkanEngine::init_sync_structures()
 
 	for (int i = 0; i < FRAME_OVERLAP; i++) {
 
-	
-
-	VK_CHECK(vkCreateFence(_device, &fenceCreateInfo, nullptr, &_frames[i]._renderFence));
+		VK_CHECK(vkCreateFence(_device, &fenceCreateInfo, nullptr, &_frames[i]._renderFence));
 
 	//enqueue the destruction of the fence
 	_mainDeletionQueue.push_function([=]() {
@@ -495,13 +502,13 @@ void VulkanEngine::init_sync_structures()
 		});
 	}
 
-	//reset the flags
-	fenceCreateInfo.flags = 0;
+	
+	VkFenceCreateInfo uploadFenceCreateInfo = vkinit::fence_create_info();
 
-	VK_CHECK(vkCreateFence(_device, &fenceCreateInfo, nullptr, &_uploadContext._uploadFence));
+	VK_CHECK(vkCreateFence(_device, &uploadFenceCreateInfo, nullptr, &_uploadContext._uploadFence));
 	_mainDeletionQueue.push_function([=]() {
 		vkDestroyFence(_device, _uploadContext._uploadFence, nullptr);
-		});
+	});
 }
 
 
@@ -765,9 +772,16 @@ void VulkanEngine::load_meshes()
 }
 
 
+void VulkanEngine::load_images()
+{
+	AllocatedImage lostEmpire;
+	vkutil::load_image_from_file(*this, "../../assets/lost_empire-RGBA.png", lostEmpire);
+
+	_loadedTextures["empire_diffuse"] = lostEmpire;
+}
+
 void VulkanEngine::upload_mesh(Mesh& mesh)
 {
-
 	const size_t bufferSize= mesh._vertices.size() * sizeof(Vertex);
 	//allocate vertex buffer
 	VkBufferCreateInfo stagingBufferInfo = {};
@@ -789,9 +803,7 @@ void VulkanEngine::upload_mesh(Mesh& mesh)
 	VK_CHECK(vmaCreateBuffer(_allocator, &stagingBufferInfo, &vmaallocInfo,
 		&stagingBuffer._buffer,
 		&stagingBuffer._allocation,
-		nullptr));
-
-	
+		nullptr));	
 
 	//copy vertex data
 	void* data;
@@ -825,7 +837,7 @@ void VulkanEngine::upload_mesh(Mesh& mesh)
 		vmaDestroyBuffer(_allocator, mesh._vertexBuffer._buffer, mesh._vertexBuffer._allocation);
 		});
 
-	inmediate_submit([=](VkCommandBuffer cmd) {
+	immediate_submit([=](VkCommandBuffer cmd) {
 		VkBufferCopy copy;
 		copy.dstOffset = 0;
 		copy.srcOffset = 0;
@@ -1036,7 +1048,7 @@ size_t VulkanEngine::pad_uniform_buffer_size(size_t originalSize)
 }
 
 
-void VulkanEngine::inmediate_submit(std::function<void(VkCommandBuffer cmd)>&& function)
+void VulkanEngine::immediate_submit(std::function<void(VkCommandBuffer cmd)>&& function)
 {
 	VkCommandBuffer cmd;
 

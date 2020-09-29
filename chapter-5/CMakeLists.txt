@@ -7,6 +7,8 @@ add_executable (chapter_5
  "vk_types.h" 
  "vk_mesh.cpp"
  "vk_mesh.h"
+"vk_textures.cpp"
+ "vk_textures.h"
  "vk_initializers.cpp" 
  "vk_initializers.h")
 
