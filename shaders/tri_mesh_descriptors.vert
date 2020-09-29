@@ -5,6 +5,7 @@ layout (location = 2) in vec3 vColor;
 
 layout (location = 0) out vec3 outColor;
 
+
 layout(set = 0, binding = 0) uniform  CameraBuffer{   
     mat4 view;
     mat4 proj;
