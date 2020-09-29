@@ -85,6 +85,12 @@ struct FrameData {
 	VkDescriptorSet objectDescriptor;
 };
 
+struct UploadContext {
+	VkFence _uploadFence;
+	VkCommandPool _commandPool;
+
+	
+};
 struct GPUCameraData{
 	glm::mat4 view;
 	glm::mat4 proj;
@@ -157,6 +163,7 @@ public:
 	GPUSceneData _sceneParameters;
 	AllocatedBuffer _sceneParameterBuffer;
 
+	UploadContext _uploadContext;
 	//initializes everything in the engine
 	void init();
 
@@ -194,6 +201,8 @@ public:
 	AllocatedBuffer create_buffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage);
 
 	size_t pad_uniform_buffer_size(size_t originalSize);
+
+	void inmediate_submit(std::function<void(VkCommandBuffer cmd)>&& function);
 private:
 
 	void init_vulkan();
