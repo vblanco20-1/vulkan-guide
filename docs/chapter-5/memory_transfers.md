@@ -46,7 +46,7 @@ In `init_structures`, we will initialize the fence alongside the rendering fence
 
     VkFenceCreateInfo uploadFenceCreateInfo = vkinit::fence_create_info();
 
-	VK_CHECK(vkCreateFence(_device, &fenceCreateInfo, nullptr, &_uploadContext._uploadFence));
+	VK_CHECK(vkCreateFence(_device, &uploadFenceCreateInfo, nullptr, &_uploadContext._uploadFence));
 	_mainDeletionQueue.push_function([=]() {
 		vkDestroyFence(_device, _uploadContext._uploadFence, nullptr);
 	});

@@ -224,11 +224,15 @@ Lets add a way to load and store the images on VulkanEngine
 
 vulkan_engine.h
 ```cpp
+struct Texture {
+	AllocatedImage image;
+	VkImageView imageView;
+};
 
 class VulkanEngine {
 public:
 //texture hashmap
-std::unordered_map<std::string, AllocatedImage> _loadedTextures;
+std::unordered_map<std::string, Texture> _loadedTextures;
 
 void load_images();
 }
@@ -240,12 +244,17 @@ vk_engine.cpp
 
 void VulkanEngine::load_images()
 {
-	AllocatedImage lostEmpire;
-	vkutil::load_image_from_file(*this, "../../assets/lost_empire-RGBA.png", lostEmpire);
+	Texture lostEmpire;
+	
+	vkutil::load_image_from_file(*this, "../../assets/lost_empire-RGBA.png", lostEmpire.image);
+	
+	VkImageViewCreateInfo imageinfo = vkinit::imageview_create_info(VK_FORMAT_R8G8B8A8_UNORM, lostEmpire.image._image, 0);
+	vkCreateImageView(_device, &imageinfo, nullptr, &lostEmpire.imageView);
 
 	_loadedTextures["empire_diffuse"] = lostEmpire;
 }
 ```
+Make sure you call load_images before setup_scene in the `init` function
 
 With the texture now loaded, we need to display it into the shader, refactoring a few things.
 
