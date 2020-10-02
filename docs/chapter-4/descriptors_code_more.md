@@ -324,3 +324,7 @@ Due to their dynamic and not hardcoded nature, they are very popular to use in g
 
 One of the things dynamic uniform buffer bindings let you do, is that you can allocate and write into a buffer at runtime while rendering, and bind exactly the offsets you write into. 
 
+
+
+Next: [Storage buffers]({{ site.baseurl }}{% link docs/chapter-4/storage_buffers.md %})
+

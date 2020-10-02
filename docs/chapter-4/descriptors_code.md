@@ -376,3 +376,7 @@ vkCmdPushConstants(cmd, object.material->pipelineLayout, VK_SHADER_STAGE_VERTEX_
 
 If you run the code right now, everything should be working fine. But we have now a way to let the shader read some data from a buffer, instead of having to pushconstant all of the data of the shader.
 
+
+
+
+Next: [Dynamic descriptor sets]({{ site.baseurl }}{% link docs/chapter-4/descriptors_code_more.md %})

@@ -283,5 +283,9 @@ Now that we have an engine that actually does something. There are some exercise
 In the github repo of the chapters, the chapter-3-scene will have the full refactor done. But not the other optional features.
 
 
+Next: [Double buffering]({{ site.baseurl }}{% link docs/chapter-4/double_buffering.md %})
+
+
+
 
 
