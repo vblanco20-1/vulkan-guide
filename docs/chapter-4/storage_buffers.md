@@ -269,3 +269,6 @@ The last step for the tutorial is textures, which will go into the next chapter.
 Right now, we have one descriptor set per frame for the Set 0 (camera and scene buffers). Try to refactor it so it only uses 1 descriptor set and 1 buffer both both camera and scene buffers, packing both the structs for all frames into the same uniform buffer, and then using dynamic offsets.
 
 Alternatively, try to create another SSBO that holds something like ObjectColor, to use on a per-object basis, and try to use it to color the objects in different ways by modifying the shaders.
+
+
+Next: [Memory transfers]({{ site.baseurl }}{% link docs/chapter-5/memory_transfers.md %})

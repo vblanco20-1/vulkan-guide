@@ -39,3 +39,7 @@ Creating a VkSampler is a completely separate path from creating images and imag
 When you bind textures to a shader, there are different ways, but we will be using `VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER` for the descriptors. This will expose image + sampler pairs to the shader, instead of sampler and image being a separated thing in the shaders. When creating those descriptors, you will need an imageView for the image you want, alongside a sampler for how to access it.
 
 
+
+Next: [Loading images]({{ site.baseurl }}{% link docs/chapter-5/loading_images.md %})
+
+

@@ -215,3 +215,7 @@ Try to run the engine now, everything should work completely fine.
 With this new mesh loading code, you will have great performance even uploading meshes that are tens of millions of triangles.
 
 All the logic for copying data is done for meshes, so its time to continue with textures.
+
+
+
+Next: [Vulkan Images]({{ site.baseurl }}{% link docs/chapter-5/vulkan_images.md %})
