@@ -5,18 +5,18 @@ parent: Chapter 4
 nav_order: 10
 ---
 
-Before we start implementing descriptor sets to improve sending data to the gpu, there is something we have to do. Right now, the engine will only execute one frame at a time, which is not optimal. While the GPU is busy drawing a frame, the CPU is waiting for that frame to end. Performance takes a huge hit here as the CPU will spend a lot of time waiting for the GPU.
-We are going to refactor a few things in the engine to implement double buffering for the rendering work. While the GPU is busy drawing frame N, the cpu will be preparing the work for frame N+1. This way, the CPU will be doing work while the GPU is running, instead of waiting. This will not add extra latency, and will improve performance a lot.
-It is possible to make the CPU render ahead more frames, which can be useful if your cpu work is wildly varying, but in general, just overlapping the next frame will be enough and work well.
+Before we start implementing descriptor sets to improve sending data to the GPU, there is something we have to do. Right now, the engine will only execute one frame at a time, which is not optimal. While the GPU is busy drawing a frame, the CPU is waiting for that frame to end. Performance takes a huge hit here as the CPU will spend a lot of time waiting for the GPU.
+We are going to refactor a few things in the engine to implement double buffering for the rendering work. While the GPU is busy drawing frame N, the CPU will be preparing the work for frame N+1. This way, the CPU will be doing work while the GPU is running, instead of waiting. This will not add extra latency, and will improve performance a lot.
+It is possible to make the CPU render ahead more frames, which can be useful if your CPU work is wildly varying, but in general, just overlapping the next frame will be enough and work well.
 
 ## Object lifetime
-Most Vulkan objects are used while the Gpu is performing its rendering work, so it is not possible to modify or delete them while they are in use.
+Most Vulkan objects are used while the GPU is performing its rendering work, so it is not possible to modify or delete them while they are in use.
 An example of this is command buffers. Once you submit a command buffer into a queue, that buffer cant be reset or modified until the GPU has finished executing its commands.
 You can control this using Fences. If you submit a command buffer that will signal a fence, and then you wait until that fence is signaled, you can be sure that the command buffer can now be reused or modified. Its the same for the other objects related used in those commands.
 
 
 ## The Frame struct
-We are going to move a few of the rendering related structures from the core vulkanEngine class into a "Frame" struct. This way we can control their lifetime a bit better.
+We are going to move a few of the rendering related structures from the core VulkanEngine class into a "Frame" struct. This way we can control their lifetime a bit better.
 
 `vk_engine.h`
 ```cpp
@@ -139,10 +139,10 @@ Example:
 	VK_CHECK(vkResetCommandBuffer(get_current_frame()._mainCommandBuffer, 0));
 ```
 
-At this moment, the frame overlap should be working fine. Try to compile and run the program, and check that the validation layers dont complain about anything. If in doubt, compare it with the example code for the chapter.
+At this moment, the frame overlap should be working fine. Try to compile and run the program, and check that the validation layers don't complain about anything. If in doubt, compare it with the example code for the chapter.
 
-You can try to increase the FRAME_OVERLAP value. By increasing it, you will add more latency to the program in cases where the CPU goes faster than the GPU. Keeping it at 2, and maybe increasing it to 3 if you have jittery framerate is the normal thing. You can also set it to 1 to completely disable all frame overlapping.
+You can try to increase the `FRAME_OVERLAP` value. By increasing it, you will add more latency to the program in cases where the CPU goes faster than the GPU. Keeping it at 2, and maybe increasing it to 3 if you have jittery framerate is the normal thing. You can also set it to 1 to completely disable all frame overlapping.
 
-Now that we have done better cpu-gpu work overlap, it is time to do descriptor sets.
+Now that we have done better CPU-GPU work overlap, it is time to do descriptor sets.
 
 Next: [Descriptor sets]({{ site.baseurl }}{% link docs/chapter-4/descriptors.md %})

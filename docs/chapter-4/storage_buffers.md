@@ -5,8 +5,8 @@ parent: Chapter 4
 nav_order: 20
 ---
 
-Uniform buffers are great for small, read only data. But what if you want data you don't know the size of in the shader? And data that can be writeable. You use Storage buffers for that. 
-Storage buffers are usually slightly slower than uniform buffers, but they can be much, much bigger. If you want to stuff your entire scene into one buffer, you have to use them.
+Uniform buffers are great for small, read only data. But what if you want data you don't know the size of in the shader? Or data that can be writeable. You use Storage buffers for that. 
+Storage buffers are usually slightly slower than uniform buffers, but they can be much, much bigger. If you want to stuff your entire scene into one buffer, you have to use them. Make sure to profile it to know the performance.
 
 With storage buffers, you can have an unsized array in a shader with whatever data you want. A common use for them is to store the data of all the objects in the scene.
 
@@ -14,8 +14,8 @@ We are going to use them to remove the usage of push-constants for the object ma
 This also will mean that we will hold all the object matrices into one array, which can be used for interesting things in compute shaders.
 
 ## Creating the Shader Storage Buffer
-We are continuing on the init_descriptors function, as its where we initialize all the buffers for shader parameters.
-In there, we are going to initialize one big storage buffer per frame, to hold the data for the objects. This is because we want the objects to still be dynamic. If we had fully static objects, we wouldnt need one buffer per frame, and one total would be enough.
+We are continuing on the `init_descriptors()` function, as its where we initialize all the buffers for shader parameters.
+In there, we are going to initialize one big storage buffer per frame, to hold the data for the objects. This is because we want the objects to still be dynamic. If we had fully static objects, we wouldn't need one buffer per frame, and one total would be enough.
 
 ```cpp
 struct FrameData {
@@ -41,7 +41,7 @@ void VulkanEngine::init_descriptors()
 }
 ```
 Shader Storage buffers are created in the same way as uniform buffers. They also work in mostly the same way, they just have different properties like increased maximum size, and being writeable in shaders.
-We are going to reserve an array of 10000 ObjectDatas per frame. This means that we can hold up to 10000 object matrices, rendering 10000 objects per frame. Its a small number, but at the moment its not a problem. Unreal Engine grows their object buffer as needed when the engine loads more objects, but we dont have any growable buffer abstraction so we reserve upfront.
+We are going to reserve an array of 10000 ObjectDatas per frame. This means that we can hold up to 10000 object matrices, rendering 10000 objects per frame. Its a small number, but at the moment its not a problem. Unreal Engine grows their object buffer as needed when the engine loads more objects, but we don't have any growable buffer abstraction so we reserve upfront.
 While the size here is 1000, you can increase it to whatever you want. The maximum sizes for storage buffers are quite big, in most GPUs they can be as big as the VRAM can fit, so you can do this with 100 million matrices if you want.
 
 We will now need to add it to the descriptor sets.
@@ -74,7 +74,7 @@ Back on `init_descriptors()`, we are going to need to reserve space for it on th
 	};
 ```
 
-A bit below, we are going to initalize the set layout, which will only have 1 binding for the big buffer.
+A bit below, we are going to initialize the set layout, which will only have 1 binding for the big buffer.
 
 ```cpp
 	VkDescriptorSetLayoutBinding objectBind = vkinit::descriptorset_layout_binding(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_VERTEX_BIT, 0);
@@ -138,7 +138,7 @@ for (int i = 0; i < FRAME_OVERLAP; i++)
 ```
 
 We need another DescriptorBufferInfo, and another WriteDescriptorSet
-Note how in here, we are using 1 `vkUpdateDescriptorSets` call to update 2 different descriptor sets. This is completely valid to do.
+Note how in here, we are using 1 `vkUpdateDescriptorSets()` call to update 2 different descriptor sets. This is completely valid to do.
 Now that the buffer is initialized and has descriptors that point to it, we need to add it to the shader.
 
 We are going to modify the `tri_mesh.vert` shader, to read the object data from SSBO instead than from the push constant. We will still keep the push constant, but it wont be used.
@@ -190,10 +190,10 @@ layout(std140,set = 1, binding = 0) readonly buffer ObjectBuffer{
 	ObjectData objects[];
 } objectBuffer;
 ```
-We need the std140 layout description to make the array match how arrays work in Cpp. That std140 enforces some rules about how the memory is laid out, and whats its alignement.
+We need the std140 layout description to make the array match how arrays work in cpp. That std140 enforces some rules about how the memory is laid out, and what is its alignment.
 The set is now 1, and binding is 0, referencing that its a new descriptor set slot.
 
-We are also using `readonly buffer` instead of `uniform` when declaring it. Shader Storage buffers can be read or written to, so we need to let vulkan know. THey are also defined with `buffer` instead of `uniform`.
+We are also using `readonly buffer` instead of `uniform` when declaring it. Shader Storage buffers can be read or written to, so we need to let Vulkan know. THey are also defined with `buffer` instead of `uniform`.
 
 The array inside is also not sized. You can only have unsized arrays in storage buffers. This will let the shader scale to whatever buffer size we have.
 
@@ -201,11 +201,11 @@ Another thing is the way we are accessing the correct object matrix. We are no l
 ```glsl
 mat4 modelMatrix = objectBuffer.objects[gl_InstanceIndex].model;
 ```
-We are using gl_InstanceIndex to access the object buffer. This is due to how vulkan works on its normal draw calls. All the draw commands in vulkan request "first Instance" and "instance count". We are not doing instanced rendering, so instance count is always 1. But we can still change the "first instance" parameter, and this way get gl_InstanceIndex as a integer we can use for whatever use we want to in the shader.
+We are using `gl_InstanceIndex` to access the object buffer. This is due to how Vulkan works on its normal draw calls. All the draw commands in Vulkan request "first Instance" and "instance count". We are not doing instanced rendering, so instance count is always 1. But we can still change the "first instance" parameter, and this way get `gl_InstanceIndex` as a integer we can use for whatever use we want to in the shader.
 
 We now need to hook the descriptor layout to the pipeline.
 
-On `init_pipelines`, we add it to the list of descriptors when creating the pipeline layout
+On `init_pipelines()`, we add it to the list of descriptors when creating the pipeline layout
 ```cpp
 VkDescriptorSetLayout setLayouts[] = { _globalSetLayout, _objectSetLayout };
 
@@ -218,7 +218,7 @@ We now have the pipeline set up, so the last thing is to write into the buffer.
 ## Writing the shader storage buffer
 
 
-On `draw_objects`, we will write into the buffer by copying the render matrices from our render objects into it. This goes before the render loop, alongside the other memory write operations.
+On `draw_objects()`, we will write into the buffer by copying the render matrices from our render objects into it. This goes before the render loop, alongside the other memory write operations.
 
 ```cpp
 void* objectData;
@@ -235,7 +235,7 @@ for (int i = 0; i < count; i++)
 vmaUnmapMemory(_allocator, _sceneParameterBuffer._allocation);
 ```
 
-Instead of using memcpy here, we are doing a different trick. It is possible to cast the void* from mapping the buffer into another type, and write into it normally. This will work completely fine, and makes it easier to write complex types into a buffer. 
+Instead of using `memcpy` here, we are doing a different trick. It is possible to cast the `void*` from mapping the buffer into another type, and write into it normally. This will work completely fine, and makes it easier to write complex types into a buffer. 
 
 The buffer is now filled, so we now need to bind the descriptor set and use the firstIndex parameter in the draw command to access the object data in the shader.
 
@@ -260,11 +260,11 @@ if (object.material != lastMaterial) {
 vkCmdDraw(cmd, object.mesh->_vertices.size(), 1,0 , i);
 ```
 
-We are using the index in the loop on the vkCmdDraw call to send the instance index to the shader.
+We are using the index in the loop on the `vkCmdDraw()` call to send the instance index to the shader.
 
 Now we have multiple buffers of different kinds, and on different descriptor sets, implemented.
 
-The last step for the tutorial is textures, which will go into the next chapter. But before going there, i heavily recomend you try to do some things with the codebase.
+The last step for the tutorial is textures, which will go into the next chapter. But before going there, I heavily recommend you try to do some things with the codebase.
 
 Right now, we have one descriptor set per frame for the Set 0 (camera and scene buffers). Try to refactor it so it only uses 1 descriptor set and 1 buffer both both camera and scene buffers, packing both the structs for all frames into the same uniform buffer, and then using dynamic offsets.
 

@@ -9,7 +9,7 @@ Now that descriptor sets are explained, lets look at using them in practise in a
 To get that to work, we are going to need to create a uniform buffer for our camera matrices, and expose that to the shader using a single descriptor set.
 
 ## Setting up camera buffers
-We are going to create one camera buffer for each of our frames. This is so that we can overlap the data correctly, and modify the camera matrix while the gpu is rendering the last frame.
+We are going to create one camera buffer for each of our frames. This is so that we can overlap the data correctly, and modify the camera matrix while the GPU is rendering the last frame.
 
 Given that we are starting to create a lot of buffers, we are going to abstract buffer creation into a function first.
 
@@ -62,9 +62,9 @@ struct FrameData {
 };
 ```
 
-The GPUCameraData struct just holds a few matrices we are going to need. View matrix (camera location/transform), Projection matrix (for perspective), and ViewProj, which is just both of them multipled together, to avoid multiplying them in the shader.
+The GPUCameraData struct just holds a few matrices we are going to need. View matrix (camera location/transform), Projection matrix (for perspective), and ViewProj, which is just both of them multiplied together, to avoid multiplying them in the shader.
 
-On FrameData, we are adding the AllocatedBuffer for it, but we also add a VkDescriptorSet that we will cache to hold the global descriptor. We will be adding a few more things to it than just the camera uniform buffer.
+On FrameData, we are adding the AllocatedBuffer for it, but we also add a `VkDescriptorSet` that we will cache to hold the global descriptor. We will be adding a few more things to it than just the camera uniform buffer.
 
 We are going to add another initialization function, `init_descriptors()` to VulkanEngine class. Also add it to the main init function, but before `init_pipelines()` call. Some of the descriptor things we initialize there will be needed when creating the pipelines.
 
@@ -106,11 +106,11 @@ for (int i = 0; i < FRAME_OVERLAP; i++)
 }
 
 ```
-For creating the buffers, we are to use the Uniform Buffer usage, and CPU_TO_GPU memory type.
+For creating the buffers, we are to use the Uniform Buffer usage, and `CPU_TO_GPU` memory type.
 Uniform buffers are the best for this sort of small, read only shader data. They have a size limitation, but they are very fast to access in the shaders.
 
 
-Try to run this and see if the validation layers complain. They shouldnt.
+Try to run this and see if the validation layers complain. They shouldn't.
 
 ## Descriptor sets: shader
 We are going to start doing the shader data itself. First thing is modifying the shader that we use, to use the matrix there.
@@ -164,7 +164,7 @@ VkDescriptorPool _descriptorPool;
 
 ```
 
-A DescriptorSetLayout holds information about the shape of a descriptor set. In this case, our descriptor set is going to be a set that holds a single uniform buffer reference at binding 0. 
+A `VkDescriptorSetLayout` holds information about the shape of a descriptor set. In this case, our descriptor set is going to be a set that holds a single uniform buffer reference at binding 0. 
 
 
 ```cpp
@@ -199,11 +199,11 @@ void VulkanEngine::init_descriptors()
 }
 ```
 
-To create a descriptor set layout, we need another CreateInfo struct. The create-info will point into an array of VkDescriptorSetLayoutBinding structs. Each of those structs will contain information about the descriptor itself. In this case, we have only a single binding, which is binding 0, and its a Uniform Buffer.
+To create a descriptor set layout, we need another CreateInfo struct. The create-info will point into an array of `VkDescriptorSetLayoutBinding` structs. Each of those structs will contain information about the descriptor itself. In this case, we have only a single binding, which is binding 0, and its a Uniform Buffer.
 
 We now have the descriptor set layout for our descriptor created, so we need to hook it to the pipeline creation. When you create a pipeline, you also need to let the pipeline know what descriptors will be bound to it.
 
-Back into `init_pipelines()`. We need to modify the creation of the Pipeline Layout by hooking the descriptor layout to it. 
+Back into `init_pipelines()`. We need to modify the creation of the `VkPipelineLayout` by hooking the descriptor layout to it. 
 
 ```cpp
 
@@ -225,7 +225,7 @@ The pipeline setup is done, so now we have to allocate a descriptor set, and bin
 
 ## Allocating descriptorsets
 
-Back to init_descriptors, we first need to create a DescriptorPool to allocate the descriptors from.
+Back to `init_descriptors()`, we first need to create a `VkDescriptorPool` to allocate the descriptors from.
 
 
 ```cpp

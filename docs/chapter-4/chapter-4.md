@@ -8,5 +8,5 @@ permalink: /docs/chapter_4
 
 # Chapter 4 : Shader input/output
 
-WIP
+
 {: .fs-6 .fw-300 }
