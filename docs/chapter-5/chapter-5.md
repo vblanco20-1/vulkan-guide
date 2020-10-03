@@ -8,5 +8,4 @@ permalink: /docs/chapter_5
 
 # Chapter 5 : Textures
 
-WIP
 {: .fs-6 .fw-300 }

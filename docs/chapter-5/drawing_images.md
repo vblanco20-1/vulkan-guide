@@ -72,10 +72,10 @@ bool Mesh::load_from_obj(const char* filename)
 }
 ```
 We access the texcoords array in a similar way as we do with the other parameters. 
-Now the obj load code will load texture coordinates. Its very important to do the 1-y on the uv.y because vulkan UV coordinates work like that.
+Now the obj load code will load texture coordinates. Its very important to do the 1-y on the uv.y because Vulkan UV coordinates work like that.
 
 Before we start changing the descriptors and descriptor layouts to point to the texture, we are going to create new shaders for the textured-lit shaders.
-We begin by modifying the tri_mesh.vert shader so that it passes the UV coordinates from the attributes to the pixel shader
+We begin by modifying the `tri_mesh.vert` shader so that it passes the UV coordinates from the attributes to the pixel shader
 
 tri_mesh.vert
 ```glsl
@@ -129,7 +129,7 @@ void main()
 }
 ```
 
-On the `init_pipelines` function, we are going to create a second pipeline that will be this textured-pipeline.
+On the `init_pipelines()` function, we are going to create a second pipeline that will be this textured-pipeline.
 
 ```cpp
 void VulkanEngine::init_pipelines()
@@ -196,7 +196,7 @@ This should work now, giving us this image if we run it. Or similar
 
 
 It is time now to expose the image to the shader.
-We will change textured_lit.frag so that it accesses a texture
+We will change `textured_lit.frag` so that it accesses a texture
 
 ```glsl
 
@@ -229,7 +229,7 @@ VkDescriptorSetLayout _singleTextureSetLayout;
 }
 ```
 
-On init_descriptors, we are going to create the layout, but not allocate the descriptor yet.
+On `init_descriptors()`, we are going to create the layout, but not allocate the descriptor yet.
 
 ```cpp
 void VulkanEngine::init_descriptors()
@@ -261,7 +261,7 @@ void VulkanEngine::init_descriptors()
 
 With the set layout initialized, we can attach it to the layout for the textured pipeline.
 
-On `init_pipelines`.
+On `init_pipelines()`.
 ```cpp
 
 	//create pipeline layout for the textured mesh, which has 3 descriptor sets
@@ -290,7 +290,7 @@ On `init_pipelines`.
 
 ```
 
-We now need to create the descriptor set in the load_scene function, so that our `texturedmesh` material has the texture set
+We now need to create the descriptor set in the `load_scene()` function, so that our `texturedmesh` material has the texture set
 
 
 We add a new initializers to vk_initializers, for sampler creation and descriptor image write
@@ -364,16 +364,16 @@ Now we can use it on `init_scene`.
 	vkUpdateDescriptorSets(_device, 1, &texture1, 0, nullptr);
 ```
 
-We need to create a sampler first. For that sampler we will use VK_FILTER_NEAREST. That will make the texture look blocky, which is exactly what we want.
+We need to create a sampler first. For that sampler we will use `VK_FILTER_NEAREST`. That will make the texture look blocky, which is exactly what we want.
 
-For the descriptor allocation, its the same as we were doing in init_descriuptors with the others.
+For the descriptor allocation, its the same as we were doing in `init_descriptors()` with the others.
 
-To write the image descriptor, we need to fill a VkDescriptorImageInfo with the imageView to use, the sampler to use, and the texture layout.
+To write the image descriptor, we need to fill a `VkDescriptorImageInfo` with the `VkImageView` to use, the `VkSampler` to use, and the texture layout.
 
 With the descriptor sets and the pipelines set up, we can now bind the descriptor set to draw using the texture.
 
 
-In `draw_objects`, inside the render loop, we do this alongside the other binds
+In `draw_objects()`, inside the render loop, we do this alongside the other binds
 
 ```cpp
 	if (object.material != lastMaterial) {
@@ -388,7 +388,7 @@ In `draw_objects`, inside the render loop, we do this alongside the other binds
 	}
 ```
 
-We will only bind the texture set (set #2), if the texture set handle isnt null. This will make it so that the rest of our drawcalls still render just fine.
+We will only bind the texture set (set #2), if the texture set handle isn't null. This will make it so that the rest of our drawcalls still render just fine.
 
 At this point, you should get this image as result.
 ![map]({{site.baseurl}}/diagrams/empireTextured.png)

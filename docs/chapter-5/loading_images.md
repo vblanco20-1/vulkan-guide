@@ -9,7 +9,7 @@ Lets start the code to upload and handle textures on the engine.
 
 We will begin by creating another pair of files. Like we did with the mesh. vk_textures.h and .cpp. We will store the main code for loading textures in there.
 
-vk_texures.h
+vk_textures.h
 ```cpp
 #pragma once
 
@@ -22,7 +22,7 @@ namespace vkutil {
 
 }
 ```
-We are going to have a single load-image function, that will do the whole load operation from file in disk into gpu memory.
+We are going to have a single load-image function, that will do the whole load operation from file in disk into GPU memory.
 
 We will use the stb_image library to load the texture.
 
@@ -53,10 +53,10 @@ bool vkutil::load_image_from_file(VulkanEngine& engine, const char* file, Alloca
 }
 ```
 
-At the start, we use stbi_load to load a texure directly from file into a CPU array of pixels. The function will return nullptr if it doesnt find the file, or if there are errors.
-When loading the function, we also send `STBI_rgb_alpha` to the function, which will make the library allways load the pixels as RGBA 4 channels. This is useful as it will match with the format we will use for vulkan.
+At the start, we use `stbi_load()` to load a texure directly from file into a CPU array of pixels. The function will return nullptr if it doesnt find the file, or if there are errors.
+When loading the function, we also send `STBI_rgb_alpha` to the function, which will make the library always load the pixels as RGBA 4 channels. This is useful as it will match with the format we will use for Vulkan.
 
-With the texture file loaded into the pixels array, we can create a staging buffer and store the pixels there. This is almost the same as what we did in the last article when copying meshes to the gpu.
+With the texture file loaded into the pixels array, we can create a staging buffer and store the pixels there. This is almost the same as what we did in the last article when copying meshes to the GPU.
 
 
 ```cpp
@@ -138,9 +138,9 @@ engine.immediate_submit([&](VkCommandBuffer cmd) {
 });
 ```
 
-To perform layout transitions, we need to use pipeline barriers. Pipeline barriers can control how the gpu overlaps comamnds before and after the barrier, but if you do pipeline barriers with image barriers, the driver can also transform the image to the correct formats and layouts.
+To perform layout transitions, we need to use pipeline barriers. Pipeline barriers can control how the GPU overlaps commands before and after the barrier, but if you do pipeline barriers with image barriers, the driver can also transform the image to the correct formats and layouts.
 
-In here, We start with a `VkImageSubresourceRange`, to tell it what part of the image we will transform. In here we dont have mipmaps or layered textures, so we have 1 for level count and for layer count.
+In here, We start with a `VkImageSubresourceRange`, to tell it what part of the image we will transform. In here we don't have mipmaps or layered textures, so we have 1 for level count and for layer count.
 
 Next, we fill `VkImageMemoryBarrier` with the layout transition. We begin with layout `VK_IMAGE_LAYOUT_UNDEFINED`, and then go to `VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL`. This prepares the image into the layout ready to be the destination of memory transfers.
 
@@ -149,7 +149,7 @@ We point the image and the subresource range too.
 With that filled, we can do the pipeline barrier. It will be a barrier that blocks from `VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT` to `VK_PIPELINE_STAGE_TRANSFER_BIT`. If you want to learn more about the exact specific of pipeline barrier stages, read this. https://gpuopen.com/learn/vulkan-barriers-explained/
 We will not need to know the specific details here for what we are doing.
 
-With the image ready to receive pixel data, we can now transfer with a command. We continue filling the `immediate_submit` call
+With the image ready to receive pixel data, we can now transfer with a command. We continue filling the `immediate_submit()` call
 
 ```cpp
     VkBufferImageCopy copyRegion = {};
@@ -170,7 +170,7 @@ With the image ready to receive pixel data, we can now transfer with a command. 
 Like when we copied the buffers, we need to fill a struct containing the information of what to copy. We have the buffer just at offset 0, and then what exact layer and mipmap we want to copy into, which is just level 0 and 1 layer. 
 We also need to send imageExtent for the image size.
 
-We now execute the CmdCopyBufferToImage command, where we also need to specify whats the layout ofo the image, which is TRANSFER_DST_OPTIMAL
+We now execute the `VkCmdCopyBufferToImage()` command, where we also need to specify whats the layout of the image, which is TRANSFER_DST_OPTIMAL
 
 The image now has the correct pixel data, so we can change its layout one more time to make it into a shader readable layout.
 
@@ -188,9 +188,9 @@ The image now has the correct pixel data, so we can change its layout one more t
 	vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, imageBarrier_toReadable);
 ```
 
-We are transfering the image into `VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL`, to let the driver know to shuffle the image into whatever internal format works best for reading from shaders.
+We are transferring the image into `VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL`, to let the driver know to shuffle the image into whatever internal format works best for reading from shaders.
 
-We now finish the load function by releasing the resources we dont need and adding the image to deletion queue.
+We now finish the load function by releasing the resources we don't need and adding the image to deletion queue.
 
 ```cpp
 bool vkutil::load_image_from_file(VulkanEngine& engine, const char* file, AllocatedImage & outImage)
@@ -218,7 +218,7 @@ bool vkutil::load_image_from_file(VulkanEngine& engine, const char* file, Alloca
 }
 ```
 
-We can now load many file formats like jpeg and png into a texture. Lets try it with one from the assets folder to make sure that it works.
+We can now load many file formats like .jpeg and .png into a texture. Lets try it with one from the assets folder to make sure that it works.
 
 Lets add a way to load and store the images on VulkanEngine
 
