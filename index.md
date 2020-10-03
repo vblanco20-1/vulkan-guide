@@ -17,6 +17,8 @@ We will be using C++, but we arent doing complex C++ unique features, so followi
 
 This guide is meant for the people who already know the basics about 3d graphics, and have worked with either Opengl or Directx in the past. This guide will not explain 3d rendering basics such as linear algebra math.
 
+To contact the authors, email `contact@vkguide.dev`
+
 The guide is separated into multiple chapters. Each chapter focuses on a narrow part of Vulkan.
 
 - **Introduction**: Overview about Vulkan API and the libraries used by this project
