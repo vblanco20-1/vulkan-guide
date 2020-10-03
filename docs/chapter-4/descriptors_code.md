@@ -13,7 +13,7 @@ We are going to create one camera buffer for each of our frames. This is so that
 
 Given that we are starting to create a lot of buffers, we are going to abstract buffer creation into a function first.
 
-Add de function declaration to the VulkanEngine class too
+Add the function declaration to the VulkanEngine class too
 vk_engine.cpp
 ```cpp
 AllocatedBuffer VulkanEngine::create_buffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage)

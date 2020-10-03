@@ -195,7 +195,7 @@ immediate_submit([=](VkCommandBuffer cmd) {
 	});
 ```
 
-We use the immediate_submit function to enqueue a `vkCmdCopyBuffer()` command. this command will copy regions of one buffer into another buffer, using VkBufferCopy for each region detail. In here, we are copying the entire staging buffer into the vertex buffer.
+We use the immediate_submit function to enqueue a `vkCmdCopyBuffer()` command. this command will copy regions of one buffer into another buffer, using `VkBufferCopy` for each region detail. In here, we are copying the entire staging buffer into the vertex buffer.
 
 With the memory now uploaded, we can clean up.
 
