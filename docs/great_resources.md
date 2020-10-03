@@ -43,6 +43,8 @@ This guide does not cover everything you could need, so this is a compilation of
 
 
 ## Blogs/websites
+- [Vulkan Spec](https://www.khronos.org/registry/vulkan/specs/1.2-extensions/html/index.html) Highly necessary resource for information about the API.
+- [Vulkan GPU Info](https://vulkan.gpuinfo.org/) Database of specifications for the different GPU vulkan implementations.
 - [GPU Open](https://gpuopen.com/) AMD graphics resources and blogposts.
 - [Nvidia gameworks](https://developer.nvidia.com/gameworks) Nvidia graphics resources and blogposts/tutorials.
 - [TheMaister blog](https://themaister.net/blog/2020/01/) Low level graphics programming blog. Lots of vulkan posts.
