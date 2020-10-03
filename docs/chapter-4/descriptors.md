@@ -32,6 +32,8 @@ A common thing to do is to default to some high numbers, like 1000 descriptors, 
 Allocating descriptor sets can be very cheap if you explicitly disallow freeing individual sets by setting the `VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT` flag. By using that flag, the driver might make the descriptor pool just use a very cheap linear allocator. If you are allocating descriptor sets per frame, you should be using that, and then you reset the entire pool instead of individual descriptor sets.
 For your global descriptor sets, its fine to allocate them once, and reuse them from frame to frame. This is what we will be doing in the tutorial, as it also ends with simpler code.
 
+A common technique used in production engines is to have a set of descriptor pools per frame. Once a descriptor allocation fails, you create a new pool and add it to a list. When the frame is submitted and you have waited on its fence, you reset all of those descriptor pools.
+
 ## Writing descriptors.
 A freshly allocated descriptor set is just a bit of GPU memory, you need to make it point to your buffers. For that you use vkUpdateDescriptorSets, which takes an array of VkWriteDescriptorSet for each of the resources that a descriptor set points to. If you were using the Update After Bind flag, it is possible to use descriptor sets, and bind them in command buffers, and update it right before submitting the command buffer. This is mostly a niche use case, and not commonly used.
 You can only update a descriptor set before its bound for the first time, unless you use that flag, in which case you can only update it before you submit the command buffer into a queue.
