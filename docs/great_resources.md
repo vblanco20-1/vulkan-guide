@@ -22,6 +22,8 @@ This guide does not cover everything you could need, so this is a compilation of
 - [Vulkan Fast Paths, AMD](http://gpuopen.com/wp-content/uploads/2016/03/VulkanFastPaths.pdf). Intermediate. How vulkan structures map to the AMD GPUs, and whats the fastest approach to use.
 - [GPU Driven Rendering, NVidia](https://on-demand.gputechconf.com/gtc/2016/presentation/s6138-christoph-kubisch-pierre-boudier-gpu-driven-rendering.pdf) How to use vulkan to do very high object counts for CAD. Also talks about how NVidia gpus execute vulkan.
 - [Vulkan and DX12, lessons learned](https://www.gdcvault.com/play/1024122/D3D12-Vulkan-Lessons). Best practises when using vulkan and directx12 for high performance games.
+- [Most common mistakes](https://gpuopen.com/wp-content/uploads/2016/05/Most-common-mistakes-in-Vulkan-apps.pdf). Slides by AMD talking about common errors by vulkan implementations and how to do them right.
+
 
 ## Code
 - [Sasha Willems Vulkan samples](https://github.com/SaschaWillems/Vulkan). Great set of vulkan samples, with a lot of features implemented on them.
@@ -38,3 +40,11 @@ This guide does not cover everything you could need, so this is a compilation of
 - [Radeon tools](https://gpuopen.com/vulkan/). Profilers and debuggers from AMD.
 - [Intel GPA](https://software.intel.com/content/www/us/en/develop/tools/graphics-performance-analyzers.html) Profiler and debugger from Intel.
 - [Tracy](https://github.com/wolfpld/tracy). Great profiler library for Cpp programs. It can also profile GPU executions.
+
+
+## Blogs/websites
+- [GPU Open](https://gpuopen.com/) AMD graphics resources and blogposts.
+- [Nvidia gameworks](https://developer.nvidia.com/gameworks) Nvidia graphics resources and blogposts/tutorials.
+- [TheMaister blog](https://themaister.net/blog/2020/01/) Low level graphics programming blog. Lots of vulkan posts.
+- [Bitsquid engine blog](https://bitsquid.blogspot.com/) Blog of game engine development by the developers of Bitsquid/Stingray game engine. Can be a bit old.
+- [OurMachinery engine blog](https://ourmachinery.com/post/). From the same devs as bitsquid/stingray, their next development blog. A lot of vulkan related articles.
