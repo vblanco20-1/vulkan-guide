@@ -26,7 +26,7 @@ This guide does not cover everything you could need, so this is a compilation of
 
 
 ## Code
-- [Sasha Willems Vulkan samples](https://github.com/SaschaWillems/Vulkan). Great set of vulkan samples, with a lot of features implemented on them.
+- [Sascha Willems Vulkan samples](https://github.com/SaschaWillems/Vulkan). Great set of vulkan samples, with a lot of features implemented on them.
 - [Official Vulkan samples](https://github.com/KhronosGroup/Vulkan-Samples). Newer samples, has tutorials about specific ways of implementing things well.
 - [V-EZ](https://github.com/GPUOpen-LibrariesAndSDKs/V-EZ). Abandoned. Minimal simplification layer on top of vulkan. Very useful to see how can one abstract vulkan.
 - [Filament Engine](https://github.com/google/filament). Mobile first rendering engine by google. Great vulkan backend for mobile.
