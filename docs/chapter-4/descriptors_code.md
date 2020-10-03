@@ -54,11 +54,11 @@ struct GPUCameraData{
 };
 
 struct FrameData {
-    // other code ...
-    //buffer that holds a single GPUCameraData to use when rendering
+	// other code ...
+	//buffer that holds a single GPUCameraData to use when rendering
 	AllocatedBuffer cameraBuffer;
-    
-    VkDescriptorSet globalDescriptor;
+	
+	VkDescriptorSet globalDescriptor;
 };
 ```
 
@@ -70,9 +70,9 @@ We are going to add another initialization function, `init_descriptors()` to Vul
 
 ```cpp
 class VulkanEngine {
-    //other code....
-    AllocatedBuffer create_buffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage);
-    void init_descriptors();
+	//other code....
+	AllocatedBuffer create_buffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage);
+	void init_descriptors();
 }
 ```
 ```cpp
@@ -81,15 +81,15 @@ class VulkanEngine {
 ```cpp
 void VulkanEngine::init()
 {
-    // other code .... 
+	// other code .... 
 
-    init_sync_structures();
+	init_sync_structures();
 
 	init_descriptors();
 
 	init_pipelines();	
 
-    //other code ....
+	//other code ....
 }
 ```
 
@@ -124,8 +124,8 @@ layout (location = 2) in vec3 vColor;
 layout (location = 0) out vec3 outColor;
 
 layout(set = 0, binding = 0) uniform  CameraBuffer{   
-    mat4 view;
-    mat4 proj;
+	mat4 view;
+	mat4 proj;
 	mat4 viewproj;
 } cameraData;
 
@@ -171,31 +171,31 @@ A `VkDescriptorSetLayout` holds information about the shape of a descriptor set.
 void VulkanEngine::init_descriptors()
 {
 
-    //information about the binding.
-    VkDescriptorSetLayoutBinding camBufferBinding = {};
+	//information about the binding.
+	VkDescriptorSetLayoutBinding camBufferBinding = {};
 	camBufferBinding.binding=  0;
 	camBufferBinding.descriptorCount = 1;
-    // its a uniform buffer binding
+	// its a uniform buffer binding
 	camBufferBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER; 
 
-    // we use it from the vertex shader
+	// we use it from the vertex shader
 	camBufferBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT; 
 	
 	
 	VkDescriptorSetLayoutCreateInfo setInfo= {};
-    setInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    setInfo.pNext = nullptr;
+	setInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+	setInfo.pNext = nullptr;
 	
-    //we are going to have 1 binding
+	//we are going to have 1 binding
 	setInfo.bindingCount = 1;
-    //no flags
+	//no flags
 	setInfo.flags = 0;
 	//point to the camera buffer binding
 	setInfo.pBindings = &camBufferBinding;
 
 	vkCreateDescriptorSetLayout(_device, &setInfo, nullptr, &_globalSetLayout);
 
-    // other code ....
+	// other code ....
 }
 ```
 
@@ -247,7 +247,7 @@ void VulkanEngine::init_descriptors()
 	
 	vkCreateDescriptorPool(_device, &pool_info, nullptr, &_descriptorPool);
 
-    // other code ....
+	// other code ....
 }
 ```
 
@@ -260,19 +260,19 @@ for (int i = 0; i < FRAME_OVERLAP; i++)
 	{
 		_frames[i].cameraBuffer = create_buffer(sizeof(GPUCameraData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
 
-        //allocate one descriptor set for each frame
+		//allocate one descriptor set for each frame
 		VkDescriptorSetAllocateInfo allocInfo ={};
 		allocInfo.pNext = nullptr;
 		allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-        //using the pool we just set
+		//using the pool we just set
 		allocInfo.descriptorPool = _descriptorPool;
-        //only 1 descriptor
+		//only 1 descriptor
 		allocInfo.descriptorSetCount = 1;
-        //using the global data layout
+		//using the global data layout
 		allocInfo.pSetLayouts = &_globalSetLayout;
 
 		vkAllocateDescriptorSets(_device, &allocInfo, &_frames[i].globalDescriptor);
-    }
+	}
 ```
 
 With this, We now have a descriptor stored in our frame struct. But this descriptor is not pointing to any buffer yet, so we need to make it point into our camera buffer.
@@ -282,34 +282,34 @@ With this, We now have a descriptor stored in our frame struct. But this descrip
 
 for (int i = 0; i < FRAME_OVERLAP; i++)
 	{
-        // allocation code ... 
+		// allocation code ... 
 
-        //information about the buffer we want to point at in the descriptor
-        VkDescriptorBufferInfo binfo;
-        //it will be the camera buffer
+		//information about the buffer we want to point at in the descriptor
+		VkDescriptorBufferInfo binfo;
+		//it will be the camera buffer
 		binfo.buffer = _frames[i].cameraBuffer._buffer;
-        //at 0 offset
+		//at 0 offset
 		binfo.offset = 0;
-        //of the size of a camera data struct
+		//of the size of a camera data struct
 		binfo.range = sizeof(GPUCameraData);
 
 		VkWriteDescriptorSet setWrite = {};
 		setWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 		setWrite.pNext = nullptr;
 
-        //we are going to write into binding number 0
+		//we are going to write into binding number 0
 		setWrite.dstBinding = 0;
-        //of the global descriptor
+		//of the global descriptor
 		setWrite.dstSet = _frames[i].globalDescriptor;
 
 		setWrite.descriptorCount = 1;
-        //and the type is uniform buffer
+		//and the type is uniform buffer
 		setWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		setWrite.pBufferInfo = &binfo;
-       
+	   
 
 		vkUpdateDescriptorSets(_device, 1, &setWrite, 0, nullptr);    
-    }
+	}
 ```
 
 We need to fill a `VkDescriptorBufferInfo` with the data of the buffer we want to have in the descriptor set. Because we have defined that our camera buffer is on binding 0, then we need to set it here, and with enough size to hold the struct.
@@ -321,7 +321,7 @@ In the `draw_objects()` function, we will start by writing to the camera buffer 
 
 void VulkanEngine::draw_objects(VkCommandBuffer cmd,RenderObject* first, int count)
 {
-    
+	
 	//camera view
 	glm::vec3 camPos = { 0.f,-6.f,-10.f };
 
@@ -330,13 +330,13 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd,RenderObject* first, int cou
 	glm::mat4 projection = glm::perspective(glm::radians(70.f), 1700.f / 900.f, 0.1f, 200.0f);
 	projection[1][1] *= -1;
 
-    //fill a gpu camera data struct
+	//fill a gpu camera data struct
 	GPUCameraData camData;
 	camData.proj = projection;
 	camData.view = view;
 	camData.viewproj = projection * view;
 
-    //and copy it to the buffer
+	//and copy it to the buffer
 	void* data;
 	vmaMapMemory(_allocator, get_current_frame().cameraBuffer._allocation, &data);
 
@@ -357,7 +357,7 @@ if (object.material != lastMaterial) {
 
 	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipeline);
 	lastMaterial = object.material;
-    //bind the descriptor set when changing pipeline
+	//bind the descriptor set when changing pipeline
 	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipelineLayout, 0, 1, &get_current_frame().globalDescriptor, 0, nullptr);
 }
 ```
