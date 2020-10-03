@@ -17,7 +17,8 @@ This guide does not cover everything you could need, so this is a compilation of
 
 ## Talks/Slides
 - [Destiny's Multithreaded Rendering Architecture](https://www.youtube.com/watch?v=0nTDFLMLX9k). Advanced. Talks about the design and general architecture of the game engine for the game Destiny.
-- [Rendering the Hellscape of Doom Eternal](http://advances.realtimerendering.com/s2020/index.htm). Advanced. Doom Eternal engine architecture, bleeding edge Vulkan usage.
+- [The Devil is in the details](http://advances.realtimerendering.com/s2016/) Talk about the Doom 2016 render engine. Goes alongside its [graphics study](http://www.adriancourreges.com/blog/2016/09/09/doom-2016-graphics-study/)
+- [Rendering the Hellscape of Doom Eternal](http://advances.realtimerendering.com/s2020/index.htm). Advanced. Doom Eternal engine architecture, bleeding edge Vulkan usage. Goes with the [graphics study](https://simoncoenen.com/blog/programming/graphics/DoomEternalStudy.html) where the exact details are shown.
 - [Vulkan Fast Paths, AMD](http://gpuopen.com/wp-content/uploads/2016/03/VulkanFastPaths.pdf). Intermediate. How vulkan structures map to the AMD GPUs, and whats the fastest approach to use.
 - [GPU Driven Rendering, NVidia](https://on-demand.gputechconf.com/gtc/2016/presentation/s6138-christoph-kubisch-pierre-boudier-gpu-driven-rendering.pdf) How to use vulkan to do very high object counts for CAD. Also talks about how NVidia gpus execute vulkan.
 - [Vulkan and DX12, lessons learned](https://www.gdcvault.com/play/1024122/D3D12-Vulkan-Lessons). Best practises when using vulkan and directx12 for high performance games.
