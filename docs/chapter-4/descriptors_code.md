@@ -75,8 +75,6 @@ class VulkanEngine {
 	void init_descriptors();
 }
 ```
-```cpp
-
 
 ```cpp
 void VulkanEngine::init()
@@ -99,12 +97,11 @@ Now that the function and data is added, we need to create those camera buffers.
 ```cpp
 void VulkanEngine::init_descriptors()
 {
-for (int i = 0; i < FRAME_OVERLAP; i++)
-{
-	_frames[i].cameraBuffer = create_buffer(sizeof(GPUCameraData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+	for (int i = 0; i < FRAME_OVERLAP; i++)
+	{
+		_frames[i].cameraBuffer = create_buffer(sizeof(GPUCameraData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+	}
 }
-}
-
 ```
 For creating the buffers, we are to use the Uniform Buffer usage, and `CPU_TO_GPU` memory type.
 Uniform buffers are the best for this sort of small, read only shader data. They have a size limitation, but they are very fast to access in the shaders.
