@@ -29,7 +29,7 @@ vkCmdEndRenderPass(cmd);
 vkEndCommandBuffer(cmd)
 ```
 
-When beggining a renderpass, you set the target framebuffer, and the clear color (if available). In this first chapter, we will change the clear color dynamically over time.
+When beginning a renderpass, you set the target framebuffer, and the clear color (if available). In this first chapter, we will change the clear color dynamically over time.
 
 ## Subpasses
 A renderpass also contains subpasses, which are a bit like the rendering "steps". They can be very useful in mobile GPUs, as they allow the driver to optimize things quite a lot. 
