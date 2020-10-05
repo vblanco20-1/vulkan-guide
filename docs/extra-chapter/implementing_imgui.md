@@ -5,6 +5,8 @@ parent: Extra Chapter
 nav_order: 30
 ---
 
+https://github.com/ocornut/imgui
+
 Dear Imgui is one of the best debug user interface libraries around. Using it makes it very easy to create debug windows with widgets of various kinds.
 This guide will use a few things from chapter 5 code, but can be done standalone just fine.
 
@@ -119,13 +121,7 @@ With imgui initialized, we now hook it into the main loop of the engine.
 ```cpp
     //main loop
 	while (!bQuit)
-	{
-        //imgui new frame 
-        ImGui_ImplVulkan_NewFrame();
-		ImGui_ImplSDL2_NewFrame(_window);
-
-		ImGui::NewFrame();        
-
+	{       
 		//Handle events on queue
 		while (SDL_PollEvent(&e) != 0)
 		{
@@ -133,6 +129,12 @@ With imgui initialized, we now hook it into the main loop of the engine.
 
 			//other event handling
 		}
+
+		 //imgui new frame 
+        ImGui_ImplVulkan_NewFrame();
+		ImGui_ImplSDL2_NewFrame(_window);
+
+		ImGui::NewFrame();        
 
 
         //imgui commands
@@ -153,6 +155,9 @@ As part of your main renderpass, call `ImGui_ImplVulkan_RenderDrawData(ImGui::Ge
 This will make imgui render as part as your main pass. If you have an UI pass of some kind, thats a good place to put it.
 
 Thats really all that was needed, so enjoy using imgui!
+
+![map]({{site.baseurl}}/diagrams/IMGUI.png)
+
 
 
 
