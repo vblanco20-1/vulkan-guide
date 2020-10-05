@@ -10,14 +10,14 @@ Because we are starting this chapter with an already made code skeleton, we are 
 
 The files are all stored in the project/src/ folder
 
-- vk_engine.h/cpp : this will be the main class for the engine, and where most of the code of the entire tutorial will go
-- vk_initializers.h/cpp : Vulkan initialization of types gets very verbose, so we will create some small helpers here. There are a lot of them, so it really needs to be its own thing
+- vk_engine.h/cpp : This will be the main class for the engine, and where most of the code of the tutorial will go
+- vk_initializers.h/cpp : Vulkan initialization of types gets very verbose, so we will create some small helpers here. There are a lot of them, so it will be its own thing
 - vk_types.h : As the tutorial continues, we will add the "basic" types such as Vertex definitions here.
-- main.cpp : entry point for the code. Has nothing but just calls into vk_engine code
+- main.cpp : Entry point for the code. Has nothing but just calls into vk_engine code
 
-Physical design (how the project is laid out) is very important for complex projects. We will call a pair of matched .h/.cpp files as a "module". It doesn't necessarily have to be only one class, or a class at all. We will have them be generally standalone when possible. The reason for calling them modules is that they will likely *be* modules once Cpp 20 modules become a thing.
+Physical design (how the project is laid out) is very important for complex projects. We will call a pair of matched .h/.cpp files a "module". It doesn't necessarily have to be only one class, or a class at all. We will have them be generally standalone when possible. The reason for calling them modules is that they will likely *be* modules once C++20 modules are widely adopted.
 
-The vk_types is completely standalone (depends on nothing), and so will be the vk_initializers component. Once they grow, you can safely keep them for your own projects as your own small abstractions.
+vk_types is completely standalone (depends on nothing other than vulkan), and so will be the vk_initializers component. Once they grow, you can safely keep them for your own projects as your own small abstractions.
 vk_engine will be the "end point" of almost everything. It will depend on most parts of the project.
 
 Whenever possible, we will try to keep the headers of each component as lightweight as possible. The lighter the headers are, the faster your program will compile, and this is crucial when dealing with C++
@@ -32,11 +32,11 @@ int main(int argc, char* argv[])
 {
 	VulkanEngine engine;
 
-	engine.init();	
-	
-	engine.run();	
+	engine.init();
 
-	engine.cleanup();	
+	engine.run();
+
+	engine.cleanup();
 
 	return 0;
 }
@@ -44,7 +44,7 @@ int main(int argc, char* argv[])
 
 We start with something simple, main.cpp. We do nothing here except immediately call into the Vulkan engine methods. 
 
-On the future, this could be a good place to set some configuration parameters brought from the commandline arguments at argc/argv.
+In the future, this could be a good place to set some configuration parameters brought from the command line arguments at argc/argv or a settings file.
 
 vk_initializers.h holds this
 
@@ -53,10 +53,10 @@ vk_initializers.h holds this
 #include <vulkan/vulkan.h>
 ```
 
-We include the main header for Vulkan, which is that `<vulkan/vulkan.h>` you can see. That will include all the Vulkan function definitions and types that we will need for everything.
-`#pragma once` is a preprocessor directive that tells the compiler to never include this twice into the same file. Its equivalent to include guards, but cleaner.
+We include the main header for Vulkan, which is the `<vulkan/vulkan.h>` you can see. That will include all the Vulkan function definitions and types that we will need for everything.
+`#pragma once` is a preprocessor directive that tells the compiler to never include this twice into the same file. It's equivalent to include guards, but cleaner.
 
-vk_initializers.h sees this
+vk_initializers.h looks like this
 
 ```cpp
 #pragma once
@@ -86,6 +86,7 @@ public:
 	VkExtent2D _windowExtent{ 1700 , 900 };
 
     struct SDL_Window* _window{ nullptr };
+	
 	//initializes everything in the engine
 	void init();
 
@@ -102,11 +103,11 @@ public:
 
 As with vk_init, we include vk_types. We already need a Vulkan type in VkExtent2D.
 The Vulkan engine will be the core of everything we will be doing.
-We have a flag to know if the engine is initialized, a frame number integer (very useful!) and the size of the window we are going to open, in pixels. 
+We have a flag to know if the engine is initialized, a frame number integer (very useful!), and the size of the window we are going to open, in pixels. 
 
-The declaration `struct SDL_Window* _window;` is of some special interest. Note the `struct` at the beggining. This is called a forward-declaration, and its what allows us to have the SDL_Window pointer in the class, without including SDL on the Vulkan engine header. This variable holds the window that we create for the application.
+The declaration `struct SDL_Window* _window;` is of special interest. Note the `struct` at the beginning. This is called a forward-declaration, and its what allows us to have the `SDL_Window `pointer in the class, without including SDL on the Vulkan engine header. This variable holds the window that we create for the application.
 
-With the header seen, lets go to the cpp
+With the header seen, lets go to the cpp files.
 
 vk_engine.cpp line 1
 ```cpp
@@ -126,7 +127,7 @@ vk_engine.cpp, line 10
 ```cpp
 void VulkanEngine::init()
 {
-    	// We initialize SDL and create a window with it. 
+    // We initialize SDL and create a window with it. 
 	SDL_Init(SDL_INIT_VIDEO);
 
 	SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_VULKAN);
@@ -136,8 +137,8 @@ void VulkanEngine::init()
 		"Vulkan Engine", //window title
 		SDL_WINDOWPOS_UNDEFINED, //window position x (dont care)
 		SDL_WINDOWPOS_UNDEFINED, //window position y (dont care)
-		_windowExtent.width, //window width in pixels
-		_windowExtent.height,//window height in pixels
+		_windowExtent.width,  //window width in pixels
+		_windowExtent.height, //window height in pixels
 		window_flags 
 	);
 	
@@ -146,28 +147,27 @@ void VulkanEngine::init()
 }
 ```
 Here we see our first proper code, in the shape of creating a SDL window.
-The first thing we do is to init the SDL library. The SDL library contains quite a few things, so we have to send a flag of what do we want to use. SDL_INIT_VIDEO tells SDL that we want the main windowing functionality (it also includes basic input events like keys or mouse).
+The first thing we do is init the SDL library. The SDL library contains quite a few things, so we have to send a flag of what do we want to use. SDL_INIT_VIDEO tells SDL that we want the main windowing functionality. That also includes basic input events like keys or mouse.
 
 Once SDL has been initialized, we use it to create a window. The window is stored on the `_window` member for later use.
 
 Because SDL is a C library, it does not support constructors and destructors, and things have to get deleted manually. 
 
-If the window is created, it also has to get destroyed.
+If the window is created, it also has to be destroyed.
 
 vk_engine.cpp, line 29
 ```cpp
 void VulkanEngine::cleanup()
 {	
 	if (_isInitialized) {
-		
 		SDL_DestroyWindow(_window);
 	}
 }
 ```
 In a similar way that we did `SDL_CreateWindow`, we need to do `SDL_DestroyWindow` This will destroy the window for the program.
-Over time, we will add more logic into this cleanup function. While its not completely necessary to cleanup properly (the OS will delete everything for us anyway), its good practise to do it.
+Over time, we will add more logic into this cleanup function. While its not completely necessary to cleanup properly, as the OS will delete everything for us anyway when the program terminates, its good practice to do it.
 
-
+vk_engine.cpp, line 37
 ```cpp
 void VulkanEngine::draw()
 {
@@ -175,7 +175,7 @@ void VulkanEngine::draw()
 }
 ```
 
-Our draw function is empty for now, but its in here where we will add the rendering code
+Our draw function is empty for now, but here is where we will add the rendering code.
 
 vk_engine.cpp, line 42
 ```cpp
@@ -190,7 +190,7 @@ void VulkanEngine::run()
 		//Handle events on queue
 		while (SDL_PollEvent(&e) != 0)
 		{
-			//close the window when user alt-f4s or clicks the X button			
+			//close the window when user clicks the X button or alt-f4s
 			if (e.type == SDL_QUIT) bQuit = true;
 		}
 
@@ -199,9 +199,9 @@ void VulkanEngine::run()
 }
 ```
 
-This is our application main loop. We have an endless loop in the `while()`, only stopped when SDL receives the SDL_QUIT event
+This is our application main loop. We have an endless loop in the `while()`, that is only stopped when SDL receives the SDL_QUIT event
 
-On every iteration of the loop, we do SDL_PollEvent, this will ask SDL for all of the events the OS has sent to the application. In here, we can check for things like keyboard events, window moving, minimization, and many others. For now we are only interested on the SDL_QUIT event. This event is called when the OS requests that the window has to be closed.
+On every iteration of the inner loop, we do SDL_PollEvent. This will ask SDL for all of the events the OS has sent to the application during the last frame. In here, we can check for things like keyboard events, mouse movement, window moving, minimization, and many others. For now we are only interested on the SDL_QUIT event. This event is called when the OS requests that the window needs to be closed.
 
 And finally, every iteration of the main loop we call `draw();`
 
@@ -209,7 +209,7 @@ We now have seen how to open a window with SDL, and basically not much else.
 
 There is really only one thing that can be added to this at this point, and is experimenting with the SDL events. 
 
-As an excercise, go into the documentation of SDL2, and try to get keypress events, just logged with std::cout 
+As an exercise, read the documentation of SDL2 and try to get keypress events, using `std::cout` to log them.
 
 Now we can move forward to the first chapter, and get a render loop going.
 
