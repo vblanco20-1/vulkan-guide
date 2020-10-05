@@ -81,7 +81,7 @@ void VulkanEngine::init()
 	_isInitialized = true;
 
 	_camera = {};
-	_camera.position = { 0.f,-6.f,-10.f };
+	_camera.position = { 0.f,6.f,10.f };
 }
 void VulkanEngine::cleanup()
 {
@@ -305,8 +305,8 @@ void VulkanEngine::process_input_event(SDL_Event* ev)
 
 void VulkanEngine::update_camera(float deltaSeconds)
 {
-	glm::vec3 forward = { 0,0,1 };
-	glm::vec3 right = { -1,0,0 };
+	glm::vec3 forward = { 0,0,-1 };
+	glm::vec3 right = { 1,0,0 };
 
 	_camera.velocity = _camera.inputAxis.x * forward + _camera.inputAxis.y * right;
 
@@ -991,8 +991,8 @@ Mesh* VulkanEngine::get_mesh(const std::string& name)
 void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderObject* first, int count)
 {
 	//make a model view matrix for rendering the object
-	//camera view
-	glm::vec3 camPos = _camera.position;//{ 0.f,-6.f,-10.f };
+	//camera view, reverse transform of the one we have in the camera struct
+	glm::vec3 camPos = -_camera.position;
 
 	glm::mat4 view = glm::translate(glm::mat4(1.f), camPos);
 	//camera projection
