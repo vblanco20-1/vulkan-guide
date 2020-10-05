@@ -299,6 +299,10 @@ void VulkanEngine::process_input_event(SDL_Event* ev)
 			break;
 		}
 	}
+	else if (ev->type == SDL_MOUSEMOTION) {
+		_camera.pitch -= ev->motion.yrel * 0.003;
+		_camera.yaw -= ev->motion.xrel * 0.003;
+	}
 
 	_camera.inputAxis = glm::clamp(_camera.inputAxis, { -1.0,-1.0,-1.0 }, { 1.0,1.0,1.0 });
 }
@@ -307,6 +311,14 @@ void VulkanEngine::update_camera(float deltaSeconds)
 {
 	glm::vec3 forward = { 0,0,-1 };
 	glm::vec3 right = { 1,0,0 };
+
+	
+
+
+	glm::mat4 cam_rot = _camera.get_rotation_matrix();
+
+	forward = cam_rot * glm::vec4(forward, 0.f);
+	right =  cam_rot * glm::vec4(right, 0.f);
 
 	_camera.velocity = _camera.inputAxis.x * forward + _camera.inputAxis.y * right;
 
@@ -991,10 +1003,16 @@ Mesh* VulkanEngine::get_mesh(const std::string& name)
 void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderObject* first, int count)
 {
 	//make a model view matrix for rendering the object
-	//camera view, reverse transform of the one we have in the camera struct
-	glm::vec3 camPos = -_camera.position;
+	//camera view
+	glm::vec3 camPos = _camera.position;
+	
+	glm::mat4 cam_rot = _camera.get_rotation_matrix();
 
-	glm::mat4 view = glm::translate(glm::mat4(1.f), camPos);
+	glm::mat4 view = glm::translate(glm::mat4{ 1 }, camPos) * cam_rot;
+	
+	//we need to invert the camera matrix
+	view = glm::inverse(view);
+
 	//camera projection
 	glm::mat4 projection = glm::perspective(glm::radians(70.f), 1700.f / 900.f, 0.1f, 200.0f);
 	projection[1][1] *= -1;
@@ -1398,4 +1416,12 @@ void VulkanEngine::init_imgui()
 		vkDestroyDescriptorPool(_device, imguiPool, nullptr);
 		ImGui_ImplVulkan_Shutdown();
 		});
+}
+
+glm::mat4 PlayerCamera::get_rotation_matrix()
+{
+	glm::mat4 yaw_rot = glm::rotate(glm::mat4{ 1 }, yaw, { 0,1,0 });
+	glm::mat4 pitch_rot = glm::rotate(glm::mat4{ yaw_rot }, pitch, { 1,0,0 });
+
+	return pitch_rot;
 }

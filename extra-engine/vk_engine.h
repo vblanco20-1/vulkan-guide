@@ -121,6 +121,11 @@ struct PlayerCamera {
 	glm::vec3 position;
 	glm::vec3 velocity;
 	glm::vec3 inputAxis;
+
+	float pitch{0}; //up-down rotation
+	float yaw{0}; //left-right rotation
+
+	glm::mat4 get_rotation_matrix();
 };
 
 
