@@ -79,6 +79,9 @@ void VulkanEngine::init()
 	init_imgui();
 	//everything went fine
 	_isInitialized = true;
+
+	_camera = {};
+	_camera.position = { 0.f,-6.f,-10.f };
 }
 void VulkanEngine::cleanup()
 {
@@ -199,18 +202,11 @@ void VulkanEngine::run()
 	//main loop
 	while (!bQuit)
 	{
-		//imgui new frame 
-		ImGui_ImplVulkan_NewFrame();
-		ImGui_ImplSDL2_NewFrame(_window);
-
-		ImGui::NewFrame();
-
-
 		//Handle events on queue
 		while (SDL_PollEvent(&e) != 0)
 		{
 			ImGui_ImplSDL2_ProcessEvent(&e);
-
+			process_input_event(&e);
 			//close the window when user alt-f4s or clicks the X button			
 			if (e.type == SDL_QUIT)
 			{
@@ -228,9 +224,18 @@ void VulkanEngine::run()
 				}
 			}
 		}
+		//imgui new frame 
+		ImGui_ImplVulkan_NewFrame();
+		ImGui_ImplSDL2_NewFrame(_window);
+
+		ImGui::NewFrame();
+
 
 		//imgui commands
 		ImGui::ShowDemoWindow();
+
+
+		update_camera(1.0 / 60.f);
 
 		draw();
 	}
@@ -245,6 +250,69 @@ FrameData& VulkanEngine::get_current_frame()
 FrameData& VulkanEngine::get_last_frame()
 {
 	return _frames[(_frameNumber - 1) % 2];
+}
+
+
+void VulkanEngine::process_input_event(SDL_Event* ev)
+{
+	if (ev->type == SDL_KEYDOWN)
+	{
+		switch (ev->key.keysym.sym)
+		{
+		case SDLK_UP:
+		case SDLK_w:
+			_camera.inputAxis.x += 1.f;
+			break;
+		case SDLK_DOWN:
+		case SDLK_s:
+			_camera.inputAxis.x -= 1.f;
+			break;
+		case SDLK_LEFT:
+		case SDLK_a:
+			_camera.inputAxis.y -= 1.f;
+			break;
+		case SDLK_RIGHT:
+		case SDLK_d:
+			_camera.inputAxis.y += 1.f;
+			break;
+		}
+	}
+	else if (ev->type == SDL_KEYUP)
+	{
+		switch (ev->key.keysym.sym)
+		{
+		case SDLK_UP:
+		case SDLK_w:
+			_camera.inputAxis.x -= 1.f;
+			break;
+		case SDLK_DOWN:
+		case SDLK_s:
+			_camera.inputAxis.x += 1.f;
+			break;
+		case SDLK_LEFT:
+		case SDLK_a:
+			_camera.inputAxis.y += 1.f;
+			break;
+		case SDLK_RIGHT:
+		case SDLK_d:
+			_camera.inputAxis.y -= 1.f;
+			break;
+		}
+	}
+
+	_camera.inputAxis = glm::clamp(_camera.inputAxis, { -1.0,-1.0,-1.0 }, { 1.0,1.0,1.0 });
+}
+
+void VulkanEngine::update_camera(float deltaSeconds)
+{
+	glm::vec3 forward = { 0,0,1 };
+	glm::vec3 right = { -1,0,0 };
+
+	_camera.velocity = _camera.inputAxis.x * forward + _camera.inputAxis.y * right;
+
+	_camera.velocity *= 10 * deltaSeconds;
+
+	_camera.position += _camera.velocity;
 }
 
 void VulkanEngine::init_vulkan()
@@ -924,7 +992,7 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderObject* first, int co
 {
 	//make a model view matrix for rendering the object
 	//camera view
-	glm::vec3 camPos = { 0.f,-6.f,-10.f };
+	glm::vec3 camPos = _camera.position;//{ 0.f,-6.f,-10.f };
 
 	glm::mat4 view = glm::translate(glm::mat4(1.f), camPos);
 	//camera projection
@@ -1036,7 +1104,7 @@ void VulkanEngine::init_scene()
 	map.material = get_material("texturedmesh");
 	map.transformMatrix = glm::translate(glm::vec3{ 5,-10,0 }); //glm::mat4{ 1.0f };
 
-	_renderables.push_back(map);
+	//_renderables.push_back(map);
 
 	for (int x = -20; x <= 20; x++) {
 		for (int y = -20; y <= 20; y++) {

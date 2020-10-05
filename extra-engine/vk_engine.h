@@ -13,6 +13,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtx/transform.hpp>
 
+#include <SDL_events.h>
 class PipelineBuilder {
 public:
 
@@ -116,6 +117,13 @@ struct GPUObjectData {
 	glm::mat4 modelMatrix;
 };
 
+struct PlayerCamera {
+	glm::vec3 position;
+	glm::vec3 velocity;
+	glm::vec3 inputAxis;
+};
+
+
 constexpr unsigned int FRAME_OVERLAP = 2;
 
 class VulkanEngine {
@@ -171,6 +179,9 @@ public:
 	AllocatedBuffer _sceneParameterBuffer;
 
 	UploadContext _uploadContext;
+
+	PlayerCamera _camera;
+
 	//initializes everything in the engine
 	void init();
 
@@ -212,6 +223,9 @@ public:
 
 	void immediate_submit(std::function<void(VkCommandBuffer cmd)>&& function);
 private:
+
+	void process_input_event(SDL_Event* ev);
+	void update_camera(float deltaSeconds);
 
 	void init_vulkan();
 
