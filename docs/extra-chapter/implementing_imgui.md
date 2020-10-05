@@ -37,24 +37,25 @@ There are a few things that we need to initialize before being able to use it.
 For that, create a `init_imgui()` function, and make sure to call it as part of your initialization. Has to be after vulkan is fully initialized.
 
 ```cpp
+
 void VulkanEngine::init_imgui()
 {
-    //1: create descriptor pool for IMGUI
-    // the size of the pool is very oversize, but its copied from imgui demo itself.
-    VkDescriptorPoolSize pool_sizes[] =
-		{
-			{ VK_DESCRIPTOR_TYPE_SAMPLER, 1000 },
-			{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000 },
-			{ VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000 },
-			{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000 },
-			{ VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1000 },
-			{ VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1000 },
-			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000 },
-			{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000 },
-			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000 },
-			{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000 },
-			{ VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000 }
-		};
+	//1: create descriptor pool for IMGUI
+	// the size of the pool is very oversize, but its copied from imgui demo itself.
+	VkDescriptorPoolSize pool_sizes[] =
+	{
+		{ VK_DESCRIPTOR_TYPE_SAMPLER, 1000 },
+		{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000 },
+		{ VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000 },
+		{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000 },
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1000 },
+		{ VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1000 },
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000 },
+		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000 },
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000 },
+		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000 },
+		{ VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000 }
+	};
 
 	VkDescriptorPoolCreateInfo pool_info = {};
 	pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -64,21 +65,21 @@ void VulkanEngine::init_imgui()
 	pool_info.pPoolSizes = pool_sizes;
 
 	VkDescriptorPool imguiPool;
-	VK_CHECK(vkCreateDescriptorPool(device, &pool_info, nullptr, &pool));
+	VK_CHECK(vkCreateDescriptorPool(_device, &pool_info, nullptr, &imguiPool));
 
 
-    // 2: initialize imgui library
+	// 2: initialize imgui library
 
-    //this initializes the core structures of imgui
-    ImGui::CreateContext();
+	//this initializes the core structures of imgui
+	ImGui::CreateContext();
 
-    //this initializes imgui for SDL
-	ImGui_ImplSDL2_InitForVulkan(gWindow);
+	//this initializes imgui for SDL
+	ImGui_ImplSDL2_InitForVulkan(_window);
 
-    //this initializes imgui for Vulkan
+	//this initializes imgui for Vulkan
 	ImGui_ImplVulkan_InitInfo init_info = {};
 	init_info.Instance = _instance;
-	init_info.PhysicalDevice = _physicalDevice;
+	init_info.PhysicalDevice = _chosenGPU;
 	init_info.Device = _device;
 	init_info.Queue = _graphicsQueue;
 	init_info.DescriptorPool = imguiPool;
@@ -87,21 +88,22 @@ void VulkanEngine::init_imgui()
 
 	ImGui_ImplVulkan_Init(&init_info, _renderPass);
 
-    //execute a gpu command to upload imgui font textures
-    immediate_submit([&](VkCommandBuffer cmd) {
-        ImGui_ImplVulkan_CreateFontsTexture(cmd);
-    });
+	//execute a gpu command to upload imgui font textures
+	immediate_submit([&](VkCommandBuffer cmd) {
+		ImGui_ImplVulkan_CreateFontsTexture(cmd);
+		});
 
-    //clear font textures from cpu data
-    ImGui_ImplVulkan_DestroyFontUploadObjects();
+	//clear font textures from cpu data
+	ImGui_ImplVulkan_DestroyFontUploadObjects();
 
 	//add the destroy the imgui created structures
 	_mainDeletionQueue.push_function([=]() {
 
 		vkDestroyDescriptorPool(_device, imguiPool, nullptr);
 		ImGui_ImplVulkan_Shutdown();
-	});
+		});
 }
+
 ```
 
 We begin by creating a descriptor pool that imgui needs. Having a descriptor pool just for imgui is the easiest. While this descriptor pool with 1000 of everything is likely going to be oversized, it wont really matter. 
@@ -120,7 +122,7 @@ With imgui initialized, we now hook it into the main loop of the engine.
 	{
         //imgui new frame 
         ImGui_ImplVulkan_NewFrame();
-		ImGui_ImplSDL2_NewFrame(gWindow);
+		ImGui_ImplSDL2_NewFrame(_window);
 
 		ImGui::NewFrame();        
 
