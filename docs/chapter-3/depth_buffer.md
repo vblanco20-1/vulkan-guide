@@ -249,8 +249,6 @@ Last thing we need is to add the depth attachment to the attachment list in the 
 	render_pass_info.pAttachments = &attachments[0];
 	render_pass_info.subpassCount = 1;
 	render_pass_info.pSubpasses = &subpass;
-	render_pass_info.dependencyCount = 1;
-	render_pass_info.pDependencies = &dependency;
 ```
 
 Instead of storing the color attachment only in pAttachments, we add depth attachment there too.

@@ -27,7 +27,7 @@ aux_links:
     - "https://github.com/vblanco20-1/vulkan-guide"
 
 # Footer content appears at the bottom of every page's main content
-footer_content: "Copyright &copy; 2020 Victor Blanco. Distributed by an <a href=\"https://github.com/pmarsceill/just-the-docs/tree/master/LICENSE.txt\">MIT license.</a>"
+footer_content: "Copyright &copy; 2020 Victor Blanco. Distributed by a <a href=\"https://github.com/pmarsceill/just-the-docs/tree/master/LICENSE.txt\">MIT license.</a>"
 
 # Color scheme currently only supports "dark" or nil (default)
 color_scheme: dark
