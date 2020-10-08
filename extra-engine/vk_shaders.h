@@ -6,6 +6,7 @@
 #include <vk_types.h>
 #include <vector>
 #include <array>
+#include <unordered_map>
 struct ShaderModule {
 	std::vector<uint32_t> code;
 	VkShaderModule module;
@@ -33,6 +34,14 @@ struct ShaderEffect {
 
 	void reflect_layout(VulkanEngine* engine, ReflectionOverrides* overrides, int overrideCount);
 	VkPipelineLayout builtLayout;
+
+	struct ReflectedBinding {
+		uint32_t set;
+		uint32_t binding;
+		VkDescriptorType type;
+	};
+	std::unordered_map<std::string, ReflectedBinding> bindings;
+	std::array<VkDescriptorSetLayout, 4> setLayouts;
 private:
 	struct ShaderStage {
 		ShaderModule* shaderModule;
@@ -40,7 +49,29 @@ private:
 	};
 
 	std::vector<ShaderStage> stages;
+};
 
+struct DescriptorBuilder {
 	
-	std::array<VkDescriptorSetLayout,4> setLayouts;
+	struct BufferWriteDescriptor {
+		int dstSet;
+		int dstBinding;
+		VkDescriptorType descriptorType;
+		VkDescriptorBufferInfo bufferInfo;
+
+		uint32_t dynamic_offset;
+	};	
+
+	void bind_buffer(const char* name, const VkDescriptorBufferInfo& bufferInfo);
+
+	void bind_dynamic_buffer(const char* name, uint32_t offset,const VkDescriptorBufferInfo& bufferInfo);
+
+	void apply_binds(VkDevice device, VkCommandBuffer cmd, VkDescriptorPool allocator);
+
+	void set_shader(ShaderEffect* newShader);
+
+	std::array<VkDescriptorSet, 4> cachedDescriptorSets;
+private:
+	ShaderEffect* shaders{ nullptr };
+	std::vector<BufferWriteDescriptor> bufferWrites;
 };

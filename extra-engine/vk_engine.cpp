@@ -642,13 +642,13 @@ void VulkanEngine::init_pipelines()
 	}
 	meshVertShader = meshModule.module;
 
-	ShaderEffect mainEffect;
-	mainEffect.add_stage(&meshModule, VK_SHADER_STAGE_VERTEX_BIT);
-	mainEffect.add_stage(&colorModule, VK_SHADER_STAGE_FRAGMENT_BIT);
+	ShaderEffect* mainEffect = new ShaderEffect();
+	mainEffect->add_stage(&meshModule, VK_SHADER_STAGE_VERTEX_BIT);
+	mainEffect->add_stage(&colorModule, VK_SHADER_STAGE_FRAGMENT_BIT);
 
 
 	ShaderEffect::ReflectionOverrides overrides[] = { {"sceneData", VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC} };
-	mainEffect.reflect_layout(this, overrides, 1);
+	mainEffect->reflect_layout(this, overrides, 1);
 
 	//build the stage-create-info for both vertex and fragment stages. This lets the pipeline know the shader modules per stage
 	PipelineBuilder pipelineBuilder;
@@ -660,40 +660,17 @@ void VulkanEngine::init_pipelines()
 		vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT, colorMeshShader));
 
 
-	//we start from just the default empty pipeline layout info
-	VkPipelineLayoutCreateInfo mesh_pipeline_layout_info = vkinit::pipeline_layout_create_info();
+	VkPipelineLayout meshPipLayout = mainEffect->builtLayout;
 
-	//setup push constants
-	VkPushConstantRange push_constant;
-	//offset 0
-	push_constant.offset = 0;
-	//size of a MeshPushConstant struct
-	push_constant.size = sizeof(MeshPushConstants);
-	//for the vertex shader
-	push_constant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+	
+	ShaderEffect* texturedEffect = new ShaderEffect();;
+	texturedEffect->add_stage(&meshModule, VK_SHADER_STAGE_VERTEX_BIT);
+	texturedEffect->add_stage(&textureModule, VK_SHADER_STAGE_FRAGMENT_BIT);
 
-	mesh_pipeline_layout_info.pPushConstantRanges = &push_constant;
-	mesh_pipeline_layout_info.pushConstantRangeCount = 1;
+	texturedEffect->reflect_layout(this, overrides, 1);
 
-	VkDescriptorSetLayout setLayouts[] = { _globalSetLayout, _objectSetLayout };
-
-	mesh_pipeline_layout_info.setLayoutCount = 2;
-	mesh_pipeline_layout_info.pSetLayouts = setLayouts;
-
-	VkPipelineLayout meshPipLayout = mainEffect.builtLayout;
-	//VK_CHECK(vkCreatePipelineLayout(_device, &mesh_pipeline_layout_info, nullptr, &meshPipLayout));
-
-
-	//we start from  the normal mesh layout
-	VkPipelineLayoutCreateInfo textured_pipeline_layout_info = mesh_pipeline_layout_info;
-
-	VkDescriptorSetLayout texturedSetLayouts[] = { _globalSetLayout, _objectSetLayout,_singleTextureSetLayout };
-
-	textured_pipeline_layout_info.setLayoutCount = 3;
-	textured_pipeline_layout_info.pSetLayouts = texturedSetLayouts;
-
-	VkPipelineLayout texturedPipeLayout;
-	VK_CHECK(vkCreatePipelineLayout(_device, &textured_pipeline_layout_info, nullptr, &texturedPipeLayout));
+	VkPipelineLayout texturedPipeLayout = texturedEffect->builtLayout;
+	
 
 	//hook the push constants layout
 	pipelineBuilder._pipelineLayout = meshPipLayout;
@@ -744,7 +721,7 @@ void VulkanEngine::init_pipelines()
 	//build the mesh triangle pipeline
 	VkPipeline meshPipeline = pipelineBuilder.build_pipeline(_device, _renderPass);
 
-	create_material(meshPipeline, meshPipLayout, "defaultmesh");
+	create_material(meshPipeline, mainEffect, "defaultmesh");
 
 	pipelineBuilder._shaderStages.clear();
 	pipelineBuilder._shaderStages.push_back(
@@ -755,7 +732,7 @@ void VulkanEngine::init_pipelines()
 
 	pipelineBuilder._pipelineLayout = texturedPipeLayout;
 	VkPipeline texPipeline = pipelineBuilder.build_pipeline(_device, _renderPass);
-	create_material(texPipeline, texturedPipeLayout, "texturedmesh");
+	create_material(texPipeline, texturedEffect, "texturedmesh");
 
 
 	vkDestroyShaderModule(_device, meshVertShader, nullptr);
@@ -941,11 +918,11 @@ void VulkanEngine::upload_mesh(Mesh& mesh)
 }
 
 
-Material* VulkanEngine::create_material(VkPipeline pipeline, VkPipelineLayout layout, const std::string& name)
+Material* VulkanEngine::create_material(VkPipeline pipeline, ShaderEffect* effect, const std::string& name)
 {
 	Material mat;
 	mat.pipeline = pipeline;
-	mat.pipelineLayout = layout;
+	mat.effect = effect;
 	_materials[name] = mat;
 	return &_materials[name];
 }
@@ -977,6 +954,7 @@ Mesh* VulkanEngine::get_mesh(const std::string& name)
 
 void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderObject* first, int count)
 {
+	vkResetDescriptorPool(_device, get_current_frame()._dynamicDescriptorPool, 0);
 	//make a model view matrix for rendering the object
 	//camera view
 	glm::vec3 camPos = _camera.position;
@@ -1035,29 +1013,52 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderObject* first, int co
 
 	Mesh* lastMesh = nullptr;
 	Material* lastMaterial = nullptr;
-
+	DescriptorBuilder binder{};
 	for (int i = 0; i < count; i++)
 	{
 		RenderObject& object = first[i];
+
+		VkDescriptorBufferInfo objectBufferInfo;
+		objectBufferInfo.buffer = get_current_frame().objectBuffer._buffer;
+		objectBufferInfo.offset = 0;
+		objectBufferInfo.range = sizeof(GPUObjectData) * 10000;
+
+		VkDescriptorBufferInfo cameraInfo;
+		cameraInfo.buffer = get_current_frame().cameraBuffer._buffer;
+		cameraInfo.offset = 0;
+		cameraInfo.range = sizeof(GPUCameraData);
+
+		VkDescriptorBufferInfo sceneInfo;
+		sceneInfo.buffer = _sceneParameterBuffer._buffer;
+		sceneInfo.offset = 0;
+		sceneInfo.range = sizeof(GPUSceneData);
+
 
 		//only bind the pipeline if it doesnt match with the already bound one
 		if (object.material != lastMaterial) {
 
 			vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipeline);
 			lastMaterial = object.material;
+			binder.set_shader(object.material->effect);
+			binder.bind_buffer("cameraData", cameraInfo);
+			binder.bind_buffer("objectBuffer", objectBufferInfo);
+		}
 
+			
+
+			
+			
 			uint32_t uniform_offset = pad_uniform_buffer_size(sizeof(GPUSceneData)) * frameIndex;
-			vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipelineLayout, 0, 1, &get_current_frame().globalDescriptor, 1, &uniform_offset);
+			binder.bind_dynamic_buffer("sceneData", uniform_offset, sceneInfo);
 
-			//object data descriptor
-			vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipelineLayout, 1, 1, &get_current_frame().objectDescriptor, 0, nullptr);
-
+			binder.apply_binds(_device, cmd, get_current_frame()._dynamicDescriptorPool);
+			
+			
 			if (object.material->textureSet != VK_NULL_HANDLE) {
 				//texture descriptor
-				vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipelineLayout, 2, 1, &object.material->textureSet, 0, nullptr);
-
+				vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->effect->builtLayout, 2, 1, &object.material->textureSet, 0, nullptr);
 			}
-		}
+		//}
 
 		glm::mat4 model = object.transformMatrix;
 		//final render matrix, that we are calculating on the cpu
@@ -1067,7 +1068,7 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderObject* first, int co
 		constants.render_matrix = mesh_matrix;
 
 		//upload the mesh to the gpu via pushconstants
-		vkCmdPushConstants(cmd, object.material->pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(MeshPushConstants), &constants);
+		vkCmdPushConstants(cmd, object.material->effect->builtLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(MeshPushConstants), &constants);
 
 		//only bind the mesh if its a different one from last bind
 		if (object.mesh != lastMesh) {
@@ -1276,6 +1277,29 @@ void VulkanEngine::init_descriptors()
 
 	for (int i = 0; i < FRAME_OVERLAP; i++)
 	{
+
+		VkDescriptorPool dynamicPool;
+
+		std::vector<VkDescriptorPoolSize> psizes =
+		{
+			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 10 },
+			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 10 },
+			{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 10 },
+			{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 10 }
+		};
+
+		VkDescriptorPoolCreateInfo dpool_info = {};
+		dpool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+		dpool_info.flags = 0;
+		dpool_info.maxSets = 10000;
+		dpool_info.poolSizeCount = (uint32_t)psizes.size();
+		dpool_info.pPoolSizes = psizes.data();
+
+		vkCreateDescriptorPool(_device, &dpool_info, nullptr, &dynamicPool);
+
+		_frames[i]._dynamicDescriptorPool = dynamicPool;
+
+
 		_frames[i].cameraBuffer = create_buffer(sizeof(GPUCameraData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
 
 		const int MAX_OBJECTS = 10000;

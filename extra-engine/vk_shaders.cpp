@@ -2,6 +2,7 @@
 #include <vk_initializers.h>
 #include <fstream>
 #include <vector>
+#include <algorithm>
 
 #include <spirv_reflect.h>
 #include <vk_engine.h>
@@ -106,6 +107,13 @@ void ShaderEffect::reflect_layout(VulkanEngine* engine, ReflectionOverrides* ove
 					layout_binding.descriptorCount *= refl_binding.array.dims[i_dim];
 				}
 				layout_binding.stageFlags = static_cast<VkShaderStageFlagBits>(spvmodule.shader_stage);
+
+				ReflectedBinding reflected;
+				reflected.binding = layout_binding.binding;
+				reflected.set = refl_set.set;
+				reflected.type = layout_binding.descriptorType;
+
+				bindings[refl_binding.name] = reflected;
 			}
 			layout.set_number = refl_set.set;
 			layout.create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
@@ -189,4 +197,158 @@ void ShaderEffect::reflect_layout(VulkanEngine* engine, ReflectionOverrides* ove
 	VkPipelineLayout meshPipLayout;
 	vkCreatePipelineLayout(engine->_device, &mesh_pipeline_layout_info, nullptr, &builtLayout);
 
+}
+
+void DescriptorBuilder::bind_buffer(const char* name, const VkDescriptorBufferInfo& bufferInfo)
+{
+	auto found = shaders->bindings.find(name);
+	if (found != shaders->bindings.end()) {
+	
+		const ShaderEffect::ReflectedBinding& bind = (*found).second;
+
+		for (auto& write : bufferWrites) {
+			if (write.dstBinding == bind.binding
+				&& write.dstSet == bind.set)
+			{
+				if (write.bufferInfo.buffer != bufferInfo.buffer ||
+					write.bufferInfo.range != bufferInfo.range ||
+					write.bufferInfo.offset != bufferInfo.offset 
+					) {
+					write.bufferInfo = bufferInfo;
+
+					cachedDescriptorSets[write.dstSet] = VK_NULL_HANDLE;
+				}
+				
+				return;
+			}
+		}
+
+		BufferWriteDescriptor newWrite;
+		newWrite.dstSet = bind.set;
+		newWrite.dstBinding = bind.binding;
+		newWrite.descriptorType = bind.type;
+		newWrite.bufferInfo = bufferInfo;
+		newWrite.dynamic_offset = 0;
+
+		cachedDescriptorSets[bind.set] = VK_NULL_HANDLE;
+		bufferWrites.push_back(newWrite);
+	}
+}
+
+
+void DescriptorBuilder::bind_dynamic_buffer(const char* name, uint32_t offset, const VkDescriptorBufferInfo& bufferInfo)
+{
+	auto found = shaders->bindings.find(name);
+	if (found != shaders->bindings.end()) {
+
+		const ShaderEffect::ReflectedBinding& bind = (*found).second;
+
+		for (auto& write : bufferWrites) {
+			if (write.dstBinding == bind.binding
+				&& write.dstSet == bind.set)
+			{
+				if (write.bufferInfo.buffer != bufferInfo.buffer ||
+					write.bufferInfo.range != bufferInfo.range ||
+					write.bufferInfo.offset != bufferInfo.offset
+					) {
+					write.bufferInfo = bufferInfo;
+
+					cachedDescriptorSets[write.dstSet] = VK_NULL_HANDLE;
+				}
+
+				return;
+			}
+		}
+
+		BufferWriteDescriptor newWrite;
+		newWrite.dstSet = bind.set;
+		newWrite.dstBinding = bind.binding;
+		newWrite.descriptorType = bind.type;
+		newWrite.bufferInfo = bufferInfo;
+		newWrite.dynamic_offset = offset;
+
+		cachedDescriptorSets[bind.set] = VK_NULL_HANDLE;
+		bufferWrites.push_back(newWrite);
+	}
+}
+
+
+
+void DescriptorBuilder::apply_binds(VkDevice device, VkCommandBuffer cmd, VkDescriptorPool allocator)
+{
+	std::array<std::vector<VkWriteDescriptorSet>, 4> writes{};
+
+	std::sort(bufferWrites.begin(), bufferWrites.end(), [](BufferWriteDescriptor& a, BufferWriteDescriptor&b) {
+		if (b.dstSet == a.dstSet) {
+			return a.dstSet < b.dstSet;
+		}
+		else {
+			return a.dstBinding < b.dstBinding;
+		}
+	});
+
+	struct DynOffsets {
+		std::array<uint32_t, 16> offsets;
+		uint32_t count{0};
+	};
+	std::array<DynOffsets, 4> setOffsets;
+	for ( BufferWriteDescriptor& w : bufferWrites) {
+		uint32_t set = w.dstSet;
+		VkWriteDescriptorSet write = vkinit::write_descriptor_buffer(w.descriptorType, VK_NULL_HANDLE, &w.bufferInfo, w.dstBinding);
+
+		writes[set].push_back(write);
+
+		//dynamic offsets
+		if (w.descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC || w.descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC) {
+			DynOffsets& offsetSet = setOffsets[set];
+			offsetSet.offsets[offsetSet.count] = w.dynamic_offset;
+			offsetSet.count++;
+		}
+	}
+
+	
+
+	for (int i = 0; i < 4; i++) {
+		//there are writes for this set
+		if (writes[i].size() > 0) {
+			
+			if (cachedDescriptorSets[i] == VK_NULL_HANDLE) {
+				//alloc
+				auto layout = shaders->setLayouts[i];
+
+				VkDescriptorSetAllocateInfo allocInfo = {};
+				allocInfo.pNext = nullptr;
+				allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+				allocInfo.descriptorPool = allocator;
+				allocInfo.descriptorSetCount = 1;
+				allocInfo.pSetLayouts = &layout;
+
+				VkDescriptorSet newDescriptor;
+				vkAllocateDescriptorSets(device, &allocInfo, &newDescriptor);
+
+
+				for (auto& w : writes[i]) {
+					w.dstSet = newDescriptor;
+				}
+				vkUpdateDescriptorSets(device, writes[i].size(), writes[i].data(), 0, nullptr);
+
+				cachedDescriptorSets[i] = newDescriptor;
+			}
+
+			vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, shaders->builtLayout, i, 1, &cachedDescriptorSets[i], setOffsets[i].count, setOffsets[i].offsets.data());
+		}
+	}
+}
+
+void DescriptorBuilder::set_shader(ShaderEffect* newShader)
+{
+	//invalidate nonequal layouts
+	if (shaders != newShader) {
+		
+		for (int i = 0; i < 4; i++) {
+			cachedDescriptorSets[i] = VK_NULL_HANDLE;
+		}
+
+		shaders = newShader;
+	}
 }
