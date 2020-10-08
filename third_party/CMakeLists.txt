@@ -7,12 +7,22 @@ add_library(vma INTERFACE)
 add_library(stb_image INTERFACE)
 
 add_library(tinyobjloader STATIC)
+add_library(spirv_reflect STATIC)
+
 
 target_sources(vkbootstrap PRIVATE 
     "${CMAKE_CURRENT_SOURCE_DIR}/vkbootstrap/VkBootstrap.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/vkbootstrap/VkBootstrap.cpp"
 )
 
+
+target_sources(spirv_reflect PRIVATE 
+    "${CMAKE_CURRENT_SOURCE_DIR}/spv_reflect/spirv_reflect.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/spv_reflect/spirv_reflect.c"
+)
+
+target_include_directories(spirv_reflect PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/spv_reflect" )
+target_include_directories(spirv_reflect PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/spv_reflect/include" )
 target_include_directories(vkbootstrap PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/vkbootstrap" )
 target_link_libraries(vkbootstrap PUBLIC Vulkan::Vulkan)
 

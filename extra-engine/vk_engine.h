@@ -252,8 +252,7 @@ private:
 
 	void init_imgui();
 
-	//loads a shader module from a spir-v file. Returns false if it errors
-	bool load_shader_module(const char* filePath, VkShaderModule* outShaderModule);
+	
 
 	void load_meshes();
 

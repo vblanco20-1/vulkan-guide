@@ -13,6 +13,7 @@
 #include <fstream>
 
 #include "vk_textures.h"
+#include "vk_shaders.h"
 
 #define VMA_IMPLEMENTATION
 #include "vk_mem_alloc.h"
@@ -505,8 +506,8 @@ void VulkanEngine::init_default_renderpass()
 	render_pass_info.pAttachments = &attachments[0];
 	render_pass_info.subpassCount = 1;
 	render_pass_info.pSubpasses = &subpass;
-	render_pass_info.dependencyCount = 1;
-	render_pass_info.pDependencies = &dependency;
+	//render_pass_info.dependencyCount = 1;
+	//render_pass_info.pDependencies = &dependency;
 
 	VK_CHECK(vkCreateRenderPass(_device, &render_pass_info, nullptr, &_renderPass));
 
@@ -615,23 +616,39 @@ void VulkanEngine::init_sync_structures()
 void VulkanEngine::init_pipelines()
 {
 	VkShaderModule colorMeshShader;
-	if (!load_shader_module("../../shaders/default_lit.frag.spv", &colorMeshShader))
+
+	ShaderModule colorModule;
+
+	if (!vkutil::load_shader_module(_device,"../../shaders/default_lit.frag.spv", &colorModule))
 	{
 		std::cout << "Error when building the colored mesh shader" << std::endl;
 	}
+	colorMeshShader = colorModule.module;
+
+
 
 	VkShaderModule texturedMeshShader;
-	if (!load_shader_module("../../shaders/textured_lit.frag.spv", &texturedMeshShader))
+	ShaderModule textureModule;
+	if (!vkutil::load_shader_module(_device ,"../../shaders/textured_lit.frag.spv", &textureModule))
 	{
 		std::cout << "Error when building the colored mesh shader" << std::endl;
 	}
-
+	texturedMeshShader = textureModule.module;
 	VkShaderModule meshVertShader;
-	if (!load_shader_module("../../shaders/tri_mesh_ssbo.vert.spv", &meshVertShader))
+	ShaderModule meshModule;
+	if (!vkutil::load_shader_module(_device,"../../shaders/tri_mesh_ssbo.vert.spv", &meshModule))
 	{
 		std::cout << "Error when building the mesh vertex shader module" << std::endl;
 	}
+	meshVertShader = meshModule.module;
 
+	ShaderEffect mainEffect;
+	mainEffect.add_stage(&meshModule, VK_SHADER_STAGE_VERTEX_BIT);
+	mainEffect.add_stage(&colorModule, VK_SHADER_STAGE_FRAGMENT_BIT);
+
+
+	ShaderEffect::ReflectionOverrides overrides[] = { {"sceneData", VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC} };
+	mainEffect.reflect_layout(this, overrides, 1);
 
 	//build the stage-create-info for both vertex and fragment stages. This lets the pipeline know the shader modules per stage
 	PipelineBuilder pipelineBuilder;
@@ -663,8 +680,8 @@ void VulkanEngine::init_pipelines()
 	mesh_pipeline_layout_info.setLayoutCount = 2;
 	mesh_pipeline_layout_info.pSetLayouts = setLayouts;
 
-	VkPipelineLayout meshPipLayout;
-	VK_CHECK(vkCreatePipelineLayout(_device, &mesh_pipeline_layout_info, nullptr, &meshPipLayout));
+	VkPipelineLayout meshPipLayout = mainEffect.builtLayout;
+	//VK_CHECK(vkCreatePipelineLayout(_device, &mesh_pipeline_layout_info, nullptr, &meshPipLayout));
 
 
 	//we start from  the normal mesh layout
@@ -751,48 +768,6 @@ void VulkanEngine::init_pipelines()
 		});
 }
 
-bool VulkanEngine::load_shader_module(const char* filePath, VkShaderModule* outShaderModule)
-{
-	//open the file. With cursor at the end
-	std::ifstream file(filePath, std::ios::ate | std::ios::binary);
-
-	if (!file.is_open()) {
-		return false;
-	}
-
-	//find what the size of the file is by looking up the location of the cursor
-	//because the cursor is at the end, it gives the size directly in bytes
-	size_t fileSize = (size_t)file.tellg();
-
-	//spirv expects the buffer to be on uint32, so make sure to reserve a int vector big enough for the entire file
-	std::vector<uint32_t> buffer(fileSize / sizeof(uint32_t));
-
-	//put file cursor at beggining
-	file.seekg(0);
-
-	//load the entire file into the buffer
-	file.read((char*)buffer.data(), fileSize);
-
-	//now that the file is loaded into the buffer, we can close it
-	file.close();
-
-	//create a new shader module, using the buffer we loaded
-	VkShaderModuleCreateInfo createInfo = {};
-	createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-	createInfo.pNext = nullptr;
-
-	//codeSize has to be in bytes, so multply the ints in the buffer by size of int to know the real size of the buffer
-	createInfo.codeSize = buffer.size() * sizeof(uint32_t);
-	createInfo.pCode = buffer.data();
-
-	//check that the creation goes well.
-	VkShaderModule shaderModule;
-	if (vkCreateShaderModule(_device, &createInfo, nullptr, &shaderModule) != VK_SUCCESS) {
-		return false;
-	}
-	*outShaderModule = shaderModule;
-	return true;
-}
 
 VkPipeline PipelineBuilder::build_pipeline(VkDevice device, VkRenderPass pass)
 {
@@ -1258,7 +1233,7 @@ void VulkanEngine::init_descriptors()
 	vkCreateDescriptorPool(_device, &pool_info, nullptr, &_descriptorPool);
 
 	VkDescriptorSetLayoutBinding cameraBind = vkinit::descriptorset_layout_binding(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT, 0);
-	VkDescriptorSetLayoutBinding sceneBind = vkinit::descriptorset_layout_binding(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 1);
+	VkDescriptorSetLayoutBinding sceneBind = vkinit::descriptorset_layout_binding(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_FRAGMENT_BIT, 1);
 
 	VkDescriptorSetLayoutBinding bindings[] = { cameraBind,sceneBind };
 
