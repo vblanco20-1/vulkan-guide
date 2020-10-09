@@ -16,6 +16,8 @@ namespace vkutil {
 
 	//loads a shader module from a spir-v file. Returns false if it errors	
 	bool load_shader_module(VkDevice device, const char* filePath, ShaderModule* outShaderModule);
+
+	uint32_t hash_descriptor_layout_info(VkDescriptorSetLayoutCreateInfo* info);
 }
 
 
@@ -42,6 +44,7 @@ struct ShaderEffect {
 	};
 	std::unordered_map<std::string, ReflectedBinding> bindings;
 	std::array<VkDescriptorSetLayout, 4> setLayouts;
+	std::array<uint32_t, 4> setHashes;
 private:
 	struct ShaderStage {
 		ShaderModule* shaderModule;
@@ -66,12 +69,20 @@ struct DescriptorBuilder {
 
 	void bind_dynamic_buffer(const char* name, uint32_t offset,const VkDescriptorBufferInfo& bufferInfo);
 
-	void apply_binds(VkDevice device, VkCommandBuffer cmd, VkDescriptorPool allocator);
+	void apply_binds( VkCommandBuffer cmd);
+
+	void build_sets(VkDevice device, VkDescriptorPool allocator);
 
 	void set_shader(ShaderEffect* newShader);
 
 	std::array<VkDescriptorSet, 4> cachedDescriptorSets;
 private:
+	struct DynOffsets {
+		std::array<uint32_t, 16> offsets;
+		uint32_t count{ 0 };
+	};
+	std::array<DynOffsets, 4> setOffsets;
+
 	ShaderEffect* shaders{ nullptr };
 	std::vector<BufferWriteDescriptor> bufferWrites;
 };

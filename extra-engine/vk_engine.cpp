@@ -1044,8 +1044,9 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderObject* first, int co
 		}
 
 		binder.bind_dynamic_buffer("sceneData", scene_data_offset, dynamicInfo);
-		binder.apply_binds(_device, cmd, get_current_frame()._dynamicDescriptorPool);
-			
+		binder.build_sets(_device, get_current_frame()._dynamicDescriptorPool);
+
+		binder.apply_binds(cmd);
 			
 		if (object.material->textureSet != VK_NULL_HANDLE) {
 			//texture descriptor
