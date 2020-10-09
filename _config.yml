@@ -25,7 +25,8 @@ aux_links:
     - "https://www.khronos.org/registry/vulkan/specs/1.2-extensions/html/chap2.html#introduction"
   "Github Repo":
     - "https://github.com/vblanco20-1/vulkan-guide"
-
+  "Tutorial code 📖":
+    - "https://github.com/vblanco20-1/vulkan-guide/tree/all-chapters"
 # Footer content appears at the bottom of every page's main content
 footer_content: "Copyright &copy; 2020 Victor Blanco. Distributed by a <a href=\"https://github.com/pmarsceill/just-the-docs/tree/master/LICENSE.txt\">MIT license.</a>"
 
