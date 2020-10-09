@@ -651,7 +651,7 @@ void VulkanEngine::init_pipelines()
 		{"sceneData", VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC},
 		{"cameraData", VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC}	
 	};
-	mainEffect->reflect_layout(this, overrides, 1);
+	mainEffect->reflect_layout(this, overrides, 2);
 
 	//build the stage-create-info for both vertex and fragment stages. This lets the pipeline know the shader modules per stage
 	PipelineBuilder pipelineBuilder;
@@ -670,7 +670,7 @@ void VulkanEngine::init_pipelines()
 	texturedEffect->add_stage(&meshModule, VK_SHADER_STAGE_VERTEX_BIT);
 	texturedEffect->add_stage(&textureModule, VK_SHADER_STAGE_FRAGMENT_BIT);
 
-	texturedEffect->reflect_layout(this, overrides, 1);
+	texturedEffect->reflect_layout(this, overrides, 2);
 
 	VkPipelineLayout texturedPipeLayout = texturedEffect->builtLayout;
 	
@@ -995,7 +995,7 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderObject* first, int co
 	vmaUnmapMemory(_allocator, get_current_frame().objectBuffer._allocation);
 
 	//push data to dynmem
-	uint32_t camera_data_offset;
+	uint32_t camera_data_offsets[3];
 	uint32_t scene_data_offset;
 
 	uint32_t dyn_offset = 0;
@@ -1003,12 +1003,15 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderObject* first, int co
 	char* dynData;
 	vmaMapMemory(_allocator, get_current_frame().dynamicDataBuffer._allocation, (void**)&dynData);
 
-	camera_data_offset = 0;
-	memcpy(dynData, &camData, sizeof(GPUCameraData));
-	dyn_offset += sizeof(GPUCameraData);
-	dyn_offset = pad_uniform_buffer_size(dyn_offset);
+	for (int i = 0; i < 3; i++) {
+		camera_data_offsets[i] = dyn_offset;
+		memcpy(dynData, &camData, sizeof(GPUCameraData));
+		dyn_offset += sizeof(GPUCameraData);
+		dyn_offset = pad_uniform_buffer_size(dyn_offset);
 
-	dynData += dyn_offset;
+		dynData += dyn_offset;
+	}
+	
 
 	scene_data_offset = dyn_offset;
 	memcpy(dynData, &_sceneParameters, sizeof(GPUSceneData));
@@ -1039,10 +1042,10 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderObject* first, int co
 			lastMaterial = object.material;
 			binder.set_shader(object.material->effect);
 
-			binder.bind_dynamic_buffer("cameraData", camera_data_offset, dynamicInfo);
+			
 			binder.bind_buffer("objectBuffer", objectBufferInfo);
 		}
-
+		binder.bind_dynamic_buffer("cameraData", camera_data_offsets[i % 3], dynamicInfo);
 		binder.bind_dynamic_buffer("sceneData", scene_data_offset, dynamicInfo);
 		binder.build_sets(_device, get_current_frame()._dynamicDescriptorPool);
 
@@ -1075,8 +1078,6 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderObject* first, int co
 	}
 }
 
-
-
 void VulkanEngine::init_scene()
 {
 	RenderObject monkey;
@@ -1091,7 +1092,7 @@ void VulkanEngine::init_scene()
 	map.material = get_material("texturedmesh");
 	map.transformMatrix = glm::translate(glm::vec3{ 5,-10,0 }); //glm::mat4{ 1.0f };
 
-	//_renderables.push_back(map);
+	_renderables.push_back(map);
 
 	for (int x = -20; x <= 20; x++) {
 		for (int y = -20; y <= 20; y++) {

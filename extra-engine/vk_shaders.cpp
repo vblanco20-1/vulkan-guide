@@ -229,8 +229,17 @@ void ShaderEffect::reflect_layout(VulkanEngine* engine, ReflectionOverrides* ove
 	mesh_pipeline_layout_info.pPushConstantRanges = constant_ranges.data();
 	mesh_pipeline_layout_info.pushConstantRangeCount = constant_ranges.size();
 
-	mesh_pipeline_layout_info.setLayoutCount = 2;
-	mesh_pipeline_layout_info.pSetLayouts = setLayouts.data();
+	std::array<VkDescriptorSetLayout,4> compactedLayouts;
+	int s = 0;
+	for (int i = 0; i < 4; i++) {
+		if (setLayouts[i] != VK_NULL_HANDLE) {
+			compactedLayouts[s] = setLayouts[i];
+			s++;
+		}
+	}
+
+	mesh_pipeline_layout_info.setLayoutCount = s;
+	mesh_pipeline_layout_info.pSetLayouts = compactedLayouts.data();
 
 	VkPipelineLayout meshPipLayout;
 	vkCreatePipelineLayout(engine->_device, &mesh_pipeline_layout_info, nullptr, &builtLayout);
@@ -288,7 +297,7 @@ void DescriptorBuilder::bind_dynamic_buffer(const char* name, uint32_t offset, c
 
 void DescriptorBuilder::apply_binds(VkCommandBuffer cmd)
 {
-	for (int i = 0; i < 4; i++) {
+	for (int i = 0; i < 2; i++) {
 		//there are writes for this set
 		if (cachedDescriptorSets[i] != VK_NULL_HANDLE) {
 
@@ -368,6 +377,10 @@ void DescriptorBuilder::set_shader(ShaderEffect* newShader)
 		for (int i = 0; i < 4; i++) {
 			
 			if (newShader->setHashes[i] != shaders->setHashes[i])
+			{
+				cachedDescriptorSets[i] = VK_NULL_HANDLE;
+			}
+			else if (newShader->setHashes[i] == 0)
 			{
 				cachedDescriptorSets[i] = VK_NULL_HANDLE;
 			}
