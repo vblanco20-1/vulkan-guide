@@ -647,7 +647,10 @@ void VulkanEngine::init_pipelines()
 	mainEffect->add_stage(&colorModule, VK_SHADER_STAGE_FRAGMENT_BIT);
 
 
-	ShaderEffect::ReflectionOverrides overrides[] = { {"sceneData", VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC} };
+	ShaderEffect::ReflectionOverrides overrides[] = { 
+		{"sceneData", VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC},
+		{"cameraData", VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC}	
+	};
 	mainEffect->reflect_layout(this, overrides, 1);
 
 	//build the stage-create-info for both vertex and fragment stages. This lets the pipeline know the shader modules per stage
@@ -975,28 +978,8 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderObject* first, int co
 	camData.view = view;
 	camData.viewproj = projection * view;
 
-	void* data;
-	vmaMapMemory(_allocator, get_current_frame().cameraBuffer._allocation, &data);
-
-	memcpy(data, &camData, sizeof(GPUCameraData));
-
-	vmaUnmapMemory(_allocator, get_current_frame().cameraBuffer._allocation);
-
 	float framed = (_frameNumber / 120.f);
-
 	_sceneParameters.ambientColor = { sin(framed),0,cos(framed),1 };
-
-	char* sceneData;
-	vmaMapMemory(_allocator, _sceneParameterBuffer._allocation, &(void*)sceneData);
-
-	int frameIndex = _frameNumber % FRAME_OVERLAP;
-
-	sceneData += pad_uniform_buffer_size(sizeof(GPUSceneData)) * frameIndex;
-
-	memcpy(sceneData, &_sceneParameters, sizeof(GPUSceneData));
-
-	vmaUnmapMemory(_allocator, _sceneParameterBuffer._allocation);
-
 
 	void* objectData;
 	vmaMapMemory(_allocator, get_current_frame().objectBuffer._allocation, &objectData);
@@ -1011,6 +994,27 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderObject* first, int co
 
 	vmaUnmapMemory(_allocator, get_current_frame().objectBuffer._allocation);
 
+	//push data to dynmem
+	uint32_t camera_data_offset;
+	uint32_t scene_data_offset;
+
+	uint32_t dyn_offset = 0;
+
+	char* dynData;
+	vmaMapMemory(_allocator, get_current_frame().dynamicDataBuffer._allocation, (void**)&dynData);
+
+	camera_data_offset = 0;
+	memcpy(dynData, &camData, sizeof(GPUCameraData));
+	dyn_offset += sizeof(GPUCameraData);
+	dyn_offset = pad_uniform_buffer_size(dyn_offset);
+
+	dynData += dyn_offset;
+
+	scene_data_offset = dyn_offset;
+	memcpy(dynData, &_sceneParameters, sizeof(GPUSceneData));
+
+	vmaUnmapMemory(_allocator, get_current_frame().dynamicDataBuffer._allocation);
+
 	Mesh* lastMesh = nullptr;
 	Material* lastMaterial = nullptr;
 	DescriptorBuilder binder{};
@@ -1023,16 +1027,10 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderObject* first, int co
 		objectBufferInfo.offset = 0;
 		objectBufferInfo.range = sizeof(GPUObjectData) * 10000;
 
-		VkDescriptorBufferInfo cameraInfo;
-		cameraInfo.buffer = get_current_frame().cameraBuffer._buffer;
-		cameraInfo.offset = 0;
-		cameraInfo.range = sizeof(GPUCameraData);
-
-		VkDescriptorBufferInfo sceneInfo;
-		sceneInfo.buffer = _sceneParameterBuffer._buffer;
-		sceneInfo.offset = 0;
-		sceneInfo.range = sizeof(GPUSceneData);
-
+		VkDescriptorBufferInfo dynamicInfo;
+		dynamicInfo.buffer = get_current_frame().dynamicDataBuffer._buffer;;
+		dynamicInfo.offset = 0;
+		dynamicInfo.range = 100;
 
 		//only bind the pipeline if it doesnt match with the already bound one
 		if (object.material != lastMaterial) {
@@ -1040,13 +1038,12 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderObject* first, int co
 			vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipeline);
 			lastMaterial = object.material;
 			binder.set_shader(object.material->effect);
-			binder.bind_buffer("cameraData", cameraInfo);
+
+			binder.bind_dynamic_buffer("cameraData", camera_data_offset, dynamicInfo);
 			binder.bind_buffer("objectBuffer", objectBufferInfo);
 		}
 
-		uint32_t uniform_offset = pad_uniform_buffer_size(sizeof(GPUSceneData)) * frameIndex;
-		binder.bind_dynamic_buffer("sceneData", uniform_offset, sceneInfo);
-
+		binder.bind_dynamic_buffer("sceneData", scene_data_offset, dynamicInfo);
 		binder.apply_binds(_device, cmd, get_current_frame()._dynamicDescriptorPool);
 			
 			
@@ -1241,7 +1238,7 @@ void VulkanEngine::init_descriptors()
 	
 	const size_t sceneParamBufferSize = FRAME_OVERLAP * pad_uniform_buffer_size(sizeof(GPUSceneData));
 
-	_sceneParameterBuffer = create_buffer(sceneParamBufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+	//_sceneParameterBuffer = create_buffer(sceneParamBufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
 	
 	for (int i = 0; i < FRAME_OVERLAP; i++)
 	{
@@ -1266,10 +1263,13 @@ void VulkanEngine::init_descriptors()
 		vkCreateDescriptorPool(_device, &dpool_info, nullptr, &dynamicPool);
 
 		_frames[i]._dynamicDescriptorPool = dynamicPool;
-		_frames[i].cameraBuffer = create_buffer(sizeof(GPUCameraData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+		//_frames[i].cameraBuffer = create_buffer(sizeof(GPUCameraData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
 
 		const int MAX_OBJECTS = 10000;
 		_frames[i].objectBuffer = create_buffer(sizeof(GPUObjectData) * MAX_OBJECTS, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+
+		//1 megabyte of dynamic data buffer
+		_frames[i].dynamicDataBuffer = create_buffer( 10000000 , VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
 	}
 }
 
