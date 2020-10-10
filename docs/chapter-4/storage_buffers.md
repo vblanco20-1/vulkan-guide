@@ -129,7 +129,7 @@ for (int i = 0; i < FRAME_OVERLAP; i++)
 		
 		VkWriteDescriptorSet sceneWrite = vkinit::write_descriptor_buffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, _frames[i].globalDescriptor, &sceneInfo, 1);
 
-		VkWriteDescriptorSet objectWrite = vkinit::write_descriptor_buffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, _frames[i].objectDescriptor, &objectBufferInfo, 0);
+		VkWriteDescriptorSet objectWrite = vkinit::write_descriptor_buffer(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, _frames[i].objectDescriptor, &objectBufferInfo, 0);
 
 		VkWriteDescriptorSet setWrites[] = { cameraWrite,sceneWrite,objectWrite };
 
