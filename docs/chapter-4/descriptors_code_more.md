@@ -15,7 +15,7 @@ Allocating multiple things into the same buffer is generally a good idea in Vulk
 The main complication that comes from sub allocating data on a buffer, is that you need to be very mindful of alignment. The GPUs often cant read from an arbitrary address, and your buffer offsets have to be aligned into a certain minimum size.
 
 ## Looking up GPU stats
-To know what is the minimum alignment size for buffers, we need to query it from the GPU.  The limit we are looking for is called `minUniformBufferOffsetAlignment`. You can look at said limit in the vulkaninfo page https://vulkan.gpuinfo.org/displaydevicelimit.php?name=minUniformBufferOffsetAlignment&platform=windows
+To know what is the minimum alignment size for buffers, we need to query it from the GPU.  The limit we are looking for is called `minUniformBufferOffsetAlignment`. You can look at said limit in the vulkaninfo page [Link](https://vulkan.gpuinfo.org/displaydevicelimit.php?name=minUniformBufferOffsetAlignment&platform=windows)  
 
 We can see that all GPUs at least support an alignment of 256 bytes, but we are going to check it at runtime anyway.
 To do that, we are going to add some code to `init_vulkan()` where we are going to request GPU information and store the minimum alignment that we need.
