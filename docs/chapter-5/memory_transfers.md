@@ -94,7 +94,7 @@ void VulkanEngine::immediate_submit(std::function<void(VkCommandBuffer cmd)>&& f
 
 
 	//submit command buffer to the queue and execute it.
-	// _renderFence will now block until the graphic commands finish execution
+	// _uploadFence will now block until the graphic commands finish execution
 	VK_CHECK(vkQueueSubmit(_graphicsQueue, 1, &submit, _uploadContext._uploadFence));
 
 	vkWaitForFences(_device, 1, &_uploadContext._uploadFence, true, 9999999999);

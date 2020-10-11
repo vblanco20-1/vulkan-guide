@@ -9,6 +9,9 @@ nav_order: 2
 
 Start by syncing git project at <https://github.com/vblanco20-1/vulkan-guide/>.
 The all-chapters branch contains the example code for the entire project, and the starting-point branch contains the initial empty project setup. I recommend you sync both branches to different folders, and if at one point you get stuck, check how the code works in the all-chapters code.
+If you want a direct download to the code without using GIT just download from these direct links. 
+[All Chapters](https://github.com/vblanco20-1/vulkan-guide/archive/all-chapters.zip)
+[Starting Point](https://github.com/vblanco20-1/vulkan-guide/archive/starting-point.zip)
 
 You will need Visual Studio to build the project. The code in the project should work cross-platform, but this guide is windows-centric.
 
