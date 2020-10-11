@@ -34,7 +34,7 @@ When using images in the vulkan API, almost always you will use them through a V
 
 ## VkSampler
 Samplers hold how exactly is the texture accessed in the shader. They control fixed pipeline state such as mipmap blending or nearest filtering. They can control anisotropic filtering, or control what happens when you get out of bounds of the texture as you sample it. 
-Creating a `VkSampler` is a completely separate path from creating images and imageviews. You dont create samplers connected to a texture, as they are standalone. In engines, its quite common to cache the sampler objects in a hashmap, and allocating them as needed. You will generally only end up with a few different samplers for an entire engine.
+Creating a `VkSampler` is a completely separate path from creating `VkImage` objects and `VkImageView` objects. You don't create samplers connected to a texture, as they are standalone. In engines, its quite common to cache the sampler objects in a hashmap, and allocating them as needed. You will generally only end up with a few different samplers for an entire engine.
 
 When you bind textures to a shader, there are different ways, but we will be using `VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER` for the descriptors. This will expose image + sampler pairs to the shader, instead of sampler and image being a separated thing in the shaders. When creating those descriptors, you will need an imageView for the image you want, alongside a sampler for how to access it.
 

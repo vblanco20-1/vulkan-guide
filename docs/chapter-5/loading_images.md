@@ -170,7 +170,7 @@ With the image ready to receive pixel data, we can now transfer with a command. 
 Like when we copied the buffers, we need to fill a struct containing the information of what to copy. We have the buffer just at offset 0, and then what exact layer and mipmap we want to copy into, which is just level 0 and 1 layer. 
 We also need to send imageExtent for the image size.
 
-We now execute the `VkCmdCopyBufferToImage()` command, where we also need to specify whats the layout of the image, which is TRANSFER_DST_OPTIMAL
+We now execute the `VkCmdCopyBufferToImage()` command, where we also need to specify whats the layout of the image, which is `TRANSFER_DST_OPTIMAL`
 
 The image now has the correct pixel data, so we can change its layout one more time to make it into a shader readable layout.
 
