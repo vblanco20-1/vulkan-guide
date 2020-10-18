@@ -93,6 +93,7 @@ Now that our main image target is defined, we need to add a subpass that will re
 
 ```cpp
 	VkAttachmentReference color_attachment_ref = {};
+	//attachment number will index into the pAttachments array in the parent renderpass itself
 	color_attachment_ref.attachment = 0;
 	color_attachment_ref.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
@@ -103,7 +104,7 @@ Now that our main image target is defined, we need to add a subpass that will re
 	subpass.pColorAttachments = &color_attachment_ref;
 ```
 
-We are going to describe 1 subpass, which will use the color attachment above. The color attachment above will also be used on the layout `VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL` during this subpass.
+We are going to describe 1 subpass, which will use the color attachment above. The color attachment above will also be used on the layout `VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL` during this subpass. Subpass `vkAttachmentReference` will point into the attachment array when creating the renderpass.
 
 The image life will go something like this:
 
@@ -128,6 +129,7 @@ Now that the main attachment and the subpass is done, we can create the renderpa
 	
 	VK_CHECK(vkCreateRenderPass(_device, &render_pass_info, nullptr, &_renderPass));
 ```
+We will have only 1 attachment, which will be the color_attachment defined above, for our main color target. Then we also connect the subpass into it.
 
 Thats it, we have now created our very basic renderpass. We will go back to this code later when we add depth testing, which needs more attachments defined.
 
