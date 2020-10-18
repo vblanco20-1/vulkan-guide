@@ -60,6 +60,7 @@ public:
     VkInstance _instance; // Vulkan library handle
 	VkPhysicalDevice _chosenGPU; // gpu chosen as the default device
 	VkDevice _device; // Vulkan device for commands
+	VkSurfaceKHR _surface; // Vulkan window surface
 private:
 		
 	void init_vulkan();
@@ -182,8 +183,8 @@ public:
 	VkSwapchainKHR _swapchain; // from other articles
 
 	// image format expected by the windowing system
-	VkFormat _swachainImageFormat; 
-
+	VkFormat _swachainImageFormat; 	
+	
 	//array of images from the swapchain
 	std::vector<VkImage> _swapchainImages;
 
@@ -274,7 +275,7 @@ void VulkanEngine::cleanup()
 		vkDestroySwapchainKHR(_device, _swapchain, nullptr);
 
 		//destroy swapchain resources
-		for (int i = 0; i < _framebuffers.size(); i++) {
+		for (int i = 0; i < _swapchainImageViews.size(); i++) {
 
 			vkDestroyImageView(_device, _swapchainImageViews[i], nullptr);
 		}
@@ -311,7 +312,7 @@ void VulkanEngine::cleanup()
 		vkDestroySwapchainKHR(_device, _swapchain, nullptr);
 
 		//destroy swapchain resources
-		for (int i = 0; i < _framebuffers.size(); i++) {
+		for (int i = 0; i < _swapchainImageViews.size(); i++) {
 
 			vkDestroyImageView(_device, _swapchainImageViews[i], nullptr);
 		}

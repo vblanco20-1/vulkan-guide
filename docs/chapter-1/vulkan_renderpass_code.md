@@ -170,11 +170,13 @@ With the render pass setup, we can go forward to the render loop itself.
 
 ## Cleanup
 
-As usual, we add the newly created objects to the `cleanup()` function. Because the framebuffers are created from images, they need to be deleted alongside them.
+As usual, we add the newly created objects to the `cleanup()` function. Because the framebuffers are created from images, they need to be deleted alongside them. We also need to delete the render pass.
 
 in `VulkanEngine::Cleanup()`
 ```cpp
 		vkDestroySwapchainKHR(_device, _swapchain, nullptr);
+
+		//destroy the main renderpass
 		vkDestroyRenderPass(_device, _renderPass, nullptr);
 
 		//destroy swapchain resources

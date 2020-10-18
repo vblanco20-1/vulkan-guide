@@ -75,7 +75,7 @@ This code will do the 3 DoSomethings in strict order in the GPU. The execution o
 If you dont use semaphores in this case, the commands of the 3 operations might execute in parallel, interleaved with each other.
 
 # Render Loop
-In the render loop, we are going to use a single fence to wait until the GPU has finished executing the render work. Because this project is a simple tutorial, we arent going to do anything advanced, and just wait until the work we sent to the GPU is executed to start preparing the next frame.
+In the render loop, we are going to use a single fence to wait until the GPU has finished executing the render work. For now we arent going to do anything advanced, and we will just wait until the work we sent to the GPU is executed to start preparing the next frame. Later in the chapter 4 of the tutorial we will change this to allow the CPU to continue preparing the next frame while the GPU is busy with the submit.
 
 When doing the render loop, we need to request an image from the swapchain. Requesting an image from the swapchain will block the CPU thread until the image is available. Using vsync-d modes will fully block the CPU, while other modes (like Mailbox) will return almost immediately.
 

@@ -110,11 +110,11 @@ Once the command buffer is reset, we can begin it.
 
 	//begin the command buffer recording. We will use this command buffer exactly once, so we want to let Vulkan know that
 	VkCommandBufferBeginInfo cmdBeginInfo= {};
-	info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-	info.pNext = nullptr;
+	cmdBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+	cmdBeginInfo.pNext = nullptr;
 
-	info.pInheritanceInfo = nullptr;
-	info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+	cmdBeginInfo.pInheritanceInfo = nullptr;
+	cmdBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
 	VK_CHECK(vkBeginCommandBuffer(cmd, &cmdBeginInfo));
 ```
@@ -127,6 +127,11 @@ As we are going to be recording the command buffer every frame, its best if Vulk
 With the command buffer recording started, lets add commands to it. We are going to launch the render pass, with a clear color that flashes over time.
 
 ```cpp
+	//make a clear-color from frame number. This will flash with a 120 frame period.
+	VkClearValue clearValue;
+	float flash = abs(sin(_frameNumber / 120.f));
+	clearValue.color = { { 0.0f, 0.0f, flash, 1.0f } };
+
 	//start the main renderpass. 
 	//We will use the clear color from above, and the framebuffer of the index the swapchain gave us
 	VkRenderPassBeginInfo rpInfo = {};
@@ -137,29 +142,23 @@ With the command buffer recording started, lets add commands to it. We are going
 	rpInfo.renderArea.offset.x = 0;
 	rpInfo.renderArea.offset.y = 0;
 	rpInfo.renderArea.extent = _windowExtent;
-	rpInfo.framebuffer = _framebuffers[swapchainImageIndex];
-
-	//make a clear-color from frame number. This will flash with a 120 frame period.
-	VkClearValue clearValue;
-	float flash = abs(sin(_frameNumber / 120.f));
-	clearValue.color = { { 0.0f, 0.0f, flash, 1.0f } };
+	rpInfo.framebuffer = _framebuffers[swapchainImageIndex];	
 
 	//connect clear values
 	rpInfo.clearValueCount = 1;
 	rpInfo.pClearValues = &clearValue;
 
 	vkCmdBeginRenderPass(cmd, &rpInfo, VK_SUBPASS_CONTENTS_INLINE);
-
 ```
 
-Beggining a render pass needs us to start writing another info structure, as beggining a renderpass needs a lot of parameters.
+Beginning a render pass needs us to start writing another info structure, as beginning a renderpass needs a lot of parameters.
 Set sType and pNext as usual
 `.renderPass` is whatever render pass we want to begin
 `.renderArea.offset` and `.renderArea.extent` is what area will be rendered, in case we want to render a small renderpass into a bigger image. We will just set the offset to 0 (no offset) and the extent to our main window size.
 
 `.framebuffer` is what image will we render into for this renderpass, so we are going to index into the cached _framebuffers with the image index we got from the swapchain.
 
-Lastly, we are going to create a VkClearValue of a flashing blue color, and connect it to the info.
+Lastly, we are going to create a VkClearValue of a flashing blue color, and connect it to the info. We are using the `_frameNumber` variable to get the numbers of frames rendered and use it for the flashing. This variable was in the engine from the starting-point code.
 
 The `vkCmdBeginRenderPass()` function will bind the framebuffers, clear the image, and put the images in the layout we specified when creating the renderpass. We can now start rendering commands... but we dont have anything to render yet. That will be on next chapter.
 
@@ -196,7 +195,7 @@ With the buffer finished, we can execute it by submitting it into the GPU
 	submit.pSignalSemaphores = &_renderSemaphore;
 
 	submit.commandBufferCount = 1;
-	submit.pCommandBuffers = cmd;
+	submit.pCommandBuffers = &cmd;
 
 	//submit command buffer to the queue and execute it.
 	// _renderFence will now block until the graphic commands finish execution
@@ -229,10 +228,12 @@ After the commands are submitted, we now display the image to the screen
 
 	VK_CHECK(vkQueuePresentKHR(_graphicsQueue, &presentInfo));
 
+	//increase the number of frames drawn
+	_frameNumber++;
 ```
 
 The `vkQueuePresentKHR` function displays an image to the screen. We have to tell it what swapchain we are using for the call, and what is the image index.
-We also need to set the WaitSemaphore correctly with the `_renderSemaphore` we signal from the VkQueueSubmit of the main rendering. This will tell the GPU to only display the image to the screen once the main render work has finished execution.
+We also need to set the WaitSemaphore correctly with the `_renderSemaphore` we signal from the VkQueueSubmit of the main rendering. This will tell the GPU to only display the image to the screen once the main render work has finished execution. As our rendering frame is done now, we can increment the `_frameNumber` variable to increase engine time.
 
 We finally have something rendering! You should be seeing a flashing blue screen.
 
