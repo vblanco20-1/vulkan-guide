@@ -23,7 +23,7 @@ Writing a Vulkan engine is an order of magnitude harder than using OpenGl, and t
 The big things Vulkan improves is CPU overhead, multithreading, and control over GPU hitches.
 When Vulkan is used right, it is possible to almost completely eliminate hitches, achieving a very smooth framerate, with a very low CPU overhead.
 
-If your application is GPU bound, where the performance is limited to fast your GPU runs, Vulkan's extra complexity is unlikely to improve performance enough to be worth it.
+If your application is GPU bound, where the performance is limited to how fast your GPU runs, Vulkan's extra complexity is unlikely to improve performance enough to be worth it.
 
 If you want to make big maps and dynamic worlds, or CAD type scenes with a lot of objects, the multithreaded capabilities of Vulkan will likely be very useful.
 
