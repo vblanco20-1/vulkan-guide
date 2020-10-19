@@ -9,11 +9,10 @@ parent: introduction
 
 ## What is Vulkan?
 
-Vulkan is a multiplatform API (Application Program Interface) created as a successor to OpenGl by the same authors at the Khronos Group.
-Vulkan is developed by a committee of GPU vendors and other partners, and the API is a standard that anyone can implement.
+Vulkan is a crossplatform API (Application Program Interface), developed by the Khronos Group.
+The Vulkan API is a standard for developers to implement in their preferred environment.
 
-Vulkan is a fresh start that breaks away from the design decisions of OpenGL. It is designed for multithreaded high performance applications, and the much more explicit API helps drivers have much less guesswork to do. If used right, Vulkan can provide a really high level of performance, low latency, and more consistent frametimes.
-
+Vulkan is designed for high performance multithreaded applications, and the API helps by allowing the developer to be more explicit which reduce the guesswork performed by the graphics driver. Using Vulkan correctly yields high level performance, low latency, and consistent frame times.
 
 ## When to use Vulkan
 
