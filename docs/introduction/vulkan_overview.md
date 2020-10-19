@@ -14,6 +14,13 @@ The Vulkan API is a standard for developers to implement in their preferred envi
 
 Vulkan is designed for high performance multithreaded applications, and the API helps by allowing the developer to be more explicit which reduce the guesswork performed by the graphics driver. Using Vulkan correctly yields high level performance, low latency, and consistent frame times.
 
+## Overview of Vulkan API
+
+The Vulkan API provides a list of functions, what arguments to pass in, and the return type.
+The API is based on the C Syntax, and should be compatible with a vast majority of languages.
+
+Although this tutorial is written in C++, porting it to other low level languages such as Rust or even plain C should be straight forward.
+
 ## When to use Vulkan
 
 Vulkan is a newer API, and is significantly harder to use compared to OpenGL, and does not gaurantee 
@@ -26,20 +33,17 @@ If your application consists of big maps, dynamic worlds, or CAD type scenes wit
 
 The mobile market has a problem with fragmentation. Not every phone implements Vulkan (especially older phones) and of those that do, you may have problems with driver quality. The phones with good drivers for Vulkan especially benefit from the lower CPU overhead and often sees extensive performance boosts all whille using less battery.
 
-## Overview of Vulkan API
+## Cross platform
 
-The Vulkan API provides a list of functions, what arguments to pass in, and the return type.
-The API is based on the C Syntax, and should be compatible with a vast majority of languages.
+Vulkan's design is unique compared to other Graphics APIs because it offers the same API for both Mobile and Desktop.
+This means that many features in Vulkan are optional and using them requires explicitly turning them on. 
+It is common to have features that are unsupported on Mobile but supported on most Desktop GPUs.
 
-Although this tutorial is written in C++, porting it to other low level languages such as Rust or even plain C should be straight forward.
+When running a Vulkan powered application on both Desktop and Mobile, you have the option of using one or two core render paths,
+it is recommended to run two core render path as the alternative will be at the cost of sub optimal performance.
+The API being unified means the two render paths can share code between them.
 
-## Multiplatform
-
-Vulkan is unique in its design compared to other GPU APIs because it has the same API for Mobile and Desktop GPUs. Due to that design, many features in Vulkan are optional and using them requires explicitly turning them on. It is not uncommon to have a feature which no Mobile GPU supports but is available on most desktop GPUs. In this tutorial, we are focusing on the Desktop side of things, so we can use features that wont directly run on smartphones and tablets. 
-
-If you wish to have a Vulkan application that will run on both Desktop and Mobile GPUs, its recommended to have two core render paths. As the API is the same, much of code can be shared, but the differences in features and fast-paths between the 2 targets means that having just one render code path will have suboptimal performance on at least one of the two platforms. 
-
-During this guide we will explain many of the differences between the two types of GPUs.
+This tutorial will be focused on writing Vulkan for Desktop, however we will cover many of the differences between the two types of GPUs.
 
 ## Validation layers
 
