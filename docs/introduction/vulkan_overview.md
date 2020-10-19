@@ -47,11 +47,18 @@ This tutorial will be focused on writing Vulkan for Desktop, however we will cov
 
 ## Validation layers
 
-The Vulkan API is very large and rather easy to make mistakes with. Fortunately, when Vulkan was being designed, the creators realized that and made the Validation Layers to fix it. The Validation Layers is a bunch of error checking code that detects and reports 'invalid usage' of the API. They check for all kinds of errors such as using the wrong enums, threading violations, and object lifetimes. The layers are separate from the driver, and to work, they must intercept every function call, perform validation, then call the driver for you. The reason for that is when you want to turn off validation, you Vulkan calls go directly to the driver and can run as fast as possible.
+The vulkan API is vast and as a result it is easy to make mistakes, but this is where Validation Layers comes to the rescue.
 
-While developing a Vulkan application, you should have the Validation Layers enabled. The obvious reason is that they detect bugs, but another big reason is that by having a clean validation output you can reasonably assume your application will work across a wide variety of hardware. This is especially important for synchronization, which is tricky to get right, and what may work perfectly fine on one GPU may fail spectacularly on another GPU.
+Validation Layers operate as a gateway between your function call and the graphics driver, this allows the Validation Layer to intercept all
+code being ran through Vulkan and validate that it is correct and then perform the call to the driver, this also means you will have reduced
+performance when running with Validation Layers enabled.
 
-It is important to note that the Validation Layers can't catch every possible bug, like uninitialized memory and bad pointers. There are tools that can check for these bugs, such as Address Sanitizer and valgrind, and using them is highly advised. Unfortunately, graphics drivers often create false positives while using these tools, making their output quite noisy. 
+The Validation Layers are useful for catching a wide variety of errors such as using incorrect configurations, using wrong enums, synchronization issues, and object lifetimes
+and it is recommended to enable Validation Layers while developing to ensure that your code follows the specification requirements. If you can run your application
+without seeing validation errors, you can reasonably assume that your application will work across a wide variety of hardware.
+
+It is important to note that the Validation Layers does not catch bugs like uninitialized memory and bad pointers. For bugs related to uninitialized memory and bad pointers 
+we highly recommend using tools such as Address Sanitizer and Valgrind. Be aware that graphics drivers often create false positives while using these tools, making their output quite noisy.
 
 ## Usage and general mindset
 
