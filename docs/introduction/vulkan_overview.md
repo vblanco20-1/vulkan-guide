@@ -26,10 +26,12 @@ If your application consists of big maps, dynamic worlds, or CAD type scenes wit
 
 The mobile market has a problem with fragmentation. Not every phone implements Vulkan (especially older phones) and of those that do, you may have problems with driver quality. The phones with good drivers for Vulkan especially benefit from the lower CPU overhead and often sees extensive performance boosts all whille using less battery.
 
-# Overview of Vulkan API
+## Overview of Vulkan API
 
-Vulkan is an API, which means its essentially a list of functions to call, the parameters to pass in, and what return values you receive. 
-The API is based on the C programming language, so it can be used from almost every other language. While this tutorial is written in C++, what is done here can be relatively easily written in other low level languages such as Rust or even plain C.
+The Vulkan API provides a list of functions, what arguments to pass in, and the return type.
+The API is based on the C Syntax, and should be compatible with a vast majority of languages.
+
+Although this tutorial is written in C++, porting it to other low level languages such as Rust or even plain C should be straight forward.
 
 ## Multiplatform
 
