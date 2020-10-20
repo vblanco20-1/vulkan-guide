@@ -237,4 +237,4 @@ We also need to set the WaitSemaphore correctly with the `_renderSemaphore` we s
 
 We finally have something rendering! You should be seeing a flashing blue screen.
 
-Next: [Chapter 2: Vulkan Pipelines]({{ site.baseurl }}{% link docs/chapter-2/pipeline_walkthrough.md %})
+Next: [Chapter 2: Vulkan Pipelines]({{ site.baseurl }}{% link docs/chapter-2/vulkan_render_pipeline.md %})
