@@ -79,6 +79,7 @@ void VulkanEngine::cleanup()
 		vkDestroySurfaceKHR(_instance, _surface, nullptr);
 
 		vkDestroyDevice(_device, nullptr);
+		vkb::destroy_debug_utils_messenger(_instance, _debug_messenger);
 		vkDestroyInstance(_instance, nullptr);
 
 		SDL_DestroyWindow(_window);
@@ -252,6 +253,7 @@ void VulkanEngine::init_vulkan()
 
 	//grab the instance 
 	_instance = vkb_inst.instance;
+	_debug_messenger = vkb_inst.debug_messenger;
 
 	SDL_Vulkan_CreateSurface(_window, _instance, &_surface);
 
@@ -289,7 +291,7 @@ void VulkanEngine::init_vulkan()
 
 void VulkanEngine::init_swapchain()
 {
-	vkb::SwapchainBuilder swapchainBuilder{_chosenGPU,_device,_surface };
+	vkb::SwapchainBuilder swapchainBuilder{_chosenGPU,_device,_surface, _graphicsQueueFamily };
 
 	vkb::Swapchain vkbSwapchain = swapchainBuilder
 		.use_default_format_selection()

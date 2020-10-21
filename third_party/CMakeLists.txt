@@ -14,7 +14,7 @@ target_sources(vkbootstrap PRIVATE
 )
 
 target_include_directories(vkbootstrap PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/vkbootstrap" )
-target_link_libraries(vkbootstrap PUBLIC Vulkan::Vulkan)
+target_link_libraries(vkbootstrap PUBLIC Vulkan::Vulkan $<$<BOOL:UNIX>:${CMAKE_DL_LIBS}>)
 
 #both vma and glm and header only libs so we only need the include path
 target_include_directories(vma INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/vma" )
@@ -30,8 +30,8 @@ target_include_directories(tinyobjloader PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/tin
 
 set(sdl2_DIR "SDL_PATH" CACHE FILEPATH "Path to SDL2")
 add_library(sdl2 INTERFACE)
-target_include_directories(sdl2 INTERFACE "${sdl2_DIR}/include" "${sdl2_image_DIR}/include" )
-target_link_directories(sdl2 INTERFACE "${sdl2_DIR}/lib/x64" "${sdl2_image_DIR}/lib/x64")
+target_include_directories(sdl2 INTERFACE ${sdl2_DIR}/include ${sdl2_image_DIR}/include ${sdl2_DIR}/include/SDL2 ${sdl2_image_DIR}/include/SDL2)
+target_link_directories(sdl2 INTERFACE ${sdl2_DIR}/lib/x64 ${sdl2_image_DIR}/lib/x64 ${sdl2_DIR}/lib ${sdl2_image_DIR}/lib)
 target_link_libraries(sdl2 INTERFACE SDL2 SDL2main)
 
 add_library(imgui STATIC)
