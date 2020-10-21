@@ -243,7 +243,7 @@ void VulkanEngine::init_vulkan()
 	//We want a gpu that can write to the SDL surface and supports vulkan 1.2
 	vkb::PhysicalDeviceSelector selector{ vkb_inst };
 	vkb::PhysicalDevice physicalDevice = selector
-		.set_minimum_version(1, 2)
+		.set_minimum_version(1, 1)
 		.set_surface(_surface)
 		.select()
 		.value();
