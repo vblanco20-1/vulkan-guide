@@ -144,7 +144,7 @@ Now that the buffer is initialized and has descriptors that point to it, we need
 We are going to modify the `tri_mesh.vert` shader, to read the object data from SSBO instead than from the push constant. We will still keep the push constant, but it wont be used.
 
 ```glsl
-#version 450
+#version 460
 layout (location = 0) in vec3 vPosition;
 layout (location = 1) in vec3 vNormal;
 layout (location = 2) in vec3 vColor;
@@ -176,12 +176,14 @@ layout( push_constant ) uniform constants
 
 void main() 
 {	
-	mat4 modelMatrix = objectBuffer.objects[gl_InstanceIndex].model;
+	mat4 modelMatrix = objectBuffer.objects[gl_BaseInstance].model;
 	mat4 transformMatrix = (cameraData.viewproj * modelMatrix);
 	gl_Position = transformMatrix * vec4(vPosition, 1.0f);
 	outColor = vColor;
 }
 ```
+We are changing the GLSL version to 460 because we want to be able to use `gl_BaseInstance` for indexing into the transforms array.
+
 
 Note the way we are declaring the ObjectBuffer
 ```glsl
@@ -199,9 +201,9 @@ The array inside is also not sized. You can only have unsized arrays in storage 
 
 Another thing is the way we are accessing the correct object matrix. We are no longer using push constants, but we are doing this
 ```glsl
-mat4 modelMatrix = objectBuffer.objects[gl_InstanceIndex].model;
+mat4 modelMatrix = objectBuffer.objects[gl_BaseInstance].model;
 ```
-We are using `gl_InstanceIndex` to access the object buffer. This is due to how Vulkan works on its normal draw calls. All the draw commands in Vulkan request "first Instance" and "instance count". We are not doing instanced rendering, so instance count is always 1. But we can still change the "first instance" parameter, and this way get `gl_InstanceIndex` as a integer we can use for whatever use we want to in the shader.
+We are using `gl_BaseInstance` to access the object buffer. This is due to how Vulkan works on its normal draw calls. All the draw commands in Vulkan request "first Instance" and "instance count". We are not doing instanced rendering, so instance count is always 1. But we can still change the "first instance" parameter, and this way get `gl_BaseInstance` as a integer we can use for whatever use we want to in the shader. This gives us a simple way to send a single integer to the shader without setting up pushconstants or descriptors.
 
 We now need to hook the descriptor layout to the pipeline.
 

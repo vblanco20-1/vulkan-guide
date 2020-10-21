@@ -110,7 +110,8 @@ Now that our new init_Vulkan function is added, we can start filling it.
 	//make the Vulkan instance, with basic debug features
 	auto inst_ret = builder.set_app_name("Example Vulkan Application")
 		.request_validation_layers(true)
-		.use_default_debug_messenger()
+		.require_api_version(1, 1, 0)
+		.use_default_debug_messenger()		
 		.build();
 
 	vkb::Instance vkb_inst = inst_ret.value();
@@ -126,6 +127,8 @@ The "Example Vulkan Application" name is completely meaningless. If you want to 
 When initializing a VkInstance, the name of the application and engine is supplied. This is so driver vendors can detect the names of AAA games, so they can tweak internal driver logic for them alone. For normal people, its not really important.
 
 We want to enable validation layers by default, hardcoded. With what we are going to do during the guide, there is no need to ever turn them off, as they will catch our errors very nicely. On a more advanced engine, you would only enable the layers in debug mode, or with a specific configuration parameter.
+
+We also require the Vulkan api version 1.1.
 
 Lastly, we tell the library that we want the debug messenger. This is what catches the log messages that the validation layers will output. Because we have no need for a dedicated one, we will just let the library use one that just directly outputs to console.
 
