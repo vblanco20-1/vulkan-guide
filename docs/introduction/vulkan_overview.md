@@ -9,29 +9,29 @@ parent: introduction
 
 ## What is Vulkan?
 
-Vulkan is a crossplatform API (Application Program Interface), developed by the Khronos Group.
-The Vulkan API is a standard for developers to implement in their preferred environment.
+Vulkan is a cross platform graphics API (Application Program Interface), developed by the Khronos Group.
+The Vulkan API is a standard and therefore it can be implemented on multiple devices, platforms and in a variety
+of different programming languages.
 
-Vulkan is designed for high performance multithreaded applications, and the API helps by allowing the developer to be more explicit which reduce the guesswork performed by the graphics driver. Using Vulkan correctly yields high level performance, low latency, and consistent frame times.
+Vulkan is designed to be used in high performance multithreaded applications.
+Vulkan especially benefits from its design as it is more explicit, reducing the guesswork performed by the graphics driver. 
+Using Vulkan correctly yields high level performance, low latency, and consistent frame times.
 
 ## Overview of Vulkan API
 
 The Vulkan API provides a list of functions, what arguments to pass in, and the return type.
-The API is based on the C Syntax, and should be compatible with a vast majority of languages.
+The API is written in the C programming language, and should be compatible with a vast majority of languages.
 
 Although this tutorial is written in C++, porting it to other low level languages such as Rust or even plain C should be straight forward.
 
 ## When to use Vulkan
 
-Vulkan is a newer API, and is significantly harder to use compared to OpenGL, and does not gaurantee 
-better GPU performance therefore you should not use Vulkan if you don't need its features.
-
-Vulkan's extra complexity means that development time can be longer, and if your main bottleneck is GPU-side, 
-it is unlikely that implementing Vulkan will improve performance enough to be worth it.
+If your main bottleneck is GPU-side, it is unlikely that implementing Vulkan will improve performance enough to be worth it.
+It should be mentioned that Vulkan is significantly harder to use compared to OpenGL, and its extra complexity often means longer development times.
 
 If your application consists of big maps, dynamic worlds, or CAD type scenes with a lot of objects, then Vulkan's multithreaded capabilities will likely boost performance.
 
-The mobile market has a problem with fragmentation. Not every phone implements Vulkan (especially older phones) and of those that do, you may have problems with driver quality. The phones with good drivers for Vulkan especially benefit from the lower CPU overhead and often sees extensive performance boosts all whille using less battery.
+The mobile market has a problem with fragmentation. Not every phone implements Vulkan (especially older phones) and of those that do, you may have problems with driver quality. The phones with good drivers for Vulkan especially benefit from the lower CPU overhead and often see extensive performance boosts all while using less battery.
 
 ## Cross platform
 
@@ -39,8 +39,8 @@ Vulkan's design is unique compared to other Graphics APIs because it offers the 
 This means that many features in Vulkan are optional and using them requires explicitly turning them on. 
 It is common to have features that are unsupported on Mobile but supported on most Desktop GPUs.
 
-When running a Vulkan powered application on both Desktop and Mobile, you have the option of using one or two core render paths,
-it is recommended to run two core render path as the alternative will be at the cost of sub optimal performance.
+When running a Vulkan powered application on both Desktop and Mobile, you have the option of using one or two core render paths.
+It is recommended to run two core render path as the alternative will be at the cost of sub optimal performance.
 The API being unified means the two render paths can share code between them.
 
 This tutorial will be focused on writing Vulkan for Desktop, however we will cover many of the differences between the two types of GPUs.
@@ -49,16 +49,13 @@ This tutorial will be focused on writing Vulkan for Desktop, however we will cov
 
 The vulkan API is vast and as a result it is easy to make mistakes, but this is where Validation Layers comes to the rescue.
 
-Validation Layers operate as a gateway between your function call and the graphics driver, this allows the Validation Layer to intercept all
-code being ran through Vulkan and validate that it is correct and then perform the call to the driver, this also means you will have reduced
-performance when running with Validation Layers enabled.
+Validation Layers is an optional feature in Vulkan that detects and reports incorrect usage of the API.
 
-The Validation Layers are useful for catching a wide variety of errors such as using incorrect configurations, using wrong enums, synchronization issues, and object lifetimes
-and it is recommended to enable Validation Layers while developing to ensure that your code follows the specification requirements. If you can run your application
-without seeing validation errors, you can reasonably assume that your application will work across a wide variety of hardware.
+Validation Layers work by intercepting your function calls and performs validation on the data. If all data is correctly validated a call to the driver will be performed. It should be noted that intercepting functions and running validation comes with a performance loss.
 
-It is important to note that the Validation Layers does not catch bugs like uninitialized memory and bad pointers. For bugs related to uninitialized memory and bad pointers 
-we highly recommend using tools such as Address Sanitizer and Valgrind. Be aware that graphics drivers often create false positives while using these tools, making their output quite noisy.
+The Validation Layers are useful for catching errors such as using incorrect configurations, using wrong enums, synchronization issues, and object lifetimes. It is recommended to enable Validation Layers while developing to ensure that your code follows the specification requirements. Running your application without any reported validation errors is a good sign, however this should not be used as an indicator for how well your application will run on different hardware. We recommend to test your application on as many different devices as possible.
+
+It is important to note that the Validation Layers does not catch bugs like uninitialized memory and bad pointers. It is highly recommended to use tools such as Address Sanitizer and Valgrind. Be aware that graphics drivers often create false positives while using these tools, making their output quite noisy.
 
 ## Usage and general mindset
 
