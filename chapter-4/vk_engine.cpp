@@ -230,6 +230,7 @@ void VulkanEngine::init_vulkan()
 	auto inst_ret = builder.set_app_name("Example Vulkan Application")
 		.request_validation_layers(bUseValidationLayers)
 		.use_default_debug_messenger()
+		.require_api_version(1, 1, 0)		
 		.build();
 
 	vkb::Instance vkb_inst = inst_ret.value();
