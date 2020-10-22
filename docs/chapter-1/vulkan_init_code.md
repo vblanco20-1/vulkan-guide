@@ -49,7 +49,7 @@ With those two done, we can go forward with initialization of the basic structur
 # Initializing core Vulkan structures
 
 
-The first thing we are going to intialize, is the Vulkan instance. For that, lets start by adding a new function and the stored handles to the VulkanEngine class
+The first thing we are going to initialize, is the Vulkan instance. For that, lets start by adding a new function and the stored handles to the VulkanEngine class
 
 vk_engine.h
 ```cpp
@@ -58,6 +58,7 @@ public:
 
     // --- ommited --- 
     VkInstance _instance; // Vulkan library handle
+	VkDebugUtilsMessengerEXT _debug_messenger; // Vulkan debug output handle
 	VkPhysicalDevice _chosenGPU; // gpu chosen as the default device
 	VkDevice _device; // Vulkan device for commands
 	VkSurfaceKHR _surface; // Vulkan window surface
@@ -97,7 +98,7 @@ void VulkanEngine::init_vulkan()
 }
 ```
 
-We have added 3 handles to the main class, VkDevice, VkPhysicalDevice, and VkInstance.
+We have added 4 handles to the main class, VkDevice, VkPhysicalDevice, VkInstance, VkDebugUtilsMessengerEXT.
 
 ## Instance
 
@@ -118,6 +119,8 @@ Now that our new init_Vulkan function is added, we can start filling it.
 
 	//store the instance 
 	_instance = vkb_inst.instance;
+	//store the debug messenger
+	_debug_messenger = vkb_inst.debug_messenger; 
 ```
 
 We are going to create a vkb::InstanceBuilder, which is from the VkBootstrap library, and simplifies the creation of a Vulkan VkInstance.
@@ -132,7 +135,9 @@ We also require the Vulkan api version 1.1.
 
 Lastly, we tell the library that we want the debug messenger. This is what catches the log messages that the validation layers will output. Because we have no need for a dedicated one, we will just let the library use one that just directly outputs to console.
 
-We then just grab the actual VkInstance handle from the vkb::Instance object.
+Then we just grab the actual VkInstance handle and the VkDebugUtilsMessengerEXT handle from the vkb::Instance object.
+We store the VkDebugUtilsMessengerEXT so we can destroy it at program exit, otherwise we would leak it.
+
 
 ## Device
 
@@ -186,7 +191,7 @@ public:
 	VkSwapchainKHR _swapchain; // from other articles
 
 	// image format expected by the windowing system
-	VkFormat _swachainImageFormat; 	
+	VkFormat _swapchainImageFormat; 	
 	
 	//array of images from the swapchain
 	std::vector<VkImage> _swapchainImages;
@@ -238,7 +243,7 @@ Like with the other initialization functions, we are going to use the vkb librar
 ```cpp
 void VulkanEngine::init_swapchain()
 {
-	vkb::SwapchainBuilder swapchainBuilder{_chosenGPU,_device,_surface };
+	vkb::SwapchainBuilder swapchainBuilder{_chosenGPU,_device,_surface,_graphicsQueueFamily };
 
 	vkb::Swapchain vkbSwapchain = swapchainBuilder
 		.use_default_format_selection()
@@ -285,6 +290,7 @@ void VulkanEngine::cleanup()
 
 		vkDestroyDevice(_device, nullptr);
 		vkDestroySurfaceKHR(_instance, _surface, nullptr);
+		vkb::destroy_debug_utils_messenger(_instance, _debug_messenger);
 		vkDestroyInstance(_instance, nullptr);
 		SDL_DestroyWindow(_window);
 	}
@@ -333,10 +339,6 @@ We are now destroying the Instance before the Device and the Surface (which was 
 [ERROR: Validation]
 Validation Error: [ VUID-vkDestroyInstance-instance-00629 ] Object 0: handle = 0x24ff02340c0, type = VK_OBJECT_TYPE_INSTANCE; Object 1: handle = 0xf8ce070000000002, type = VK_OBJECT_TYPE_SURFACE_KHR; | MessageID = 0x8b3d8e18 | OBJ ERROR : For VkInstance 0x24ff02340c0[], VkSurfaceKHR 0xf8ce070000000002[] has not been destroyed. The Vulkan spec states: All child objects created using instance must have been destroyed prior to destroying instance (https://www.khronos.org/registry/vulkan/specs/1.1-extensions/html/vkspec.html#VUID-vkDestroyInstance-instance-00629)
 ```
-
-If you get one of those errors about a VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT not being deleted, don't worry, that's just the debug logger, and its not important.
-
-
 
 With the Vulkan initialization completed and the layers working, we can begin to prepare the actual render loop and command execution.
 
