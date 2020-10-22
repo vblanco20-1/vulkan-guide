@@ -36,7 +36,7 @@ With the final colored pixels, we put them on the output framebuffer with the Re
 ## Shaders
 To program the GPU, we use shaders. Shaders are a restricted programming model, with their own language and functionality, that is designed for the parallelism of GPUs, and to mesh with the graphics pipeline well.
 
-GPUs, unlike CPUs, have a lot of cores, and those cores are very wide cores, executing a lot of things at once. The amount of data a GPU can crunch at once is staggering, so normal CPU style programming models dont work of it. 
+GPUs, unlike CPUs, have a lot of cores, and those cores are very wide cores, executing a lot of things at once. The amount of data a GPU can crunch at once is staggering, so normal CPU style programming models don't work of it. 
 
 On this tutorial, we are focusing on the minimum we need to render, which is Fragment Shaders and Vertex Shaders
 

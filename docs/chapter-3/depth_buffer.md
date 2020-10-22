@@ -7,13 +7,13 @@ nav_order: 15
 
 When we created the renderpass in chapter 1, there is something we skipped to keep the code shorter, the depth buffer.
 
-In 3d graphics, to make sure that you dont render things that are behind other things on top, you use a depth buffer and use z-testing. 
+In 3d graphics, to make sure that you don't render things that are behind other things on top, you use a depth buffer and use z-testing. 
 By having a depth buffer bound to the renderpass, you can enable ztesting which will allow proper rendering of 3d objects.
 
 We are going to refactor the code around the engine a little bit to enable this.
 
 ## Depth image
-When rendering, we are going to need a depth image to use. Before, we were using the swapchain images as render target, but the swapchains dont contain a depth image, the depth image has to be created separately. We are going to create one depth image to match with our swapchain image.
+When rendering, we are going to need a depth image to use. Before, we were using the swapchain images as render target, but the swapchains don't contain a depth image, the depth image has to be created separately. We are going to create one depth image to match with our swapchain image.
 
 First of all, we are going to create the AllocatedImage struct, which is the same as AllocatedBuffer we are using, but for images instead of buffers, as we will be using VMA to allocate the depth image.
 

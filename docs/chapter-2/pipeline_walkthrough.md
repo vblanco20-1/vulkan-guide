@@ -362,7 +362,7 @@ void VulkanEngine::init_pipelines()
 	//configure the rasterizer to draw filled triangles
 	pipelineBuilder._rasterizer = vkinit::rasterization_state_create_info(VK_POLYGON_MODE_FILL);
 
-	//we dont use multisampling, so just run the default one
+	//we don't use multisampling, so just run the default one
 	pipelineBuilder._multisampling = vkinit::multisampling_state_create_info();
 
 	//a single blend attachment with no blending and writing to RGBA

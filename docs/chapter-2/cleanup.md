@@ -60,7 +60,7 @@ And then, as part of our cleanup function, we `flush()` the deletion queue, whic
 Its very important to keep in mind how cpp lambdas capture data. In here we are using `[=]` capture, which means that it will create a *copy* of the objects. Be very careful with this, and never capture anything by reference unless you know what you are doing. 
 In the example above, it will call the DestroyFence first, and then the DestroySemaphore calls, as it keeps order.
 
-Now that we have this, lets implement it over the current codebase so we can go back to a state where the validation layers dont complain. 
+Now that we have this, lets implement it over the current codebase so we can go back to a state where the validation layers don't complain. 
 If you want to skip this step, you can look at the tutorial code, which already uses it.
 
 ## Refactoring the code

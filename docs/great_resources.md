@@ -10,7 +10,7 @@ permalink: /docs/great_resources
 This guide does not cover everything you could need, so this is a compilation of high quality vulkan related materials and resources.
 
 ## Other Tutorials
-- [Vulkan-Tutorial](https://vulkan-tutorial.com/). The most popular vulkan tutorial on the internet. Goes a lot more into detail on vulkan initialization, also talks about things we dont do here.
+- [Vulkan-Tutorial](https://vulkan-tutorial.com/). The most popular vulkan tutorial on the internet. Goes a lot more into detail on vulkan initialization, also talks about things we don't do here.
 - [LearnOpenGL](https://learnopengl.com/). OpenGL tutorial. While we use vulkan, this tutorial talks a lot more about graphics programming basics such as graphics pipeline, transformation math, and lighting techniques. Recomended you try to go through its chapters but using vulkan instead.
 - [Filament Engine PBR Documentation](https://google.github.io/filament/Filament.html). Best in class documentation about high performance PBR lighting shaders. 
 
