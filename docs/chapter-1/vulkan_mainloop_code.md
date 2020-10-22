@@ -50,7 +50,7 @@ void VulkanEngine::init_sync_structures()
 
 	VK_CHECK(vkCreateFence(_device, &fenceCreateInfo, nullptr, &_renderFence));
 
-	//for the semaphores we dont need any flags
+	//for the semaphores we don't need any flags
 	VkSemaphoreCreateInfo semaphoreCreateInfo = {};
 	semaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 	semaphoreCreateInfo.pNext = nullptr;
@@ -160,7 +160,7 @@ Set sType and pNext as usual
 
 Lastly, we are going to create a VkClearValue of a flashing blue color, and connect it to the info. We are using the `_frameNumber` variable to get the numbers of frames rendered and use it for the flashing. This variable was in the engine from the starting-point code.
 
-The `vkCmdBeginRenderPass()` function will bind the framebuffers, clear the image, and put the images in the layout we specified when creating the renderpass. We can now start rendering commands... but we dont have anything to render yet. That will be on next chapter.
+The `vkCmdBeginRenderPass()` function will bind the framebuffers, clear the image, and put the images in the layout we specified when creating the renderpass. We can now start rendering commands... but we don't have anything to render yet. That will be on next chapter.
 
 We can now end the render pass, and also end the command buffer
 ```cpp

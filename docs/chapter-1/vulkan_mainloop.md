@@ -72,7 +72,7 @@ VkDoSomething(OpGammaInfo);
 
 This code will do the 3 DoSomethings in strict order in the GPU. The execution order of the GPU-side commands will be Alpha->Beta->Gamma . Operation Beta will not start until Alpha has fully finished its execution.
 
-If you dont use semaphores in this case, the commands of the 3 operations might execute in parallel, interleaved with each other.
+If you don't use semaphores in this case, the commands of the 3 operations might execute in parallel, interleaved with each other.
 
 # Render Loop
 In the render loop, we are going to use a single fence to wait until the GPU has finished executing the render work. For now we arent going to do anything advanced, and we will just wait until the work we sent to the GPU is executed to start preparing the next frame. Later in the chapter 4 of the tutorial we will change this to allow the CPU to continue preparing the next frame while the GPU is busy with the submit.

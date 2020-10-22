@@ -100,7 +100,7 @@ With Vulkan structures, it is very important that we do this
 VkCommandPoolCreateInfo commandPoolInfo = {};
 ```
 
-By doing that ` = {}` thing, we are letting the compiler initialize the entire struct to zero. This is critical, as in general Vulkan structs will have their defaults set in a way that 0 is relatively safe. By doing that, we make sure we dont leave unitialized data in the struct.
+By doing that ` = {}` thing, we are letting the compiler initialize the entire struct to zero. This is critical, as in general Vulkan structs will have their defaults set in a way that 0 is relatively safe. By doing that, we make sure we don't leave unitialized data in the struct.
 
 We set queueFamilyIndex to the _graphicsQueueFamily that we grabbed before. This means that the command pool will create commands that are compatible with any queue of that "graphics" family.
 

@@ -71,11 +71,11 @@ void VulkanEngine::init_default_renderpass()
 	color_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 	// we keep the attachment stored when the renderpass ends
 	color_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-	//we dont care about stencil
+	//we don't care about stencil
 	color_attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;	
 	color_attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 
-	//we dont know or care about the starting layout of the attachment
+	//we don't know or care about the starting layout of the attachment
 	color_attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
 	//after the renderpass ends, the image has to be on a layout ready for display
@@ -87,7 +87,7 @@ First thing we start writing is the color attachment. This is the description of
 
 The image will use the format we got from the swapchain (so its compatible), and we will clear it when the renderpass begins. When the renderpass ends, we will store the image so that it can be read later.
 
-Before the renderpass, the image layout will be undefined, which means "we dont care". And after the renderpass ends, the layout will be ready to be displayed with the swapchain.
+Before the renderpass, the image layout will be undefined, which means "we don't care". And after the renderpass ends, the layout will be ready to be displayed with the swapchain.
 
 Now that our main image target is defined, we need to add a subpass that will render into it. This goes right after defining the attachment
 
