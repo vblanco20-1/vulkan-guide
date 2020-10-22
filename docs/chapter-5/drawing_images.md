@@ -42,7 +42,7 @@ VertexInputDescription Vertex::get_vertex_description()
 	return description;
 }
 ```
-We store the UVs in attribute location 3, and the format is R32G32 float, which is perfect for glm::vec2
+We store the UVs in attribute location 3, and the format is R32G32 float, which is perfect for `glm::vec2`
 
 Now we need to load the texture coordinates from the obj files.
 
@@ -212,7 +212,7 @@ void main()
 We are binding the sampler2d texture into Set 2, binding 0.
 At the moment we are using sets 0 and 1, so this will be the 3rd descriptor set.
 As we have a new descriptor set, we need to create its layout and add it to the engine. 
-We will add a "textureDescriptor" parameter into our Material struct, and we will also store the descriptor layout into the engine class
+We will add a texture descriptor parameter into our Material struct, and we will also store the descriptor layout into the engine class
 
 
 ```cpp

@@ -5,8 +5,11 @@ nav_order: 2
 has_children: true
 permalink: /docs/chapter_0
 ---
+![chapter0]({{site.baseurl}}/diagrams/chapter0.png)
+
 
 # Chapter 0 index
+
 
 In this chapter, we setup the build toolchain to compile the project
 
