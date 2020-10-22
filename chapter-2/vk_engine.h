@@ -56,6 +56,7 @@ public:
 	struct SDL_Window* _window{ nullptr };
 
 	VkInstance _instance;
+	VkDebugUtilsMessengerEXT _debug_messenger;
 	VkPhysicalDevice _chosenGPU;
 	VkDevice _device;
 

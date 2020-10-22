@@ -1,100 +1,117 @@
+/*
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
+ * documentation files (the “Software”), to deal in the Software without restriction, including without
+ * limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+ * of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT
+ * LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *
+ * Copyright © 2020 Charles Giessen (charles@lunarg.com)
+ */
+
 #pragma once
 
 #include <cassert>
 
 #include <vector>
+#include <system_error>
 
 #include <vulkan/vulkan.h>
+
 
 namespace vkb {
 
 namespace detail {
-template <typename ErrorType> struct Error {
-	explicit Error (ErrorType type, VkResult result = VK_SUCCESS)
-	: type (type), vk_result (result) {}
 
-	ErrorType type;
-	VkResult vk_result; // optional error value if a vulkan call failed
+struct Error {
+	std::error_code type;
+	VkResult vk_result = VK_SUCCESS; // optional error value if a vulkan call failed
 };
 
-template <typename E, typename U> class Expected {
+template <typename T> class Result {
 	public:
-	Expected (const E& expect) : m_expect{ expect }, m_init{ true } {}
-	Expected (E&& expect) : m_expect{ std::move (expect) }, m_init{ true } {}
-	Expected (const U& error) : m_error{ error }, m_init{ false } {}
-	Expected (U&& error) : m_error{ std::move (error) }, m_init{ false } {}
-	~Expected () { destroy (); }
-	Expected (Expected const& expected) : m_init (expected.m_init) {
+	Result (const T& value) : m_value{ value }, m_init{ true } {}
+	Result (T&& value) : m_value{ std::move (value) }, m_init{ true } {}
+
+	Result (Error error) : m_error{ error }, m_init{ false } {}
+
+	Result (std::error_code error_code, VkResult result = VK_SUCCESS)
+	: m_error{ error_code, result }, m_init{ false } {}
+
+	~Result () { destroy (); }
+	Result (Result const& expected) : m_init (expected.m_init) {
 		if (m_init)
-			new (&m_expect) E{ expected.m_expect };
+			new (&m_value) T{ expected.m_value };
 		else
-			new (&m_error) U{ expected.m_error };
+			m_error = expected.m_error;
 	}
-	Expected (Expected&& expected) : m_init (expected.m_init) {
+	Result (Result&& expected) : m_init (expected.m_init) {
 		if (m_init)
-			new (&m_expect) E{ std::move (expected.m_expect) };
+			new (&m_value) T{ std::move (expected.m_value) };
 		else
-			new (&m_error) U{ std::move (expected.m_error) };
+			m_error = std::move (expected.m_error);
 		expected.destroy ();
 	}
 
-	Expected& operator= (const E& expect) {
+	Result& operator= (const T& expect) {
 		destroy ();
 		m_init = true;
-		new (&m_expect) E{ expect };
+		new (&m_value) T{ expect };
 		return *this;
 	}
-	Expected& operator= (E&& expect) {
+	Result& operator= (T&& expect) {
 		destroy ();
 		m_init = true;
-		new (&m_expect) E{ std::move (expect) };
+		new (&m_value) T{ std::move (expect) };
 		return *this;
 	}
-	Expected& operator= (const U& error) {
+	Result& operator= (const Error& error) {
 		destroy ();
 		m_init = false;
-		new (&m_error) U{ error };
+		m_error = error;
 		return *this;
 	}
-	Expected& operator= (U&& error) {
+	Result& operator= (Error&& error) {
 		destroy ();
 		m_init = false;
-		new (&m_error) U{ std::move (error) };
+		m_error = error;
 		return *this;
 	}
 	// clang-format off
-	const E* operator-> () const { assert (m_init); return &m_expect; }
-	E*       operator-> ()       { assert (m_init); return &m_expect; }
-	const E& operator* () const& { assert (m_init);	return m_expect; }
-	E&       operator* () &      { assert (m_init); return m_expect; }
-	E&&      operator* () &&	 { assert (m_init); return std::move (m_expect); }
-	const E&  value () const&    { assert (m_init); return m_expect; }
-	E&        value () &         { assert (m_init); return m_expect; }
-	const E&& value () const&&   { assert (m_init); return std::move (m_expect); }
-	E&&       value () &&        { assert (m_init); return std::move (m_expect); }
-	const U&  error () const&  { assert (!m_init); return m_error; }
-	U&        error () &       { assert (!m_init); return m_error; }
-	const U&& error () const&& { assert (!m_init); return std::move (m_error); }
-	U&&       error () &&      { assert (!m_init); return std::move (m_error); }
+	const T* operator-> () const { assert (m_init); return &m_value; }
+	T*       operator-> ()       { assert (m_init); return &m_value; }
+	const T& operator* () const& { assert (m_init);	return m_value; }
+	T&       operator* () &      { assert (m_init); return m_value; }
+	T&&      operator* () &&	 { assert (m_init); return std::move (m_value); }
+	const T&  value () const&    { assert (m_init); return m_value; }
+	T&        value () &         { assert (m_init); return m_value; }
+	const T&& value () const&&   { assert (m_init); return std::move (m_value); }
+	T&&       value () &&        { assert (m_init); return std::move (m_value); }
+
+    std::error_code error() const { assert (!m_init); return m_error.type; }
+    VkResult vk_result() const { assert (!m_init); return m_error.vk_result; }
 	// clang-format on
+
+
 	bool has_value () const { return m_init; }
 	explicit operator bool () const { return m_init; }
 
 	private:
 	void destroy () {
-		if (m_init)
-			m_expect.~E ();
-		else
-			m_error.~U ();
+		if (m_init) m_value.~T ();
 	}
 	union {
-		E m_expect;
-		U m_error;
+		T m_value;
+		Error m_error;
 	};
 	bool m_init;
 };
 
-/* TODO implement operator == and operator != as friend or global */
 } // namespace detail
 
 enum class InstanceError {
@@ -105,7 +122,8 @@ enum class InstanceError {
 	failed_create_instance,
 	failed_create_debug_messenger,
 	requested_layers_not_present,
-	requested_extensions_not_present
+	requested_extensions_not_present,
+	windowing_extensions_not_present,
 };
 enum class PhysicalDeviceError {
 	no_surface_provided,
@@ -131,6 +149,13 @@ enum class SwapchainError {
 	failed_get_swapchain_images,
 	failed_create_swapchain_image_views,
 };
+
+std::error_code make_error_code (InstanceError instance_error);
+std::error_code make_error_code (PhysicalDeviceError physical_device_error);
+std::error_code make_error_code (QueueError queue_error);
+std::error_code make_error_code (DeviceError device_error);
+std::error_code make_error_code (SwapchainError swapchain_error);
+
 const char* to_string_message_severity (VkDebugUtilsMessageSeverityFlagBitsEXT s);
 const char* to_string_message_type (VkDebugUtilsMessageTypeFlagsEXT s);
 
@@ -140,9 +165,18 @@ const char* to_string (QueueError err);
 const char* to_string (DeviceError err);
 const char* to_string (SwapchainError err);
 
-
+// Gathers useful information about the available vulkan capabilities, like layers and instance extensions.
+// Use this for enabling features conditionally, ie if you would like an extension but can use a fallback if
+// it isn't supported but need to know if support is available first.
 struct SystemInfo {
+	private:
 	SystemInfo ();
+
+	public:
+    // Use get_system_info to create a SystemInfo struct. This is because loading vulkan could fail.
+	static detail::Result<SystemInfo> get_system_info ();
+	static detail::Result<SystemInfo>  get_system_info (PFN_vkGetInstanceProcAddr fp_vkGetInstanceProcAddr);
+
 	// Returns true if a layer is available
 	bool is_layer_available (const char* layer_name) const;
 	// Returns true if an extension is available
@@ -151,8 +185,9 @@ struct SystemInfo {
 	std::vector<VkLayerProperties> available_layers;
 	std::vector<VkExtensionProperties> available_extensions;
 	bool validation_layers_available = false;
-	bool debug_messenger_available = false;
+	bool debug_utils_available = false;
 };
+
 
 class InstanceBuilder;
 class PhysicalDeviceSelector;
@@ -161,6 +196,8 @@ struct Instance {
 	VkInstance instance = VK_NULL_HANDLE;
 	VkDebugUtilsMessengerEXT debug_messenger = VK_NULL_HANDLE;
 	VkAllocationCallbacks* allocation_callbacks = VK_NULL_HANDLE;
+
+	PFN_vkGetInstanceProcAddr fp_vkGetInstanceProcAddr = nullptr;
 
 	private:
 	bool headless = false;
@@ -174,24 +211,26 @@ void destroy_instance (Instance instance); // release instance resources
 
 class InstanceBuilder {
 	public:
-	// contains useful information about the available vulkan capabilities, like layers and instance extensions.
-	SystemInfo get_system_info () const;
+	// Default constructor, will load vulkan.
+	explicit InstanceBuilder ();
+	// Optional: Can use your own PFN_vkGetInstanceProcAddr
+	explicit InstanceBuilder (PFN_vkGetInstanceProcAddr fp_vkGetInstanceProcAddr);
 
 	// Create a VkInstance. Return an error if it failed.
-	detail::Expected<Instance, detail::Error<InstanceError>> build () const;
+	detail::Result<Instance> build () const;
 
 	// Sets the name of the application. Defaults to "" if none is provided.
 	InstanceBuilder& set_app_name (const char* app_name);
 	// Sets the name of the engine. Defaults to "" if none is provided.
 	InstanceBuilder& set_engine_name (const char* engine_name);
 	// Sets the (major, minor, patch) version of the application.
-	InstanceBuilder& set_app_version (uint32_t major, uint32_t minor, uint32_t patch);
+	InstanceBuilder& set_app_version (uint32_t major, uint32_t minor, uint32_t patch = 0);
 	// Sets the (major, minor, patch) version of the engine.
-	InstanceBuilder& set_engine_version (uint32_t major, uint32_t minor, uint32_t patch);
+	InstanceBuilder& set_engine_version (uint32_t major, uint32_t minor, uint32_t patch = 0);
 	// Require a vulkan instance API version. Will fail to create if this version isn't available.
-	InstanceBuilder& require_api_version (uint32_t major, uint32_t minor, uint32_t patch);
+	InstanceBuilder& require_api_version (uint32_t major, uint32_t minor, uint32_t patch = 0);
 	// Prefer a vulkan instance API version. If the desired version isn't available, it will use the highest version available.
-	InstanceBuilder& desire_api_version (uint32_t major, uint32_t minor, uint32_t patch);
+	InstanceBuilder& desire_api_version (uint32_t major, uint32_t minor, uint32_t patch = 0);
 
 	// Adds a layer to be enabled. Will fail to create an instance if the layer isn't available.
 	InstanceBuilder& enable_layer (const char* layer_name);
@@ -266,29 +305,21 @@ class InstanceBuilder {
 		// Custom allocator
 		VkAllocationCallbacks* allocation_callbacks = VK_NULL_HANDLE;
 
+		bool request_validation_layers = false;
 		bool enable_validation_layers = false;
 		bool use_debug_messenger = false;
 		bool headless_context = false;
+
+		PFN_vkGetInstanceProcAddr fp_vkGetInstanceProcAddr = nullptr;
 	} info;
-
-	SystemInfo system;
 };
-
-VkResult create_debug_utils_messenger (VkInstance instance,
-    PFN_vkDebugUtilsMessengerCallbackEXT debug_callback,
-    VkDebugUtilsMessageSeverityFlagsEXT severity,
-    VkDebugUtilsMessageTypeFlagsEXT type,
-    VkDebugUtilsMessengerEXT* pDebugMessenger,
-    VkAllocationCallbacks* allocation_callbacks = VK_NULL_HANDLE);
-
-void destroy_debug_utils_messenger (VkInstance instance,
-    VkDebugUtilsMessengerEXT debugMessenger,
-    VkAllocationCallbacks* allocation_callbacks = VK_NULL_HANDLE);
 
 VKAPI_ATTR VkBool32 VKAPI_CALL default_debug_callback (VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
     VkDebugUtilsMessageTypeFlagsEXT messageType,
     const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
     void* pUserData);
+
+void destroy_debug_utils_messenger(VkInstance const instance, VkDebugUtilsMessengerEXT const messenger, VkAllocationCallbacks* allocation_callbacks = nullptr);
 
 // ---- Physical Device ---- //
 class PhysicalDeviceSelector;
@@ -334,9 +365,9 @@ enum class PreferredDeviceType {
 class PhysicalDeviceSelector {
 	public:
 	// Requires a vkb::Instance to construct, needed to pass instance creation info.
-	PhysicalDeviceSelector (Instance const& instance);
+	explicit PhysicalDeviceSelector (Instance const& instance);
 
-	detail::Expected<PhysicalDevice, detail::Error<PhysicalDeviceError>> select () const;
+	detail::Result<PhysicalDevice> select () const;
 
 	// Set the surface in which the physical device should render to.
 	PhysicalDeviceSelector& set_surface (VkSurfaceKHR surface);
@@ -375,8 +406,8 @@ class PhysicalDeviceSelector {
 
 	// Prefer a physical device that supports a (major, minor) version of vulkan.
 	PhysicalDeviceSelector& set_desired_version (uint32_t major, uint32_t minor);
-	// Require a physical device that supports a (major, minor) version of vulkan. Default is Vulkan 1.0.
-	PhysicalDeviceSelector& set_minimum_version (uint32_t major = 1, uint32_t minor = 0);
+	// Require a physical device that supports a (major, minor) version of vulkan.
+	PhysicalDeviceSelector& set_minimum_version (uint32_t major, uint32_t minor);
 
 	// Require a physical device which supports the features in VkPhysicalDeviceFeatures.
 	PhysicalDeviceSelector& set_required_features (VkPhysicalDeviceFeatures features);
@@ -446,18 +477,18 @@ struct Device {
 	std::vector<VkQueueFamilyProperties> queue_families;
 	VkAllocationCallbacks* allocation_callbacks = VK_NULL_HANDLE;
 
-	detail::Expected<uint32_t, detail::Error<QueueError>> get_queue_index (QueueType type) const;
+	detail::Result<uint32_t> get_queue_index (QueueType type) const;
 	// Only a compute or transfer queue type is valid. All other queue types do not support a 'dedicated' queue index
-	detail::Expected<uint32_t, detail::Error<QueueError>> get_dedicated_queue_index (QueueType type) const;
+	detail::Result<uint32_t> get_dedicated_queue_index (QueueType type) const;
 
-	detail::Expected<VkQueue, detail::Error<QueueError>> get_queue (QueueType type) const;
+	detail::Result<VkQueue> get_queue (QueueType type) const;
 	// Only a compute or transfer queue type is valid. All other queue types do not support a 'dedicated' queue
-	detail::Expected<VkQueue, detail::Error<QueueError>> get_dedicated_queue (QueueType type) const;
+	detail::Result<VkQueue> get_dedicated_queue (QueueType type) const;
 };
 
 // For advanced device queue setup
 struct CustomQueueDescription {
-	CustomQueueDescription (uint32_t index, uint32_t count, std::vector<float> priorities);
+	explicit CustomQueueDescription (uint32_t index, uint32_t count, std::vector<float> priorities);
 	uint32_t index = 0;
 	uint32_t count = 0;
 	std::vector<float> priorities;
@@ -468,9 +499,9 @@ void destroy_device (Device device);
 class DeviceBuilder {
 	public:
 	// Any features and extensions that are requested/required in PhysicalDeviceSelector are automatically enabled.
-	DeviceBuilder (PhysicalDevice physical_device);
+	explicit DeviceBuilder (PhysicalDevice physical_device);
 
-	detail::Expected<Device, detail::Error<DeviceError>> build () const;
+	detail::Result<Device> build () const;
 
 	// For Advanced Users: specify the exact list of VkDeviceQueueCreateInfo's needed for the application.
 	// If a custom queue setup is provided, getting the queues and queue indexes is up to the application.
@@ -510,12 +541,12 @@ struct Swapchain {
 	VkExtent2D extent = { 0, 0 };
 	VkAllocationCallbacks* allocation_callbacks = VK_NULL_HANDLE;
 
-	// Returns a vector of VkImage handles to the swapchain
-	detail::Expected<std::vector<VkImage>, detail::Error<SwapchainError>> get_images ();
+	// Returns a vector of VkImage handles to the swapchain.
+	detail::Result<std::vector<VkImage>> get_images ();
 
-	// Returns a vector of VkImageView's to the VkImage's of the swapchain
-	// VkImageViews must be destroyed
-	detail::Expected<std::vector<VkImageView>, detail::Error<SwapchainError>> get_image_views ();
+	// Returns a vector of VkImageView's to the VkImage's of the swapchain.
+	// VkImageViews must be destroyed.
+	detail::Result<std::vector<VkImageView>> get_image_views ();
 	void destroy_image_views (std::vector<VkImageView> const& image_views);
 };
 
@@ -523,22 +554,68 @@ void destroy_swapchain (Swapchain const& swapchain);
 
 class SwapchainBuilder {
 	public:
-	SwapchainBuilder (Device const& device);
-	SwapchainBuilder (Device const& device, VkSurfaceKHR const surface);
-	SwapchainBuilder (VkPhysicalDevice const physical_device, VkDevice const device, VkSurfaceKHR const surface);
+	explicit SwapchainBuilder (Device const& device);
+	explicit SwapchainBuilder (Device const& device, VkSurfaceKHR const surface);
+	explicit SwapchainBuilder (VkPhysicalDevice const physical_device, VkDevice const device, VkSurfaceKHR const surface, uint32_t graphics_queue_index);
+	explicit SwapchainBuilder (VkPhysicalDevice const physical_device, VkDevice const device, VkSurfaceKHR const surface, uint32_t graphics_queue_index, uint32_t present_queue_index);
 
-	detail::Expected<Swapchain, detail::Error<SwapchainError>> build () const;
-	detail::Expected<Swapchain, detail::Error<SwapchainError>> recreate (Swapchain const& swapchain) const;
+	detail::Result<Swapchain> build () const;
 
+	// Set the oldSwapchain member of VkSwapchainCreateInfoKHR.
+	// For use in rebuilding a swapchain.
+	SwapchainBuilder& set_old_swapchain (VkSwapchainKHR old_swapchain);
+	SwapchainBuilder& set_old_swapchain (Swapchain const& swapchain);
+
+
+	// Desired size of the swapchain. By default, the swapchain will use the size
+	// of the window being drawn to.
 	SwapchainBuilder& set_desired_extent (uint32_t width, uint32_t height);
 
+	// When determining the surface format, make this the first to be used if supported.
 	SwapchainBuilder& set_desired_format (VkSurfaceFormatKHR format);
+	// Add this swapchain format to the end of the list of formats selected from.
 	SwapchainBuilder& add_fallback_format (VkSurfaceFormatKHR format);
+	// Use the default swapchain formats. This is done if no formats are provided.
 	SwapchainBuilder& use_default_format_selection ();
 
+	// When determining the present mode, make this the first to be used if supported.
 	SwapchainBuilder& set_desired_present_mode (VkPresentModeKHR present_mode);
+	// Add this present mode to the end of the list of present modes selected from.
 	SwapchainBuilder& add_fallback_present_mode (VkPresentModeKHR present_mode);
+	// Use the default presentation mode. This is done if no present modes are provided.
 	SwapchainBuilder& use_default_present_mode_selection ();
+
+	// Set the bitmask of the image usage for acquired swapchain images.
+	SwapchainBuilder& set_image_usage_flags (VkImageUsageFlags usage_flags);
+	// Add a image usage to the bitmask for acquired swapchain images.
+	SwapchainBuilder& add_image_usage_flags (VkImageUsageFlags usage_flags);
+	// Use the default image usage bitmask values. This is the default if no image usages
+	// are provided. The default is VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT
+	SwapchainBuilder& use_default_image_usage_flags ();
+
+	// Set the number of views in for multiview/stereo surface
+	SwapchainBuilder& set_image_array_layer_count (uint32_t array_layer_count);
+
+	// Set whether the Vulkan implementation is allowed to discard rendering operations that
+	// affect regions of the surface that are not visible. Default is true.
+	// Note: Applications should use the default of true if they do not expect to read back the content
+	// of presentable images before presenting them or after reacquiring them, and if their fragment
+	// shaders do not have any side effects that require them to run for all pixels in the presentable image.
+	SwapchainBuilder& set_clipped (bool clipped = true);
+
+	// Set the VkSwapchainCreateFlagBitsKHR.
+	SwapchainBuilder& set_create_flags (VkSwapchainCreateFlagBitsKHR create_flags);
+	// Set the transform to be applied, like a 90 degree rotation. Default is the current transform.
+	SwapchainBuilder& set_pre_transform_flags (VkSurfaceTransformFlagBitsKHR pre_transform_flags);
+	// Set the alpha channel to be used with other windows in on the system. Default is VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR.
+	SwapchainBuilder& set_composite_alpha_flags (VkCompositeAlphaFlagBitsKHR composite_alpha_flags);
+
+	// Add a structure to the pNext chain of VkSwapchainCreateInfoKHR.
+	// The structure must be valid when SwapchainBuilder::build() is called.
+	template <typename T> SwapchainBuilder& add_pNext (T* structure) {
+		info.pNext_chain.push_back (reinterpret_cast<VkBaseOutStructure*> (structure));
+		return *this;
+	}
 
 	// Provide custom allocation callbacks.
 	SwapchainBuilder& set_allocation_callbacks (VkAllocationCallbacks* callbacks);
@@ -546,23 +623,36 @@ class SwapchainBuilder {
 	private:
 	void add_desired_formats (std::vector<VkSurfaceFormatKHR>& formats) const;
 	void add_desired_present_modes (std::vector<VkPresentModeKHR>& modes) const;
-	// for use in swapchain recreation
-	detail::Expected<Swapchain, detail::Error<SwapchainError>> build (VkSwapchainKHR old_swapchain) const;
 
 	struct SwapchainInfo {
 		VkPhysicalDevice physical_device = VK_NULL_HANDLE;
 		VkDevice device = VK_NULL_HANDLE;
+		std::vector<VkBaseOutStructure*> pNext_chain;
+		VkSwapchainCreateFlagBitsKHR create_flags = static_cast<VkSwapchainCreateFlagBitsKHR> (0);
 		VkSurfaceKHR surface = VK_NULL_HANDLE;
-		VkSwapchainKHR old_swapchain = VK_NULL_HANDLE;
 		std::vector<VkSurfaceFormatKHR> desired_formats;
-		std::vector<VkPresentModeKHR> desired_present_modes;
 		uint32_t desired_width = 256;
 		uint32_t desired_height = 256;
+		uint32_t array_layer_count = 1;
+		VkImageUsageFlags image_usage_flags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 		uint32_t graphics_queue_index = 0;
 		uint32_t present_queue_index = 0;
-		std::vector<VkBaseOutStructure*> pNext_elements;
+		VkSurfaceTransformFlagBitsKHR pre_transform = static_cast<VkSurfaceTransformFlagBitsKHR> (0);
+		VkCompositeAlphaFlagBitsKHR composite_alpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+		std::vector<VkPresentModeKHR> desired_present_modes;
+		bool clipped = true;
+		VkSwapchainKHR old_swapchain = VK_NULL_HANDLE;
 		VkAllocationCallbacks* allocation_callbacks = VK_NULL_HANDLE;
 	} info;
 };
 
 } // namespace vkb
+
+
+namespace std {
+template <> struct is_error_code_enum<vkb::InstanceError> : true_type {};
+template <> struct is_error_code_enum<vkb::PhysicalDeviceError> : true_type {};
+template <> struct is_error_code_enum<vkb::QueueError> : true_type {};
+template <> struct is_error_code_enum<vkb::DeviceError> : true_type {};
+template <> struct is_error_code_enum<vkb::SwapchainError> : true_type {};
+} // namespace std
