@@ -73,3 +73,6 @@ There is no concept of a frame in Vulkan. This means that the way you render is 
 This means it is possible to use Vulkan in an entirely headless mode, where nothing is displayed to the screen. You can render the images and then store them onto the disk (very useful for testing!) or use Vulkan as a way to perform GPU calculations such as a raytracer or other compute tasks.
 
 Next: [Vulkan Render flow]({{ site.baseurl }}{% link docs/introduction/vulkan_execution.md %})
+
+
+{% include comments.html term="Introduction Comments" %}

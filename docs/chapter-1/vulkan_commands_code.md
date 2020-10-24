@@ -241,3 +241,5 @@ At this point, it is possible to execute pure-compute commands, if you wanted to
 
 
 Next: [Main Loop]({{ site.baseurl }}{% link docs/chapter-1/vulkan_mainloop.md %})
+
+{% include comments.html term="Chapter 1 Comments" %}

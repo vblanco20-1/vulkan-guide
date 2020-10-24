@@ -49,3 +49,6 @@ If you get the message of SDL2 dll missing, go to your sdl folder, lib directory
 
 
 Next: [Chapter 0 code walkthrough]({{ site.baseurl }}{% link docs/chapter-0/code_walkthrough.md %})
+
+
+{% include comments.html term="Chapter 0 Comments" %}

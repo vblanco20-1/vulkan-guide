@@ -10,3 +10,5 @@ permalink: /docs/introduction
 
 
 {: .fs-6 .fw-300 }
+
+{% include comments.html term="Introduction Comments" %}

@@ -11,3 +11,6 @@ permalink: /docs/chapter_1
 In this chapter, we are going to start the tutorial code, and configure the initial Vulkan structures needed to support rendering.
 We will also be writing the initial render loop, including command buffer and renderpass management.
 {: .fs-6 .fw-300 }
+
+
+{% include comments.html term="Chapter 1 Comments" %}

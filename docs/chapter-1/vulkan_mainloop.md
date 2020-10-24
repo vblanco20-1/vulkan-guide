@@ -86,3 +86,5 @@ Then we reset the command buffer, and start rendering commands. Once rendering c
 Lets begin the code for the renderloop.
 
 Next: [Programming render loop]({{ site.baseurl }}{% link docs/chapter-1/vulkan_mainloop_code.md %})
+
+{% include comments.html term="Chapter 1 Comments" %}

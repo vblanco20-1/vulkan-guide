@@ -60,3 +60,5 @@ For more detailed information on the command buffer lifecycle, refer to the Vulk
 <https://www.khronos.org/registry/vulkan/specs/1.2-extensions/html/chap6.html#commandbuffers-lifecycle>.
 
 Next: [Vulkan commands code]({{ site.baseurl }}{% link docs/chapter-1/vulkan_commands_code.md %})
+
+{% include comments.html term="Chapter 1 Comments" %}

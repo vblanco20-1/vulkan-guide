@@ -86,3 +86,6 @@ vkQueuePresent(graphicsQueue, renderSemaphore);
 ```
 
 Next: [Project files and libraries]({{ site.baseurl }}{% link docs/introduction/project_libs.md %})
+
+
+{% include comments.html term="Introduction Comments" %}

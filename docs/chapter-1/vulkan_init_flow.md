@@ -58,3 +58,5 @@ In this guide, we will be using the FIFO_RELAXED mode, because it implements a u
 
 
 Next: [Initializing vulkan code]({{ site.baseurl }}{% link docs/chapter-1/vulkan_init_code.md %})
+
+{% include comments.html term="Chapter 1 Comments" %}

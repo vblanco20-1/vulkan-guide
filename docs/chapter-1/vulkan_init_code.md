@@ -344,3 +344,5 @@ With the Vulkan initialization completed and the layers working, we can begin to
 
 
 Next: [Vulkan Render Passes]({{ site.baseurl }}{% link docs/chapter-1/vulkan_renderpass.md %})
+
+{% include comments.html term="Chapter 1 Comments" %}
