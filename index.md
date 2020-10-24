@@ -34,3 +34,21 @@ The guide is separated into multiple chapters. Each chapter focuses on a narrow 
 -  **Chapter 5**: Vulkan textured rendering
 
 Next: [Introduction to vulkan]({{ site.baseurl }}{% link docs/introduction/vulkan_overview.md %})
+
+
+<script src="./gitment/gitment.browser.js"></script>
+  <script>
+    var clientId = 'c45eb9f49498ae618ab4'
+    var clientSecret = '582956c8bdfb982043c48b37c53c67d82c9b6f0c'
+    var gitment = new Gitment({
+      id: 'test page',
+      owner: 'vblanco20-1',
+      repo: 'vulkan-guide',
+      oauth: {
+        client_id: clientId,
+        client_secret: clientSecret,
+      },
+    })
+
+    gitment.render('container')
+  </script>

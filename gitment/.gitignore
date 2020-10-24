@@ -1,0 +1,8 @@
+.DS_Store
+.idea
+
+node_modules
+
+dist
+test/config.js
+index.html
