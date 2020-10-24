@@ -34,11 +34,4 @@ The guide is separated into multiple chapters. Each chapter focuses on a narrow 
 -  **Chapter 5**: Vulkan textured rendering
 
 Next: [Introduction to vulkan]({{ site.baseurl }}{% link docs/introduction/vulkan_overview.md %})
-<script src="https://utteranc.es/client.js"
-        repo="vblanco20-1/vulkan-guide"
-        issue-term="pathname"
-        label="Comment"
-        theme="github-dark"
-        crossorigin="anonymous"
-        async>
-</script>
+{% include comments.html term="Index Comments" %}
