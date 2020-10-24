@@ -36,6 +36,7 @@ The guide is separated into multiple chapters. Each chapter focuses on a narrow 
 Next: [Introduction to vulkan]({{ site.baseurl }}{% link docs/introduction/vulkan_overview.md %})
 
 <div id="container"></div>
+<link rel="stylesheet" href="https://imsun.github.io/gitment/style/default.css">
 <script src="https://vkguide.dev/gitment/gitment.browser.js"></script>
   <script>
     var clientId = 'c45eb9f49498ae618ab4';
