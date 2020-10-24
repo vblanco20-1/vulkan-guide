@@ -55,3 +55,6 @@ It is possible to have multiple descriptor sets pointing to one uniform buffer, 
 
 
 Next: [Setting up descriptor sets]({{ site.baseurl }}{% link docs/chapter-4/descriptors_code.md %})
+
+
+{% include comments.html term="Chapter 4 Comments" %}

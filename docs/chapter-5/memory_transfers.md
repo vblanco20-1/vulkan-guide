@@ -219,3 +219,6 @@ All the logic for copying data is done for meshes, so its time to continue with 
 
 
 Next: [Vulkan Images]({{ site.baseurl }}{% link docs/chapter-5/vulkan_images.md %})
+
+
+{% include comments.html term="Chapter 5 Comments" %}

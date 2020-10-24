@@ -146,3 +146,6 @@ You can try to increase the `FRAME_OVERLAP` value. By increasing it, you will ad
 Now that we have done better CPU-GPU work overlap, it is time to do descriptor sets.
 
 Next: [Descriptor sets]({{ site.baseurl }}{% link docs/chapter-4/descriptors.md %})
+
+
+{% include comments.html term="Chapter 4 Comments" %}

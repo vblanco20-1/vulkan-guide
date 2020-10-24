@@ -159,6 +159,9 @@ Thats really all that was needed, so enjoy using imgui!
 ![map]({{site.baseurl}}/diagrams/IMGUI.png)
 
 
+{% include comments.html term="Imgui Implementation Comments" %}
+
+
 
 
 

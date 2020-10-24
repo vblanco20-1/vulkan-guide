@@ -12,3 +12,6 @@ In this chapter, we iterate on the code to turn a hardcoded triangle into real m
 
 
 {: .fs-6 .fw-300 }
+
+
+{% include comments.html term="Chapter 3 Comments" %}

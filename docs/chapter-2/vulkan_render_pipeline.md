@@ -44,3 +44,5 @@ On this tutorial, we are focusing on the minimum we need to render, which is Fra
 
 Next: [Setting up triangle shaders]({{ site.baseurl }}{% link docs/chapter-2/triangle_walkthrough.md %})
 
+{% include comments.html term="Chapter 2 Comments" %}
+

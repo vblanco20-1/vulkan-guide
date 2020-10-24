@@ -10,3 +10,5 @@ permalink: /docs/chapter_2
 
 In this chapter, we are going to start rendering triangles. We will setup a render pipeline and use it to draw a hardcoded triangle.
 {: .fs-6 .fw-300 }
+
+{% include comments.html term="Chapter 2 Comments" %}

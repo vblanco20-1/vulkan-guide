@@ -380,3 +380,5 @@ If you now execute the application, and everything went well, you should be seei
 ![triangle]({{site.baseurl}}/diagrams/monkeyGood.png)
 
 Next: [Scene management]({{ site.baseurl }}{% link docs/chapter-3/scene_management.md %})
+
+{% include comments.html term="Chapter 3 Comments" %}

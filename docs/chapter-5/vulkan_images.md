@@ -43,3 +43,6 @@ When you bind textures to a shader, there are different ways, but we will be usi
 Next: [Loading images]({{ site.baseurl }}{% link docs/chapter-5/loading_images.md %})
 
 
+{% include comments.html term="Chapter 5 Comments" %}
+
+

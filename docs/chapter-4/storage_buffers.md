@@ -274,3 +274,6 @@ Alternatively, try to create another SSBO that holds something like ObjectColor,
 
 
 Next: [Memory transfers]({{ site.baseurl }}{% link docs/chapter-5/memory_transfers.md %})
+
+
+{% include comments.html term="Chapter 4 Comments" %}

@@ -122,3 +122,4 @@ If you compile and run, you should now see a colored RGB triangle
 ![triangle]({{site.baseurl}}/diagrams/colorTriangle.png)
 
 Next: [Switching shaders]({{ site.baseurl }}{% link docs/chapter-2/toggling_shaders.md %})
+{% include comments.html term="Chapter 2 Comments" %}

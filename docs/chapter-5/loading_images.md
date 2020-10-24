@@ -263,4 +263,7 @@ With the texture now loaded, we need to display it into the shader, refactoring 
 Next: [Drawing images]({{ site.baseurl }}{% link docs/chapter-5/drawing_images.md %})
 
 
+{% include comments.html term="Chapter 5 Comments" %}
+
+
 

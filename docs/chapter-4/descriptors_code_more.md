@@ -328,3 +328,5 @@ One of the things dynamic uniform buffer bindings let you do, is that you can al
 
 Next: [Storage buffers]({{ site.baseurl }}{% link docs/chapter-4/storage_buffers.md %})
 
+
+{% include comments.html term="Chapter 4 Comments" %}

@@ -36,3 +36,4 @@ Next: [Implementing vertex buffers]({{ site.baseurl }}{% link docs/chapter-3/tri
 
 
 
+{% include comments.html term="Chapter 3 Comments" %}

@@ -394,6 +394,9 @@ At this point, you should get this image as result.
 ![map]({{site.baseurl}}/diagrams/empireTextured.png)
 
 
+{% include comments.html term="Chapter 5 Comments" %}
+
+
 
 
 

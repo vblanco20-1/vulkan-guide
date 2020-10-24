@@ -11,3 +11,6 @@ permalink: /docs/chapter_5
 In this chapter, we load textures from files and upload them to Vulkan, to then be used when rendering objects.
 
 {: .fs-6 .fw-300 }
+
+
+{% include comments.html term="Chapter 5 Comments" %}

@@ -377,3 +377,6 @@ If you run the code right now, everything should be working fine. But we have no
 
 
 Next: [Dynamic descriptor sets]({{ site.baseurl }}{% link docs/chapter-4/descriptors_code_more.md %})
+
+
+{% include comments.html term="Chapter 4 Comments" %}

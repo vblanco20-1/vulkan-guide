@@ -164,3 +164,4 @@ If you now run the program, you will see the triangle spinning in the window, up
 
 Next: [Loading OBJ Meshes]({{ site.baseurl }}{% link docs/chapter-3/obj_loading.md %})
 
+{% include comments.html term="Chapter 3 Comments" %}

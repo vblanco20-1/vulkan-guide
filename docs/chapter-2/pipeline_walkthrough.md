@@ -408,3 +408,5 @@ We can now proceed to do interesting things with the shaders to make it more int
 
 
 Next: [Passing data through shader stages]({{ site.baseurl }}{% link docs/chapter-2/passing_data.md %})
+
+{% include comments.html term="Chapter 2 Comments" %}

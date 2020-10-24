@@ -185,6 +185,7 @@ That's caused by the lack of a depth buffer that we have right now, so lets fix 
 
 Next: [Setting up Depth Buffer]({{ site.baseurl }}{% link docs/chapter-3/depth_buffer.md %})
 
+{% include comments.html term="Chapter 3 Comments" %}
 
 
 

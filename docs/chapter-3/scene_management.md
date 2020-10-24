@@ -285,6 +285,8 @@ In the github repo of the chapters, the chapter-3-scene will have the full refac
 
 Next: [Double buffering]({{ site.baseurl }}{% link docs/chapter-4/double_buffering.md %})
 
+{% include comments.html term="Chapter 3 Comments" %}
+
 
 
 
