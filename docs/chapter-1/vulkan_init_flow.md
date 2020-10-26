@@ -7,7 +7,7 @@ nav_order: 1
 
 
 ## Vulkan initialization
-Unlike Opengl, which allowed you to execute graphics commands near-immediately, Vulkan has a lengthy setup phase. To shorten this phase, we are going to use the library `VkBootstrap`, which helps a lot with all of this boilerplate.
+Unlike OpenGL, which allowed you to execute graphics commands near-immediately, Vulkan has a lengthy setup phase. To shorten this phase, we are going to use the library `VkBootstrap`, which helps a lot with all of this boilerplate.
 
 As Vulkan is a very explicit API that gives very "direct" control, you need to initialize it to do things such as load extensions, select which gpu (or multiple!) you are going to use, and create the initial `VkInstance` and `VkDevice` structures that you then use with Vulkan commands.
 
@@ -41,11 +41,11 @@ A swapchain is created on a given size, and if the window resizes, you will have
 
 The format that the swapchain exposes for its images can be different between platforms and even gpus, so its necessary that you store the image format that the swapchain wants, as rendering on a different format will cause artifacts or crashes.
 
-Swapchains are a list of images, accesible by the operating system for display to the screen. You can create swapchains with more or less images, but generally you will want only 2 or 3 images to perform double-buffer or triple-buffer rendering.
+Swapchains are a list of images, accessible by the operating system for display to the screen. You can create swapchains with more or less images, but generally you will want only 2 or 3 images to perform double-buffer or triple-buffer rendering.
 
 The most important thing when creating a swapchain is to select a Present Mode, this is how the swapchain "works" logically.
 
-- VK_PRESENT_MODE_IMMEDIATE_KHR Makes the swapchain not wait for anything, and accept instant pushing of images. This will likely result in tearing, generally not recomended.
+- VK_PRESENT_MODE_IMMEDIATE_KHR Makes the swapchain not wait for anything, and accept instant pushing of images. This will likely result in tearing, generally not recommended.
 - VK_PRESENT_MODE_FIFO_KHR This will have a queue of images to present on refresh intervals. Once the queue is full the application will have to wait until the queue is popped by displaying the image. This is the "strong VSync" present mode, and it will lock your application to the FPS of your screen.
 - VK_PRESENT_MODE_FIFO_RELAXED_KHR . Mostly the same as Fifo VSync, but the VSync is adaptive. If the FPS of your application are lower than the optimal FPS of the screen, it will push the images immediately, likely resulting in tearing. For example, if your screen is a 60 HZ screen, and you are rendering at 55 HZ, this will not drop to the next vsync interval, making your general FPS drop to 30 like Fifo does, instead it will just display the images as still 55 FPS, but with tearing.
 - VK_PRESENT_MODE_MAILBOX_KHR . This one has a list of images, and while one of them is being displayed by the screen, you will be continuously rendering to the others in the list. Whenever its time to display an image, it will select the most recent one. This is the one you use if you want Triple-buffering without hard vsync.
@@ -54,7 +54,7 @@ VK_PRESENT_MODE_IMMEDIATE_KHR is rarely used due to its tearing. Only in extreme
 
 Normal applications will use either MAILBOX or one of the 2 FIFO modes. Mostly depends if you want a hard-vsync or you prefer triple-buffering.
 
-In this guide, we will be using the FIFO_RELAXED mode, because it implements a upper cap on our rendering speed, and as we arent going to render many objects, its best if the framerate is capped and not reaching 5000 FPS which can cause issues. On real applications that have some work to do, MAILBOX is the preferred mode by default.
+In this guide, we will be using the FIFO_RELAXED mode, because it implements a upper cap on our rendering speed, and as we aren't going to render many objects, its best if the framerate is capped and not reaching 5000 FPS which can cause issues. On real applications that have some work to do, MAILBOX is the preferred mode by default.
 
 
 Next: [Initializing vulkan code]({{ site.baseurl }}{% link docs/chapter-1/vulkan_init_code.md %})
