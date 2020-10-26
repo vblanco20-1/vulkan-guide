@@ -1,38 +1,219 @@
+/*
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
+ * documentation files (the “Software”), to deal in the Software without restriction, including without
+ * limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+ * of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT
+ * LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *
+ * Copyright © 2020 Charles Giessen (charles@lunarg.com)
+ */
 
-//#define VK_NO_PROTOTYPES
 #include "VkBootstrap.h"
-//#include "volk.h"
-#include <stdio.h>
-#include <string.h>
+
+#include <cstdio>
+#include <cstring>
+
+#if defined(_WIN32)
+#include <fcntl.h>
+#define NOMINMAX
+#include <windows.h>
+#endif // _WIN32
+
+#if defined(__linux__) || defined(__APPLE__)
+#include <dlfcn.h>
+#endif
+
+#include <mutex>
 
 namespace vkb {
 
 namespace detail {
 
-template <typename T>
-void get_inst_proc_addr (
-    T& out_ptr, const char* func_name, VkInstance instance, PFN_vkGetInstanceProcAddr ptr_vkGetInstanceProcAddr) {
-	out_ptr = reinterpret_cast<T> (ptr_vkGetInstanceProcAddr (instance, func_name));
+class VulkanFunctions {
+	private:
+	std::mutex init_mutex;
+	struct VulkanLibrary {
+#if defined(__linux__) || defined(__APPLE__)
+		void* library;
+#elif defined(_WIN32)
+		HMODULE library;
+#endif
+		PFN_vkGetInstanceProcAddr ptr_vkGetInstanceProcAddr = VK_NULL_HANDLE;
+
+		VulkanLibrary () {
+#if defined(__linux__)
+			library = dlopen ("libvulkan.so.1", RTLD_NOW | RTLD_LOCAL);
+			if (!library) library = dlopen ("libvulkan.so", RTLD_NOW | RTLD_LOCAL);
+#elif defined(__APPLE__)
+			library = dlopen ("libvulkan.dylib", RTLD_NOW | RTLD_LOCAL);
+			if (!library) library = dlopen ("libvulkan.1.dylib", RTLD_NOW | RTLD_LOCAL);
+#elif defined(_WIN32)
+			library = LoadLibrary (TEXT ("vulkan-1.dll"));
+#else
+			assert (false && "Unsupported platform");
+#endif
+			if (!library) return;
+			load_func (ptr_vkGetInstanceProcAddr, "vkGetInstanceProcAddr");
+		}
+
+		template <typename T> void load_func (T& func_dest, const char* func_name) {
+#if defined(__linux__) || defined(__APPLE__)
+			func_dest = reinterpret_cast<T> (dlsym (library, func_name));
+#elif defined(_WIN32)
+			func_dest = reinterpret_cast<T> (GetProcAddress (library, func_name));
+#endif
+		}
+		void close () {
+#if defined(__linux__) || defined(__APPLE__)
+			dlclose (library);
+#elif defined(_WIN32)
+			FreeLibrary (library);
+#endif
+			library = 0;
+		}
+	};
+	VulkanLibrary& get_vulkan_library () {
+		static VulkanLibrary lib;
+		return lib;
+	}
+
+	bool load_vulkan (PFN_vkGetInstanceProcAddr fp_vkGetInstanceProcAddr = nullptr) {
+		if (fp_vkGetInstanceProcAddr != nullptr) {
+			ptr_vkGetInstanceProcAddr = fp_vkGetInstanceProcAddr;
+			return true;
+		} else {
+			auto& lib = get_vulkan_library ();
+			ptr_vkGetInstanceProcAddr = lib.ptr_vkGetInstanceProcAddr;
+			return lib.library != nullptr && lib.ptr_vkGetInstanceProcAddr != VK_NULL_HANDLE;
+		}
+	}
+
+	template <typename T> void get_proc_addr (T& out_ptr, const char* func_name) {
+		out_ptr = reinterpret_cast<T> (ptr_vkGetInstanceProcAddr (instance, func_name));
+	}
+
+	void init_pre_instance_funcs () {
+		get_proc_addr (fp_vkEnumerateInstanceExtensionProperties, "vkEnumerateInstanceExtensionProperties");
+		get_proc_addr (fp_vkEnumerateInstanceLayerProperties, "vkEnumerateInstanceLayerProperties");
+		get_proc_addr (fp_vkEnumerateInstanceVersion, "vkEnumerateInstanceVersion");
+		get_proc_addr (fp_vkCreateInstance, "vkCreateInstance");
+	}
+
+	public:
+	PFN_vkGetInstanceProcAddr ptr_vkGetInstanceProcAddr = nullptr;
+	VkInstance instance = nullptr;
+
+	PFN_vkEnumerateInstanceExtensionProperties fp_vkEnumerateInstanceExtensionProperties = nullptr;
+	PFN_vkEnumerateInstanceLayerProperties fp_vkEnumerateInstanceLayerProperties = nullptr;
+	PFN_vkEnumerateInstanceVersion fp_vkEnumerateInstanceVersion = nullptr;
+	PFN_vkCreateInstance fp_vkCreateInstance = nullptr;
+	PFN_vkDestroyInstance fp_vkDestroyInstance = nullptr;
+
+	PFN_vkEnumeratePhysicalDevices fp_vkEnumeratePhysicalDevices = nullptr;
+	PFN_vkGetPhysicalDeviceFeatures fp_vkGetPhysicalDeviceFeatures = nullptr;
+	PFN_vkGetPhysicalDeviceFeatures2 fp_vkGetPhysicalDeviceFeatures2 = nullptr;
+	PFN_vkGetPhysicalDeviceFormatProperties fp_vkGetPhysicalDeviceFormatProperties = nullptr;
+	PFN_vkGetPhysicalDeviceImageFormatProperties fp_vkGetPhysicalDeviceImageFormatProperties = nullptr;
+	PFN_vkGetPhysicalDeviceProperties fp_vkGetPhysicalDeviceProperties = nullptr;
+	PFN_vkGetPhysicalDeviceProperties2 fp_vkGetPhysicalDeviceProperties2 = nullptr;
+	PFN_vkGetPhysicalDeviceQueueFamilyProperties fp_vkGetPhysicalDeviceQueueFamilyProperties = nullptr;
+	PFN_vkGetPhysicalDeviceQueueFamilyProperties2 fp_vkGetPhysicalDeviceQueueFamilyProperties2 = nullptr;
+	PFN_vkGetPhysicalDeviceMemoryProperties fp_vkGetPhysicalDeviceMemoryProperties = nullptr;
+	PFN_vkGetPhysicalDeviceFormatProperties2 fp_vkGetPhysicalDeviceFormatProperties2 = nullptr;
+	PFN_vkGetPhysicalDeviceMemoryProperties2 fp_vkGetPhysicalDeviceMemoryProperties2 = nullptr;
+
+	PFN_vkCreateDevice fp_vkCreateDevice = nullptr;
+	PFN_vkDestroyDevice fp_vkDestroyDevice = nullptr;
+	PFN_vkEnumerateDeviceExtensionProperties fp_vkEnumerateDeviceExtensionProperties = nullptr;
+	PFN_vkGetDeviceQueue fp_vkGetDeviceQueue = nullptr;
+
+	PFN_vkCreateImageView fp_vkCreateImageView = nullptr;
+	PFN_vkDestroyImageView fp_vkDestroyImageView = nullptr;
+
+	PFN_vkDestroySurfaceKHR fp_vkDestroySurfaceKHR = nullptr;
+	PFN_vkGetPhysicalDeviceSurfaceSupportKHR fp_vkGetPhysicalDeviceSurfaceSupportKHR = nullptr;
+	PFN_vkGetPhysicalDeviceSurfaceFormatsKHR fp_vkGetPhysicalDeviceSurfaceFormatsKHR = nullptr;
+	PFN_vkGetPhysicalDeviceSurfacePresentModesKHR fp_vkGetPhysicalDeviceSurfacePresentModesKHR = nullptr;
+	PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR fp_vkGetPhysicalDeviceSurfaceCapabilitiesKHR = nullptr;
+	PFN_vkCreateSwapchainKHR fp_vkCreateSwapchainKHR = nullptr;
+	PFN_vkDestroySwapchainKHR fp_vkDestroySwapchainKHR = nullptr;
+	PFN_vkGetSwapchainImagesKHR fp_vkGetSwapchainImagesKHR = nullptr;
+
+	bool init_vulkan_funcs (PFN_vkGetInstanceProcAddr fp_vkGetInstanceProcAddr) {
+		std::lock_guard<std::mutex> lg (init_mutex);
+		if (!load_vulkan (fp_vkGetInstanceProcAddr)) return false;
+		init_pre_instance_funcs ();
+		return true;
+	}
+
+	template <typename T> void get_inst_proc_addr (T& out_ptr, const char* func_name) {
+		std::lock_guard<std::mutex> lg (init_mutex);
+		get_proc_addr (out_ptr, func_name);
+	}
+
+	void init_instance_funcs (VkInstance inst) {
+		std::lock_guard<std::mutex> lg (init_mutex);
+
+		instance = inst;
+		get_proc_addr (fp_vkDestroyInstance, "vkDestroyInstance");
+		get_proc_addr (fp_vkEnumeratePhysicalDevices, "vkEnumeratePhysicalDevices");
+		get_proc_addr (fp_vkGetPhysicalDeviceFeatures, "vkGetPhysicalDeviceFeatures");
+		get_proc_addr (fp_vkGetPhysicalDeviceFeatures2, "vkGetPhysicalDeviceFeatures2");
+		get_proc_addr (fp_vkGetPhysicalDeviceFormatProperties, "vkGetPhysicalDeviceFormatProperties");
+		get_proc_addr (fp_vkGetPhysicalDeviceImageFormatProperties, "vkGetPhysicalDeviceImageFormatProperties");
+		get_proc_addr (fp_vkGetPhysicalDeviceProperties, "vkGetPhysicalDeviceProperties");
+		get_proc_addr (fp_vkGetPhysicalDeviceProperties2, "vkGetPhysicalDeviceProperties2");
+		get_proc_addr (fp_vkGetPhysicalDeviceQueueFamilyProperties, "vkGetPhysicalDeviceQueueFamilyProperties");
+		get_proc_addr (fp_vkGetPhysicalDeviceQueueFamilyProperties2, "vkGetPhysicalDeviceQueueFamilyProperties2");
+		get_proc_addr (fp_vkGetPhysicalDeviceMemoryProperties, "vkGetPhysicalDeviceMemoryProperties");
+		get_proc_addr (fp_vkGetPhysicalDeviceFormatProperties2, "vkGetPhysicalDeviceFormatProperties2");
+		get_proc_addr (fp_vkGetPhysicalDeviceMemoryProperties2, "vkGetPhysicalDeviceMemoryProperties2");
+
+		get_proc_addr (fp_vkCreateDevice, "vkCreateDevice");
+		get_proc_addr (fp_vkDestroyDevice, "vkDestroyDevice");
+		get_proc_addr (fp_vkEnumerateDeviceExtensionProperties, "vkEnumerateDeviceExtensionProperties");
+		get_proc_addr (fp_vkGetDeviceQueue, "vkGetDeviceQueue");
+
+		get_proc_addr (fp_vkCreateImageView, "vkCreateImageView");
+		get_proc_addr (fp_vkDestroyImageView, "vkDestroyImageView");
+
+		get_proc_addr (fp_vkDestroySurfaceKHR, "vkDestroySurfaceKHR");
+		get_proc_addr (fp_vkGetPhysicalDeviceSurfaceSupportKHR, "vkGetPhysicalDeviceSurfaceSupportKHR");
+		get_proc_addr (fp_vkGetPhysicalDeviceSurfaceFormatsKHR, "vkGetPhysicalDeviceSurfaceFormatsKHR");
+		get_proc_addr (fp_vkGetPhysicalDeviceSurfacePresentModesKHR, "vkGetPhysicalDeviceSurfacePresentModesKHR");
+		get_proc_addr (fp_vkGetPhysicalDeviceSurfaceCapabilitiesKHR, "vkGetPhysicalDeviceSurfaceCapabilitiesKHR");
+		get_proc_addr (fp_vkCreateSwapchainKHR, "vkCreateSwapchainKHR");
+		get_proc_addr (fp_vkDestroySwapchainKHR, "vkDestroySwapchainKHR");
+		get_proc_addr (fp_vkGetSwapchainImagesKHR, "vkGetSwapchainImagesKHR");
+	}
+};
+
+VulkanFunctions& vulkan_functions () {
+	static VulkanFunctions v;
+	return v;
 }
 
 // Helper for robustly executing the two-call pattern
 template <typename T, typename F, typename... Ts>
-auto get_vector (F&& f, Ts&&... ts) -> Expected<std::vector<T>, VkResult> {
+auto get_vector (std::vector<T>& out, F&& f, Ts&&... ts) -> VkResult {
 	uint32_t count = 0;
-	std::vector<T> results;
 	VkResult err;
 	do {
 		err = f (ts..., &count, nullptr);
 		if (err) {
 			return err;
 		};
-		results.resize (count);
-		err = f (ts..., &count, results.data ());
+		out.resize (count);
+		err = f (ts..., &count, out.data ());
+		out.resize (count);
 	} while (err == VK_INCOMPLETE);
-	if (err != VK_SUCCESS) {
-		return err;
-	};
-	return results;
+	return err;
 }
 
 template <typename T, typename F, typename... Ts>
@@ -42,6 +223,7 @@ auto get_vector_noerror (F&& f, Ts&&... ts) -> std::vector<T> {
 	f (ts..., &count, nullptr);
 	results.resize (count);
 	f (ts..., &count, results.data ());
+	results.resize (count);
 	return results;
 }
 } // namespace detail
@@ -87,8 +269,7 @@ VkResult create_debug_utils_messenger (VkInstance instance,
 	messengerCreateInfo.pfnUserCallback = debug_callback;
 
 	PFN_vkCreateDebugUtilsMessengerEXT createMessengerFunc;
-	detail::get_inst_proc_addr (
-	    createMessengerFunc, "vkCreateDebugUtilsMessengerEXT", instance, vkGetInstanceProcAddr);
+	detail::vulkan_functions ().get_inst_proc_addr (createMessengerFunc, "vkCreateDebugUtilsMessengerEXT");
 
 	if (createMessengerFunc != nullptr) {
 		return createMessengerFunc (instance, &messengerCreateInfo, allocation_callbacks, pDebugMessenger);
@@ -99,9 +280,10 @@ VkResult create_debug_utils_messenger (VkInstance instance,
 
 void destroy_debug_utils_messenger (
     VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, VkAllocationCallbacks* allocation_callbacks) {
+
 	PFN_vkDestroyDebugUtilsMessengerEXT deleteMessengerFunc;
-	detail::get_inst_proc_addr (
-	    deleteMessengerFunc, "vkDestroyDebugUtilsMessengerEXT", instance, vkGetInstanceProcAddr);
+	detail::vulkan_functions ().get_inst_proc_addr (deleteMessengerFunc, "vkDestroyDebugUtilsMessengerEXT");
+
 	if (deleteMessengerFunc != nullptr) {
 		deleteMessengerFunc (instance, debugMessenger, allocation_callbacks);
 	}
@@ -119,7 +301,7 @@ VkBool32 default_debug_callback (VkDebugUtilsMessageSeverityFlagBitsEXT messageS
 }
 
 namespace detail {
-bool check_layer_supported (std::vector<VkLayerProperties> available_layers, const char* layer_name) {
+bool check_layer_supported (std::vector<VkLayerProperties> const& available_layers, const char* layer_name) {
 	if (!layer_name) return false;
 	for (const auto& layer_properties : available_layers) {
 		if (strcmp (layer_name, layer_properties.layerName) == 0) {
@@ -129,7 +311,8 @@ bool check_layer_supported (std::vector<VkLayerProperties> available_layers, con
 	return false;
 }
 
-bool check_layers_supported (std::vector<VkLayerProperties> available_layers, std::vector<const char*> layer_names) {
+bool check_layers_supported (std::vector<VkLayerProperties> const& available_layers,
+    std::vector<const char*> const& layer_names) {
 	bool all_found = true;
 	for (const auto& layer_name : layer_names) {
 		bool found = check_layer_supported (available_layers, layer_name);
@@ -138,18 +321,19 @@ bool check_layers_supported (std::vector<VkLayerProperties> available_layers, st
 	return all_found;
 }
 
-bool check_extension_supported (std::vector<VkExtensionProperties> available_extensions, const char* extension_name) {
+bool check_extension_supported (
+    std::vector<VkExtensionProperties> const& available_extensions, const char* extension_name) {
 	if (!extension_name) return false;
-	for (const auto& layer_properties : available_extensions) {
-		if (strcmp (extension_name, layer_properties.extensionName) == 0) {
+	for (const auto& extension_properties : available_extensions) {
+		if (strcmp (extension_name, extension_properties.extensionName) == 0) {
 			return true;
 		}
 	}
 	return false;
 }
 
-bool check_extensions_supported (std::vector<VkExtensionProperties> available_extensions,
-    std::vector<const char*> extension_names) {
+bool check_extensions_supported (std::vector<VkExtensionProperties> const& available_extensions,
+    std::vector<const char*> const& extension_names) {
 	bool all_found = true;
 	for (const auto& extension_name : extension_names) {
 		bool found = check_extension_supported (available_extensions, extension_name);
@@ -169,7 +353,63 @@ void setup_pNext_chain (T& structure, std::vector<VkBaseOutStructure*> const& st
 }
 const char* validation_layer_name = "VK_LAYER_KHRONOS_validation";
 
+struct InstanceErrorCategory : std::error_category {
+	const char* name () const noexcept override { return "vkb_instance"; }
+	std::string message (int err) const override {
+		return to_string (static_cast<InstanceError> (err));
+	}
+};
+const InstanceErrorCategory instance_error_category;
+
+struct PhysicalDeviceErrorCategory : std::error_category {
+	const char* name () const noexcept override { return "vkb_physical_device"; }
+	std::string message (int err) const override {
+		return to_string (static_cast<PhysicalDeviceError> (err));
+	}
+};
+const PhysicalDeviceErrorCategory physical_device_error_category;
+
+struct QueueErrorCategory : std::error_category {
+	const char* name () const noexcept override { return "vkb_queue"; }
+	std::string message (int err) const override {
+		return to_string (static_cast<QueueError> (err));
+	}
+};
+const QueueErrorCategory queue_error_category;
+
+struct DeviceErrorCategory : std::error_category {
+	const char* name () const noexcept override { return "vkb_device"; }
+	std::string message (int err) const override {
+		return to_string (static_cast<DeviceError> (err));
+	}
+};
+const DeviceErrorCategory device_error_category;
+
+struct SwapchainErrorCategory : std::error_category {
+	const char* name () const noexcept override { return "vbk_swapchain"; }
+	std::string message (int err) const override {
+		return to_string (static_cast<SwapchainError> (err));
+	}
+};
+const SwapchainErrorCategory swapchain_error_category;
+
 } // namespace detail
+
+std::error_code make_error_code (InstanceError instance_error) {
+	return { static_cast<int> (instance_error), detail::instance_error_category };
+}
+std::error_code make_error_code (PhysicalDeviceError physical_device_error) {
+	return { static_cast<int> (physical_device_error), detail::physical_device_error_category };
+}
+std::error_code make_error_code (QueueError queue_error) {
+	return { static_cast<int> (queue_error), detail::queue_error_category };
+}
+std::error_code make_error_code (DeviceError device_error) {
+	return { static_cast<int> (device_error), detail::device_error_category };
+}
+std::error_code make_error_code (SwapchainError swapchain_error) {
+	return { static_cast<int> (swapchain_error), detail::swapchain_error_category };
+}
 
 const char* to_string (InstanceError err) {
 	switch (err) {
@@ -189,6 +429,8 @@ const char* to_string (InstanceError err) {
 			return "requested_layers_not_present";
 		case InstanceError::requested_extensions_not_present:
 			return "requested_extensions_not_present";
+		case InstanceError::windowing_extensions_not_present:
+			return "windowing_extensions_not_present";
 		default:
 			return "";
 	}
@@ -250,23 +492,52 @@ const char* to_string (SwapchainError err) {
 	}
 }
 
-SystemInfo::SystemInfo () {
- 	auto available_extensions_ret =
-	    detail::get_vector<VkExtensionProperties> (vkEnumerateInstanceExtensionProperties, nullptr);
-	if (available_extensions_ret.has_value ()) {
-		this->available_extensions = available_extensions_ret.value ();
+detail::Result<SystemInfo> SystemInfo::get_system_info () {
+	if (!detail::vulkan_functions ().init_vulkan_funcs (nullptr)) {
+		return make_error_code (InstanceError::vulkan_unavailable);
 	}
-	for (auto& ext : this->available_extensions)
-		if (strcmp (ext.extensionName, VK_EXT_DEBUG_UTILS_EXTENSION_NAME) == 0)
-			debug_messenger_available = true;
+	return SystemInfo ();
+}
 
-	auto available_layers_ret = detail::get_vector<VkLayerProperties> (vkEnumerateInstanceLayerProperties);
-	if (available_layers_ret.has_value ()) {
-		this->available_layers = available_layers_ret.value ();
+detail::Result<SystemInfo> SystemInfo::get_system_info (PFN_vkGetInstanceProcAddr fp_vkGetInstanceProcAddr) {
+	// Using externally provided function pointers, assume the loader is available
+	detail::vulkan_functions ().init_vulkan_funcs (fp_vkGetInstanceProcAddr);
+	return SystemInfo ();
+}
+
+SystemInfo::SystemInfo () {
+	auto available_layers_ret = detail::get_vector<VkLayerProperties> (
+	    this->available_layers, detail::vulkan_functions ().fp_vkEnumerateInstanceLayerProperties);
+	if (available_layers_ret != VK_SUCCESS) {
+		this->available_layers.clear ();
 	}
+
 	for (auto& layer : this->available_layers)
 		if (strcmp (layer.layerName, detail::validation_layer_name) == 0)
 			validation_layers_available = true;
+
+	auto available_extensions_ret = detail::get_vector<VkExtensionProperties> (this->available_extensions,
+	    detail::vulkan_functions ().fp_vkEnumerateInstanceExtensionProperties,
+	    nullptr);
+	if (available_extensions_ret != VK_SUCCESS) {
+		this->available_extensions.clear ();
+	}
+
+	for (auto& ext : this->available_extensions)
+		if (strcmp (ext.extensionName, VK_EXT_DEBUG_UTILS_EXTENSION_NAME) == 0)
+			debug_utils_available = true;
+
+	for (auto& layer : this->available_layers) {
+		std::vector<VkExtensionProperties> layer_extensions;
+		auto layer_extensions_ret = detail::get_vector<VkExtensionProperties> (layer_extensions,
+		    detail::vulkan_functions ().fp_vkEnumerateInstanceExtensionProperties,
+		    layer.layerName);
+		if (layer_extensions_ret != VK_SUCCESS) {
+			for (auto& ext : layer_extensions)
+				if (strcmp (ext.extensionName, VK_EXT_DEBUG_UTILS_EXTENSION_NAME) == 0)
+					debug_utils_available = true;
+		}
+	}
 }
 bool SystemInfo::is_extension_available (const char* extension_name) const {
 	if (!extension_name) return false;
@@ -281,36 +552,42 @@ void destroy_instance (Instance instance) {
 	if (instance.instance != VK_NULL_HANDLE) {
 		if (instance.debug_messenger != nullptr)
 			destroy_debug_utils_messenger (instance.instance, instance.debug_messenger, instance.allocation_callbacks);
-		vkDestroyInstance (instance.instance, instance.allocation_callbacks);
+		detail::vulkan_functions ().fp_vkDestroyInstance (instance.instance, instance.allocation_callbacks);
 	}
 }
 
-SystemInfo InstanceBuilder::get_system_info () const { return system; }
+InstanceBuilder::InstanceBuilder (PFN_vkGetInstanceProcAddr fp_vkGetInstanceProcAddr) {
+	info.fp_vkGetInstanceProcAddr = fp_vkGetInstanceProcAddr;
+}
+InstanceBuilder::InstanceBuilder () {}
 
-detail::Expected<Instance, detail::Error<InstanceError>> InstanceBuilder::build () const {
+detail::Result<Instance> InstanceBuilder::build () const {
+
+	auto sys_info_ret = SystemInfo::get_system_info ();
+	if (!sys_info_ret) return sys_info_ret.error ();
+	auto system = sys_info_ret.value ();
 
 	uint32_t api_version = VK_MAKE_VERSION (1, 0, 0);
 
 	if (info.required_api_version > VK_MAKE_VERSION (1, 0, 0) ||
 	    info.desired_api_version > VK_MAKE_VERSION (1, 0, 0)) {
-		PFN_vkEnumerateInstanceVersion pfn_vkEnumerateInstanceVersion;
-		detail::get_inst_proc_addr (
-		    pfn_vkEnumerateInstanceVersion, "vkEnumerateInstanceVersion", nullptr, vkGetInstanceProcAddr);
+		PFN_vkEnumerateInstanceVersion pfn_vkEnumerateInstanceVersion =
+		    detail::vulkan_functions ().fp_vkEnumerateInstanceVersion;
 
 		uint32_t queried_api_version = VK_MAKE_VERSION (1, 0, 0);
 		if (pfn_vkEnumerateInstanceVersion != nullptr) {
 			VkResult res = pfn_vkEnumerateInstanceVersion (&queried_api_version);
 			// Should always return VK_SUCCESS
 			if (res != VK_SUCCESS && info.required_api_version > 0)
-				return detail::Error<InstanceError>{ InstanceError::vulkan_version_unavailable };
+				return make_error_code (InstanceError::vulkan_version_unavailable);
 		}
 		if (pfn_vkEnumerateInstanceVersion == nullptr || queried_api_version < info.required_api_version) {
 			if (VK_VERSION_MINOR (info.required_api_version) == 2)
-				return detail::Error<InstanceError>{ InstanceError::vulkan_version_1_2_unavailable };
+				return make_error_code (InstanceError::vulkan_version_1_2_unavailable);
 			else if (VK_VERSION_MINOR (info.required_api_version))
-				return detail::Error<InstanceError>{ InstanceError::vulkan_version_1_1_unavailable };
+				return make_error_code (InstanceError::vulkan_version_1_1_unavailable);
 			else
-				return detail::Error<InstanceError>{ InstanceError::vulkan_version_unavailable };
+				return make_error_code (InstanceError::vulkan_version_unavailable);
 		}
 		if (info.required_api_version > VK_MAKE_VERSION (1, 0, 0)) {
 			api_version = info.required_api_version;
@@ -334,41 +611,49 @@ detail::Expected<Instance, detail::Error<InstanceError>> InstanceBuilder::build 
 	std::vector<const char*> extensions;
 	for (auto& ext : info.extensions)
 		extensions.push_back (ext);
-	if (info.debug_callback != nullptr) {
+	if (info.debug_callback != nullptr && system.debug_utils_available) {
 		extensions.push_back (VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 	}
 
 	if (!info.headless_context) {
-		extensions.push_back ("VK_KHR_surface");
+		auto check_add_window_ext = [&] (const char* name) -> bool {
+			if (!detail::check_extension_supported (system.available_extensions, name))
+				return false;
+			extensions.push_back (name);
+			return true;
+		};
+		bool khr_surface_added = check_add_window_ext ("VK_KHR_surface");
 #if defined(_WIN32)
-		extensions.push_back ("VK_KHR_win32_surface");
+		bool added_window_exts = check_add_window_ext ("VK_KHR_win32_surface");
 #elif defined(__ANDROID__)
-		extensions.push_back ("VK_KHR_android_surface");
+		bool added_window_exts = check_add_window_ext ("VK_KHR_android_surface");
 #elif defined(_DIRECT2DISPLAY)
-		extensions.push_back ("VK_KHR_display");
+		bool added_window_exts = check_add_window_ext ("VK_KHR_display");
 #elif defined(__linux__)
-		extensions.push_back ("VK_KHR_xcb_surface");
-		extensions.push_back ("VK_KHR_xlib_surface");
-		extensions.push_back ("VK_KHR_wayland_surface");
+		bool added_window_exts = check_add_window_ext ("VK_KHR_xcb_surface");
+        added_window_exts = check_add_window_ext ("VK_KHR_xlib_surface") || added_window_exts;
+        added_window_exts = check_add_window_ext ("VK_KHR_wayland_surface") || added_window_exts;
 #elif defined(__APPLE__)
-		extensions.push_back ("VK_KHR_metal_surface");
+		bool added_window_exts = check_add_window_ext ("VK_KHR_metal_surface");
 #endif
+		if (!khr_surface_added || !added_window_exts)
+			return make_error_code (InstanceError::windowing_extensions_not_present);
 	}
 	bool all_extensions_supported = detail::check_extensions_supported (system.available_extensions, extensions);
 	if (!all_extensions_supported) {
-		return detail::Error<InstanceError>{ InstanceError::requested_extensions_not_present };
+		return make_error_code (InstanceError::requested_extensions_not_present);
 	}
 
 	std::vector<const char*> layers;
 	for (auto& layer : info.layers)
 		layers.push_back (layer);
 
-	if (info.enable_validation_layers) {
+	if (info.enable_validation_layers || (info.request_validation_layers && system.validation_layers_available)) {
 		layers.push_back (detail::validation_layer_name);
 	}
 	bool all_layers_supported = detail::check_layers_supported (system.available_layers, layers);
 	if (!all_layers_supported) {
-		return detail::Error<InstanceError>{ InstanceError::requested_layers_not_present };
+		return make_error_code (InstanceError::requested_layers_not_present);
 	}
 
 	std::vector<VkBaseOutStructure*> pNext_chain;
@@ -417,9 +702,12 @@ detail::Expected<Instance, detail::Error<InstanceError>> InstanceBuilder::build 
 	instance_create_info.ppEnabledLayerNames = layers.data ();
 
 	Instance instance;
-	VkResult res = vkCreateInstance (&instance_create_info, info.allocation_callbacks, &instance.instance);
+	VkResult res = detail::vulkan_functions ().fp_vkCreateInstance (
+	    &instance_create_info, info.allocation_callbacks, &instance.instance);
 	if (res != VK_SUCCESS)
-		return detail::Error<InstanceError>{ InstanceError::failed_create_instance, res };
+		return detail::Result<Instance> (InstanceError::failed_create_instance, res);
+
+	detail::vulkan_functions ().init_instance_funcs (instance.instance);
 
 	if (info.use_debug_messenger) {
 		res = create_debug_utils_messenger (instance.instance,
@@ -429,7 +717,7 @@ detail::Expected<Instance, detail::Error<InstanceError>> InstanceBuilder::build 
 		    &instance.debug_messenger,
 		    info.allocation_callbacks);
 		if (res != VK_SUCCESS) {
-			return detail::Error<InstanceError>{ InstanceError::failed_create_debug_messenger, res };
+			return detail::Result<Instance> (InstanceError::failed_create_debug_messenger, res);
 		}
 	}
 
@@ -438,6 +726,7 @@ detail::Expected<Instance, detail::Error<InstanceError>> InstanceBuilder::build 
 	}
 	instance.allocation_callbacks = info.allocation_callbacks;
 	instance.instance_version = api_version;
+	instance.fp_vkGetInstanceProcAddr = detail::vulkan_functions ().ptr_vkGetInstanceProcAddr;
 	return instance;
 }
 
@@ -482,9 +771,7 @@ InstanceBuilder& InstanceBuilder::enable_validation_layers (bool enable_validati
 	return *this;
 }
 InstanceBuilder& InstanceBuilder::request_validation_layers (bool enable_validation) {
-	info.enable_validation_layers =
-	    enable_validation &&
-	    detail::check_layer_supported (system.available_layers, detail::validation_layer_name);
+	info.request_validation_layers = enable_validation;
 	return *this;
 }
 InstanceBuilder& InstanceBuilder::use_default_debug_messenger () {
@@ -540,12 +827,13 @@ namespace detail {
 
 std::vector<const char*> check_device_extension_support (
     VkPhysicalDevice device, std::vector<const char*> desired_extensions) {
-	auto available_extensions =
-	    detail::get_vector<VkExtensionProperties> (vkEnumerateDeviceExtensionProperties, device, nullptr);
-	if (!available_extensions.has_value ()) return {};
+	std::vector<VkExtensionProperties> available_extensions;
+	auto available_extensions_ret = detail::get_vector<VkExtensionProperties> (
+	    available_extensions, detail::vulkan_functions ().fp_vkEnumerateDeviceExtensionProperties, device, nullptr);
+	if (available_extensions_ret != VK_SUCCESS) return {};
 
 	std::vector<const char*> extensions_to_enable;
-	for (const auto& extension : available_extensions.value ()) {
+	for (const auto& extension : available_extensions) {
 		for (auto& req_ext : desired_extensions) {
 			if (strcmp (req_ext, extension.extensionName) == 0) {
 				extensions_to_enable.push_back (req_ext);
@@ -683,7 +971,7 @@ int get_present_queue_index (VkPhysicalDevice const phys_device,
 	for (size_t i = 0; i < families.size (); i++) {
 		VkBool32 presentSupport = false;
 		if (surface != VK_NULL_HANDLE) {
-			VkResult res = vkGetPhysicalDeviceSurfaceSupportKHR (
+			VkResult res = detail::vulkan_functions ().fp_vkGetPhysicalDeviceSurfaceSupportKHR (
 			    phys_device, static_cast<uint32_t> (i), surface, &presentSupport);
 			if (res != VK_SUCCESS) return -1; // TODO: determine if this should fail another way
 		}
@@ -699,12 +987,12 @@ PhysicalDeviceSelector::PhysicalDeviceDesc PhysicalDeviceSelector::populate_devi
 	PhysicalDeviceSelector::PhysicalDeviceDesc desc{};
 	desc.phys_device = phys_device;
 	auto queue_families = detail::get_vector_noerror<VkQueueFamilyProperties> (
-	    vkGetPhysicalDeviceQueueFamilyProperties, phys_device);
+	    detail::vulkan_functions ().fp_vkGetPhysicalDeviceQueueFamilyProperties, phys_device);
 	desc.queue_families = queue_families;
 
-	vkGetPhysicalDeviceProperties (phys_device, &desc.device_properties);
-	vkGetPhysicalDeviceFeatures (phys_device, &desc.device_features);
-	vkGetPhysicalDeviceMemoryProperties (phys_device, &desc.mem_properties);
+	detail::vulkan_functions ().fp_vkGetPhysicalDeviceProperties (phys_device, &desc.device_properties);
+	detail::vulkan_functions ().fp_vkGetPhysicalDeviceFeatures (phys_device, &desc.device_features);
+	detail::vulkan_functions ().fp_vkGetPhysicalDeviceMemoryProperties (phys_device, &desc.mem_properties);
 	return desc;
 }
 
@@ -744,14 +1032,20 @@ PhysicalDeviceSelector::Suitable PhysicalDeviceSelector::is_device_suitable (Phy
 	if (criteria.defer_surface_initialization) {
 		swapChainAdequate = true;
 	} else if (!system_info.headless) {
+		std::vector<VkSurfaceFormatKHR> formats;
+		std::vector<VkPresentModeKHR> present_modes;
 
-		auto formats = detail::get_vector<VkSurfaceFormatKHR> (
-		    vkGetPhysicalDeviceSurfaceFormatsKHR, pd.phys_device, system_info.surface);
-		auto present_modes = detail::get_vector<VkPresentModeKHR> (
-		    vkGetPhysicalDeviceSurfacePresentModesKHR, pd.phys_device, system_info.surface);
+		auto formats_ret = detail::get_vector<VkSurfaceFormatKHR> (formats,
+		    detail::vulkan_functions ().fp_vkGetPhysicalDeviceSurfaceFormatsKHR,
+		    pd.phys_device,
+		    system_info.surface);
+		auto present_modes_ret = detail::get_vector<VkPresentModeKHR> (present_modes,
+		    detail::vulkan_functions ().fp_vkGetPhysicalDeviceSurfacePresentModesKHR,
+		    pd.phys_device,
+		    system_info.surface);
 
-		if (formats.has_value () && present_modes.has_value ()) {
-			swapChainAdequate = !formats.value ().empty () && !present_modes.value ().empty ();
+		if (formats_ret == VK_SUCCESS && present_modes_ret == VK_SUCCESS) {
+			swapChainAdequate = !formats.empty () && !present_modes.empty ();
 		}
 	}
 	if (criteria.require_present && !swapChainAdequate) return Suitable::no;
@@ -793,24 +1087,27 @@ PhysicalDeviceSelector::PhysicalDeviceSelector (Instance const& instance) {
 	criteria.desired_version = instance.instance_version;
 }
 
-detail::Expected<PhysicalDevice, detail::Error<PhysicalDeviceError>> PhysicalDeviceSelector::select () const {
+detail::Result<PhysicalDevice> PhysicalDeviceSelector::select () const {
 	if (!system_info.headless && !criteria.defer_surface_initialization) {
 		if (system_info.surface == nullptr)
-			return detail::Error<PhysicalDeviceError>{ PhysicalDeviceError::no_surface_provided };
+			return detail::Result<PhysicalDevice>{ PhysicalDeviceError::no_surface_provided };
 	}
 
-	auto physical_devices =
-	    detail::get_vector<VkPhysicalDevice> (vkEnumeratePhysicalDevices, system_info.instance);
-	if (!physical_devices.has_value ()) {
-		return detail::Error<PhysicalDeviceError>{ PhysicalDeviceError::failed_enumerate_physical_devices,
-			physical_devices.error () };
+
+	std::vector<VkPhysicalDevice> physical_devices;
+
+	auto physical_devices_ret = detail::get_vector<VkPhysicalDevice> (
+	    physical_devices, detail::vulkan_functions ().fp_vkEnumeratePhysicalDevices, system_info.instance);
+	if (physical_devices_ret != VK_SUCCESS) {
+		return detail::Result<PhysicalDevice>{ PhysicalDeviceError::failed_enumerate_physical_devices,
+			physical_devices_ret };
 	}
-	if (physical_devices.value ().size () == 0) {
-		return detail::Error<PhysicalDeviceError>{ PhysicalDeviceError::no_physical_devices_found };
+	if (physical_devices.size () == 0) {
+		return detail::Result<PhysicalDevice>{ PhysicalDeviceError::no_physical_devices_found };
 	}
 
 	std::vector<PhysicalDeviceDesc> phys_device_descriptions;
-	for (auto& phys_device : physical_devices.value ()) {
+	for (auto& phys_device : physical_devices) {
 		phys_device_descriptions.push_back (populate_device_details (phys_device));
 	}
 
@@ -831,7 +1128,7 @@ detail::Expected<PhysicalDevice, detail::Error<PhysicalDeviceError>> PhysicalDev
 	}
 
 	if (selected_device.phys_device == VK_NULL_HANDLE) {
-		return detail::Error<PhysicalDeviceError>{ PhysicalDeviceError::no_suitable_device };
+		return detail::Result<PhysicalDevice>{ PhysicalDeviceError::no_suitable_device };
 	}
 	PhysicalDevice out_device{};
 	out_device.physical_device = selected_device.phys_device;
@@ -951,61 +1248,61 @@ std::vector<VkQueueFamilyProperties> PhysicalDevice::get_queue_families () const
 
 // ---- Queues ---- //
 
-detail::Expected<uint32_t, detail::Error<QueueError>> Device::get_queue_index (QueueType type) const {
+detail::Result<uint32_t> Device::get_queue_index (QueueType type) const {
 	int index = -1;
 	switch (type) {
 		case QueueType::present:
 			index = detail::get_present_queue_index (physical_device.physical_device, surface, queue_families);
-			if (index < 0) return detail::Error<QueueError>{ QueueError::present_unavailable };
+			if (index < 0) return detail::Result<uint32_t>{ QueueError::present_unavailable };
 			break;
 		case QueueType::graphics:
 			index = detail::get_graphics_queue_index (queue_families);
-			if (index < 0) return detail::Error<QueueError>{ QueueError::graphics_unavailable };
+			if (index < 0) return detail::Result<uint32_t>{ QueueError::graphics_unavailable };
 			break;
 		case QueueType::compute:
 			index = detail::get_separate_compute_queue_index (queue_families);
-			if (index < 0) return detail::Error<QueueError>{ QueueError::compute_unavailable };
+			if (index < 0) return detail::Result<uint32_t>{ QueueError::compute_unavailable };
 			break;
 		case QueueType::transfer:
 			index = detail::get_separate_transfer_queue_index (queue_families);
-			if (index < 0) return detail::Error<QueueError>{ QueueError::transfer_unavailable };
+			if (index < 0) return detail::Result<uint32_t>{ QueueError::transfer_unavailable };
 			break;
 		default:
-			return detail::Error<QueueError>{ QueueError::invalid_queue_family_index };
+			return detail::Result<uint32_t>{ QueueError::invalid_queue_family_index };
 	}
 	return static_cast<uint32_t> (index);
 }
-detail::Expected<uint32_t, detail::Error<QueueError>> Device::get_dedicated_queue_index (QueueType type) const {
+detail::Result<uint32_t> Device::get_dedicated_queue_index (QueueType type) const {
 	int index = -1;
 	switch (type) {
 		case QueueType::compute:
 			index = detail::get_dedicated_compute_queue_index (queue_families);
-			if (index < 0) return detail::Error<QueueError>{ QueueError::compute_unavailable };
+			if (index < 0) return detail::Result<uint32_t>{ QueueError::compute_unavailable };
 			break;
 		case QueueType::transfer:
 			index = detail::get_dedicated_transfer_queue_index (queue_families);
-			if (index < 0) return detail::Error<QueueError>{ QueueError::transfer_unavailable };
+			if (index < 0) return detail::Result<uint32_t>{ QueueError::transfer_unavailable };
 			break;
 		default:
-			return detail::Error<QueueError>{ QueueError::invalid_queue_family_index };
+			return detail::Result<uint32_t>{ QueueError::invalid_queue_family_index };
 	}
 	return static_cast<uint32_t> (index);
 }
 namespace detail {
 VkQueue get_queue (VkDevice device, uint32_t family) {
 	VkQueue out_queue;
-	vkGetDeviceQueue (device, family, 0, &out_queue);
+	detail::vulkan_functions ().fp_vkGetDeviceQueue (device, family, 0, &out_queue);
 	return out_queue;
 }
 } // namespace detail
-detail::Expected<VkQueue, detail::Error<QueueError>> Device::get_queue (QueueType type) const {
+detail::Result<VkQueue> Device::get_queue (QueueType type) const {
 	auto index = get_queue_index (type);
-	if (!index.has_value ()) return index.error ();
+	if (!index.has_value ()) return { index.error () };
 	return detail::get_queue (device, index.value ());
 }
-detail::Expected<VkQueue, detail::Error<QueueError>> Device::get_dedicated_queue (QueueType type) const {
+detail::Result<VkQueue> Device::get_dedicated_queue (QueueType type) const {
 	auto index = get_dedicated_queue_index (type);
-	if (!index.has_value ()) return index.error ();
+	if (!index.has_value ()) return { index.error () };
 	return detail::get_queue (device, index.value ());
 }
 
@@ -1017,7 +1314,7 @@ CustomQueueDescription::CustomQueueDescription (uint32_t index, uint32_t count, 
 }
 
 void destroy_device (Device device) {
-	vkDestroyDevice (device.device, device.allocation_callbacks);
+	detail::vulkan_functions ().fp_vkDestroyDevice (device.device, device.allocation_callbacks);
 }
 
 DeviceBuilder::DeviceBuilder (PhysicalDevice phys_device) {
@@ -1029,7 +1326,7 @@ DeviceBuilder::DeviceBuilder (PhysicalDevice phys_device) {
 	info.defer_surface_initialization = phys_device.defer_surface_initialization;
 }
 
-detail::Expected<Device, detail::Error<DeviceError>> DeviceBuilder::build () const {
+detail::Result<Device> DeviceBuilder::build () const {
 
 	std::vector<CustomQueueDescription> queue_descriptions;
 	queue_descriptions.insert (
@@ -1037,7 +1334,7 @@ detail::Expected<Device, detail::Error<DeviceError>> DeviceBuilder::build () con
 
 	if (queue_descriptions.size () == 0) {
 		for (uint32_t i = 0; i < info.queue_families.size (); i++) {
-			queue_descriptions.push_back ({ i, 1, std::vector<float>{ 1.0f } });
+			queue_descriptions.push_back (CustomQueueDescription{ i, 1, std::vector<float>{ 1.0f } });
 		}
 	}
 
@@ -1076,12 +1373,12 @@ detail::Expected<Device, detail::Error<DeviceError>> DeviceBuilder::build () con
 	}
 
 	Device device;
-	VkResult res = vkCreateDevice (info.physical_device.physical_device,
+	VkResult res = detail::vulkan_functions ().fp_vkCreateDevice (info.physical_device.physical_device,
 	    &device_create_info,
 	    info.allocation_callbacks,
 	    &device.device);
 	if (res != VK_SUCCESS) {
-		return detail::Error<DeviceError>{ DeviceError::failed_create_device, res };
+		return { DeviceError::failed_create_device, res };
 	}
 	device.physical_device = info.physical_device;
 	device.surface = info.surface;
@@ -1114,27 +1411,53 @@ enum class SurfaceSupportError {
 	failed_enumerate_present_modes
 };
 
-Expected<SurfaceSupportDetails, detail::Error<SurfaceSupportError>> query_surface_support_details (
-    VkPhysicalDevice phys_device, VkSurfaceKHR surface) {
+struct SurfaceSupportErrorCategory : std::error_category {
+	const char* name () const noexcept override { return "vbk_surface_support"; }
+	std::string message (int err) const override {
+		switch (static_cast<SurfaceSupportError> (err)) {
+			case SurfaceSupportError::surface_handle_null:
+				return "surface_handle_null";
+			case SurfaceSupportError::failed_get_surface_capabilities:
+				return "failed_get_surface_capabilities";
+			case SurfaceSupportError::failed_enumerate_surface_formats:
+				return "failed_enumerate_surface_formats";
+			case SurfaceSupportError::failed_enumerate_present_modes:
+				return "failed_enumerate_present_modes";
+			default:
+				return "";
+		}
+	}
+};
+const SurfaceSupportErrorCategory surface_support_error_category;
+
+std::error_code make_error_code (SurfaceSupportError surface_support_error) {
+	return { static_cast<int> (surface_support_error), detail::surface_support_error_category };
+}
+
+Result<SurfaceSupportDetails> query_surface_support_details (VkPhysicalDevice phys_device, VkSurfaceKHR surface) {
 	if (surface == VK_NULL_HANDLE)
-		return detail::Error<SurfaceSupportError>{ SurfaceSupportError::surface_handle_null };
+		return make_error_code (SurfaceSupportError::surface_handle_null);
 
 	VkSurfaceCapabilitiesKHR capabilities;
-	VkResult res = vkGetPhysicalDeviceSurfaceCapabilitiesKHR (phys_device, surface, &capabilities);
+	VkResult res = detail::vulkan_functions ().fp_vkGetPhysicalDeviceSurfaceCapabilitiesKHR (
+	    phys_device, surface, &capabilities);
 	if (res != VK_SUCCESS) {
-		return detail::Error<SurfaceSupportError>{ SurfaceSupportError::failed_get_surface_capabilities, res };
+		return { make_error_code (SurfaceSupportError::failed_get_surface_capabilities), res };
 	}
-	auto formats = detail::get_vector<VkSurfaceFormatKHR> (
-	    vkGetPhysicalDeviceSurfaceFormatsKHR, phys_device, surface);
-	if (!formats.has_value ())
-		return detail::Error<SurfaceSupportError>{ SurfaceSupportError::failed_enumerate_surface_formats,
-			formats.error () };
-	auto present_modes = detail::get_vector<VkPresentModeKHR> (
-	    vkGetPhysicalDeviceSurfacePresentModesKHR, phys_device, surface);
-	if (!present_modes.has_value ())
-		return detail::Error<SurfaceSupportError>{ SurfaceSupportError::failed_enumerate_present_modes,
-			formats.error () };
-	return SurfaceSupportDetails{ capabilities, formats.value (), present_modes.value () };
+
+	std::vector<VkSurfaceFormatKHR> formats;
+	std::vector<VkPresentModeKHR> present_modes;
+
+	auto formats_ret = detail::get_vector<VkSurfaceFormatKHR> (
+	    formats, detail::vulkan_functions ().fp_vkGetPhysicalDeviceSurfaceFormatsKHR, phys_device, surface);
+	if (formats_ret != VK_SUCCESS)
+		return { make_error_code (SurfaceSupportError::failed_enumerate_surface_formats), formats_ret };
+	auto present_modes_ret = detail::get_vector<VkPresentModeKHR> (
+	    present_modes, detail::vulkan_functions ().fp_vkGetPhysicalDeviceSurfacePresentModesKHR, phys_device, surface);
+	if (present_modes_ret != VK_SUCCESS)
+		return { make_error_code (SurfaceSupportError::failed_enumerate_present_modes), present_modes_ret };
+
+	return SurfaceSupportDetails{ capabilities, formats, present_modes };
 }
 
 VkSurfaceFormatKHR find_surface_format (std::vector<VkSurfaceFormatKHR> const& available_formats,
@@ -1185,6 +1508,13 @@ VkExtent2D find_extent (
 }
 } // namespace detail
 
+void destroy_swapchain (Swapchain const& swapchain) {
+	if (swapchain.device != VK_NULL_HANDLE && swapchain.swapchain != VK_NULL_HANDLE) {
+		detail::vulkan_functions ().fp_vkDestroySwapchainKHR (
+		    swapchain.device, swapchain.swapchain, swapchain.allocation_callbacks);
+	}
+}
+
 SwapchainBuilder::SwapchainBuilder (Device const& device) {
 	info.device = device.device;
 	info.physical_device = device.physical_device.physical_device;
@@ -1207,28 +1537,23 @@ SwapchainBuilder::SwapchainBuilder (Device const& device, VkSurfaceKHR const sur
 	info.graphics_queue_index = present.value ();
 	info.present_queue_index = graphics.value ();
 }
-
-SwapchainBuilder::SwapchainBuilder (
-    VkPhysicalDevice const physical_device, VkDevice const device, VkSurfaceKHR const surface) {
+SwapchainBuilder::SwapchainBuilder (VkPhysicalDevice const physical_device, VkDevice const device, VkSurfaceKHR const surface, uint32_t graphics_queue_index){
 	info.physical_device = physical_device;
-	info.device = device;
+    info.device = device;
 	info.surface = surface;
-	auto queue_families = detail::get_vector_noerror<VkQueueFamilyProperties> (
-	    vkGetPhysicalDeviceQueueFamilyProperties, physical_device);
-
-	int graphics_queue_index = detail::get_graphics_queue_index (queue_families);
-	int present_queue_index = detail::get_present_queue_index (physical_device, surface, queue_families);
-	// TODO: handle queue indexes being below zero
-	info.graphics_queue_index = static_cast<uint32_t> (graphics_queue_index);
-	info.present_queue_index = static_cast<uint32_t> (present_queue_index);
+    info.graphics_queue_index = graphics_queue_index;
+	info.present_queue_index = graphics_queue_index;
 }
-detail::Expected<Swapchain, detail::Error<SwapchainError>> SwapchainBuilder::build () const {
-	return build (VK_NULL_HANDLE);
+SwapchainBuilder::SwapchainBuilder (VkPhysicalDevice const physical_device, VkDevice const device, VkSurfaceKHR const surface, uint32_t graphics_queue_index, uint32_t present_queue_index){
+	info.physical_device = physical_device;
+    info.device = device;
+	info.surface = surface;
+    info.graphics_queue_index = graphics_queue_index;
+	info.present_queue_index = present_queue_index;
 }
-detail::Expected<Swapchain, detail::Error<SwapchainError>> SwapchainBuilder::build (
-    VkSwapchainKHR old_swapchain) const {
+detail::Result<Swapchain> SwapchainBuilder::build () const {
 	if (info.surface == VK_NULL_HANDLE) {
-		return detail::Error<SwapchainError>{ SwapchainError::surface_handle_not_provided };
+		return detail::Error{ SwapchainError::surface_handle_not_provided };
 	}
 
 	auto desired_formats = info.desired_formats;
@@ -1236,35 +1561,47 @@ detail::Expected<Swapchain, detail::Error<SwapchainError>> SwapchainBuilder::bui
 	auto desired_present_modes = info.desired_present_modes;
 	if (desired_present_modes.size () == 0) add_desired_present_modes (desired_present_modes);
 
-	auto surface_support = detail::query_surface_support_details (info.physical_device, info.surface);
-	if (!surface_support.has_value ())
-		return detail::Error<SwapchainError>{ SwapchainError::failed_query_surface_support_details,
-			surface_support.error ().vk_result };
-	VkSurfaceFormatKHR surface_format =
-	    detail::find_surface_format (surface_support.value ().formats, desired_formats);
-	VkPresentModeKHR present_mode =
-	    detail::find_present_mode (surface_support.value ().present_modes, desired_present_modes);
-	VkExtent2D extent = detail::find_extent (
-	    surface_support.value ().capabilities, info.desired_width, info.desired_height);
+	auto surface_support_ret = detail::query_surface_support_details (info.physical_device, info.surface);
+	if (!surface_support_ret.has_value ())
+		return detail::Error{ SwapchainError::failed_query_surface_support_details,
+			surface_support_ret.vk_result () };
+	auto surface_support = surface_support_ret.value ();
 
-	uint32_t imageCount = surface_support.value ().capabilities.minImageCount + 1;
-	if (surface_support.value ().capabilities.maxImageCount > 0 &&
-	    imageCount > surface_support.value ().capabilities.maxImageCount) {
-		imageCount = surface_support.value ().capabilities.maxImageCount;
+	uint32_t image_count = surface_support.capabilities.minImageCount + 1;
+	if (surface_support.capabilities.maxImageCount > 0 && image_count > surface_support.capabilities.maxImageCount) {
+		image_count = surface_support.capabilities.maxImageCount;
 	}
+	VkSurfaceFormatKHR surface_format = detail::find_surface_format (surface_support.formats, desired_formats);
+
+	VkExtent2D extent =
+	    detail::find_extent (surface_support.capabilities, info.desired_width, info.desired_height);
+
+	uint32_t image_array_layers = info.array_layer_count;
+	if (surface_support.capabilities.maxImageArrayLayers < info.array_layer_count)
+		image_array_layers = surface_support.capabilities.maxImageArrayLayers;
+	if (info.array_layer_count == 0) image_array_layers = 1;
+
+	uint32_t queue_family_indices[] = { info.graphics_queue_index, info.present_queue_index };
+
+
+	VkPresentModeKHR present_mode =
+	    detail::find_present_mode (surface_support.present_modes, desired_present_modes);
+
+	VkSurfaceTransformFlagBitsKHR pre_transform = info.pre_transform;
+	if (info.pre_transform == static_cast<VkSurfaceTransformFlagBitsKHR> (0))
+		pre_transform = surface_support.capabilities.currentTransform;
 
 	VkSwapchainCreateInfoKHR swapchain_create_info = {};
 	swapchain_create_info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-	detail::setup_pNext_chain (swapchain_create_info, info.pNext_elements);
+	detail::setup_pNext_chain (swapchain_create_info, info.pNext_chain);
+	swapchain_create_info.flags = info.create_flags;
 	swapchain_create_info.surface = info.surface;
-	swapchain_create_info.minImageCount = imageCount;
+	swapchain_create_info.minImageCount = image_count;
 	swapchain_create_info.imageFormat = surface_format.format;
 	swapchain_create_info.imageColorSpace = surface_format.colorSpace;
 	swapchain_create_info.imageExtent = extent;
-	swapchain_create_info.imageArrayLayers = 1;
-	swapchain_create_info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-
-	uint32_t queue_family_indices[] = { info.graphics_queue_index, info.present_queue_index };
+	swapchain_create_info.imageArrayLayers = image_array_layers;
+	swapchain_create_info.imageUsage = info.image_usage_flags;
 
 	if (info.graphics_queue_index != info.present_queue_index) {
 		swapchain_create_info.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
@@ -1274,41 +1611,39 @@ detail::Expected<Swapchain, detail::Error<SwapchainError>> SwapchainBuilder::bui
 		swapchain_create_info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
 	}
 
-	swapchain_create_info.preTransform = surface_support.value ().capabilities.currentTransform;
-	swapchain_create_info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+	swapchain_create_info.preTransform = pre_transform;
+	swapchain_create_info.compositeAlpha = info.composite_alpha;
 	swapchain_create_info.presentMode = present_mode;
-	swapchain_create_info.clipped = VK_TRUE;
-	swapchain_create_info.oldSwapchain = old_swapchain;
+	swapchain_create_info.clipped = info.clipped;
+	swapchain_create_info.oldSwapchain = info.old_swapchain;
 	Swapchain swapchain{};
-	VkResult res = vkCreateSwapchainKHR (
+	VkResult res = detail::vulkan_functions ().fp_vkCreateSwapchainKHR (
 	    info.device, &swapchain_create_info, info.allocation_callbacks, &swapchain.swapchain);
 	if (res != VK_SUCCESS) {
-		return detail::Error<SwapchainError>{ SwapchainError::failed_create_swapchain, res };
+		return detail::Error{ SwapchainError::failed_create_swapchain, res };
 	}
 	swapchain.device = info.device;
 	swapchain.image_format = surface_format.format;
 	swapchain.extent = extent;
 	auto images = swapchain.get_images ();
 	if (!images) {
-		return detail::Error<SwapchainError>{ SwapchainError::failed_get_swapchain_images };
+		return detail::Error{ SwapchainError::failed_get_swapchain_images };
 	}
 	swapchain.image_count = static_cast<uint32_t> (images.value ().size ());
 	swapchain.allocation_callbacks = info.allocation_callbacks;
 	return swapchain;
 }
-detail::Expected<Swapchain, detail::Error<SwapchainError>> SwapchainBuilder::recreate (
-    Swapchain const& swapchain) const {
-	return build (swapchain.swapchain);
-}
-detail::Expected<std::vector<VkImage>, detail::Error<SwapchainError>> Swapchain::get_images () {
-	auto swapchain_images = detail::get_vector<VkImage> (vkGetSwapchainImagesKHR, device, swapchain);
-	if (!swapchain_images) {
-		return detail::Error<SwapchainError>{ SwapchainError::failed_get_swapchain_images,
-			swapchain_images.error () };
+detail::Result<std::vector<VkImage>> Swapchain::get_images () {
+	std::vector<VkImage> swapchain_images;
+
+	auto swapchain_images_ret = detail::get_vector<VkImage> (
+	    swapchain_images, detail::vulkan_functions ().fp_vkGetSwapchainImagesKHR, device, swapchain);
+	if (swapchain_images_ret != VK_SUCCESS) {
+		return detail::Error{ SwapchainError::failed_get_swapchain_images, swapchain_images_ret };
 	}
-	return swapchain_images.value ();
+	return swapchain_images;
 }
-detail::Expected<std::vector<VkImageView>, detail::Error<SwapchainError>> Swapchain::get_image_views () {
+detail::Result<std::vector<VkImageView>> Swapchain::get_image_views () {
 
 	auto swapchain_images_ret = get_images ();
 	if (!swapchain_images_ret) return swapchain_images_ret.error ();
@@ -1332,20 +1667,25 @@ detail::Expected<std::vector<VkImageView>, detail::Error<SwapchainError>> Swapch
 		createInfo.subresourceRange.baseArrayLayer = 0;
 		createInfo.subresourceRange.layerCount = 1;
 
-		VkResult res = vkCreateImageView (device, &createInfo, allocation_callbacks, &views[i]);
+		VkResult res = detail::vulkan_functions ().fp_vkCreateImageView (
+		    device, &createInfo, allocation_callbacks, &views[i]);
 		if (res != VK_SUCCESS)
-			return detail::Error<SwapchainError>{ SwapchainError::failed_create_swapchain_image_views, res };
+			return detail::Error{ SwapchainError::failed_create_swapchain_image_views, res };
 	}
 	return views;
 }
 void Swapchain::destroy_image_views (std::vector<VkImageView> const& image_views) {
 	for (auto& image_view : image_views) {
-		vkDestroyImageView (device, image_view, allocation_callbacks);
+		detail::vulkan_functions ().fp_vkDestroyImageView (device, image_view, allocation_callbacks);
 	}
 }
-void destroy_swapchain (Swapchain const& swapchain) {
-	if (swapchain.device != VK_NULL_HANDLE && swapchain.swapchain != VK_NULL_HANDLE)
-		vkDestroySwapchainKHR (swapchain.device, swapchain.swapchain, swapchain.allocation_callbacks);
+SwapchainBuilder& SwapchainBuilder::set_old_swapchain (VkSwapchainKHR old_swapchain) {
+	info.old_swapchain = old_swapchain;
+	return *this;
+}
+SwapchainBuilder& SwapchainBuilder::set_old_swapchain (Swapchain const& swapchain) {
+	info.old_swapchain = swapchain.swapchain;
+	return *this;
 }
 SwapchainBuilder& SwapchainBuilder::set_desired_extent (uint32_t width, uint32_t height) {
 	info.desired_width = width;
@@ -1361,6 +1701,7 @@ SwapchainBuilder& SwapchainBuilder::add_fallback_format (VkSurfaceFormatKHR form
 	return *this;
 }
 SwapchainBuilder& SwapchainBuilder::use_default_format_selection () {
+	info.desired_formats.clear ();
 	add_desired_formats (info.desired_formats);
 	return *this;
 }
@@ -1374,6 +1715,7 @@ SwapchainBuilder& SwapchainBuilder::add_fallback_present_mode (VkPresentModeKHR 
 	return *this;
 }
 SwapchainBuilder& SwapchainBuilder::use_default_present_mode_selection () {
+	info.desired_present_modes.clear ();
 	add_desired_present_modes (info.desired_present_modes);
 	return *this;
 }
@@ -1381,9 +1723,42 @@ SwapchainBuilder& SwapchainBuilder::set_allocation_callbacks (VkAllocationCallba
 	info.allocation_callbacks = callbacks;
 	return *this;
 }
+SwapchainBuilder& SwapchainBuilder::set_image_usage_flags (VkImageUsageFlags usage_flags) {
+	info.image_usage_flags = usage_flags;
+	return *this;
+}
+SwapchainBuilder& SwapchainBuilder::add_image_usage_flags (VkImageUsageFlags usage_flags) {
+	info.image_usage_flags = info.image_usage_flags | usage_flags;
+	return *this;
+}
+SwapchainBuilder& SwapchainBuilder::use_default_image_usage_flags () {
+	info.image_usage_flags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+	return *this;
+}
+SwapchainBuilder& SwapchainBuilder::set_image_array_layer_count (uint32_t array_layer_count) {
+	info.array_layer_count = array_layer_count;
+	return *this;
+}
+SwapchainBuilder& SwapchainBuilder::set_clipped (bool clipped) {
+	info.clipped = clipped;
+	return *this;
+}
+SwapchainBuilder& SwapchainBuilder::set_create_flags (VkSwapchainCreateFlagBitsKHR create_flags) {
+	info.create_flags = create_flags;
+	return *this;
+}
+SwapchainBuilder& SwapchainBuilder::set_pre_transform_flags (VkSurfaceTransformFlagBitsKHR pre_transform_flags) {
+	info.pre_transform = pre_transform_flags;
+	return *this;
+}
+SwapchainBuilder& SwapchainBuilder::set_composite_alpha_flags (VkCompositeAlphaFlagBitsKHR composite_alpha_flags) {
+	info.composite_alpha = composite_alpha_flags;
+	return *this;
+}
+
 void SwapchainBuilder::add_desired_formats (std::vector<VkSurfaceFormatKHR>& formats) const {
-	formats.push_back ({ VK_FORMAT_R8G8B8A8_UNORM, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR });
-	formats.push_back ({ VK_FORMAT_B8G8R8A8_UNORM, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR });
+	formats.push_back ({ VK_FORMAT_B8G8R8A8_SRGB, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR });
+	formats.push_back ({ VK_FORMAT_R8G8B8A8_SRGB, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR });
 }
 void SwapchainBuilder::add_desired_present_modes (std::vector<VkPresentModeKHR>& modes) const {
 	modes.push_back (VK_PRESENT_MODE_MAILBOX_KHR);
