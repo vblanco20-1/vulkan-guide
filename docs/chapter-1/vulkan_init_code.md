@@ -62,6 +62,8 @@ public:
 	VkPhysicalDevice _chosenGPU; // gpu chosen as the default device
 	VkDevice _device; // Vulkan device for commands
 	VkSurfaceKHR _surface; // Vulkan window surface
+
+	uint32_t _graphicsQueueFamily; // queue family for display
 private:
 		
 	void init_vulkan();
@@ -98,7 +100,7 @@ void VulkanEngine::init_vulkan()
 }
 ```
 
-We have added 4 handles to the main class, VkDevice, VkPhysicalDevice, VkInstance, VkDebugUtilsMessengerEXT.
+We have added 4 handles to the main class, VkDevice, VkPhysicalDevice, VkInstance, VkDebugUtilsMessengerEXT. We are also adding a integer to hold the queue family for displaying images, which we will need to initialize.
 
 ## Instance
 
@@ -121,6 +123,9 @@ Now that our new init_Vulkan function is added, we can start filling it.
 	_instance = vkb_inst.instance;
 	//store the debug messenger
 	_debug_messenger = vkb_inst.debug_messenger; 
+
+	//request a graphics queue family
+	_graphicsQueueFamily = vkbDevice.get_queue_index(vkb::QueueType::graphics).value();
 ```
 
 We are going to create a vkb::InstanceBuilder, which is from the VkBootstrap library, and simplifies the creation of a Vulkan VkInstance.
@@ -326,8 +331,9 @@ void VulkanEngine::cleanup()
 			vkDestroyImageView(_device, _swapchainImageViews[i], nullptr);
 		}
 
-		vkDestroyDevice(_device, nullptr);
+		vkDestroyDevice(_device, nullptr);		
 		vkDestroySurfaceKHR(_instance, _surface, nullptr);	
+		vkb::destroy_debug_utils_messenger(_instance, _debug_messenger);
 		SDL_DestroyWindow(_window);
 	}
 }
