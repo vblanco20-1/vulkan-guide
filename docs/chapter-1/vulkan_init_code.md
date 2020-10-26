@@ -63,7 +63,6 @@ public:
 	VkDevice _device; // Vulkan device for commands
 	VkSurfaceKHR _surface; // Vulkan window surface
 
-	uint32_t _graphicsQueueFamily; // queue family for display
 private:
 		
 	void init_vulkan();
