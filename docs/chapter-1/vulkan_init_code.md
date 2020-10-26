@@ -100,7 +100,7 @@ void VulkanEngine::init_vulkan()
 }
 ```
 
-We have added 4 handles to the main class, VkDevice, VkPhysicalDevice, VkInstance, VkDebugUtilsMessengerEXT. We are also adding a integer to hold the queue family for displaying images, which we will need to initialize.
+We have added 4 handles to the main class, VkDevice, VkPhysicalDevice, VkInstance, VkDebugUtilsMessengerEXT.
 
 ## Instance
 
@@ -123,8 +123,6 @@ Now that our new init_Vulkan function is added, we can start filling it.
 	_instance = vkb_inst.instance;
 	//store the debug messenger
 	_debug_messenger = vkb_inst.debug_messenger; 
-
-	
 ```
 
 We are going to create a vkb::InstanceBuilder, which is from the VkBootstrap library, and simplifies the creation of a Vulkan VkInstance.
@@ -166,9 +164,6 @@ We store the VkDebugUtilsMessengerEXT so we can destroy it at program exit, othe
 	// Get the VkDevice handle used in the rest of a Vulkan application
 	_device = vkbDevice.device;
 	_chosenGPU = physicalDevice.physical_device;
-
-	//request a graphics queue family to use with the swapchain
-	_graphicsQueueFamily = vkbDevice.get_queue_index(vkb::QueueType::graphics).value();
 ```
 
 To select a gpu to use, we are going to use vkb::PhysicalDeviceSelector.
@@ -177,7 +172,7 @@ First of all, we need to create a VkSurfaceKHR object from the SDL window. This 
 
 For the gpu selector, we just want Vulkan 1.1 support and the window surface, so there is not much to find. The library will make sure to select the dedicated gpu in the system.
 
-Once we have a VkPhysicalDevice, we can directly build a VkDevice from it and grab a queue index for the swapchain. 
+Once we have a VkPhysicalDevice, we can directly build a VkDevice from it.
 
 And at the end, we store the handles in the class.
 
@@ -250,7 +245,7 @@ Like with the other initialization functions, we are going to use the vkb librar
 ```cpp
 void VulkanEngine::init_swapchain()
 {
-	vkb::SwapchainBuilder swapchainBuilder{_chosenGPU,_device,_surface,_graphicsQueueFamily };
+	vkb::SwapchainBuilder swapchainBuilder{_chosenGPU,_device,_surface };
 
 	vkb::Swapchain vkbSwapchain = swapchainBuilder
 		.use_default_format_selection()
@@ -333,8 +328,8 @@ void VulkanEngine::cleanup()
 			vkDestroyImageView(_device, _swapchainImageViews[i], nullptr);
 		}
 
-		vkDestroyDevice(_device, nullptr);		
-		vkDestroySurfaceKHR(_instance, _surface, nullptr);	
+		vkDestroyDevice(_device, nullptr);
+		vkDestroySurfaceKHR(_instance, _surface, nullptr);
 		vkb::destroy_debug_utils_messenger(_instance, _debug_messenger);
 		SDL_DestroyWindow(_window);
 	}
