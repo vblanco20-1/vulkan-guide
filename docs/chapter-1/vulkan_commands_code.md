@@ -2,7 +2,7 @@
 layout: default
 title: Setting up Vulkan commands
 parent: Chapter 1
-nav_order: 31
+nav_order: 21
 ---
 
 We will first start by adding the handles we are going to need to the VulkanEngine class, and the `init_commands()` function
@@ -237,9 +237,10 @@ VkQueue-s also cant be destroyed, as, like with the VkPhysicalDevice, they arent
 
 Now that we have the Queue and the CommandBuffer, we are ready to start executing commands, but their usability will be limited, as we still lack the structures needed to execute graphics commands.
 
-At this point, it is possible to execute pure-compute commands, if you wanted to perform offline computation.
+At this point, it is possible to execute pure-compute commands, if you wanted to perform offline computation. But to do rendering we need to do renderpasses first.
 
 
-Next: [Main Loop]({{ site.baseurl }}{% link docs/chapter-1/vulkan_mainloop.md %})
+Next: [Vulkan Render Passes]({{ site.baseurl }}{% link docs/chapter-1/vulkan_renderpass.md %})
+
 
 {% include comments.html term="Chapter 1 Comments" %}
