@@ -556,8 +556,7 @@ class SwapchainBuilder {
 	public:
 	explicit SwapchainBuilder (Device const& device);
 	explicit SwapchainBuilder (Device const& device, VkSurfaceKHR const surface);
-	explicit SwapchainBuilder (VkPhysicalDevice const physical_device, VkDevice const device, VkSurfaceKHR const surface, uint32_t graphics_queue_index);
-	explicit SwapchainBuilder (VkPhysicalDevice const physical_device, VkDevice const device, VkSurfaceKHR const surface, uint32_t graphics_queue_index, uint32_t present_queue_index);
+	explicit SwapchainBuilder (VkPhysicalDevice const physical_device, VkDevice const device, VkSurfaceKHR const surface, int32_t graphics_queue_index = -1, int32_t present_queue_index = -1);
 
 	detail::Result<Swapchain> build () const;
 
