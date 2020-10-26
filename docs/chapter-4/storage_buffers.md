@@ -99,13 +99,13 @@ for (int i = 0; i < FRAME_OVERLAP; i++)
 
 		//allocate the descriptor set that will point to object buffer
 		VkDescriptorSetAllocateInfo objectSetAlloc = {};
-		allocInfo.pNext = nullptr;
-		allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-		allocInfo.descriptorPool = _descriptorPool;
-		allocInfo.descriptorSetCount = 1;
-		allocInfo.pSetLayouts = &_globalSetLayout;
+		objectSetAlloc.pNext = nullptr;
+		objectSetAlloc.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+		objectSetAlloc.descriptorPool = _descriptorPool;
+		objectSetAlloc.descriptorSetCount = 1;
+		objectSetAlloc.pSetLayouts = &_globalSetLayout;
 
-		vkAllocateDescriptorSets(_device, &allocInfo, &_frames[i].globalDescriptor);
+		vkAllocateDescriptorSets(_device, &objectSetAlloc, &_frames[i].globalDescriptor);
 
 
 
@@ -234,7 +234,7 @@ for (int i = 0; i < count; i++)
 	objectSSBO[i].modelMatrix = object.transformMatrix;
 }
 
-vmaUnmapMemory(_allocator, _sceneParameterBuffer._allocation);
+vmaUnmapMemory(_allocator, get_current_frame().objectBuffer._allocation);
 ```
 
 Instead of using `memcpy` here, we are doing a different trick. It is possible to cast the `void*` from mapping the buffer into another type, and write into it normally. This will work completely fine, and makes it easier to write complex types into a buffer. 
