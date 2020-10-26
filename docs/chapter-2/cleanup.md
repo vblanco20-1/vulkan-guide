@@ -227,6 +227,8 @@ void VulkanEngine::init_pipelines()
 
 At this point, if you run the engine, and close it, the debug layers should only complain about a missing `VK_OBJECT_TYPE_DEBUG_UTILS_MESSENGER_EXT;` As this object is something implicitly created by vk-bootstrap library, we arent going to care about it.
 
-With this, chapter 2 is completed. Next step is to start rendering meshes.
+With this, chapter 2 is completed. Next step is to start rendering meshes in chapter 3.
+
+Next: [Vertex Buffers]({{ site.baseurl }}{% link docs/chapter-3/triangle_mesh.md %})
 
 {% include comments.html term="Chapter 2 Comments" %}

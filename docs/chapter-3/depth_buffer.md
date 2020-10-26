@@ -298,7 +298,7 @@ VkPipelineDepthStencilStateCreateInfo vkinit::depth_stencil_create_info(bool bDe
 
 Depth stencil create info is a bit more complicated that other initializers, we are abstracting things a little bit.
 
-depthTestEnable holds if we should do any z-culling at all. Set to `VK_FALSE` to draw on top of everything, and `VK_FALSE` to not draw on top of other objects.
+depthTestEnable holds if we should do any z-culling at all. Set to `VK_FALSE` to draw on top of everything, and `VK_TRUE` to not draw on top of other objects.
 depthWriteEnable allows the depth to be written. While DepthTest and DepthWrite will both be true most of the time, there are cases where you might want to do depth write, but without doing depthtesting, Its sometimes used for some special effects.
 
 the depthCompareOp holds the depth-testing function. Set to `VK_COMPARE_OP_ALLWAYS` to not do any depthtest at all. Other common depth compare OPs are `VK_COMPARE_OP_LESS` (Only draw if Z < whatever is on the depth buffer), or `VK_COMPARE_OP_EQUAL` (only draw if the depth z matches) 

@@ -28,7 +28,7 @@ VertexInputDescription Vertex::get_vertex_description()
 
 	//position, normal, and color descriptions
 
-	//UV will be stored at Location 2
+	//UV will be stored at Location 3
 	VkVertexInputAttributeDescription uvAttribute = {};
 	uvAttribute.binding = 0;
 	uvAttribute.location = 3;

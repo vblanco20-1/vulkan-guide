@@ -181,4 +181,6 @@ void VulkanEngine::draw()
 
 If we now run the application, we should be able to toggle between the 2 shaders that we have and see it display accordingly.
 
+Next: [Cleanup]({{ site.baseurl }}{% link docs/chapter-2/cleanup.md %})
+
 {% include comments.html term="Chapter 2 Comments" %}

@@ -103,10 +103,9 @@ for (int i = 0; i < FRAME_OVERLAP; i++)
 		objectSetAlloc.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
 		objectSetAlloc.descriptorPool = _descriptorPool;
 		objectSetAlloc.descriptorSetCount = 1;
-		objectSetAlloc.pSetLayouts = &_globalSetLayout;
+		objectSetAlloc.pSetLayouts = &_objectSetLayout;
 
-		vkAllocateDescriptorSets(_device, &objectSetAlloc, &_frames[i].globalDescriptor);
-
+		vkAllocateDescriptorSets(_device, &objectSetAlloc, &_frames[i].objectDescriptor);
 
 
 		VkDescriptorBufferInfo cameraInfo;
