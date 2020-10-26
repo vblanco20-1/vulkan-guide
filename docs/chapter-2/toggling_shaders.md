@@ -96,7 +96,7 @@ void VulkanEngine::init_pipelines()
 
 	//compile red triangle modules
 	VkShaderModule redTriangleFragShader;
-	if (!load_shader_module("../../shaders/colored_triangle.frag.spv", &redTriangleFragShader))
+	if (!load_shader_module("../../shaders/triangle.frag.spv", &redTriangleFragShader))
 	{
 		std::cout << "Error when building the triangle fragment shader module" << std::endl;
 	}
@@ -105,7 +105,7 @@ void VulkanEngine::init_pipelines()
 	}
 
 	VkShaderModule redTriangleVertShader;
-	if (!load_shader_module("../../shaders/colored_triangle.vert.spv", &redTriangleVertShader))
+	if (!load_shader_module("../../shaders/triangle.vert.spv", &redTriangleVertShader))
 	{
 		std::cout << "Error when building the triangle vertex shader module" << std::endl;
 	}
@@ -135,10 +135,10 @@ void VulkanEngine::init_pipelines()
 
 	//add the other shaders
 	pipelineBuilder._shaderStages.push_back(
-		vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_VERTEX_BIT, redTriangleVertShader));
+		vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_VERTEX_BIT, &redTriangleVertShader));
 
 	pipelineBuilder._shaderStages.push_back(
-		vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT, redTriangleFragShader));
+		vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT, &redTriangleFragShader));
 
 	//build the red triangle pipeline
 	_redTrianglePipeline = pipelineBuilder.build_pipeline(_device, _renderPass);

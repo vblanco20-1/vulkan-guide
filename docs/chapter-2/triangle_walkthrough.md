@@ -185,7 +185,7 @@ Add it to the other init_ declarations in the class too
 void VulkanEngine::init_pipelines(){
 
 VkShaderModule triangleFragShader;
-	if (!load_shader_module("../../shaders/triangle.frag.spv", triangleFragShader))
+	if (!load_shader_module("../../shaders/triangle.frag.spv", &triangleFragShader))
 	{
 		std::cout << "Error when building the triangle fragment shader module" << std::endl;
 	}
@@ -194,7 +194,7 @@ VkShaderModule triangleFragShader;
 	}
 
 	VkShaderModule triangleVertexShader;
-	if (!load_shader_module("../../shaders/triangle.vert.spv", triangleVertexShader))
+	if (!load_shader_module("../../shaders/triangle.vert.spv", &triangleVertexShader))
 	{
 		std::cout << "Error when building the triangle vertex shader module" << std::endl;
 		
