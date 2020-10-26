@@ -124,8 +124,7 @@ Now that our new init_Vulkan function is added, we can start filling it.
 	//store the debug messenger
 	_debug_messenger = vkb_inst.debug_messenger; 
 
-	//request a graphics queue family
-	_graphicsQueueFamily = vkbDevice.get_queue_index(vkb::QueueType::graphics).value();
+	
 ```
 
 We are going to create a vkb::InstanceBuilder, which is from the VkBootstrap library, and simplifies the creation of a Vulkan VkInstance.
@@ -167,6 +166,9 @@ We store the VkDebugUtilsMessengerEXT so we can destroy it at program exit, othe
 	// Get the VkDevice handle used in the rest of a Vulkan application
 	_device = vkbDevice.device;
 	_chosenGPU = physicalDevice.physical_device;
+
+	//request a graphics queue family to use with the swapchain
+	_graphicsQueueFamily = vkbDevice.get_queue_index(vkb::QueueType::graphics).value();
 ```
 
 To select a gpu to use, we are going to use vkb::PhysicalDeviceSelector.
@@ -175,7 +177,7 @@ First of all, we need to create a VkSurfaceKHR object from the SDL window. This 
 
 For the gpu selector, we just want Vulkan 1.1 support and the window surface, so there is not much to find. The library will make sure to select the dedicated gpu in the system.
 
-Once we have a VkPhysicalDevice, we can directly build a VkDevice from it. 
+Once we have a VkPhysicalDevice, we can directly build a VkDevice from it and grab a queue index for the swapchain. 
 
 And at the end, we store the handles in the class.
 
