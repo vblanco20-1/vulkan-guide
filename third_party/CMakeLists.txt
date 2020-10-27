@@ -5,10 +5,11 @@ add_library(glm INTERFACE)
 add_library(vma INTERFACE)
 
 add_library(stb_image INTERFACE)
-
+add_library(json INTERFACE)
 add_library(tinyobjloader STATIC)
 add_library(spirv_reflect STATIC)
 
+add_library(lz4 STATIC)
 
 target_sources(vkbootstrap PRIVATE 
     "${CMAKE_CURRENT_SOURCE_DIR}/vkbootstrap/VkBootstrap.h"
@@ -21,6 +22,13 @@ target_sources(spirv_reflect PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/spv_reflect/spirv_reflect.c"
 )
 
+target_sources(lz4 PRIVATE 
+    "${CMAKE_CURRENT_SOURCE_DIR}/lz4/lz4.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/lz4/lz4.c"
+)
+
+target_include_directories(lz4 PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/lz4" )
+
 target_include_directories(spirv_reflect PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/spv_reflect" )
 target_include_directories(spirv_reflect PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/spv_reflect/include" )
 target_include_directories(vkbootstrap PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/vkbootstrap" )
@@ -30,6 +38,8 @@ target_link_libraries(vkbootstrap PUBLIC Vulkan::Vulkan)
 target_include_directories(vma INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/vma" )
 
 target_include_directories(glm INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/glm" )
+
+target_include_directories(json INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/nlohmann_json" )
 
 target_sources(tinyobjloader PRIVATE 
     "${CMAKE_CURRENT_SOURCE_DIR}/tinyobjloader/tiny_obj_loader.h"
