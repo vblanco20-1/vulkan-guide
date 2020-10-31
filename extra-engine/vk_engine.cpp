@@ -825,10 +825,12 @@ void VulkanEngine::load_meshes()
 
 	//load the monkey
 	Mesh monkeyMesh{};
-	monkeyMesh.load_from_obj("../../assets/monkey_smooth.obj");
+	//monkeyMesh.load_from_obj("../../assets/monkey_smooth.obj");
+	monkeyMesh.load_from_meshasset("../../assets/monkey_smooth.mesh");
 
 	Mesh lostEmpire{};
-	lostEmpire.load_from_obj("../../assets/lost_empire.obj");
+	//lostEmpire.load_from_obj("../../assets/lost_empire.obj");
+	lostEmpire.load_from_meshasset("../../assets/lost_empire.mesh");
 
 	upload_mesh(triMesh);
 	upload_mesh(monkeyMesh);
@@ -844,7 +846,7 @@ void VulkanEngine::load_images()
 {
 	Texture lostEmpire;
 
-	vkutil::load_image_from_file(*this, "../../assets/lost_empire-RGBA.png", lostEmpire.image);
+	vkutil::load_image_from_asset(*this, "../../assets/lost_empire-RGBA.tx", lostEmpire.image);
 
 	VkImageViewCreateInfo imageinfo = vkinit::imageview_create_info(VK_FORMAT_R8G8B8A8_UNORM, lostEmpire.image._image, 0);
 	vkCreateImageView(_device, &imageinfo, nullptr, &lostEmpire.imageView);

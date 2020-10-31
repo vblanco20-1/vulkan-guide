@@ -10,71 +10,15 @@
 #include "stb_image.h"
 #include "tiny_obj_loader.h"
 
+#include <asset_loader.h>
+#include <texture_asset.h>
+#include <mesh_asset.h>
+
 namespace fs = std::filesystem;
 
-struct File {
-	char type[4];
-	int version;
-	std::string json;
-	std::vector<char> binaryBlob;
-};
+using namespace assets;
 
-bool save_binaryfile(const fs::path& path,const File& file) {
-	std::ofstream outfile;
-	outfile.open(path, std::ios::binary | std::ios::out);
 
-	outfile.write(file.type, 4);
-	uint32_t version = file.version;
-	//version
-	outfile.write((const char*)&version, sizeof(uint32_t));
-
-	//json lenght
-	uint32_t lenght = file.json.size();
-	outfile.write((const char*)&lenght, sizeof(uint32_t));
-
-	//blob lenght
-	uint32_t bloblenght = file.binaryBlob.size();
-	outfile.write((const char*)&bloblenght, sizeof(uint32_t));
-
-	//json stream
-	outfile.write(file.json.data(), lenght);
-	//pixel data
-	outfile.write(file.binaryBlob.data(), file.binaryBlob.size());
-
-	outfile.close();
-
-	return true;
-}
-
-bool load_binaryfile(const fs::path& path, File& outputFile) {
-	
-	std::ifstream infile;
-	infile.open(path, std::ios::binary);
-
-	if (!infile.is_open()) return false;
-
-	infile.seekg(0);
-
-	
-	infile.read(outputFile.type, 4);
-	uint32_t vers;
-	infile.read((char*)&outputFile.version, sizeof(uint32_t));
-
-	uint32_t jsonlen = 0;
-	infile.read((char*)&jsonlen, sizeof(uint32_t));
-
-	uint32_t bloblen = 0;
-	infile.read((char*)&bloblen, sizeof(uint32_t));
-
-	outputFile.json.resize(jsonlen);
-
-	infile.read(outputFile.json.data(), jsonlen);
-
-	outputFile.binaryBlob.resize(bloblen);
-	infile.read(outputFile.binaryBlob.data(), bloblen);
-
-	return true;
-}
 bool convert_image(const fs::path& input, const fs::path& output)
 {
 	int texWidth, texHeight, texChannels;
@@ -96,84 +40,33 @@ bool convert_image(const fs::path& input, const fs::path& output)
 	
 	int texture_size = texWidth * texHeight * 4;
 
-	nlohmann::json texture_metadata;
-	texture_metadata["format"] = "RGBA8";
-	texture_metadata["original_file"] = input.string();
-	texture_metadata["width"] = texWidth;
-	texture_metadata["height"] = texHeight;
-	texture_metadata["buffer_size"] = texture_size;
-
-	std::string stringified = texture_metadata.dump();
-
-	File newImage;
-	newImage.json = stringified;
-	newImage.version = 1;
-	newImage.type[0] = 'T';
-	newImage.type[1] = 'E';
-	newImage.type[2] = 'X';
-	newImage.type[3] = 'I';
-
+	TextureInfo texinfo;
+	texinfo.textureSize = texture_size;
+	texinfo.pixelsize[0] = texWidth;
+	texinfo.pixelsize[1] = texHeight;
+	texinfo.textureFormat = TextureFormat::RGBA8;
 	auto start = std::chrono::high_resolution_clock::now();
 
-	int compressStaging = LZ4_compressBound(texture_size);
-
-	newImage.binaryBlob.resize(compressStaging);
-
-	int compressedSize = LZ4_compress_default((const char*)pixels, newImage.binaryBlob.data(), texture_size, compressStaging);
-
-	newImage.binaryBlob.resize(compressedSize);
+	assets::AssetFile newImage = assets::pack_texture(&texinfo, pixels);	
 
 	auto  end = std::chrono::high_resolution_clock::now();
 
-	diff = end - start;
 
 	std::cout << "compression took " << std::chrono::duration_cast<std::chrono::nanoseconds>(diff).count() / 1000000.0 << "ms" << std::endl;
-	
-
-
-	newImage.binaryBlob.resize(compressedSize);
-	
+		
 
 	stbi_image_free(pixels);
 
-	save_binaryfile(output, newImage);
-
-	File loadImage;
-
-	
-
-	
-
-	start = std::chrono::high_resolution_clock::now();
-	load_binaryfile(output, loadImage);
-
-	std::vector<char> blob;
-	blob.resize(texture_size);
-	
-	LZ4_decompress_safe(loadImage.binaryBlob.data(), blob.data(),loadImage.binaryBlob.size(), blob.size());
-
-	end = std::chrono::high_resolution_clock::now();
-
-	diff = end - start;
-
-	std::cout << "loading and decompression took " << std::chrono::duration_cast<std::chrono::nanoseconds>(diff).count() / 1000000.0 << "ms" << std::endl;
-
+	save_binaryfile(output.string().c_str(), newImage);
 
 	return true;
 }
-struct Vertex {
 
-	float position[3];
-	float normal[3];
-	float color[3];
-	float uv[2];
-	
-};
 
 bool convert_mesh(const fs::path& input, const fs::path& output)
 
 {
-	//attrib will contain the vertex arrays of the file
+	//attrib will contain the assets::Vertex_f32_PNCV arrays of the file
 	tinyobj::attrib_t attrib;
 	//shapes contains the info for each separate object in the file
 	std::vector<tinyobj::shape_t> shapes;
@@ -206,7 +99,8 @@ bool convert_mesh(const fs::path& input, const fs::path& output)
 		return false;
 	}
 
-	std::vector<Vertex> _vertices;
+	std::vector<assets::Vertex_f32_PNCV> _vertices;
+	std::vector<uint32_t> _indices;
 	// Loop over shapes
 	for (size_t s = 0; s < shapes.size(); s++) {
 		// Loop over faces(polygon)
@@ -218,24 +112,24 @@ bool convert_mesh(const fs::path& input, const fs::path& output)
 
 			// Loop over vertices in the face.
 			for (size_t v = 0; v < fv; v++) {
-				// access to vertex
+				// access to assets::Vertex_f32_PNCV
 				tinyobj::index_t idx = shapes[s].mesh.indices[index_offset + v];
 
-				//vertex position
+				//assets::Vertex_f32_PNCV position
 				tinyobj::real_t vx = attrib.vertices[3 * idx.vertex_index + 0];
 				tinyobj::real_t vy = attrib.vertices[3 * idx.vertex_index + 1];
 				tinyobj::real_t vz = attrib.vertices[3 * idx.vertex_index + 2];
-				//vertex normal
+				//assets::Vertex_f32_PNCV normal
 				tinyobj::real_t nx = attrib.normals[3 * idx.normal_index + 0];
 				tinyobj::real_t ny = attrib.normals[3 * idx.normal_index + 1];
 				tinyobj::real_t nz = attrib.normals[3 * idx.normal_index + 2];
 
-				//vertex uv
+				//assets::Vertex_f32_PNCV uv
 				tinyobj::real_t ux = attrib.texcoords[2 * idx.texcoord_index + 0];
 				tinyobj::real_t uy = attrib.texcoords[2 * idx.texcoord_index + 1];
 
-				//copy it into our vertex
-				Vertex new_vert;
+				//copy it into our assets::Vertex_f32_PNCV
+				assets::Vertex_f32_PNCV new_vert;
 				new_vert.position[0] = vx;
 				new_vert.position[1] = vy;
 				new_vert.position[2] = vz;
@@ -251,68 +145,36 @@ bool convert_mesh(const fs::path& input, const fs::path& output)
 				//we are setting the vertex color as the vertex normal. This is just for display purposes
 				//new_vert.color = new_vert.normal;
 
-
+				_indices.push_back(_vertices.size());
 				_vertices.push_back(new_vert);
 			}
 			index_offset += fv;
 		}
 	}
 
-	auto buffer_size = _vertices.size() * sizeof(Vertex);
-	nlohmann::json metadata;
-	metadata["format"] = "VERTEX";
-	metadata["original_file"] = input.string();
-	
-	metadata["buffer_size"] = buffer_size;
 
-	std::string stringified = metadata.dump();
 
-	File newFile;
-	newFile.json = stringified;
-	newFile.version = 1;
-	newFile.type[0] = 'M';
-	newFile.type[1] = 'E';
-	newFile.type[2] = 'S';
-	newFile.type[3] = 'H';
+	MeshInfo meshinfo;
+	meshinfo.vertexFormat = assets::VertexFormat::PNCV_F32;
+	meshinfo.vertexBuferSize = _vertices.size() * sizeof(assets::Vertex_f32_PNCV);
+	meshinfo.indexBuferSize = _indices.size() * sizeof(uint32_t);
+	meshinfo.indexSize = sizeof(uint32_t);
+	meshinfo.originalFile = input.string();	
 
+	//pack mesh file
 	auto start = std::chrono::high_resolution_clock::now();
 
-	int compressStaging = LZ4_compressBound(buffer_size);
-
-	newFile.binaryBlob.resize(compressStaging);
-
-	int compressedSize = LZ4_compress_default((const char*)_vertices.data(), newFile.binaryBlob.data(), buffer_size, compressStaging);
-
-	newFile.binaryBlob.resize(compressedSize);
-	//newFile.binaryBlob.resize(buffer_size);
+	assets::AssetFile newFile = assets::pack_mesh(&meshinfo, (char*)_vertices.data(), (char*)_indices.data());
+	
 	auto  end = std::chrono::high_resolution_clock::now();
 
 	diff = end - start;
 
 	std::cout << "compression took " << std::chrono::duration_cast<std::chrono::nanoseconds>(diff).count() / 1000000.0 << "ms" << std::endl;
 
-	save_binaryfile(output, newFile);
-
-	File loadImage;
-
-
-
-
-
-	start = std::chrono::high_resolution_clock::now();
-	load_binaryfile(output, loadImage);
-
-	std::vector<char> blob;
-	blob.resize(buffer_size);
-
-	LZ4_decompress_safe(loadImage.binaryBlob.data(), blob.data(), loadImage.binaryBlob.size(), blob.size());
-
-	end = std::chrono::high_resolution_clock::now();
-
-	diff = end - start;
-
-	std::cout << "loading and decompression took " << std::chrono::duration_cast<std::chrono::nanoseconds>(diff).count() / 1000000.0 << "ms" << std::endl;
-
+	//save to disk
+	save_binaryfile(output.string().c_str(), newFile);
+	
 	return true;
 }
 
