@@ -17,11 +17,11 @@ The advantages are considerable:
 * Heavily simplified runtime logic for loading
 
 On the other side, there are a few disadvantages to take into account.
-* Need to develop and mantain the custom formats.
-* Need to develop and mantain a converter that converts from classic formats into the custom one.
+* Need to develop and maintain the custom formats.
+* Need to develop and maintain a converter that converts from classic formats into the custom one.
 * Custom formats wont be readable by any tool.
 
-In general, its a good idea to implement an asset system into your engine, unless you dont care about the load times or the excutable bloat. While mantaining the custom formats is extra work, its not that much compared to the productivity increase of having an engine that loads scenes very quickly.
+In general, its a good idea to implement an asset system into your engine, unless you dont care about the load times or the executable bloat. While maintaining the custom formats is extra work, its not that much compared to the productivity increase of having an engine that loads scenes very quickly.
 
 # Asset System architecture
 
