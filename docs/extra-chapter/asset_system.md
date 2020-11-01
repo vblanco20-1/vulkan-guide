@@ -2,7 +2,7 @@
 layout: default
 title: Implementing an asset system.
 parent: Extra Chapter
-nav_order: 3`0`
+nav_order: 31
 ---
 In the tutorial, we have been loading .obj and .png files directly. The issue with doing that is that we depend on 3rd party libraries (stb_image and tinyobj), and loading the formats like that is quite inefficient. You have probably seen that the engine takes a couple seconds to load when you are in debug mode.
 
@@ -463,7 +463,9 @@ bool vkutil::load_image_from_asset(VulkanEngine& engine, const char* filename, A
 
 This is all we need to load from the file. We begin by loading the asset file itself, then we parse texture info, and then we unpack the texture pixels directly into the staging buffer that will be used to upload the texture. You can find this code on https://github.com/vblanco20-1/vulkan-guide/blob/engine/extra-engine/vk_textures.cpp
 
+For mesh data, go look at the source code. The general flow is the same as the texture loading, but with the slightly different data. This asset system is very easy to expand, as you can keep creating new types of assets, and adding more formats to mesh/texture asset themselves.
 
+Another thing that would be possible to do in a system like this is to make it able to load pure-json files, that are on text format. They could point into another file for the blob data or just hold no blob data. This way they would be easier to edit by people.
 
 
 {% include comments.html term="Asset System Comments" %}
