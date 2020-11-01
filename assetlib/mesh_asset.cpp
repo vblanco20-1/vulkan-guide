@@ -2,29 +2,53 @@
 #include "json.hpp"
 #include "lz4.h"
 
+
+assets::VertexFormat parse_format(const char* f) {
+
+	if (strcmp(f, "PNCV_F32") == 0)
+	{
+		return assets::VertexFormat::PNCV_F32;
+	}
+	else if (strcmp(f, "P32N8C8V16") == 0)
+	{
+		return assets::VertexFormat::P32N8C8V16;
+	}
+	else
+	{
+		return assets::VertexFormat::Unknown;
+	}
+}
+
 assets::MeshInfo assets::read_mesh_info(AssetFile* file)
 {
 	MeshInfo info;
 
 	nlohmann::json metadata = nlohmann::json::parse(file->json);
 
-	info.vertexFormat = VertexFormat::PNCV_F32;
-	info.vertexBuferSize = metadata["vertex_buffer_size"];	
-	info.vertexBuferSize = metadata["vertex_buffer_size"];
+	
+	info.vertexBuferSize = metadata["vertex_buffer_size"];		
 	info.indexBuferSize = metadata["index_buffer_size"];
 	info.indexSize = (uint8_t) metadata["index_size"];
 	info.originalFile = metadata["original_file"];
 
+	std::string compressionString = metadata["compression"];
+	info.compressionMode = parse_compression(compressionString.c_str());
+
+
+	std::string vertexFormat = metadata["vertex_format"];
+	info.vertexFormat = parse_format(vertexFormat.c_str());
     return info;
 }
 
 void assets::unpack_mesh(MeshInfo* info, const char* sourcebuffer, size_t sourceSize, char* vertexBufer, char* indexBuffer)
 {
+	//decompressing into temporal vector. TODO: streaming decompress directly on the buffers
 	std::vector<char> decompressedBuffer;
 	decompressedBuffer.resize(info->vertexBuferSize + info->indexBuferSize);
 
 	LZ4_decompress_safe(sourcebuffer, decompressedBuffer.data(), sourceSize, decompressedBuffer.size());
 
+	//copy vertex buffer
 	memcpy(vertexBufer, decompressedBuffer.data(), info->vertexBuferSize);
 
 	//copy index buffer
@@ -41,7 +65,13 @@ assets::AssetFile assets::pack_mesh(MeshInfo* info, char* vertexData, char* inde
 	file.version = 1;
 
 	nlohmann::json metadata;
-	metadata["vertex_format"] = "f32_PNCV";
+	if (info->vertexFormat == VertexFormat::P32N8C8V16) {
+		metadata["vertex_format"] = "P32N8C8V16";
+	}
+	else if (info->vertexFormat == VertexFormat::PNCV_F32)
+	{
+		metadata["vertex_format"] = "PNCV_F32";
+	}
 	metadata["vertex_buffer_size"] = info->vertexBuferSize;
 	metadata["index_buffer_size"] = info->indexBuferSize;
 	metadata["index_size"] = info->indexSize;

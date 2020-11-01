@@ -13,10 +13,6 @@ assets::TextureFormat parse_format(const char* f) {
 	}
 }
 
-
-
-
-
 assets::TextureInfo assets::read_texture_info(AssetFile* file)
 {
 	TextureInfo info;
@@ -57,6 +53,7 @@ assets::AssetFile assets::pack_texture(TextureInfo* info, void* pixelData)
 	texture_metadata["original_file"] = info->originalFile;
 
 
+	//core file header
 	AssetFile file;	
 	file.type[0] = 'T';
 	file.type[1] = 'E';
@@ -64,6 +61,7 @@ assets::AssetFile assets::pack_texture(TextureInfo* info, void* pixelData)
 	file.type[3] = 'I';
 	file.version = 1;
 
+	//compress buffer into blob
 	int compressStaging = LZ4_compressBound(info->textureSize);
 
 	file.binaryBlob.resize(compressStaging);
@@ -74,10 +72,8 @@ assets::AssetFile assets::pack_texture(TextureInfo* info, void* pixelData)
 
 	texture_metadata["compression"] = "LZ4";
 
-
 	std::string stringified = texture_metadata.dump();
 	file.json = stringified;
-	
 	
 
 	return file;

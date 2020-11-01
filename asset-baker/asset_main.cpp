@@ -63,6 +63,76 @@ bool convert_image(const fs::path& input, const fs::path& output)
 }
 
 
+void pack_vertex(assets::Vertex_f32_PNCV& new_vert, tinyobj::real_t vx, tinyobj::real_t vy, tinyobj::real_t vz, tinyobj::real_t nx, tinyobj::real_t ny, tinyobj::real_t nz, tinyobj::real_t ux, tinyobj::real_t uy)
+{
+	new_vert.position[0] = vx;
+	new_vert.position[1] = vy;
+	new_vert.position[2] = vz;
+
+	new_vert.normal[0] = nx;
+	new_vert.normal[1] = ny;
+	new_vert.normal[2] = nz;
+
+	new_vert.uv[0] = ux;
+	new_vert.uv[1] = 1 - uy;
+}
+void pack_vertex(assets::Vertex_P32N8C8V16& new_vert, tinyobj::real_t vx, tinyobj::real_t vy, tinyobj::real_t vz, tinyobj::real_t nx, tinyobj::real_t ny, tinyobj::real_t nz, tinyobj::real_t ux, tinyobj::real_t uy)
+{
+	new_vert.position[0] = vx;
+	new_vert.position[1] = vy;
+	new_vert.position[2] = vz;
+
+	new_vert.normal[0] = uint8_t(  ((nx + 1.0) / 2.0) * 255);
+	new_vert.normal[1] = uint8_t(  ((ny + 1.0) / 2.0) * 255);
+	new_vert.normal[2] = uint8_t(  ((nz + 1.0) / 2.0) * 255);
+
+	new_vert.uv[0] = ux;
+	new_vert.uv[1] = 1 - uy;
+}
+
+template<typename V>
+void extract_mesh_from_obj(std::vector<tinyobj::shape_t>& shapes, tinyobj::attrib_t& attrib, std::vector<uint32_t>& _indices, std::vector<V>& _vertices)
+{
+	// Loop over shapes
+	for (size_t s = 0; s < shapes.size(); s++) {
+		// Loop over faces(polygon)
+		size_t index_offset = 0;
+		for (size_t f = 0; f < shapes[s].mesh.num_face_vertices.size(); f++) {
+
+			//hardcode loading to triangles
+			int fv = 3;
+
+			// Loop over vertices in the face.
+			for (size_t v = 0; v < fv; v++) {
+				// access to assets::Vertex_f32_PNCV
+				tinyobj::index_t idx = shapes[s].mesh.indices[index_offset + v];
+
+				//vertex position
+				tinyobj::real_t vx = attrib.vertices[3 * idx.vertex_index + 0];
+				tinyobj::real_t vy = attrib.vertices[3 * idx.vertex_index + 1];
+				tinyobj::real_t vz = attrib.vertices[3 * idx.vertex_index + 2];
+				//vertex normal
+				tinyobj::real_t nx = attrib.normals[3 * idx.normal_index + 0];
+				tinyobj::real_t ny = attrib.normals[3 * idx.normal_index + 1];
+				tinyobj::real_t nz = attrib.normals[3 * idx.normal_index + 2];
+
+				//vertex uv
+				tinyobj::real_t ux = attrib.texcoords[2 * idx.texcoord_index + 0];
+				tinyobj::real_t uy = attrib.texcoords[2 * idx.texcoord_index + 1];
+
+				//copy it into our vertex
+				V new_vert;
+				pack_vertex(new_vert, vx, vy, vz, nx, ny, nz, ux, uy);
+
+
+				_indices.push_back(_vertices.size());
+				_vertices.push_back(new_vert);
+			}
+			index_offset += fv;
+		}
+	}
+}
+
 bool convert_mesh(const fs::path& input, const fs::path& output)
 
 {
@@ -99,64 +169,18 @@ bool convert_mesh(const fs::path& input, const fs::path& output)
 		return false;
 	}
 
-	std::vector<assets::Vertex_f32_PNCV> _vertices;
+	using VertexFormat = assets::Vertex_P32N8C8V16;
+	auto VertexFormatEnum = assets::VertexFormat::P32N8C8V16;
+
+	std::vector<VertexFormat> _vertices;
 	std::vector<uint32_t> _indices;
-	// Loop over shapes
-	for (size_t s = 0; s < shapes.size(); s++) {
-		// Loop over faces(polygon)
-		size_t index_offset = 0;
-		for (size_t f = 0; f < shapes[s].mesh.num_face_vertices.size(); f++) {
 
-			//hardcode loading to triangles
-			int fv = 3;
-
-			// Loop over vertices in the face.
-			for (size_t v = 0; v < fv; v++) {
-				// access to assets::Vertex_f32_PNCV
-				tinyobj::index_t idx = shapes[s].mesh.indices[index_offset + v];
-
-				//assets::Vertex_f32_PNCV position
-				tinyobj::real_t vx = attrib.vertices[3 * idx.vertex_index + 0];
-				tinyobj::real_t vy = attrib.vertices[3 * idx.vertex_index + 1];
-				tinyobj::real_t vz = attrib.vertices[3 * idx.vertex_index + 2];
-				//assets::Vertex_f32_PNCV normal
-				tinyobj::real_t nx = attrib.normals[3 * idx.normal_index + 0];
-				tinyobj::real_t ny = attrib.normals[3 * idx.normal_index + 1];
-				tinyobj::real_t nz = attrib.normals[3 * idx.normal_index + 2];
-
-				//assets::Vertex_f32_PNCV uv
-				tinyobj::real_t ux = attrib.texcoords[2 * idx.texcoord_index + 0];
-				tinyobj::real_t uy = attrib.texcoords[2 * idx.texcoord_index + 1];
-
-				//copy it into our assets::Vertex_f32_PNCV
-				assets::Vertex_f32_PNCV new_vert;
-				new_vert.position[0] = vx;
-				new_vert.position[1] = vy;
-				new_vert.position[2] = vz;
-
-				new_vert.normal[0] = nx;
-				new_vert.normal[1] = ny;
-				new_vert.normal[2] = nz;
-
-
-				new_vert.uv[0] = ux;
-				new_vert.uv[1] = 1 - uy;
-
-				//we are setting the vertex color as the vertex normal. This is just for display purposes
-				//new_vert.color = new_vert.normal;
-
-				_indices.push_back(_vertices.size());
-				_vertices.push_back(new_vert);
-			}
-			index_offset += fv;
-		}
-	}
-
+	extract_mesh_from_obj(shapes, attrib, _indices, _vertices);
 
 
 	MeshInfo meshinfo;
-	meshinfo.vertexFormat = assets::VertexFormat::PNCV_F32;
-	meshinfo.vertexBuferSize = _vertices.size() * sizeof(assets::Vertex_f32_PNCV);
+	meshinfo.vertexFormat = VertexFormatEnum;
+	meshinfo.vertexBuferSize = _vertices.size() * sizeof(VertexFormat);
 	meshinfo.indexBuferSize = _indices.size() * sizeof(uint32_t);
 	meshinfo.indexSize = sizeof(uint32_t);
 	meshinfo.originalFile = input.string();	

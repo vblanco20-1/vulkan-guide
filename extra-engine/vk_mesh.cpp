@@ -157,27 +157,53 @@ bool Mesh::load_from_meshasset(const char* filename)
 
 	_vertices.clear();
 
-	assets::Vertex_f32_PNCV* unpackedVertices = (assets::Vertex_f32_PNCV*)vertexBuffer.data();
+	if (meshinfo.vertexFormat == assets::VertexFormat::PNCV_F32)
+	{	
+		assets::Vertex_f32_PNCV* unpackedVertices = (assets::Vertex_f32_PNCV*)vertexBuffer.data();
 
-	_vertices.resize(vertexBuffer.size() / sizeof(assets::Vertex_f32_PNCV));
+		_vertices.resize(vertexBuffer.size() / sizeof(assets::Vertex_f32_PNCV));
 
-	for (int i = 0; i < _vertices.size(); i++) {
+		for (int i = 0; i < _vertices.size(); i++) {
 
-		_vertices[i].position.x = unpackedVertices[i].position[0];
-		_vertices[i].position.y = unpackedVertices[i].position[1];
-		_vertices[i].position.z = unpackedVertices[i].position[2];
+			_vertices[i].position.x = unpackedVertices[i].position[0];
+			_vertices[i].position.y = unpackedVertices[i].position[1];
+			_vertices[i].position.z = unpackedVertices[i].position[2];
 
-		_vertices[i].normal.x = unpackedVertices[i].normal[0];
-		_vertices[i].normal.y = unpackedVertices[i].normal[1];
-		_vertices[i].normal.z = unpackedVertices[i].normal[2];
+			_vertices[i].normal.x = unpackedVertices[i].normal[0];
+			_vertices[i].normal.y = unpackedVertices[i].normal[1];
+			_vertices[i].normal.z = unpackedVertices[i].normal[2];
 
-		_vertices[i].color.x = unpackedVertices[i].color[0];
-		_vertices[i].color.y = unpackedVertices[i].color[1];
-		_vertices[i].color.z = unpackedVertices[i].color[2];
+			_vertices[i].color.x = unpackedVertices[i].color[0];
+			_vertices[i].color.y = unpackedVertices[i].color[1];
+			_vertices[i].color.z = unpackedVertices[i].color[2];
 
-		_vertices[i].uv.x = unpackedVertices[i].uv[0];
-		_vertices[i].uv.y = unpackedVertices[i].uv[1];
+			_vertices[i].uv.x = unpackedVertices[i].uv[0];
+			_vertices[i].uv.y = unpackedVertices[i].uv[1];
+		}
 	}
+	else if (meshinfo.vertexFormat == assets::VertexFormat::P32N8C8V16)
+	{
+		assets::Vertex_P32N8C8V16* unpackedVertices = (assets::Vertex_P32N8C8V16*)vertexBuffer.data();
 
+		_vertices.resize(vertexBuffer.size() / sizeof(assets::Vertex_P32N8C8V16));
+
+		for (int i = 0; i < _vertices.size(); i++) {
+
+			_vertices[i].position.x = unpackedVertices[i].position[0];
+			_vertices[i].position.y = unpackedVertices[i].position[1];
+			_vertices[i].position.z = unpackedVertices[i].position[2];
+
+			_vertices[i].normal.x = ((unpackedVertices[i].normal[0] / 255.f) * 2.0) - 1.f;
+			_vertices[i].normal.y = ((unpackedVertices[i].normal[1] / 255.f) * 2.0) - 1.f;
+			_vertices[i].normal.z = ((unpackedVertices[i].normal[2] / 255.f) * 2.0) - 1.f;
+
+			_vertices[i].color.x = unpackedVertices[i].color[0] / 255.f;
+			_vertices[i].color.y = unpackedVertices[i].color[1] / 255.f;
+			_vertices[i].color.z = unpackedVertices[i].color[2] / 255.f;
+
+			_vertices[i].uv.x = unpackedVertices[i].uv[0];
+			_vertices[i].uv.y = unpackedVertices[i].uv[1];
+		}
+	}
 	return true;
 }

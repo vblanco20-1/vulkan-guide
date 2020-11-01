@@ -12,11 +12,19 @@ namespace assets {
 		float color[3];
 		float uv[2];
 	};
+	struct Vertex_P32N8C8V16 {
+
+		float position[3];
+		uint8_t normal[3];
+		uint8_t color[3];
+		float uv[2];
+	};
 
 	enum class VertexFormat : uint32_t
 	{
 		Unknown = 0,
-		PNCV_F32
+		PNCV_F32, //everything at 32 bits
+		P32N8C8V16 //position at 32 bits, normal at 8 bits, color at 8 bits, uvs at 16 bits float
 	};
 
 
