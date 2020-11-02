@@ -1,4 +1,5 @@
 ﻿#include <vk_descriptors.h>
+#include <algorithm>
 
 namespace vkutil {
 
@@ -108,4 +109,50 @@ namespace vkutil {
 		}
 	}
 
+
+	void DescriptorLayoutCache::Initialize(VkDevice newDevice)
+	{
+		device = newDevice;
+	}
+
+	VkDescriptorSetLayout DescriptorLayoutCache::CreateDescriptorSetLayout(VkDescriptorSetLayoutCreateInfo* info)
+	{
+		DescriptorLayoutInfo layoutinfo;
+		layoutinfo.bindings.reserve(info->bindingCount);
+		bool isSorted = true;
+		int lastBinding = -1;
+		for (int i = 0; i < info->bindingCount; i++) {
+			layoutinfo.bindings.push_back(info->pBindings[i]);
+
+			//check that the bindings are in strict increasing order
+			if (info->pBindings[i].binding > lastBinding)
+			{
+				lastBinding = info->pBindings[i].binding;
+			}
+			else{
+				isSorted = false;
+			}
+		}
+		if (!isSorted)
+		{
+			std::sort(layoutinfo.bindings.begin(), layoutinfo.bindings.end(), [](VkDescriptorSetLayoutBinding& a, VkDescriptorSetLayoutBinding& b ) {
+				return a.binding < b.binding;
+			});
+		}
+		
+		auto it = layoutCache.find(layoutinfo);
+		if (it != layoutCache.end())
+		{
+			return (*it).second;
+		}
+		else {
+			VkDescriptorSetLayout layout;
+			vkCreateDescriptorSetLayout(device, info, nullptr, &layout);
+
+			//layoutCache.emplace()
+			//add to cache
+			layoutCache[layoutinfo] = layout;
+			return layout;
+		}
+	}
 }

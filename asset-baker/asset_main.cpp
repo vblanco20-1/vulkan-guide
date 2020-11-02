@@ -45,6 +45,7 @@ bool convert_image(const fs::path& input, const fs::path& output)
 	texinfo.pixelsize[0] = texWidth;
 	texinfo.pixelsize[1] = texHeight;
 	texinfo.textureFormat = TextureFormat::RGBA8;
+	texinfo.originalFile = input.string();
 	auto start = std::chrono::high_resolution_clock::now();
 
 	assets::AssetFile newImage = assets::pack_texture(&texinfo, pixels);	

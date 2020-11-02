@@ -52,4 +52,73 @@ namespace vkutil {
 		VkDevice device;
 	};
 
+
+	class DescriptorLayoutCache {
+	public:
+		void Initialize(VkDevice newDevice);
+
+
+		VkDescriptorSetLayout CreateDescriptorSetLayout(VkDescriptorSetLayoutCreateInfo* info);
+
+		struct DescriptorLayoutInfo {
+			//good idea to turn this into a inlined array
+			std::vector<VkDescriptorSetLayoutBinding> bindings;
+
+			bool operator==(const DescriptorLayoutInfo& other) const {
+				if (other.bindings.size() != bindings.size())
+				{
+					return false;
+				}
+				else {
+					for (int i = 0; i < bindings.size(); i++) {
+						if (other.bindings[i].binding != bindings[i].binding)
+						{
+							return false;
+						}
+						if (other.bindings[i].descriptorType != bindings[i].descriptorType)
+						{
+							return false;
+						}
+						if (other.bindings[i].descriptorCount != bindings[i].descriptorCount)
+						{
+							return false;
+						}
+						if (other.bindings[i].stageFlags != bindings[i].stageFlags)
+						{
+							return false;
+						}
+					}
+					return true;
+				}
+			}
+		};
+	private:
+
+		struct DescriptorLayoutHash
+		{
+
+			std::size_t operator()(const DescriptorLayoutInfo& k) const
+			{
+				using std::size_t;
+				using std::hash;
+
+				size_t result = hash<size_t>()(k.bindings.size());
+
+				for (const VkDescriptorSetLayoutBinding& b : k.bindings)
+				{
+					//pack the binding data into a single int64. Not fully correct but its ok
+					size_t binding_hash = b.binding | b.descriptorType << 8 |  b.descriptorCount << 16 | b.stageFlags << 24;
+					
+					//shuffle the packed binding data and xor it with the main hash
+					result ^= hash<size_t>()(binding_hash);
+				}
+
+				return result;
+			}
+		};		
+
+		std::unordered_map<DescriptorLayoutInfo, VkDescriptorSetLayout, DescriptorLayoutHash> layoutCache;
+		VkDevice device;
+	};
 }
+

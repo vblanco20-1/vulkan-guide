@@ -179,6 +179,7 @@ public:
 
 	//VkDescriptorPool _descriptorPool;
 	vkutil::DescriptorAllocator _descriptorAllocator;
+	vkutil::DescriptorLayoutCache _descriptorLayoutCache;
 
 	VkDescriptorSetLayout _singleTextureSetLayout;
 

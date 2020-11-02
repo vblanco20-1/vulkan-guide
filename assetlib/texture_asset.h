@@ -18,7 +18,6 @@ namespace assets {
 		std::string originalFile;
 	};
 
-
 	TextureInfo read_texture_info(AssetFile* file);
 
 	void unpack_texture(TextureInfo* info, const char* sourcebuffer, size_t sourceSize, char* destination);
