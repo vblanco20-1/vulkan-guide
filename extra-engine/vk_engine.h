@@ -7,6 +7,7 @@
 #include <vector>
 #include <functional>
 #include <deque>
+#include <memory>
 #include <vk_mesh.h>
 #include <unordered_map>
 
@@ -15,7 +16,13 @@
 
 #include <SDL_events.h>
 
-#include <vk_descriptors.h>
+
+//forward declarations
+namespace vkutil {
+	class DescriptorLayoutCache;
+	class DescriptorAllocator;
+}
+
 class PipelineBuilder {
 public:
 
@@ -93,8 +100,7 @@ struct FrameData {
 	AllocatedBuffer objectBuffer;
 
 	AllocatedBuffer dynamicDataBuffer;
-	vkutil::DescriptorAllocator dynamicDescriptorAllocator;
-	//VkDescriptorPool _dynamicDescriptorPool;
+	vkutil::DescriptorAllocator* dynamicDescriptorAllocator;
 };
 
 struct UploadContext {
@@ -177,9 +183,9 @@ public:
 	//the format for the depth image
 	VkFormat _depthFormat;
 
-	//VkDescriptorPool _descriptorPool;
-	vkutil::DescriptorAllocator _descriptorAllocator;
-	vkutil::DescriptorLayoutCache _descriptorLayoutCache;
+	
+	vkutil::DescriptorAllocator* _descriptorAllocator;
+	vkutil::DescriptorLayoutCache* _descriptorLayoutCache;
 
 	VkDescriptorSetLayout _singleTextureSetLayout;
 

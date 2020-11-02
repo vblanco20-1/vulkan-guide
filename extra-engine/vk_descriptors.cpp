@@ -9,7 +9,7 @@ namespace vkutil {
 		std::vector<VkDescriptorPoolSize> sizes;
 		sizes.reserve(poolSizes.sizes.size());
 		for (auto sz : poolSizes.sizes) {
-			sizes.push_back({ sz.type, uint32_t(sz.multiplier * count) });
+			sizes.push_back({ sz.first, uint32_t(sz.second * count) });
 		}
 		VkDescriptorPoolCreateInfo pool_info = {};
 		pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -24,7 +24,7 @@ namespace vkutil {
 		return descriptorPool;
 	}
 
-	void DescriptorAllocator::ResetAll()
+	void DescriptorAllocator::reset_pools()
 	{
 		for (auto p : usedPools)
 		{
@@ -36,11 +36,11 @@ namespace vkutil {
 		currentPool = VK_NULL_HANDLE;
 	}
 
-	bool DescriptorAllocator::AllocateDescriptor(VkDescriptorSet* set, VkDescriptorSetLayout layout)
+	bool DescriptorAllocator::allocate(VkDescriptorSet* set, VkDescriptorSetLayout layout)
 	{
 		if (currentPool == VK_NULL_HANDLE)
 		{
-			currentPool = GrabPool();//createPool(device, descriptorSizes, 1000, 0);
+			currentPool = grab_pool();//createPool(device, descriptorSizes, 1000, 0);
 			usedPools.push_back(currentPool);
 		}
 
@@ -76,7 +76,7 @@ namespace vkutil {
 		{
 			//allocate a new pool and retry
 
-			currentPool = GrabPool();//createPool(device, descriptorSizes, 1000, 0);
+			currentPool = grab_pool();//createPool(device, descriptorSizes, 1000, 0);
 			usedPools.push_back(currentPool);
 
 			allocResult = vkAllocateDescriptorSets(device, &allocInfo, set);
@@ -91,12 +91,12 @@ namespace vkutil {
 		return false;
 	}
 
-	void DescriptorAllocator::Initialize(VkDevice newDevice)
+	void DescriptorAllocator::init(VkDevice newDevice)
 	{
 		device = newDevice;
 	}
 
-	VkDescriptorPool DescriptorAllocator::GrabPool()
+	VkDescriptorPool DescriptorAllocator::grab_pool()
 	{
 		if (freePools.size() > 0)
 		{
@@ -110,12 +110,12 @@ namespace vkutil {
 	}
 
 
-	void DescriptorLayoutCache::Initialize(VkDevice newDevice)
+	void DescriptorLayoutCache::init(VkDevice newDevice)
 	{
 		device = newDevice;
 	}
 
-	VkDescriptorSetLayout DescriptorLayoutCache::CreateDescriptorSetLayout(VkDescriptorSetLayoutCreateInfo* info)
+	VkDescriptorSetLayout DescriptorLayoutCache::create_descriptor_layout(VkDescriptorSetLayoutCreateInfo* info)
 	{
 		DescriptorLayoutInfo layoutinfo;
 		layoutinfo.bindings.reserve(info->bindingCount);
@@ -229,12 +229,12 @@ namespace vkutil {
 		
 
 
-		layout = cache->CreateDescriptorSetLayout(&layoutInfo);
+		layout = cache->create_descriptor_layout(&layoutInfo);
 
 
 		//allocate descriptor
 
-		alloc->AllocateDescriptor(&set, layout);
+		alloc->allocate(&set, layout);
 
 
 		//write descriptor

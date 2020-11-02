@@ -359,7 +359,7 @@ void ShaderDescriptorBinder::build_sets(VkDevice device, vkutil::DescriptorAlloc
 				//vkAllocateDescriptorSets(device, &allocInfo, &newDescriptor);
 
 				VkDescriptorSet newDescriptor;
-				allocator.AllocateDescriptor(&newDescriptor, layout);
+				allocator.allocate(&newDescriptor, layout);
 
 				for (auto& w : writes[i]) {
 					w.dstSet = newDescriptor;

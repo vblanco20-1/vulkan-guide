@@ -6,6 +6,7 @@
 
 #include <vk_types.h>
 #include <vk_initializers.h>
+#include <vk_descriptors.h>
 
 #include "VkBootstrap.h"
 
@@ -21,6 +22,7 @@
 #include "imgui.h"
 #include "imgui_impl_sdl.h"
 #include "imgui_impl_vulkan.h"
+
 
 
 constexpr bool bUseValidationLayers = true;
@@ -110,7 +112,7 @@ void VulkanEngine::draw()
 	VK_CHECK(vkWaitForFences(_device, 1, &get_current_frame()._renderFence, true, 1000000000));
 	VK_CHECK(vkResetFences(_device, 1, &get_current_frame()._renderFence));
 
-	get_current_frame().dynamicDescriptorAllocator.ResetAll();
+	get_current_frame().dynamicDescriptorAllocator->reset_pools();
 
 	//now that we are sure that the commands finished executing, we can safely reset the command buffer to begin recording again.
 	VK_CHECK(vkResetCommandBuffer(get_current_frame()._mainCommandBuffer, 0));
@@ -1036,13 +1038,13 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderObject* first, int co
 	dynamicInfo.range = 100;
 
 	VkDescriptorSet GlobalSet;
-	vkutil::DescriptorBuilder::begin(&_descriptorLayoutCache, &_descriptorAllocator)
-		.bind_buffer(0, &dynamicInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_VERTEX_BIT)
+	vkutil::DescriptorBuilder::begin(_descriptorLayoutCache, _descriptorAllocator)
+		.bind_buffer(0, &dynamicInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_VERTEX_BIT )
 		.bind_buffer(1, &dynamicInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_FRAGMENT_BIT)
 		.build(GlobalSet);
 
 	VkDescriptorSet ObjectDataSet;
-	vkutil::DescriptorBuilder::begin(&_descriptorLayoutCache, &_descriptorAllocator)
+	vkutil::DescriptorBuilder::begin(_descriptorLayoutCache, _descriptorAllocator)
 		.bind_buffer(0, &objectBufferInfo, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
 		.build(ObjectDataSet);
 
@@ -1133,7 +1135,7 @@ void VulkanEngine::init_scene()
 	imageBufferInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
 
-	vkutil::DescriptorBuilder::begin(&_descriptorLayoutCache, &_descriptorAllocator)
+	vkutil::DescriptorBuilder::begin(_descriptorLayoutCache, _descriptorAllocator)
 		.bind_image(0, &imageBufferInfo, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
 		.build(texturedMat->textureSet);
 }
@@ -1211,8 +1213,11 @@ void VulkanEngine::immediate_submit(std::function<void(VkCommandBuffer cmd)>&& f
 
 void VulkanEngine::init_descriptors()
 {
-	_descriptorAllocator.Initialize(_device);
-	_descriptorLayoutCache.Initialize(_device);
+	_descriptorAllocator = new vkutil::DescriptorAllocator{};
+	_descriptorAllocator->init(_device);
+
+	_descriptorLayoutCache = new vkutil::DescriptorLayoutCache{};
+	_descriptorLayoutCache->init(_device);
 
 
 	VkDescriptorSetLayoutBinding textureBind = vkinit::descriptorset_layout_binding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0);
@@ -1224,14 +1229,15 @@ void VulkanEngine::init_descriptors()
 	set3info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
 	set3info.pBindings = &textureBind;
 	
-	_singleTextureSetLayout = _descriptorLayoutCache.CreateDescriptorSetLayout(&set3info);
+	_singleTextureSetLayout = _descriptorLayoutCache->create_descriptor_layout(&set3info);
 	
 	
 	const size_t sceneParamBufferSize = FRAME_OVERLAP * pad_uniform_buffer_size(sizeof(GPUSceneData));	
 	
 	for (int i = 0; i < FRAME_OVERLAP; i++)
 	{
-		_frames[i].dynamicDescriptorAllocator.Initialize(_device);
+		_frames[i].dynamicDescriptorAllocator = new vkutil::DescriptorAllocator{};
+		_frames[i].dynamicDescriptorAllocator->init(_device);
 		
 		const int MAX_OBJECTS = 10000;
 		_frames[i].objectBuffer = create_buffer(sizeof(GPUObjectData) * MAX_OBJECTS, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);

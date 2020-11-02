@@ -13,12 +13,9 @@ namespace vkutil {
 
 	class DescriptorAllocator {
 	public:
-		struct PoolSize {
-			VkDescriptorType type;
-			float multiplier;
-		};
+		
 		struct PoolSizes {
-			std::vector<PoolSize> sizes =
+			std::vector<std::pair<VkDescriptorType,float>> sizes =
 			{
 				{ VK_DESCRIPTOR_TYPE_SAMPLER, 0.5f },
 				{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 4.f },
@@ -36,28 +33,28 @@ namespace vkutil {
 
 
 
-		void ResetAll();
-		bool AllocateDescriptor(VkDescriptorSet* set, VkDescriptorSetLayout layout);
+		void reset_pools();
+		bool allocate(VkDescriptorSet* set, VkDescriptorSetLayout layout);
 		
-		void Initialize(VkDevice newDevice);
+		void init(VkDevice newDevice);
 
 		VkDevice device;
 	private:
-		VkDescriptorPool GrabPool();
+		VkDescriptorPool grab_pool();
 
 		VkDescriptorPool currentPool{VK_NULL_HANDLE};
 		PoolSizes descriptorSizes;
 		std::vector<VkDescriptorPool> usedPools;
-		std::vector<VkDescriptorPool> freePools;		
+		std::vector<VkDescriptorPool> freePools;
 	};
 
 
 	class DescriptorLayoutCache {
 	public:
-		void Initialize(VkDevice newDevice);
+		void init(VkDevice newDevice);
 
 
-		VkDescriptorSetLayout CreateDescriptorSetLayout(VkDescriptorSetLayoutCreateInfo* info);
+		VkDescriptorSetLayout create_descriptor_layout(VkDescriptorSetLayoutCreateInfo* info);
 
 		struct DescriptorLayoutInfo {
 			//good idea to turn this into a inlined array
@@ -69,6 +66,7 @@ namespace vkutil {
 					return false;
 				}
 				else {
+					//compare each of the bindings is the same. Bindings are sorted so they will match
 					for (int i = 0; i < bindings.size(); i++) {
 						if (other.bindings[i].binding != bindings[i].binding)
 						{
@@ -114,7 +112,7 @@ namespace vkutil {
 
 				return result;
 			}
-		};		
+		};
 
 		std::unordered_map<DescriptorLayoutInfo, VkDescriptorSetLayout, DescriptorLayoutHash> layoutCache;
 		VkDevice device;
