@@ -112,10 +112,10 @@ void ShaderEffect::reflect_layout(VulkanEngine* engine, ReflectionOverrides* ove
 		assert(result == SPV_REFLECT_RESULT_SUCCESS);	
 
 		for (size_t i_set = 0; i_set < sets.size(); ++i_set) {
-			//set_layouts.push_back({});
+			
 			const SpvReflectDescriptorSet& refl_set = *(sets[i_set]);
 
-			DescriptorSetLayoutData layout = {};// = set_layouts[i_set];
+			DescriptorSetLayoutData layout = {};
 
 			layout.bindings.resize(refl_set.binding_count);
 			for (uint32_t i_binding = 0; i_binding < refl_set.binding_count; ++i_binding) {
@@ -306,7 +306,7 @@ void DescriptorBuilder::apply_binds(VkCommandBuffer cmd)
 	}
 }
 
-void DescriptorBuilder::build_sets(VkDevice device, VkDescriptorPool allocator)
+void DescriptorBuilder::build_sets(VkDevice device, vkutil::DescriptorAllocator& allocator)
 {
 	std::array<std::vector<VkWriteDescriptorSet>, 4> writes{};
 
@@ -348,15 +348,18 @@ void DescriptorBuilder::build_sets(VkDevice device, VkDescriptorPool allocator)
 				//alloc
 				auto layout = shaders->setLayouts[i];
 
-				VkDescriptorSetAllocateInfo allocInfo = {};
-				allocInfo.pNext = nullptr;
-				allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-				allocInfo.descriptorPool = allocator;
-				allocInfo.descriptorSetCount = 1;
-				allocInfo.pSetLayouts = &layout;
+				//VkDescriptorSetAllocateInfo allocInfo = {};
+				//allocInfo.pNext = nullptr;
+				//allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+				//allocInfo.descriptorPool = allocator;
+				//allocInfo.descriptorSetCount = 1;
+				//allocInfo.pSetLayouts = &layout;
+				//
+				//VkDescriptorSet newDescriptor;
+				//vkAllocateDescriptorSets(device, &allocInfo, &newDescriptor);
 
 				VkDescriptorSet newDescriptor;
-				vkAllocateDescriptorSets(device, &allocInfo, &newDescriptor);
+				allocator.AllocateDescriptor(&newDescriptor, layout);
 
 				for (auto& w : writes[i]) {
 					w.dstSet = newDescriptor;

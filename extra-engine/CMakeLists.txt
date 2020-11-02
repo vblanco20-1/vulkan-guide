@@ -9,6 +9,8 @@ add_executable (extra
  "vk_mesh.h"
 "vk_textures.cpp"
  "vk_textures.h"
+"vk_descriptors.cpp"
+ "vk_descriptors.h"
 "vk_shaders.cpp"
  "vk_shaders.h"
  "vk_initializers.cpp" 

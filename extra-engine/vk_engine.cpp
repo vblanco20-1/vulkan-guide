@@ -110,6 +110,8 @@ void VulkanEngine::draw()
 	VK_CHECK(vkWaitForFences(_device, 1, &get_current_frame()._renderFence, true, 1000000000));
 	VK_CHECK(vkResetFences(_device, 1, &get_current_frame()._renderFence));
 
+	get_current_frame().dynamicDescriptorAllocator.ResetAll();
+
 	//now that we are sure that the commands finished executing, we can safely reset the command buffer to begin recording again.
 	VK_CHECK(vkResetCommandBuffer(get_current_frame()._mainCommandBuffer, 0));
 
@@ -959,7 +961,6 @@ Mesh* VulkanEngine::get_mesh(const std::string& name)
 
 void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderObject* first, int count)
 {
-	vkResetDescriptorPool(_device, get_current_frame()._dynamicDescriptorPool, 0);
 	//make a model view matrix for rendering the object
 	//camera view
 	glm::vec3 camPos = _camera.position;
@@ -1047,9 +1048,9 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderObject* first, int co
 			
 			binder.bind_buffer("objectBuffer", objectBufferInfo);
 		}
-		binder.bind_dynamic_buffer("cameraData", camera_data_offsets[i % 3], dynamicInfo);
+		binder.bind_dynamic_buffer("cameraData", camera_data_offsets[0], dynamicInfo);
 		binder.bind_dynamic_buffer("sceneData", scene_data_offset, dynamicInfo);
-		binder.build_sets(_device, get_current_frame()._dynamicDescriptorPool);
+		binder.build_sets(_device, get_current_frame().dynamicDescriptorAllocator);
 
 		binder.apply_binds(cmd);
 			
@@ -1113,14 +1114,16 @@ void VulkanEngine::init_scene()
 
 	Material* texturedMat = get_material("texturedmesh");
 
-	VkDescriptorSetAllocateInfo allocInfo = {};
-	allocInfo.pNext = nullptr;
-	allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-	allocInfo.descriptorPool = _descriptorPool;
-	allocInfo.descriptorSetCount = 1;
-	allocInfo.pSetLayouts = &_singleTextureSetLayout;
+	//VkDescriptorSetAllocateInfo allocInfo = {};
+	//allocInfo.pNext = nullptr;
+	//allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+	//allocInfo.descriptorPool = _descriptorPool;
+	//allocInfo.descriptorSetCount = 1;
+	//allocInfo.pSetLayouts = &_singleTextureSetLayout;
+	//
+	//vkAllocateDescriptorSets(_device, &allocInfo, &texturedMat->textureSet);
 
-	vkAllocateDescriptorSets(_device, &allocInfo, &texturedMat->textureSet);
+	_descriptorAllocator.AllocateDescriptor(&texturedMat->textureSet, _singleTextureSetLayout);
 
 	VkSamplerCreateInfo samplerInfo = vkinit::sampler_create_info(VK_FILTER_NEAREST);
 
@@ -1211,23 +1214,7 @@ void VulkanEngine::immediate_submit(std::function<void(VkCommandBuffer cmd)>&& f
 void VulkanEngine::init_descriptors()
 {
 
-	//create a descriptor pool that will hold 10 uniform buffers
-	std::vector<VkDescriptorPoolSize> sizes =
-	{
-		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 10 },
-		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 10 },
-		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 10 },
-		{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 10 }
-	};
-	
-	VkDescriptorPoolCreateInfo pool_info = {};
-	pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-	pool_info.flags = 0;
-	pool_info.maxSets = 10;
-	pool_info.poolSizeCount = (uint32_t)sizes.size();
-	pool_info.pPoolSizes = sizes.data();
-	
-	vkCreateDescriptorPool(_device, &pool_info, nullptr, &_descriptorPool);
+	_descriptorAllocator.Initialize(_device);
 
 	VkDescriptorSetLayoutBinding textureBind = vkinit::descriptorset_layout_binding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0);
 	
@@ -1246,27 +1233,7 @@ void VulkanEngine::init_descriptors()
 	
 	for (int i = 0; i < FRAME_OVERLAP; i++)
 	{
-
-		VkDescriptorPool dynamicPool;
-
-		std::vector<VkDescriptorPoolSize> psizes =
-		{
-			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 10 },
-			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 10 },
-			{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 10 },
-			{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 10 }
-		};
-
-		VkDescriptorPoolCreateInfo dpool_info = {};
-		dpool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-		dpool_info.flags = 0;
-		dpool_info.maxSets = 10000;
-		dpool_info.poolSizeCount = (uint32_t)psizes.size();
-		dpool_info.pPoolSizes = psizes.data();
-
-		vkCreateDescriptorPool(_device, &dpool_info, nullptr, &dynamicPool);
-
-		_frames[i]._dynamicDescriptorPool = dynamicPool;
+		_frames[i].dynamicDescriptorAllocator.Initialize(_device);
 		//_frames[i].cameraBuffer = create_buffer(sizeof(GPUCameraData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
 
 		const int MAX_OBJECTS = 10000;

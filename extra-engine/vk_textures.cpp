@@ -60,10 +60,8 @@ bool vkutil::load_image_from_asset(VulkanEngine& engine, const char* filename, A
 		std::cout << "Error when loading mesh ";
 		return false;
 	}
-
-	assets::TextureInfo textureInfo = assets::read_texture_info(&file);
-
 	
+	assets::TextureInfo textureInfo = assets::read_texture_info(&file);
 
 	
 	VkDeviceSize imageSize = textureInfo.textureSize;
@@ -81,8 +79,7 @@ bool vkutil::load_image_from_asset(VulkanEngine& engine, const char* filename, A
 	void* data;
 	vmaMapMemory(engine._allocator, stagingBuffer._allocation, &data);
 
-	assets::unpack_texture(&textureInfo, file.binaryBlob.data(), file.binaryBlob.size(), (char*)data);
-	//memcpy(data, pixel_ptr, static_cast<size_t>(imageSize));
+	assets::unpack_texture(&textureInfo, file.binaryBlob.data(), file.binaryBlob.size(), (char*)data);	
 
 	vmaUnmapMemory(engine._allocator, stagingBuffer._allocation);	
 

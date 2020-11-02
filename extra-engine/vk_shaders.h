@@ -7,6 +7,9 @@
 #include <vector>
 #include <array>
 #include <unordered_map>
+
+#include <vk_descriptors.h>
+
 struct ShaderModule {
 	std::vector<uint32_t> code;
 	VkShaderModule module;
@@ -71,7 +74,8 @@ struct DescriptorBuilder {
 
 	void apply_binds( VkCommandBuffer cmd);
 
-	void build_sets(VkDevice device, VkDescriptorPool allocator);
+	//void build_sets(VkDevice device, VkDescriptorPool allocator);
+	void build_sets(VkDevice device, vkutil::DescriptorAllocator& allocator);
 
 	void set_shader(ShaderEffect* newShader);
 
@@ -85,4 +89,6 @@ private:
 
 	ShaderEffect* shaders{ nullptr };
 	std::vector<BufferWriteDescriptor> bufferWrites;
+
+
 };

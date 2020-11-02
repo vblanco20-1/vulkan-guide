@@ -14,6 +14,8 @@
 #include <glm/gtx/transform.hpp>
 
 #include <SDL_events.h>
+
+#include <vk_descriptors.h>
 class PipelineBuilder {
 public:
 
@@ -91,7 +93,8 @@ struct FrameData {
 	AllocatedBuffer objectBuffer;
 
 	AllocatedBuffer dynamicDataBuffer;
-	VkDescriptorPool _dynamicDescriptorPool;
+	vkutil::DescriptorAllocator dynamicDescriptorAllocator;
+	//VkDescriptorPool _dynamicDescriptorPool;
 };
 
 struct UploadContext {
@@ -174,7 +177,8 @@ public:
 	//the format for the depth image
 	VkFormat _depthFormat;
 
-	VkDescriptorPool _descriptorPool;
+	//VkDescriptorPool _descriptorPool;
+	vkutil::DescriptorAllocator _descriptorAllocator;
 
 	VkDescriptorSetLayout _singleTextureSetLayout;
 
