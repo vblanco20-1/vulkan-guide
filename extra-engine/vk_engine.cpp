@@ -1111,19 +1111,7 @@ void VulkanEngine::init_scene()
 		}
 	}
 
-
 	Material* texturedMat = get_material("texturedmesh");
-
-	//VkDescriptorSetAllocateInfo allocInfo = {};
-	//allocInfo.pNext = nullptr;
-	//allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-	//allocInfo.descriptorPool = _descriptorPool;
-	//allocInfo.descriptorSetCount = 1;
-	//allocInfo.pSetLayouts = &_singleTextureSetLayout;
-	//
-	//vkAllocateDescriptorSets(_device, &allocInfo, &texturedMat->textureSet);
-
-	_descriptorAllocator.AllocateDescriptor(&texturedMat->textureSet, _singleTextureSetLayout);
 
 	VkSamplerCreateInfo samplerInfo = vkinit::sampler_create_info(VK_FILTER_NEAREST);
 
@@ -1135,9 +1123,10 @@ void VulkanEngine::init_scene()
 	imageBufferInfo.imageView = _loadedTextures["empire_diffuse"].imageView;
 	imageBufferInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
-	VkWriteDescriptorSet texture1 = vkinit::write_descriptor_image(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, texturedMat->textureSet, &imageBufferInfo, 0);
 
-	vkUpdateDescriptorSets(_device, 1, &texture1, 0, nullptr);
+	vkutil::DescriptorBuilder::begin(&_descriptorLayoutCache, &_descriptorAllocator)
+		.bind_image(0, &imageBufferInfo, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
+		.build(texturedMat->textureSet);
 }
 
 AllocatedBuffer VulkanEngine::create_buffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage)
