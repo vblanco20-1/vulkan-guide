@@ -1024,35 +1024,44 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderObject* first, int co
 	Mesh* lastMesh = nullptr;
 	Material* lastMaterial = nullptr;
 	ShaderDescriptorBinder binder{};
+
+	VkDescriptorBufferInfo objectBufferInfo;
+	objectBufferInfo.buffer = get_current_frame().objectBuffer._buffer;
+	objectBufferInfo.offset = 0;
+	objectBufferInfo.range = sizeof(GPUObjectData) * 10000;
+
+	VkDescriptorBufferInfo dynamicInfo;
+	dynamicInfo.buffer = get_current_frame().dynamicDataBuffer._buffer;;
+	dynamicInfo.offset = 0;
+	dynamicInfo.range = 100;
+
+	VkDescriptorSet GlobalSet;
+	vkutil::DescriptorBuilder::begin(&_descriptorLayoutCache, &_descriptorAllocator)
+		.bind_buffer(0, &dynamicInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_VERTEX_BIT)
+		.bind_buffer(1, &dynamicInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_FRAGMENT_BIT)
+		.build(GlobalSet);
+
+	VkDescriptorSet ObjectDataSet;
+	vkutil::DescriptorBuilder::begin(&_descriptorLayoutCache, &_descriptorAllocator)
+		.bind_buffer(0, &objectBufferInfo, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
+		.build(ObjectDataSet);
+
 	for (int i = 0; i < count; i++)
 	{
-		RenderObject& object = first[i];
-
-		VkDescriptorBufferInfo objectBufferInfo;
-		objectBufferInfo.buffer = get_current_frame().objectBuffer._buffer;
-		objectBufferInfo.offset = 0;
-		objectBufferInfo.range = sizeof(GPUObjectData) * 10000;
-
-		VkDescriptorBufferInfo dynamicInfo;
-		dynamicInfo.buffer = get_current_frame().dynamicDataBuffer._buffer;;
-		dynamicInfo.offset = 0;
-		dynamicInfo.range = 100;
+		RenderObject& object = first[i];		
 
 		//only bind the pipeline if it doesnt match with the already bound one
 		if (object.material != lastMaterial) {
 
 			vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipeline);
 			lastMaterial = object.material;
-			binder.set_shader(object.material->effect);
 
-			
-			binder.bind_buffer("objectBuffer", objectBufferInfo);
+			vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->effect->builtLayout, 1, 1, &ObjectDataSet, 0, nullptr);
 		}
-		binder.bind_dynamic_buffer("cameraData", camera_data_offsets[0], dynamicInfo);
-		binder.bind_dynamic_buffer("sceneData", scene_data_offset, dynamicInfo);
-		binder.build_sets(_device, get_current_frame().dynamicDescriptorAllocator);
 
-		binder.apply_binds(cmd);
+		//update dynamic binds
+		uint32_t dynamicBinds[] = { camera_data_offsets[0],scene_data_offset };
+		vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->effect->builtLayout, 0, 1, &GlobalSet, 2, dynamicBinds);
 			
 		if (object.material->textureSet != VK_NULL_HANDLE) {
 			//texture descriptor
