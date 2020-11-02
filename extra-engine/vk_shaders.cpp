@@ -246,13 +246,13 @@ void ShaderEffect::reflect_layout(VulkanEngine* engine, ReflectionOverrides* ove
 
 }
 
-void DescriptorBuilder::bind_buffer(const char* name, const VkDescriptorBufferInfo& bufferInfo)
+void ShaderDescriptorBinder::bind_buffer(const char* name, const VkDescriptorBufferInfo& bufferInfo)
 {
 	bind_dynamic_buffer(name, -1, bufferInfo);
 }
 
 
-void DescriptorBuilder::bind_dynamic_buffer(const char* name, uint32_t offset, const VkDescriptorBufferInfo& bufferInfo)
+void ShaderDescriptorBinder::bind_dynamic_buffer(const char* name, uint32_t offset, const VkDescriptorBufferInfo& bufferInfo)
 {
 	auto found = shaders->bindings.find(name);
 	if (found != shaders->bindings.end()) {
@@ -295,7 +295,7 @@ void DescriptorBuilder::bind_dynamic_buffer(const char* name, uint32_t offset, c
 	}
 }
 
-void DescriptorBuilder::apply_binds(VkCommandBuffer cmd)
+void ShaderDescriptorBinder::apply_binds(VkCommandBuffer cmd)
 {
 	for (int i = 0; i < 2; i++) {
 		//there are writes for this set
@@ -306,7 +306,7 @@ void DescriptorBuilder::apply_binds(VkCommandBuffer cmd)
 	}
 }
 
-void DescriptorBuilder::build_sets(VkDevice device, vkutil::DescriptorAllocator& allocator)
+void ShaderDescriptorBinder::build_sets(VkDevice device, vkutil::DescriptorAllocator& allocator)
 {
 	std::array<std::vector<VkWriteDescriptorSet>, 4> writes{};
 
@@ -372,7 +372,7 @@ void DescriptorBuilder::build_sets(VkDevice device, vkutil::DescriptorAllocator&
 	}
 }
 
-void DescriptorBuilder::set_shader(ShaderEffect* newShader)
+void ShaderDescriptorBinder::set_shader(ShaderEffect* newShader)
 {
 	//invalidate nonequal layouts
 	if (shaders &&  shaders != newShader) {

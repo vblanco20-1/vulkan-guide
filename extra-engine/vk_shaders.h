@@ -57,7 +57,7 @@ private:
 	std::vector<ShaderStage> stages;
 };
 
-struct DescriptorBuilder {
+struct ShaderDescriptorBinder {
 	
 	struct BufferWriteDescriptor {
 		int dstSet;
@@ -89,6 +89,4 @@ private:
 
 	ShaderEffect* shaders{ nullptr };
 	std::vector<BufferWriteDescriptor> bufferWrites;
-
-
 };

@@ -1023,7 +1023,7 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderObject* first, int co
 
 	Mesh* lastMesh = nullptr;
 	Material* lastMaterial = nullptr;
-	DescriptorBuilder binder{};
+	ShaderDescriptorBinder binder{};
 	for (int i = 0; i < count; i++)
 	{
 		RenderObject& object = first[i];
