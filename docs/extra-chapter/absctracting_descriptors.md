@@ -1,7 +1,6 @@
 ---
 layout: default
-title: Abstracting Descriptor Set Creation
-parent: Extra Chapter
+title: A thin abstraction for descriptor sets
 nav_order: 33
 ---
 
