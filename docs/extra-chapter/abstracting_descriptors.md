@@ -1,6 +1,7 @@
 ---
 layout: default
 title: A thin abstraction for descriptor sets
+parent: Extra Chapter
 nav_order: 33
 ---
 
