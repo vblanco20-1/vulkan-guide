@@ -17,6 +17,9 @@
 #include <SDL_events.h>
 
 
+namespace assets { struct PrefabInfo; }
+
+
 //forward declarations
 namespace vkutil {
 	class DescriptorLayoutCache;
@@ -45,7 +48,9 @@ struct DeletionQueue
 {
     std::deque<std::function<void()>> deletors;
 
-    void push_function(std::function<void()>&& function) {
+	template<typename F>
+    void push_function(F&& function) {
+		static_assert(sizeof(F) < 200, "DONT CAPTURE TOO MUCH IN THE LAMBDA");
         deletors.push_back(function);
     }
 
@@ -216,6 +221,7 @@ public:
 	std::unordered_map<std::string, Material> _materials;
 	std::unordered_map<std::string, Mesh> _meshes;
 	std::unordered_map<std::string, Texture> _loadedTextures;
+	std::unordered_map<std::string, assets::PrefabInfo*> _prefabCache;
 	//functions
 
 	//create material and add it to the map

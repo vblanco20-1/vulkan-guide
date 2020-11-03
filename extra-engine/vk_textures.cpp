@@ -160,10 +160,10 @@ AllocatedImage vkutil::upload_image(int texWidth, int texHeight, VkFormat image_
 		});
 
 
-	engine._mainDeletionQueue.push_function([=]() {
+	engine._mainDeletionQueue.push_function([=, &engine]() {
 
 		vmaDestroyImage(engine._allocator, newImage._image, newImage._allocation);
-		});
+	});
 
 	return newImage;
 }

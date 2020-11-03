@@ -925,7 +925,7 @@ void VulkanEngine::load_image_to_cache(const char* name, const char* path)
 
 	vkutil::load_image_from_asset(*this, path, newtex.image);
 
-	VkImageViewCreateInfo imageinfo = vkinit::imageview_create_info(VK_FORMAT_R8G8B8A8_UNORM, newtex.image._image, 0);
+	VkImageViewCreateInfo imageinfo = vkinit::imageview_create_info(VK_FORMAT_R8G8B8A8_UNORM, newtex.image._image, VK_IMAGE_ASPECT_COLOR_BIT);
 	vkCreateImageView(_device, &imageinfo, nullptr, &newtex.imageView);
 
 	_loadedTextures[name] = newtex;
@@ -1007,12 +1007,12 @@ void VulkanEngine::upload_mesh(Mesh& mesh)
 
 	//add the destruction of triangle mesh buffer to the deletion queue
 	_mainDeletionQueue.push_function([=]() {
-
+	
 		vmaDestroyBuffer(_allocator, mesh._vertexBuffer._buffer, mesh._vertexBuffer._allocation);
 		if (index_buffer_size > 0) {
 			vmaDestroyBuffer(_allocator, mesh._indexBuffer._buffer, mesh._indexBuffer._allocation);
 		}
-		});
+	});
 
 	immediate_submit([=](VkCommandBuffer cmd) {
 		VkBufferCopy copy;
@@ -1242,63 +1242,16 @@ void VulkanEngine::init_scene()
 	monkey.material = get_material("defaultmesh");
 	monkey.transformMatrix = glm::mat4{ 1.0f };
 
-	//_renderables.push_back(monkey);
+	for (int x = -10; x <= 10; x++) {
+		for (int y = -10; y <= 10; y++) {
 
+			glm::mat4 translation = glm::translate(glm::mat4{ 1.0 }, glm::vec3(x * 5, 0, y * 5));
+			glm::mat4 scale = glm::scale(glm::mat4{ 1.0 }, glm::vec3(10));
 
-	//RenderObject helmet1;
-	//helmet1.mesh = get_mesh("helmet1");
-	//helmet1.material = clone_material("texturedmesh","helmet_leather");
-	//helmet1.transformMatrix = glm::scale(glm::vec3{10.f,10.f,10.f});
-	//
-	//build_texture_set(smoothSampler, helmet1.material, "LeatherParts_diffuse");
-	//
-	//_renderables.push_back(helmet1);
-	//
-	//helmet1.mesh = get_mesh("helmet2");
-	//
-	//helmet1.material = clone_material("texturedmesh", "helmet_glassplastic");
-	//build_texture_set(smoothSampler, helmet1.material, "GlassPlastic_diffuse"); 
-	//
-	//_renderables.push_back(helmet1);
-	//
-	//helmet1.mesh = get_mesh("helmet3");
-	//helmet1.material = clone_material("texturedmesh", "helmet_rubber");
-	//build_texture_set(smoothSampler, helmet1.material, "RubberWoodMat_diffuse");
-	////helmet1.material = get_material("helmet_glassplastic");
-	//
-	//_renderables.push_back(helmet1);
-	//
-	////helmet1.material = clone_material("texturedmesh", "helmet_rubber");
-	////build_texture_set(smoothSampler, helmet1.material, "RubberWoodMat_diffuse");
-	//
-	//helmet1.mesh = get_mesh("helmet4");
-	//
-	//helmet1.material = clone_material("texturedmesh", "helmet_lenses");
-	//build_texture_set(smoothSampler, helmet1.material, "LensesMat_diffuse");
-	//
-	//
-	//_renderables.push_back(helmet1);
-	//
-	//helmet1.mesh = get_mesh("helmet5");
-	//
-	//helmet1.material = clone_material("texturedmesh", "helmet_metal");
-	//build_texture_set(smoothSampler, helmet1.material, "MetalPartsMat_diffuse");
-	//_renderables.push_back(helmet1);
-	//
-	//helmet1.mesh = get_mesh("helmet6");
-	//helmet1.material = get_material("helmet_rubber");
-	//
-	//_renderables.push_back(helmet1);
+			load_prefab("K:/Programming/vulkan-guide-otherbranch/assets/FlightHelmet/FlightHelmet.pfb", translation * scale);
+		}
+	}
 
-
-	load_prefab("K:/Programming/vulkan-guide-otherbranch/assets/FlightHelmet/FlightHelmet.pfb", glm::scale(glm::vec3{10.f}));
-
-	//RenderObject map;
-	//map.mesh = get_mesh("empire");
-	//map.material = get_material("texturedmesh");
-	//map.transformMatrix = glm::translate(glm::vec3{ 5,-10,0 }); //glm::mat4{ 1.0f };
-	//
-	//_renderables.push_back(map);
 
 	for (int x = -20; x <= 20; x++) {
 		for (int y = -20; y <= 20; y++) {
@@ -1412,15 +1365,24 @@ void VulkanEngine::immediate_submit(std::function<void(VkCommandBuffer cmd)>&& f
 bool VulkanEngine::load_prefab(const char* path, glm::mat4 root)
 {
 	
-	assets::AssetFile file;
-	bool loaded = assets::load_binaryfile(path, file);
+	
+	auto pf = _prefabCache.find(path);
+	if (pf == _prefabCache.end())
+	{
+		assets::AssetFile file;
+		bool loaded = assets::load_binaryfile(path, file);
 
-	if (!loaded) {
-		std::cout << "Error when loading prefab ";
-		return false;
+		if (!loaded) {
+			std::cout << "Error when loading prefab ";
+			return false;
+		}
+
+		_prefabCache[path] = new assets::PrefabInfo;
+		
+		*_prefabCache[path] = assets::read_prefab_info(&file);
 	}
 
-	assets::PrefabInfo prefab = assets::read_prefab_info(&file);
+	assets::PrefabInfo* prefab = _prefabCache[path];
 
 	VkSamplerCreateInfo samplerInfo = vkinit::sampler_create_info(VK_FILTER_LINEAR);
 
@@ -1429,33 +1391,42 @@ bool VulkanEngine::load_prefab(const char* path, glm::mat4 root)
 	VkSampler smoothSampler;
 	vkCreateSampler(_device, &samplerInfo, nullptr, &smoothSampler);
 
-	for (auto& [k, v] : prefab.node_meshes)
+	for (auto& [k, v] : prefab->node_meshes)
 	{
 		//load mesh
 
-		Mesh mesh{};		
-		mesh.load_from_meshasset(v.mesh_path.c_str());
+		if (!get_mesh(v.mesh_path.c_str()))
+		{
+			Mesh mesh{};
+			mesh.load_from_meshasset(v.mesh_path.c_str());
 
-		upload_mesh(mesh);
+			upload_mesh(mesh);
 
-		_meshes[v.mesh_path.c_str()] = mesh;
+			_meshes[v.mesh_path.c_str()] = mesh;
+		}		
 
 		//load material
 
-		assets::AssetFile materialFile;
-		bool loaded = assets::load_binaryfile(v.material_path.c_str(), materialFile);
+		if (!get_material(v.material_path.c_str()))
+		{
+			assets::AssetFile materialFile;
+			bool loaded = assets::load_binaryfile(v.material_path.c_str(), materialFile);
 
-		assets::MaterialInfo material = assets::read_material_info(&materialFile);
+			assets::MaterialInfo material = assets::read_material_info(&materialFile);
 
-		auto texture = material.textures["baseColor"];
-		load_image_to_cache(texture.c_str(), texture.c_str());
+			auto texture = material.textures["baseColor"];
+			load_image_to_cache(texture.c_str(), texture.c_str());
+
+			Material* mat = clone_material("texturedmesh", v.material_path.c_str());
+
+			build_texture_set(smoothSampler, mat, texture.c_str());
+		}
+		
 
 		RenderObject loadmesh;
 		loadmesh.mesh = get_mesh(v.mesh_path.c_str());
-		loadmesh.transformMatrix = root;
-		loadmesh.material = clone_material("texturedmesh", v.material_path.c_str());
-
-		build_texture_set(smoothSampler, loadmesh.material, texture.c_str());
+		loadmesh.transformMatrix = root;		
+		loadmesh.material = get_material(v.material_path.c_str());
 
 		_renderables.push_back(loadmesh);
 	}
