@@ -40,7 +40,7 @@ namespace vkutil {
 	{
 		if (currentPool == VK_NULL_HANDLE)
 		{
-			currentPool = grab_pool();//createPool(device, descriptorSizes, 1000, 0);
+			currentPool = grab_pool();
 			usedPools.push_back(currentPool);
 		}
 
@@ -75,16 +75,15 @@ namespace vkutil {
 		if (needReallocate)
 		{
 			//allocate a new pool and retry
-
-			currentPool = grab_pool();//createPool(device, descriptorSizes, 1000, 0);
+			currentPool = grab_pool();
 			usedPools.push_back(currentPool);
 
 			allocResult = vkAllocateDescriptorSets(device, &allocInfo, set);
 
 			//if it still fails then we have big issues
-			if (allocResult != VK_SUCCESS)
+			if (allocResult == VK_SUCCESS)
 			{
-				return false;
+				return true;
 			}
 		}
 
@@ -95,7 +94,6 @@ namespace vkutil {
 	{
 		device = newDevice;
 	}
-
 
 	void DescriptorAllocator::cleanup()
 	{
@@ -250,16 +248,13 @@ namespace vkutil {
 
 		layoutInfo.pBindings = bindings.data();
 		layoutInfo.bindingCount = bindings.size();
-		
-
 
 		layout = cache->create_descriptor_layout(&layoutInfo);
 
 
 		//allocate descriptor
-
-		alloc->allocate(&set, layout);
-
+		bool success = alloc->allocate(&set, layout);
+		if (!success) { return false; };
 
 		//write descriptor
 
@@ -277,6 +272,56 @@ namespace vkutil {
 	{
 		VkDescriptorSetLayout layout;
 		return build(set, layout);
+	}
+
+
+	bool DescriptorLayoutCache::DescriptorLayoutInfo::operator==(const DescriptorLayoutInfo& other) const
+	{
+		if (other.bindings.size() != bindings.size())
+		{
+			return false;
+		}
+		else {
+			//compare each of the bindings is the same. Bindings are sorted so they will match
+			for (int i = 0; i < bindings.size(); i++) {
+				if (other.bindings[i].binding != bindings[i].binding)
+				{
+					return false;
+				}
+				if (other.bindings[i].descriptorType != bindings[i].descriptorType)
+				{
+					return false;
+				}
+				if (other.bindings[i].descriptorCount != bindings[i].descriptorCount)
+				{
+					return false;
+				}
+				if (other.bindings[i].stageFlags != bindings[i].stageFlags)
+				{
+					return false;
+				}
+			}
+			return true;
+		}
+	}
+
+	size_t DescriptorLayoutCache::DescriptorLayoutInfo::hash() const
+	{
+		using std::size_t;
+		using std::hash;
+
+		size_t result = hash<size_t>()(bindings.size());
+
+		for (const VkDescriptorSetLayoutBinding& b : bindings)
+		{
+			//pack the binding data into a single int64. Not fully correct but its ok
+			size_t binding_hash = b.binding | b.descriptorType << 8 | b.descriptorCount << 16 | b.stageFlags << 24;
+
+			//shuffle the packed binding data and xor it with the main hash
+			result ^= hash<size_t>()(binding_hash);
+		}
+
+		return result;
 	}
 
 }
