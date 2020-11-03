@@ -221,6 +221,9 @@ public:
 	//create material and add it to the map
 
 	Material* create_material(VkPipeline pipeline, ShaderEffect* effect, const std::string& name);
+
+	Material* clone_material(const std::string& originalname, const std::string& copyname);
+
 	//returns nullptr if it cant be found
 	Material* get_material(const std::string& name);
 
@@ -256,6 +259,8 @@ private:
 
 	void init_scene();
 
+	void build_texture_set(VkSampler blockySampler, Material* texturedMat, const char* textureName);
+
 	void init_descriptors();
 
 	void init_imgui();
@@ -265,6 +270,8 @@ private:
 	void load_meshes();
 
 	void load_images();
+
+	void load_image_to_cache(const char* name, const char* path);
 
 	void upload_mesh(Mesh& mesh);
 };

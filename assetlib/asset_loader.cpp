@@ -2,12 +2,16 @@
 #include <asset_loader.h>
 
 #include <fstream>
+#include <iostream>
 using namespace assets;
 bool assets::save_binaryfile(const  char* path, const AssetFile& file)
 {
 	std::ofstream outfile;
 	outfile.open(path, std::ios::binary | std::ios::out);
-
+	if (!outfile.is_open())
+	{
+		std::cout << "Error when trying to write file: " << path << std::endl;
+	}
 	outfile.write(file.type, 4);
 	uint32_t version = file.version;
 	//version

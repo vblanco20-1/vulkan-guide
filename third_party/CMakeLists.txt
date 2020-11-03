@@ -11,6 +11,8 @@ add_library(spirv_reflect STATIC)
 
 add_library(lz4 STATIC)
 
+add_subdirectory(gltf)
+
 target_sources(vkbootstrap PRIVATE 
     "${CMAKE_CURRENT_SOURCE_DIR}/vkbootstrap/VkBootstrap.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/vkbootstrap/VkBootstrap.cpp"

@@ -9,7 +9,6 @@ add_library (assetlib STATIC
 "asset_loader.cpp"
 )
 
-
 target_include_directories(assetlib PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 
 target_link_libraries(assetlib PRIVATE json lz4)

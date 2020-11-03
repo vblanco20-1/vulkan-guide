@@ -130,6 +130,10 @@ bool Mesh::load_from_obj(const char* filename)
 		}
 	}
 
+
+	for (int i = 0; i < _vertices.size(); i++) {
+		_indices.push_back(i);
+	}
 	return true;
 }
 
@@ -156,6 +160,15 @@ bool Mesh::load_from_meshasset(const char* filename)
 	assets::unpack_mesh(&meshinfo, file.binaryBlob.data(), file.binaryBlob.size(), vertexBuffer.data(), indexBuffer.data());
 
 	_vertices.clear();
+
+
+	_indices.clear();
+
+	_indices.resize(indexBuffer.size() / sizeof(uint32_t));
+	for (int i = 0; i < _indices.size(); i++) {
+		uint32_t* unpacked_indices = (uint32_t*)indexBuffer.data();
+		_indices[i] = unpacked_indices[i];
+	}
 
 	if (meshinfo.vertexFormat == assets::VertexFormat::PNCV_F32)
 	{	

@@ -143,7 +143,7 @@ void VulkanEngine::draw()
 	//make a clear-color from frame number. This will flash with a 120 frame period.
 	VkClearValue clearValue;
 	float flash = abs(sin(_frameNumber / 120.f));
-	clearValue.color = { { 0.0f, 0.0f, flash, 1.0f } };
+	clearValue.color = { { 0.1f, 0.1f, 0.1f, 1.0f } };
 
 	//clear depth at 1
 	VkClearValue depthClear;
@@ -847,31 +847,93 @@ void VulkanEngine::load_meshes()
 	//lostEmpire.load_from_obj("../../assets/lost_empire.obj");
 	lostEmpire.load_from_meshasset("../../assets/lost_empire.mesh");
 
+	Mesh helmet1{};
+	//lostEmpire.load_from_obj("../../assets/lost_empire.obj");
+	helmet1.load_from_meshasset("../../assets/FlightHelmet/FlightHelmet/LeatherParts_low.mesh");
+
+
+
+
 	upload_mesh(triMesh);
 	upload_mesh(monkeyMesh);
 	upload_mesh(lostEmpire);
+	upload_mesh(helmet1);
+
 
 	_meshes["monkey"] = monkeyMesh;
+	_meshes["helmet1"] = helmet1;
 	_meshes["triangle"] = triMesh;
 	_meshes["empire"] = lostEmpire;
+
+	{
+		Mesh helmet{};
+		//lostEmpire.load_from_obj("../../assets/lost_empire.obj");
+		helmet.load_from_meshasset("../../assets/FlightHelmet/FlightHelmet/GlassPlastic_low.mesh");
+		upload_mesh(helmet);
+		_meshes["helmet2"] = helmet;
+	}
+	{
+		Mesh helmet{};
+		//lostEmpire.load_from_obj("../../assets/lost_empire.obj");
+		helmet.load_from_meshasset("../../assets/FlightHelmet/FlightHelmet/Hose_low.mesh");
+		upload_mesh(helmet);
+		_meshes["helmet3"] = helmet;
+	}
+	{
+		Mesh helmet{};
+		//lostEmpire.load_from_obj("../../assets/lost_empire.obj");
+		helmet.load_from_meshasset("../../assets/FlightHelmet/FlightHelmet/Lenses_low.mesh");
+		upload_mesh(helmet);
+		_meshes["helmet4"] = helmet;
+	}
+	{
+		Mesh helmet{};
+		//lostEmpire.load_from_obj("../../assets/lost_empire.obj");
+		helmet.load_from_meshasset("../../assets/FlightHelmet/FlightHelmet/MetalParts_low.mesh");
+		upload_mesh(helmet);
+		_meshes["helmet5"] = helmet;
+	}
+	{
+		Mesh helmet{};
+		
+		helmet.load_from_meshasset("../../assets/FlightHelmet/FlightHelmet/RubberWood_low.mesh");
+		upload_mesh(helmet);
+		_meshes["helmet6"] = helmet;
+	}
 }
 
 
 void VulkanEngine::load_images()
 {
-	Texture lostEmpire;
+	load_image_to_cache("empire_diffuse", "../../assets/lost_empire-RGBA.tx");
 
-	vkutil::load_image_from_asset(*this, "../../assets/lost_empire-RGBA.tx", lostEmpire.image);
+	load_image_to_cache("GlassPlastic_diffuse", "../../assets/FlightHelmet/FlightHelmet_Materials_GlassPlasticMat_BaseColor.tx");
+	load_image_to_cache("LeatherParts_diffuse", "../../assets/FlightHelmet/FlightHelmet_Materials_LeatherPartsMat_BaseColor.tx");
 
-	VkImageViewCreateInfo imageinfo = vkinit::imageview_create_info(VK_FORMAT_R8G8B8A8_UNORM, lostEmpire.image._image, 0);
-	vkCreateImageView(_device, &imageinfo, nullptr, &lostEmpire.imageView);
+	load_image_to_cache("MetalPartsMat_diffuse", "../../assets/FlightHelmet/FlightHelmet_Materials_MetalPartsMat_BaseColor.tx");
+	load_image_to_cache("LensesMat_diffuse", "../../assets/FlightHelmet/FlightHelmet_Materials_LensesMat_BaseColor.tx");
 
-	_loadedTextures["empire_diffuse"] = lostEmpire;
+	load_image_to_cache("RubberWoodMat_diffuse", "../../assets/FlightHelmet/FlightHelmet_Materials_RubberWoodMat_BaseColor.tx");
+}
+
+
+void VulkanEngine::load_image_to_cache(const char* name, const char* path)
+{
+	Texture newtex;
+
+	vkutil::load_image_from_asset(*this, path, newtex.image);
+
+	VkImageViewCreateInfo imageinfo = vkinit::imageview_create_info(VK_FORMAT_R8G8B8A8_UNORM, newtex.image._image, 0);
+	vkCreateImageView(_device, &imageinfo, nullptr, &newtex.imageView);
+
+	_loadedTextures[name] = newtex;
 }
 
 void VulkanEngine::upload_mesh(Mesh& mesh)
 {
-	const size_t bufferSize = mesh._vertices.size() * sizeof(Vertex);
+	const size_t vertex_buffer_size = mesh._vertices.size() * sizeof(Vertex);
+	const size_t index_buffer_size = mesh._indices.size() * sizeof(uint32_t);
+	const size_t bufferSize = vertex_buffer_size + index_buffer_size;
 	//allocate vertex buffer
 	VkBufferCreateInfo stagingBufferInfo = {};
 	stagingBufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -895,10 +957,11 @@ void VulkanEngine::upload_mesh(Mesh& mesh)
 		nullptr));
 
 	//copy vertex data
-	void* data;
-	vmaMapMemory(_allocator, stagingBuffer._allocation, &data);
+	char* data;
+	vmaMapMemory(_allocator, stagingBuffer._allocation, (void**)&data);
 
-	memcpy(data, mesh._vertices.data(), mesh._vertices.size() * sizeof(Vertex));
+	memcpy(data, mesh._vertices.data(), vertex_buffer_size);
+	memcpy(data + vertex_buffer_size, mesh._indices.data(), index_buffer_size);
 
 	vmaUnmapMemory(_allocator, stagingBuffer._allocation);
 
@@ -908,7 +971,7 @@ void VulkanEngine::upload_mesh(Mesh& mesh)
 	vertexBufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
 	vertexBufferInfo.pNext = nullptr;
 	//this is the total size, in bytes, of the buffer we are allocating
-	vertexBufferInfo.size = bufferSize;
+	vertexBufferInfo.size = vertex_buffer_size;
 	//this buffer is going to be used as a Vertex Buffer
 	vertexBufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
@@ -920,19 +983,49 @@ void VulkanEngine::upload_mesh(Mesh& mesh)
 		&mesh._vertexBuffer._buffer,
 		&mesh._vertexBuffer._allocation,
 		nullptr));
+
+	if (index_buffer_size > 0) {
+		//allocate index buffer
+		VkBufferCreateInfo indexBufferInfo = {};
+		indexBufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+		indexBufferInfo.pNext = nullptr;
+		//this is the total size, in bytes, of the buffer we are allocating
+		indexBufferInfo.size = index_buffer_size;
+		//this buffer is going to be used as a index Buffer
+		indexBufferInfo.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+
+		//allocate the buffer
+		VK_CHECK(vmaCreateBuffer(_allocator, &indexBufferInfo, &vmaallocInfo,
+			&mesh._indexBuffer._buffer,
+			&mesh._indexBuffer._allocation,
+			nullptr));
+	}
+	
+
+
 	//add the destruction of triangle mesh buffer to the deletion queue
 	_mainDeletionQueue.push_function([=]() {
 
 		vmaDestroyBuffer(_allocator, mesh._vertexBuffer._buffer, mesh._vertexBuffer._allocation);
+		if (index_buffer_size > 0) {
+			vmaDestroyBuffer(_allocator, mesh._indexBuffer._buffer, mesh._indexBuffer._allocation);
+		}
 		});
 
 	immediate_submit([=](VkCommandBuffer cmd) {
 		VkBufferCopy copy;
 		copy.dstOffset = 0;
 		copy.srcOffset = 0;
-		copy.size = bufferSize;
+		copy.size = vertex_buffer_size;
 		vkCmdCopyBuffer(cmd, stagingBuffer._buffer, mesh._vertexBuffer._buffer, 1, &copy);
-		});
+
+		if (index_buffer_size > 0) {
+			copy.dstOffset = 0;
+			copy.srcOffset = vertex_buffer_size;
+			copy.size = index_buffer_size;
+			vkCmdCopyBuffer(cmd, stagingBuffer._buffer, mesh._indexBuffer._buffer, 1, &copy);
+		}
+	});
 
 	vmaDestroyBuffer(_allocator, stagingBuffer._buffer, stagingBuffer._allocation);
 }
@@ -945,6 +1038,18 @@ Material* VulkanEngine::create_material(VkPipeline pipeline, ShaderEffect* effec
 	mat.effect = effect;
 	_materials[name] = mat;
 	return &_materials[name];
+}
+
+Material* VulkanEngine::clone_material(const std::string& originalname, const std::string& copyname)
+{
+	Material* m = get_material(originalname);
+
+	Material mat;
+	mat.pipeline = m->pipeline;
+	mat.effect = m->effect;
+	_materials[copyname] = mat;
+	return &_materials[copyname];
+	
 }
 
 Material* VulkanEngine::get_material(const std::string& name)
@@ -1049,13 +1154,13 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderObject* first, int co
 	dynamicInfo.range = 100;
 
 	VkDescriptorSet GlobalSet;
-	vkutil::DescriptorBuilder::begin(_descriptorLayoutCache, _descriptorAllocator)
+	vkutil::DescriptorBuilder::begin(_descriptorLayoutCache, get_current_frame().dynamicDescriptorAllocator)
 		.bind_buffer(0, &dynamicInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_VERTEX_BIT )
 		.bind_buffer(1, &dynamicInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_FRAGMENT_BIT)
 		.build(GlobalSet);
 
 	VkDescriptorSet ObjectDataSet;
-	vkutil::DescriptorBuilder::begin(_descriptorLayoutCache, _descriptorAllocator)
+	vkutil::DescriptorBuilder::begin(_descriptorLayoutCache, get_current_frame().dynamicDescriptorAllocator)
 		.bind_buffer(0, &objectBufferInfo, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
 		.build(ObjectDataSet);
 
@@ -1097,27 +1202,98 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderObject* first, int co
 			VkDeviceSize offset = 0;
 			vkCmdBindVertexBuffers(cmd, 0, 1, &object.mesh->_vertexBuffer._buffer, &offset);
 			lastMesh = object.mesh;
+
+			if (object.mesh->_indexBuffer._buffer != VK_NULL_HANDLE) {
+				vkCmdBindIndexBuffer(cmd, object.mesh->_indexBuffer._buffer, 0, VK_INDEX_TYPE_UINT32);
+			}
+			
 		}
 		//we can now draw
-		vkCmdDraw(cmd, object.mesh->_vertices.size(), 1, 0, i);
+
+		bool bHasIndices = object.mesh->_indices.size() > 0;
+		if (!bHasIndices) {
+			vkCmdDraw(cmd, object.mesh->_vertices.size(), 1, 0, i);
+		}
+		else {
+			vkCmdDrawIndexed(cmd, object.mesh->_indices.size(), 1, 0, 0,i);
+		}
+	
+		
 	}
 }
 
 void VulkanEngine::init_scene()
 {
+	VkSamplerCreateInfo samplerInfo = vkinit::sampler_create_info(VK_FILTER_NEAREST);
+
+	VkSampler blockySampler;
+	vkCreateSampler(_device, &samplerInfo, nullptr, &blockySampler);
+
+	samplerInfo = vkinit::sampler_create_info(VK_FILTER_LINEAR);
+
+	VkSampler smoothSampler;
+	vkCreateSampler(_device, &samplerInfo, nullptr, &smoothSampler);
+
+
 	RenderObject monkey;
 	monkey.mesh = get_mesh("monkey");
 	monkey.material = get_material("defaultmesh");
 	monkey.transformMatrix = glm::mat4{ 1.0f };
 
-	_renderables.push_back(monkey);
+	//_renderables.push_back(monkey);
 
-	RenderObject map;
-	map.mesh = get_mesh("empire");
-	map.material = get_material("texturedmesh");
-	map.transformMatrix = glm::translate(glm::vec3{ 5,-10,0 }); //glm::mat4{ 1.0f };
 
-	_renderables.push_back(map);
+	RenderObject helmet1;
+	helmet1.mesh = get_mesh("helmet1");
+	helmet1.material = clone_material("texturedmesh","helmet_leather");
+	helmet1.transformMatrix = glm::scale(glm::vec3{10.f,10.f,10.f});
+
+	build_texture_set(smoothSampler, helmet1.material, "LeatherParts_diffuse");
+
+	_renderables.push_back(helmet1);
+
+	helmet1.mesh = get_mesh("helmet2");
+
+	helmet1.material = clone_material("texturedmesh", "helmet_glassplastic");
+	build_texture_set(smoothSampler, helmet1.material, "GlassPlastic_diffuse"); 
+
+	_renderables.push_back(helmet1);
+
+	helmet1.mesh = get_mesh("helmet3");
+	helmet1.material = clone_material("texturedmesh", "helmet_rubber");
+	build_texture_set(smoothSampler, helmet1.material, "RubberWoodMat_diffuse");
+	//helmet1.material = get_material("helmet_glassplastic");
+	
+	_renderables.push_back(helmet1);
+
+	//helmet1.material = clone_material("texturedmesh", "helmet_rubber");
+	//build_texture_set(smoothSampler, helmet1.material, "RubberWoodMat_diffuse");
+
+	helmet1.mesh = get_mesh("helmet4");
+
+	helmet1.material = clone_material("texturedmesh", "helmet_lenses");
+	build_texture_set(smoothSampler, helmet1.material, "LensesMat_diffuse");
+	
+
+	_renderables.push_back(helmet1);
+
+	helmet1.mesh = get_mesh("helmet5");
+
+	helmet1.material = clone_material("texturedmesh", "helmet_metal");
+	build_texture_set(smoothSampler, helmet1.material, "MetalPartsMat_diffuse");
+	_renderables.push_back(helmet1);
+
+	helmet1.mesh = get_mesh("helmet6");
+	helmet1.material = get_material("helmet_rubber");
+	
+	_renderables.push_back(helmet1);
+
+	//RenderObject map;
+	//map.mesh = get_mesh("empire");
+	//map.material = get_material("texturedmesh");
+	//map.transformMatrix = glm::translate(glm::vec3{ 5,-10,0 }); //glm::mat4{ 1.0f };
+	//
+	//_renderables.push_back(map);
 
 	for (int x = -20; x <= 20; x++) {
 		for (int y = -20; y <= 20; y++) {
@@ -1133,18 +1309,23 @@ void VulkanEngine::init_scene()
 		}
 	}
 
-	Material* texturedMat = get_material("texturedmesh");
+	
 
-	VkSamplerCreateInfo samplerInfo = vkinit::sampler_create_info(VK_FILTER_NEAREST);
+	
 
-	VkSampler blockySampler;
-	vkCreateSampler(_device, &samplerInfo, nullptr, &blockySampler);
+	build_texture_set(blockySampler, get_material("texturedmesh"), "empire_diffuse");
 
+
+
+}
+
+
+void VulkanEngine::build_texture_set(VkSampler blockySampler, Material* texturedMat, const char * textureName)
+{
 	VkDescriptorImageInfo imageBufferInfo;
 	imageBufferInfo.sampler = blockySampler;
-	imageBufferInfo.imageView = _loadedTextures["empire_diffuse"].imageView;
+	imageBufferInfo.imageView = _loadedTextures[textureName].imageView;
 	imageBufferInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-
 
 	vkutil::DescriptorBuilder::begin(_descriptorLayoutCache, _descriptorAllocator)
 		.bind_image(0, &imageBufferInfo, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)

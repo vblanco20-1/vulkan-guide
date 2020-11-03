@@ -23,8 +23,10 @@ struct Vertex {
 
 struct Mesh {
 	std::vector<Vertex> _vertices;
+	std::vector<uint32_t> _indices;
 
 	AllocatedBuffer _vertexBuffer;
+	AllocatedBuffer _indexBuffer;
 
 	bool load_from_obj(const char* filename);
 	bool load_from_meshasset(const char* filename);

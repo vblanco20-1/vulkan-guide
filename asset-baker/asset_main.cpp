@@ -14,6 +14,9 @@
 #include <texture_asset.h>
 #include <mesh_asset.h>
 
+#define TINYGLTF_IMPLEMENTATION
+#include <tiny_gltf.h>
+
 namespace fs = std::filesystem;
 
 using namespace assets;
@@ -135,7 +138,6 @@ void extract_mesh_from_obj(std::vector<tinyobj::shape_t>& shapes, tinyobj::attri
 }
 
 bool convert_mesh(const fs::path& input, const fs::path& output)
-
 {
 	//attrib will contain the assets::Vertex_f32_PNCV arrays of the file
 	tinyobj::attrib_t attrib;
@@ -203,6 +205,227 @@ bool convert_mesh(const fs::path& input, const fs::path& output)
 	return true;
 }
 
+void unpack_gltf_buffer(tinygltf::Model& model, tinygltf::Accessor& accesor, std::vector<uint8_t> &outputBuffer)
+{
+	int bufferID = accesor.bufferView;
+	size_t elementSize = tinygltf::GetComponentSizeInBytes(accesor.componentType);
+
+	tinygltf::BufferView& bufferView = model.bufferViews[bufferID];	
+
+	tinygltf::Buffer& bufferData = (model.buffers[bufferView.buffer]);
+
+
+	uint8_t* dataptr = bufferData.data.data() + accesor.byteOffset + bufferView.byteOffset;
+
+	int components = tinygltf::GetNumComponentsInType(accesor.type);
+
+	elementSize *= components;
+
+	size_t stride = bufferView.byteStride;
+	if (stride == 0)
+	{
+		stride = elementSize;
+		
+	}
+
+	outputBuffer.resize(accesor.count * elementSize);
+
+	for (int i = 0; i < accesor.count; i++) {
+		uint8_t* dataindex = dataptr + stride * i;
+		uint8_t* targetptr = outputBuffer.data() + elementSize * i;
+
+		memcpy(targetptr, dataindex, elementSize);	
+	}
+}
+void extract_gltf_vertices(tinygltf::Primitive& primitive, tinygltf::Model& model, std::vector<assets::Vertex_f32_PNCV>& _vertices)
+{
+	
+	tinygltf::Accessor& pos_accesor = model.accessors[primitive.attributes["POSITION"]];
+
+	_vertices.resize(pos_accesor.count);
+
+	std::vector<uint8_t> pos_data;
+	unpack_gltf_buffer(model, pos_accesor, pos_data);
+	
+
+	for (int i = 0; i < _vertices.size(); i++) {
+		if (pos_accesor.type == TINYGLTF_TYPE_VEC3)
+		{
+			if (pos_accesor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT)
+			{
+				float* dtf = (float*)pos_data.data();
+
+				//vec3f 
+				_vertices[i].position[0] = *(dtf + (i * 3) + 0);
+				_vertices[i].position[1] = *(dtf + (i * 3) + 1);
+				_vertices[i].position[2] = *(dtf + (i * 3) + 2);
+			}
+			else {
+				assert(false);
+			}
+		}
+		else {
+			assert(false);
+		}
+	}
+
+	tinygltf::Accessor& normal_accesor = model.accessors[primitive.attributes["NORMAL"]];
+
+	std::vector<uint8_t> normal_data;
+	unpack_gltf_buffer(model, normal_accesor, normal_data);
+
+
+	for (int i = 0; i < _vertices.size(); i++) {
+		if (normal_accesor.type == TINYGLTF_TYPE_VEC3)
+		{
+			if (normal_accesor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT)
+			{
+				float* dtf = (float*)normal_data.data();
+
+				//vec3f 
+				_vertices[i].normal[0] = *(dtf + (i * 3) + 0);
+				_vertices[i].normal[1] = *(dtf + (i * 3) + 1);
+				_vertices[i].normal[2] = *(dtf + (i * 3) + 2);
+
+				_vertices[i].color[0] = *(dtf + (i * 3) + 0);
+				_vertices[i].color[1] = *(dtf + (i * 3) + 1);
+				_vertices[i].color[2] = *(dtf + (i * 3) + 2);
+			}
+			else {
+				assert(false);
+			}
+		}
+		else {
+			assert(false);
+		}
+	}
+
+	tinygltf::Accessor& uv_accesor = model.accessors[primitive.attributes["TEXCOORD_0"]];
+
+	std::vector<uint8_t> uv_data;
+	unpack_gltf_buffer(model, uv_accesor, uv_data);
+
+
+	for (int i = 0; i < _vertices.size(); i++) {
+		if (uv_accesor.type == TINYGLTF_TYPE_VEC2)
+		{
+			if (uv_accesor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT)
+			{
+				float* dtf = (float*)uv_data.data();
+
+				//vec3f 
+				_vertices[i].uv[0] = *(dtf + (i * 2) + 0);
+				_vertices[i].uv[1] = *(dtf + (i * 2) + 1);
+			}
+			else {
+				assert(false);
+			}
+		}
+		else {
+			assert(false);
+		}
+	}
+
+	return;
+}
+
+
+void extract_gltf_indices(tinygltf::Primitive& primitive, tinygltf::Model& model, std::vector<uint32_t>& _primindices)
+{
+	int indexaccesor = primitive.indices;	
+
+	int indexbuffer = model.accessors[indexaccesor].bufferView;
+	int componentType = model.accessors[indexaccesor].componentType;
+	size_t indexsize = tinygltf::GetComponentSizeInBytes(componentType);
+
+	tinygltf::BufferView& indexview = model.bufferViews[indexbuffer];
+	int bufferidx = indexview.buffer;
+
+	tinygltf::Buffer& buffindex = (model.buffers[bufferidx]);
+
+	uint8_t* dataptr = buffindex.data.data() + indexview.byteOffset;
+
+	std::vector<uint8_t> unpackedIndices;
+	unpack_gltf_buffer(model, model.accessors[indexaccesor], unpackedIndices);
+
+	for (int i = 0; i < model.accessors[indexaccesor].count; i++) {
+
+		uint32_t index;
+		switch (componentType) {
+		case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
+		{
+			uint16_t* bfr = (uint16_t*)unpackedIndices.data();
+			index = *(bfr + i);
+		}
+		break;
+		case TINYGLTF_COMPONENT_TYPE_SHORT:
+		{
+			int16_t* bfr = (int16_t*)unpackedIndices.data();
+			index = *(bfr + i);
+		}
+		break;
+		default:
+			assert(false);
+		}
+
+		_primindices.push_back(index);
+	}
+}
+
+bool extract_gltf_meshes(tinygltf::Model& model, const fs::path& input, const fs::path& outputFolder)
+{
+	tinygltf::Model* glmod = &model;
+	for (auto& glmesh : model.meshes) {
+
+		fs::path meshpath = outputFolder / (glmesh.name + ".mesh");
+
+		using VertexFormat = assets::Vertex_f32_PNCV;
+		auto VertexFormatEnum = assets::VertexFormat::PNCV_F32;
+
+		std::vector<VertexFormat> _vertices;
+		std::vector<uint32_t> _indices;
+
+		for (auto& primitive : glmesh.primitives) {
+
+
+			std::vector<assets::Vertex_f32_PNCV> _primvertices;
+			std::vector<uint32_t> _primindices;
+
+			extract_gltf_indices(primitive, model, _primindices);
+			extract_gltf_vertices(primitive, model, _primvertices);
+
+		
+			int first_vert = _vertices.size();
+			
+			for (auto& v : _primvertices) {
+				_vertices.push_back(v);
+			}
+
+			for (uint32_t index : _primindices) {
+				_indices.push_back(index + first_vert);
+			}
+		}
+
+		MeshInfo meshinfo;
+		meshinfo.vertexFormat = VertexFormatEnum;
+		meshinfo.vertexBuferSize = _vertices.size() * sizeof(VertexFormat);
+		meshinfo.indexBuferSize = _indices.size() * sizeof(uint32_t);
+		meshinfo.indexSize = sizeof(uint32_t);
+		meshinfo.originalFile = input.string();
+
+	//pack mesh file
+	//auto start = std::chrono::high_resolution_clock::now();
+
+	assets::AssetFile newFile = assets::pack_mesh(&meshinfo, (char*)_vertices.data(), (char*)_indices.data());
+
+		//save to disk
+	save_binaryfile(meshpath.string().c_str(), newFile);
+
+	}
+	return true;
+}
+
+
 int main(int argc, char* argv[])
 {
 	if (argc < 2)
@@ -218,23 +441,52 @@ int main(int argc, char* argv[])
 		
 		std::cout << "loaded asset directory at " << directory << std::endl;
 
-		for (auto& p : fs::directory_iterator(directory))
+		for (auto& p : fs::recursive_directory_iterator(directory))
 		{
-			std::cout << "File: " << p;
+			std::cout << "File: " << p << std::endl;
 
-			if (p.path().extension() == ".png") {
-				std::cout << "found a texture" << std::endl;
+			//if (p.path().extension() == ".png") {
+			//	std::cout << "found a texture" << std::endl;
+			//
+			//	auto newpath = p.path();
+			//	newpath.replace_extension(".tx");
+			//	convert_image(p.path(), newpath);
+			//}
+			//if (p.path().extension() == ".obj") {
+			//	std::cout << "found a mesh" << std::endl;
+			//
+			//	auto newpath = p.path();
+			//	newpath.replace_extension(".mesh");
+			//	convert_mesh(p.path(), newpath);
+			//}
+			if (p.path().extension() == ".gltf")
+			{
+				using namespace tinygltf;
+				Model model;
+				TinyGLTF loader;
+				std::string err;
+				std::string warn;
 
-				auto newpath = p.path();
-				newpath.replace_extension(".tx");
-				convert_image(p.path(), newpath);
-			}
-			if (p.path().extension() == ".obj") {
-				std::cout << "found a mesh" << std::endl;
+				bool ret = loader.LoadASCIIFromFile(&model, &err, &warn, p.path().string().c_str());
 
-				auto newpath = p.path();
-				newpath.replace_extension(".mesh");
-				convert_mesh(p.path(), newpath);
+				if (!warn.empty()) {
+					printf("Warn: %s\n", warn.c_str());
+				}
+
+				if (!err.empty()) {
+					printf("Err: %s\n", err.c_str());
+				}
+
+				if (!ret) {
+					printf("Failed to parse glTF\n");
+					return -1;
+				}
+				else {
+					auto folder = p.path().parent_path() / p.path().stem();
+					fs::create_directory(folder);
+
+					extract_gltf_meshes(model, p.path(), folder);
+				}
 			}
 		}
 
