@@ -91,9 +91,20 @@ void VulkanEngine::cleanup()
 	if (_isInitialized) {
 
 		//make sure the gpu has stopped doing its things
-		vkWaitForFences(_device, 1, &get_current_frame()._renderFence, true, 1000000000);
+		for (auto& frame : _frames)
+		{
+			vkWaitForFences(_device, 1, &frame._renderFence, true, 1000000000);
+		}
 
 		_mainDeletionQueue.flush();
+
+		for (auto& frame : _frames)
+		{
+			frame.dynamicDescriptorAllocator->cleanup();
+		}
+
+		_descriptorAllocator->cleanup();
+		_descriptorLayoutCache->cleanup();
 
 		vkDestroySurfaceKHR(_instance, _surface, nullptr);
 

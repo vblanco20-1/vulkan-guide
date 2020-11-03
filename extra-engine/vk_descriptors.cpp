@@ -96,6 +96,20 @@ namespace vkutil {
 		device = newDevice;
 	}
 
+
+	void DescriptorAllocator::cleanup()
+	{
+		//delete every pool held
+		for (auto p : freePools)
+		{
+			vkDestroyDescriptorPool(device, p, nullptr);
+		}
+		for (auto p : usedPools)
+		{
+			vkDestroyDescriptorPool(device, p, nullptr);
+		}
+	}
+
 	VkDescriptorPool DescriptorAllocator::grab_pool()
 	{
 		if (freePools.size() > 0)
@@ -153,6 +167,16 @@ namespace vkutil {
 			//add to cache
 			layoutCache[layoutinfo] = layout;
 			return layout;
+		}
+	}
+
+
+	void DescriptorLayoutCache::cleanup()
+	{
+		//delete every descriptor layout held
+		for (auto pair : layoutCache)
+		{
+			vkDestroyDescriptorSetLayout(device, pair.second, nullptr);
 		}
 	}
 

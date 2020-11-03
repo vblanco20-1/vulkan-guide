@@ -31,12 +31,12 @@ namespace vkutil {
 			};
 		};
 
-
-
 		void reset_pools();
 		bool allocate(VkDescriptorSet* set, VkDescriptorSetLayout layout);
 		
 		void init(VkDevice newDevice);
+
+		void cleanup();
 
 		VkDevice device;
 	private:
@@ -89,6 +89,9 @@ namespace vkutil {
 				}
 			}
 		};
+
+		void cleanup();
+
 	private:
 
 		struct DescriptorLayoutHash
