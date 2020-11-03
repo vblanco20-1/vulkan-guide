@@ -22,6 +22,8 @@
 #include "imgui.h"
 #include "imgui_impl_sdl.h"
 #include "imgui_impl_vulkan.h"
+#include "prefab_asset.h"
+#include "material_asset.h"
 
 
 
@@ -1243,50 +1245,53 @@ void VulkanEngine::init_scene()
 	//_renderables.push_back(monkey);
 
 
-	RenderObject helmet1;
-	helmet1.mesh = get_mesh("helmet1");
-	helmet1.material = clone_material("texturedmesh","helmet_leather");
-	helmet1.transformMatrix = glm::scale(glm::vec3{10.f,10.f,10.f});
-
-	build_texture_set(smoothSampler, helmet1.material, "LeatherParts_diffuse");
-
-	_renderables.push_back(helmet1);
-
-	helmet1.mesh = get_mesh("helmet2");
-
-	helmet1.material = clone_material("texturedmesh", "helmet_glassplastic");
-	build_texture_set(smoothSampler, helmet1.material, "GlassPlastic_diffuse"); 
-
-	_renderables.push_back(helmet1);
-
-	helmet1.mesh = get_mesh("helmet3");
-	helmet1.material = clone_material("texturedmesh", "helmet_rubber");
-	build_texture_set(smoothSampler, helmet1.material, "RubberWoodMat_diffuse");
-	//helmet1.material = get_material("helmet_glassplastic");
-	
-	_renderables.push_back(helmet1);
-
+	//RenderObject helmet1;
+	//helmet1.mesh = get_mesh("helmet1");
+	//helmet1.material = clone_material("texturedmesh","helmet_leather");
+	//helmet1.transformMatrix = glm::scale(glm::vec3{10.f,10.f,10.f});
+	//
+	//build_texture_set(smoothSampler, helmet1.material, "LeatherParts_diffuse");
+	//
+	//_renderables.push_back(helmet1);
+	//
+	//helmet1.mesh = get_mesh("helmet2");
+	//
+	//helmet1.material = clone_material("texturedmesh", "helmet_glassplastic");
+	//build_texture_set(smoothSampler, helmet1.material, "GlassPlastic_diffuse"); 
+	//
+	//_renderables.push_back(helmet1);
+	//
+	//helmet1.mesh = get_mesh("helmet3");
 	//helmet1.material = clone_material("texturedmesh", "helmet_rubber");
 	//build_texture_set(smoothSampler, helmet1.material, "RubberWoodMat_diffuse");
+	////helmet1.material = get_material("helmet_glassplastic");
+	//
+	//_renderables.push_back(helmet1);
+	//
+	////helmet1.material = clone_material("texturedmesh", "helmet_rubber");
+	////build_texture_set(smoothSampler, helmet1.material, "RubberWoodMat_diffuse");
+	//
+	//helmet1.mesh = get_mesh("helmet4");
+	//
+	//helmet1.material = clone_material("texturedmesh", "helmet_lenses");
+	//build_texture_set(smoothSampler, helmet1.material, "LensesMat_diffuse");
+	//
+	//
+	//_renderables.push_back(helmet1);
+	//
+	//helmet1.mesh = get_mesh("helmet5");
+	//
+	//helmet1.material = clone_material("texturedmesh", "helmet_metal");
+	//build_texture_set(smoothSampler, helmet1.material, "MetalPartsMat_diffuse");
+	//_renderables.push_back(helmet1);
+	//
+	//helmet1.mesh = get_mesh("helmet6");
+	//helmet1.material = get_material("helmet_rubber");
+	//
+	//_renderables.push_back(helmet1);
 
-	helmet1.mesh = get_mesh("helmet4");
 
-	helmet1.material = clone_material("texturedmesh", "helmet_lenses");
-	build_texture_set(smoothSampler, helmet1.material, "LensesMat_diffuse");
-	
-
-	_renderables.push_back(helmet1);
-
-	helmet1.mesh = get_mesh("helmet5");
-
-	helmet1.material = clone_material("texturedmesh", "helmet_metal");
-	build_texture_set(smoothSampler, helmet1.material, "MetalPartsMat_diffuse");
-	_renderables.push_back(helmet1);
-
-	helmet1.mesh = get_mesh("helmet6");
-	helmet1.material = get_material("helmet_rubber");
-	
-	_renderables.push_back(helmet1);
+	load_prefab("K:/Programming/vulkan-guide-otherbranch/assets/FlightHelmet/FlightHelmet.pfb", glm::scale(glm::vec3{10.f}));
 
 	//RenderObject map;
 	//map.mesh = get_mesh("empire");
@@ -1401,6 +1406,61 @@ void VulkanEngine::immediate_submit(std::function<void(VkCommandBuffer cmd)>&& f
 	vkResetFences(_device, 1, &_uploadContext._uploadFence);
 
 	vkResetCommandPool(_device, _uploadContext._commandPool, 0);
+}
+
+
+bool VulkanEngine::load_prefab(const char* path, glm::mat4 root)
+{
+	
+	assets::AssetFile file;
+	bool loaded = assets::load_binaryfile(path, file);
+
+	if (!loaded) {
+		std::cout << "Error when loading prefab ";
+		return false;
+	}
+
+	assets::PrefabInfo prefab = assets::read_prefab_info(&file);
+
+	VkSamplerCreateInfo samplerInfo = vkinit::sampler_create_info(VK_FILTER_LINEAR);
+
+	
+
+	VkSampler smoothSampler;
+	vkCreateSampler(_device, &samplerInfo, nullptr, &smoothSampler);
+
+	for (auto& [k, v] : prefab.node_meshes)
+	{
+		//load mesh
+
+		Mesh mesh{};		
+		mesh.load_from_meshasset(v.mesh_path.c_str());
+
+		upload_mesh(mesh);
+
+		_meshes[v.mesh_path.c_str()] = mesh;
+
+		//load material
+
+		assets::AssetFile materialFile;
+		bool loaded = assets::load_binaryfile(v.material_path.c_str(), materialFile);
+
+		assets::MaterialInfo material = assets::read_material_info(&materialFile);
+
+		auto texture = material.textures["baseColor"];
+		load_image_to_cache(texture.c_str(), texture.c_str());
+
+		RenderObject loadmesh;
+		loadmesh.mesh = get_mesh(v.mesh_path.c_str());
+		loadmesh.transformMatrix = root;
+		loadmesh.material = clone_material("texturedmesh", v.material_path.c_str());
+
+		build_texture_set(smoothSampler, loadmesh.material, texture.c_str());
+
+		_renderables.push_back(loadmesh);
+	}
+
+	return true;
 }
 
 void VulkanEngine::init_descriptors()

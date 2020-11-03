@@ -13,9 +13,11 @@
 #include <asset_loader.h>
 #include <texture_asset.h>
 #include <mesh_asset.h>
+#include <material_asset.h>
 
 #define TINYGLTF_IMPLEMENTATION
 #include <tiny_gltf.h>
+#include "prefab_asset.h"
 
 namespace fs = std::filesystem;
 
@@ -416,13 +418,95 @@ bool extract_gltf_meshes(tinygltf::Model& model, const fs::path& input, const fs
 	//pack mesh file
 	//auto start = std::chrono::high_resolution_clock::now();
 
-	assets::AssetFile newFile = assets::pack_mesh(&meshinfo, (char*)_vertices.data(), (char*)_indices.data());
+		assets::AssetFile newFile = assets::pack_mesh(&meshinfo, (char*)_vertices.data(), (char*)_indices.data());
 
 		//save to disk
-	save_binaryfile(meshpath.string().c_str(), newFile);
+		save_binaryfile(meshpath.string().c_str(), newFile);
 
 	}
 	return true;
+}
+
+
+void extract_gltf_materials(tinygltf::Model& model, const fs::path& input, const fs::path& outputFolder)
+{
+	for (auto& glmat : model.materials) {
+
+		std::string matname = glmat.name;
+
+		auto& pbr = glmat.pbrMetallicRoughness;
+
+
+		assets::MaterialInfo newMaterial;
+		newMaterial.baseEffect = "defaultPBR";
+
+		auto baseColor = model.textures[pbr.baseColorTexture.index];
+
+		fs::path baseColorPath = input.parent_path() / baseColor.name;
+
+		baseColorPath.replace_extension(".tx");
+
+		newMaterial.textures["baseColor"] = baseColorPath.string();
+
+		fs::path materialPath = outputFolder.parent_path() / (matname + ".mat");
+
+		assets::AssetFile newFile = assets::pack_material(&newMaterial);
+
+		//save to disk
+		save_binaryfile(materialPath.string().c_str(), newFile);
+	}
+}
+
+void extract_gltf_nodes(tinygltf::Model& model, const fs::path& input, const fs::path& outputFolder)
+{
+	assets::PrefabInfo prefab;
+
+	for (int i = 0; i < model.nodes.size(); i++)
+	{
+		auto& node = model.nodes[i];
+
+		std::string nodename = node.name;
+
+		prefab.node_names[i] = nodename;
+
+		//node has a matrix
+		if (node.matrix.size() > 0)
+		{
+			std::array<float, 16> matrix;
+
+			for (int n = 0; n < 16; n++) {
+				matrix[n] = node.matrix[n];
+			}
+
+			prefab.node_matrices[i] = prefab.matrices.size();
+			prefab.matrices.push_back(matrix);
+		}
+		if (node.mesh >= 0)
+		{
+			auto mesh = model.meshes[node.mesh];
+			fs::path meshpath = outputFolder / (mesh.name + ".mesh");
+
+			int material = mesh.primitives[0].material;
+			auto mat = model.materials[material];
+
+			fs::path materialpath = outputFolder.parent_path() / (mat.name + ".mat");
+
+			assets::PrefabInfo::NodeMesh nmesh;
+			nmesh.mesh_path = meshpath.string();
+			nmesh.material_path = materialpath.string();
+
+			prefab.node_meshes[i] = nmesh;
+		}
+	}
+
+	assets::AssetFile newFile = assets::pack_prefab(prefab);
+
+	fs::path materialPath = input;
+
+	materialPath.replace_extension(".pfb");
+
+	//save to disk
+	save_binaryfile(materialPath.string().c_str(), newFile);
 }
 
 
@@ -486,6 +570,10 @@ int main(int argc, char* argv[])
 					fs::create_directory(folder);
 
 					extract_gltf_meshes(model, p.path(), folder);
+
+					extract_gltf_materials(model, p.path(), folder);
+
+					extract_gltf_nodes(model, p.path(), folder);
 				}
 			}
 		}

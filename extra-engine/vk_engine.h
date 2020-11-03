@@ -238,6 +238,8 @@ public:
 	size_t pad_uniform_buffer_size(size_t originalSize);
 
 	void immediate_submit(std::function<void(VkCommandBuffer cmd)>&& function);
+
+	bool load_prefab(const char* path, glm::mat4 root);
 private:
 
 	void process_input_event(SDL_Event* ev);
