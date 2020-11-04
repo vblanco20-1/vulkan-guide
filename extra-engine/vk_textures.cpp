@@ -75,7 +75,7 @@ bool vkutil::load_image_from_asset(VulkanEngine& engine, const char* filename, A
 		return false;
 	}
 
-	AllocatedBuffer stagingBuffer = engine.create_buffer(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
+	AllocatedBuffer stagingBuffer = engine.create_buffer(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_UNKNOWN, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_CACHED_BIT);
 
 	void* data;
 	vmaMapMemory(engine._allocator, stagingBuffer._allocation, &data);
@@ -83,12 +83,20 @@ bool vkutil::load_image_from_asset(VulkanEngine& engine, const char* filename, A
 	{
 		ZoneScopedNC("Unpack Texture", tracy::Color::Magenta);
 
-		std::vector<char> unpackedData;
-		unpackedData.resize(imageSize);
+		bool directUpload = true;
+		if (directUpload)
+		{		
+			assets::unpack_texture(&textureInfo, file.binaryBlob.data(), file.binaryBlob.size(), (char*)data);
+		}
+		else {
+			std::vector<char> unpackedData;
+			unpackedData.resize(imageSize);
 
-		assets::unpack_texture(&textureInfo, file.binaryBlob.data(), file.binaryBlob.size(), (char*)unpackedData.data());
+			assets::unpack_texture(&textureInfo, file.binaryBlob.data(), file.binaryBlob.size(), (char*)unpackedData.data());
 
-		memcpy(data, unpackedData.data(), imageSize);
+			memcpy(data, unpackedData.data(), imageSize);
+		}
+		
 
 	}
 	vmaUnmapMemory(engine._allocator, stagingBuffer._allocation);	

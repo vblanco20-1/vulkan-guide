@@ -1345,7 +1345,7 @@ void VulkanEngine::build_texture_set(VkSampler blockySampler, Material* textured
 		.build(texturedMat->textureSet);
 }
 
-AllocatedBuffer VulkanEngine::create_buffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage)
+AllocatedBuffer VulkanEngine::create_buffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage ,VkMemoryPropertyFlags required_flags)
 {
 	//allocate vertex buffer
 	VkBufferCreateInfo bufferInfo = {};
@@ -1359,7 +1359,7 @@ AllocatedBuffer VulkanEngine::create_buffer(size_t allocSize, VkBufferUsageFlags
 	//let the VMA library know that this data should be writeable by CPU, but also readable by GPU
 	VmaAllocationCreateInfo vmaallocInfo = {};
 	vmaallocInfo.usage = memoryUsage;
-
+	vmaallocInfo.requiredFlags = required_flags;
 	AllocatedBuffer newBuffer;
 
 	//allocate the buffer

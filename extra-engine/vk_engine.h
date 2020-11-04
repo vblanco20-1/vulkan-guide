@@ -239,7 +239,7 @@ public:
 	//our draw function
 	void draw_objects(VkCommandBuffer cmd, RenderObject* first, int count);
 
-	AllocatedBuffer create_buffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage);
+	AllocatedBuffer create_buffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage, VkMemoryPropertyFlags required_flags = 0);
 
 	size_t pad_uniform_buffer_size(size_t originalSize);
 
