@@ -857,37 +857,12 @@ void VulkanEngine::load_meshes()
 	//we dont care about the vertex normals
 	upload_mesh(triMesh);
 	_meshes["triangle"] = triMesh;
-#if 0
-
-	//load the monkey
-	Mesh monkeyMesh{};
-	//monkeyMesh.load_from_obj("../../assets/monkey_smooth.obj");
-	monkeyMesh.load_from_meshasset("../../assets/monkey_smooth.mesh");
-
-	Mesh lostEmpire{};
-	//lostEmpire.load_from_obj("../../assets/lost_empire.obj");
-	lostEmpire.load_from_meshasset("../../assets/lost_empire.mesh");
-
-	Mesh helmet1{};
-	//lostEmpire.load_from_obj("../../assets/lost_empire.obj");
-	helmet1.load_from_meshasset("../../assets/FlightHelmet/FlightHelmet/LeatherParts_low.mesh");
-
-
-
-
-	upload_mesh(monkeyMesh);
-	upload_mesh(lostEmpire);
-
-	_meshes["monkey"] = monkeyMesh;
-	
-	_meshes["empire"] = lostEmpire;
-#endif
 }
 
 
 void VulkanEngine::load_images()
 {
-	load_image_to_cache("empire_diffuse", "../../assets/lost_empire-RGBA.tx");
+	//load_image_to_cache("empire_diffuse", "../../assets/lost_empire-RGBA.tx");
 }
 
 
@@ -1247,14 +1222,9 @@ void VulkanEngine::init_scene()
 	samplerInfo.mipLodBias = 2;
 	samplerInfo.maxLod = 30.f;
 	samplerInfo.minLod = 3;
-	VkSampler smoothSampler;
+	VkSampler smoothSampler;	
+	
 	vkCreateSampler(_device, &samplerInfo, nullptr, &smoothSampler);
-
-
-	//RenderObject monkey;
-	//monkey.mesh = get_mesh("monkey");
-	//monkey.material = get_material("defaultmesh");
-	//monkey.transformMatrix = glm::mat4{ 1.0f };
 
 	for (int x = -10; x <= 10; x++) {
 		for (int y = -10; y <= 10; y++) {
@@ -1283,12 +1253,6 @@ void VulkanEngine::init_scene()
 			_renderables.push_back(tri);
 		}
 	}
-
-	
-
-	
-
-	build_texture_set(blockySampler, get_material("texturedmesh"), "empire_diffuse");
 }
 
 
