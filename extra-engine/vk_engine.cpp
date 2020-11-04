@@ -943,6 +943,7 @@ void VulkanEngine::load_image_to_cache(const char* name, const char* path)
 	vkutil::load_image_from_asset(*this, path, newtex.image);
 
 	VkImageViewCreateInfo imageinfo = vkinit::imageview_create_info(VK_FORMAT_R8G8B8A8_UNORM, newtex.image._image, VK_IMAGE_ASPECT_COLOR_BIT);
+	imageinfo.subresourceRange.levelCount = newtex.image.mipLevels;
 	vkCreateImageView(_device, &imageinfo, nullptr, &newtex.imageView);
 
 	_loadedTextures[name] = newtex;
@@ -1285,6 +1286,11 @@ void VulkanEngine::init_scene()
 
 	samplerInfo = vkinit::sampler_create_info(VK_FILTER_LINEAR);
 
+	samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+	//info.anisotropyEnable = true;
+	samplerInfo.mipLodBias = 2;
+	samplerInfo.maxLod = 30.f;
+	samplerInfo.minLod = 3;
 	VkSampler smoothSampler;
 	vkCreateSampler(_device, &samplerInfo, nullptr, &smoothSampler);
 
@@ -1444,7 +1450,12 @@ bool VulkanEngine::load_prefab(const char* path, glm::mat4 root)
 	VkSamplerCreateInfo samplerInfo = vkinit::sampler_create_info(VK_FILTER_LINEAR);
 
 	
-
+	samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+	//info.anisotropyEnable = true;
+	//samplerInfo.mipLodBias = 2;
+	samplerInfo.maxLod = 30.f;
+	//samplerInfo.minLod = 3;
+	
 	VkSampler smoothSampler;
 	vkCreateSampler(_device, &samplerInfo, nullptr, &smoothSampler);
 

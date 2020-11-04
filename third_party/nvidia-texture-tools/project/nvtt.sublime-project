@@ -1,0 +1,10 @@
+{
+	"folders":
+	[
+		{
+			"path": "..",
+            "file_exclude_patterns": ["*.user"],
+            "folder_exclude_patterns": ["build*", ".vscode", ".vc"]
+		}
+	]
+}

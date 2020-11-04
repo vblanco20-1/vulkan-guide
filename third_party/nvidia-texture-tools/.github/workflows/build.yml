@@ -1,0 +1,33 @@
+name: build
+
+on: [push, pull_request]
+
+jobs:
+  vs2017:
+    runs-on: windows-2019
+    steps:
+    - uses: actions/checkout@v2
+    - uses: microsoft/setup-msbuild@v1.0.0
+    - name: Build Debug/x64
+      run: msbuild .\project\vc2017\nvtt.sln /property:Configuration=Debug /property:Platform=x64
+    - name: Build Debug/Win32
+      run: msbuild .\project\vc2017\nvtt.sln /property:Configuration=Debug /property:Platform=Win32
+    - name: Build Release/x64
+      run: msbuild .\project\vc2017\nvtt.sln /property:Configuration=Release /property:Platform=x64
+    - name: Build Release/Win32
+      run: msbuild .\project\vc2017\nvtt.sln /property:Configuration=Release /property:Platform=Win32
+      
+  unix:
+    strategy:
+      matrix:
+        os: [ubuntu, macos]
+    name: ${{matrix.os}}
+    runs-on: ${{matrix.os}}-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: make
+      run: |
+        ./configure --debug
+        make
+        ./configure --release
+        make

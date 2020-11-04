@@ -1,0 +1,21 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClInclude Include="..\..\..\src\nvthread\Atomic.h" />
+    <ClInclude Include="..\..\..\src\nvthread\Event.h" />
+    <ClInclude Include="..\..\..\src\nvthread\Mutex.h" />
+    <ClInclude Include="..\..\..\src\nvthread\nvthread.h" />
+    <ClInclude Include="..\..\..\src\nvthread\Thread.h" />
+    <ClInclude Include="..\..\..\src\nvthread\ThreadPool.h" />
+    <ClInclude Include="..\..\..\src\nvthread\Win32.h" />
+    <ClInclude Include="..\..\..\src\nvthread\ParallelFor.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\..\src\nvthread\Event.cpp" />
+    <ClCompile Include="..\..\..\src\nvthread\Mutex.cpp" />
+    <ClCompile Include="..\..\..\src\nvthread\nvthread.cpp" />
+    <ClCompile Include="..\..\..\src\nvthread\Thread.cpp" />
+    <ClCompile Include="..\..\..\src\nvthread\ThreadPool.cpp" />
+    <ClCompile Include="..\..\..\src\nvthread\ParallelFor.cpp" />
+  </ItemGroup>
+</Project>

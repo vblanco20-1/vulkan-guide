@@ -320,6 +320,6 @@ VkSamplerCreateInfo vkinit::sampler_create_info(VkFilter filters, VkSamplerAddre
 	info.addressModeU = samplerAdressMode;
 	info.addressModeV = samplerAdressMode;
 	info.addressModeW = samplerAdressMode;
-
+	
 	return info;
 }

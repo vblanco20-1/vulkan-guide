@@ -1,0 +1,88 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav</Extensions>
+    </Filter>
+    <Filter Include="cuda">
+      <UniqueIdentifier>{18fa5da9-6ed8-4990-880e-ab4234fe2114}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="nvtt.rc">
+      <Filter>Resource Files</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="resource.h">
+      <Filter>Resource Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\nvtt\cuda\CudaCompressorDXT.h">
+      <Filter>cuda</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\nvtt\cuda\CudaMath.h">
+      <Filter>cuda</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\nvtt\cuda\CudaUtils.h">
+      <Filter>cuda</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\nvtt\CompressionOptions.h" />
+    <ClInclude Include="..\..\..\src\nvtt\Compressor.h" />
+    <ClInclude Include="..\..\..\src\nvtt\CompressorDX10.h" />
+    <ClInclude Include="..\..\..\src\nvtt\CompressorDX9.h" />
+    <ClInclude Include="..\..\..\src\nvtt\CompressorRGB.h" />
+    <ClInclude Include="..\..\..\src\nvtt\Context.h" />
+    <ClInclude Include="..\..\..\src\nvtt\InputOptions.h" />
+    <ClInclude Include="..\..\..\src\nvtt\nvtt.h" />
+    <ClInclude Include="..\..\..\src\nvtt\nvtt_wrapper.h" />
+    <ClInclude Include="..\..\..\src\nvtt\OptimalCompressDXT.h" />
+    <ClInclude Include="..\..\..\src\nvtt\OutputOptions.h" />
+    <ClInclude Include="..\..\..\src\nvtt\QuickCompressDXT.h" />
+    <ClInclude Include="..\..\..\src\nvtt\TaskDispatcher.h" />
+    <ClInclude Include="..\..\..\src\nvtt\CubeSurface.h" />
+    <ClInclude Include="..\..\..\src\nvtt\Surface.h" />
+    <ClInclude Include="..\..\..\src\nvtt\BlockCompressor.h" />
+    <ClInclude Include="..\..\..\src\nvtt\SingleColorLookup.h" />
+    <ClInclude Include="..\..\..\src\nvtt\CompressorDX11.h" />
+    <ClInclude Include="..\..\..\src\nvtt\CompressorDXT5_RGBM.h" />
+    <ClInclude Include="..\..\..\src\nvtt\icbc.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\..\src\nvtt\cuda\CudaCompressorDXT.cpp">
+      <Filter>cuda</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\nvtt\cuda\CudaUtils.cpp">
+      <Filter>cuda</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\nvtt\CompressionOptions.cpp" />
+    <ClCompile Include="..\..\..\src\nvtt\CompressorDX10.cpp" />
+    <ClCompile Include="..\..\..\src\nvtt\CompressorDX11.cpp" />
+    <ClCompile Include="..\..\..\src\nvtt\CompressorDX9.cpp" />
+    <ClCompile Include="..\..\..\src\nvtt\CompressorRGB.cpp" />
+    <ClCompile Include="..\..\..\src\nvtt\Context.cpp" />
+    <ClCompile Include="..\..\..\src\nvtt\InputOptions.cpp" />
+    <ClCompile Include="..\..\..\src\nvtt\nvtt.cpp" />
+    <ClCompile Include="..\..\..\src\nvtt\nvtt_wrapper.cpp" />
+    <ClCompile Include="..\..\..\src\nvtt\OptimalCompressDXT.cpp" />
+    <ClCompile Include="..\..\..\src\nvtt\OutputOptions.cpp" />
+    <ClCompile Include="..\..\..\src\nvtt\QuickCompressDXT.cpp" />
+    <ClCompile Include="..\..\..\src\nvtt\SingleColorLookup.cpp" />
+    <ClCompile Include="..\..\..\src\nvtt\CubeSurface.cpp" />
+    <ClCompile Include="..\..\..\src\nvtt\Surface.cpp" />
+    <ClCompile Include="..\..\..\src\nvtt\BlockCompressor.cpp" />
+    <ClCompile Include="..\..\..\src\nvtt\CompressorDXT5_RGBM.cpp" />
+    <ClCompile Include="..\..\..\src\nvtt\CompressorETC.cpp" />
+    <ClCompile Include="..\..\..\src\nvtt\icbc.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuildStep Include="..\..\..\src\nvtt\cuda\ConvolveKernel.cu">
+      <Filter>cuda</Filter>
+    </CustomBuildStep>
+  </ItemGroup>
+  <ItemGroup>
+    <CudaCompile Include="..\..\..\src\nvtt\cuda\CompressKernel.cu">
+      <Filter>cuda</Filter>
+    </CudaCompile>
+  </ItemGroup>
+</Project>

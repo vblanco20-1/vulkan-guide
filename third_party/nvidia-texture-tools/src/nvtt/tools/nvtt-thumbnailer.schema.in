@@ -1,0 +1,26 @@
+<gconfschemafile>
+  <schemalist>
+<schema>
+<key>/schemas/desktop/gnome/thumbnailers/image@x-dds/enable</key>
+<applyto>/desktop/gnome/thumbnailers/image@x-dds/enable</applyto>
+<owner>nvtt-thumbnailer</owner>
+<type>bool</type>
+<default>true</default>
+<locale name="C">
+<short></short>
+<long></long>
+</locale>
+</schema>
+<schema>
+<key>/schemas/desktop/gnome/thumbnailers/image@x-dds/command</key>
+<applyto>/desktop/gnome/thumbnailers/image@x-dds/command</applyto>
+<owner>nvtt-thumbnailer</owner>
+<type>string</type>
+<default>@CMAKE_INSTALL_PREFIX@/bin/nv-gnome-thumbnailer -s %s %i %o</default>
+<locale name="C">
+<short></short>
+<long></long>
+</locale>
+</schema>
+  </schemalist>
+</gconfschemafile>

@@ -14,4 +14,5 @@ struct AllocatedBuffer {
 struct AllocatedImage {
 	VkImage _image;
 	VmaAllocation _allocation;
+	int mipLevels;
 };

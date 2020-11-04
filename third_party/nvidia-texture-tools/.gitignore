@@ -1,0 +1,17 @@
+**/bin/
+**/obj/
+**/Debug/
+**/Release/
+**/Debug.x64/
+**/Release.x64/
+**/Debug.Win32/
+**/Release.Win32/
+**/Debug-CUDA/
+**/Release-CUDA/
+*.vcxproj.user
+*.opensdf
+*.sdf
+*.suo
+build
+.vs
+project/nvtt.sublime-workspace

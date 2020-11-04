@@ -1,4 +1,5 @@
 find_package(Vulkan REQUIRED)
+include(ExternalProject)
 
 add_library(vkbootstrap STATIC)
 add_library(glm INTERFACE)
@@ -11,7 +12,40 @@ add_library(spirv_reflect STATIC)
 
 add_library(lz4 STATIC)
 
+
+#set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/libs")
+#set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/libs")
+
 add_subdirectory(gltf)
+
+ExternalProject_Add(nvtools
+SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/nvidia-texture-tools"
+BINARY_DIR "${CMAKE_CURRENT_SOURCE_DIR}/nvlibs"
+CMAKE_ARGS -DCMAKE_ARCHIVE_OUTPUT_DIRECTORY=${PROJECT_SOURCE_DIR}/libs -DCMAKE_LIBRARY_OUTPUT_DIRECTORY=${PROJECT_SOURCE_DIR}/libs -DCMAKE_CXX_STANDARD=17
+)
+
+add_library(nvtt INTERFACE)
+target_include_directories(nvtt INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/nvidia-texture-tools/src/nvtt")
+
+#set(nvttfolder "${PROJECT_SOURCE_DIR}/libs/Release")
+
+set(nvttfolder "${PROJECT_SOURCE_DIR}/libs/$<IF:$<CONFIG:Debug>,Debug,Release>")
+
+target_link_libraries(nvtt INTERFACE "${nvttfolder}/nvtt.lib")
+target_link_libraries(nvtt INTERFACE "${nvttfolder}/bc6h.lib")
+target_link_libraries(nvtt INTERFACE "${nvttfolder}/bc7.lib")
+target_link_libraries(nvtt INTERFACE "${nvttfolder}/EtcLib.lib")
+target_link_libraries(nvtt INTERFACE "${nvttfolder}/nvcore.lib")
+target_link_libraries(nvtt INTERFACE "${nvttfolder}/nvimage.lib")
+target_link_libraries(nvtt INTERFACE "${nvttfolder}/nvmath.lib")
+target_link_libraries(nvtt INTERFACE "${nvttfolder}/nvsquish.lib")
+target_link_libraries(nvtt INTERFACE "${nvttfolder}/nvthread.lib")
+target_link_libraries(nvtt INTERFACE "${nvttfolder}/posh.lib")
+target_link_libraries(nvtt INTERFACE "${nvttfolder}/rg_etc1.lib")
+#target_link_libraries(nvtt INTERFACE "${nvttfolder}/squish.lib")
+
+
+#add_subdirectory(nvidia-texture-tools)
 
 set(TRACY_DIR "${CMAKE_CURRENT_SOURCE_DIR}/tracy" CACHE FILEPATH "Path to Tracy")
 add_library(tracy OBJECT "${TRACY_DIR}/TracyClient.cpp")

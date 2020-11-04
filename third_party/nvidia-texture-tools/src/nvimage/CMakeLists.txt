@@ -1,0 +1,63 @@
+PROJECT(nvimage)
+
+SET(IMAGE_SRCS	
+    nvimage.h
+    BlockDXT.h BlockDXT.cpp
+    ColorBlock.h ColorBlock.cpp
+    DirectDrawSurface.h DirectDrawSurface.cpp
+    ErrorMetric.h ErrorMetric.cpp
+    Filter.h Filter.cpp
+    FloatImage.h FloatImage.cpp
+    Image.h Image.cpp
+    ImageIO.h ImageIO.cpp
+    #KtxFile.h KtxFile.cpp
+    NormalMap.h NormalMap.cpp
+    PixelFormat.h
+    PsdFile.h
+    TgaFile.h
+    KtxFile.h KtxFile.cpp)
+
+INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR})
+
+IF(PNG_FOUND)
+    SET(LIBS ${LIBS} ${PNG_LIBRARIES})
+    INCLUDE_DIRECTORIES(${PNG_INCLUDE_DIR})
+ENDIF(PNG_FOUND)
+
+IF(JPEG_FOUND)
+    SET(LIBS ${LIBS} ${JPEG_LIBRARIES})
+    INCLUDE_DIRECTORIES(${JPEG_INCLUDE_DIR})
+ENDIF(JPEG_FOUND)
+
+IF(TIFF_FOUND)
+    SET(LIBS ${LIBS} ${TIFF_LIBRARIES})
+    INCLUDE_DIRECTORIES(${TIFF_INCLUDE_DIR})
+ENDIF(TIFF_FOUND)
+
+IF(OPENEXR_FOUND)
+    SET(LIBS ${LIBS} ${OPENEXR_LIBRARIES})
+    INCLUDE_DIRECTORIES(${OPENEXR_INCLUDE_PATHS})
+ENDIF(OPENEXR_FOUND)
+
+IF(FREEIMAGE_FOUND)
+    SET(LIBS ${LIBS} ${FREEIMAGE_LIBRARIES})
+    INCLUDE_DIRECTORIES(${FREEIMAGE_INCLUDE_PATH})
+ENDIF(FREEIMAGE_FOUND)
+
+# targets
+ADD_DEFINITIONS(-DNVIMAGE_EXPORTS)
+
+IF(NVIMAGE_SHARED)
+    ADD_DEFINITIONS(-DNVIMAGE_SHARED=1)
+    ADD_LIBRARY(nvimage SHARED ${IMAGE_SRCS})
+ELSE(NVIMAGE_SHARED)
+    ADD_LIBRARY(nvimage ${IMAGE_SRCS})
+ENDIF(NVIMAGE_SHARED)
+
+TARGET_LINK_LIBRARIES(nvimage ${LIBS} nvcore posh bc6h bc7 nvmath)
+
+INSTALL(TARGETS nvimage
+    RUNTIME DESTINATION bin
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib/static)
+
