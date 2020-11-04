@@ -621,39 +621,39 @@ int main(int argc, char* argv[])
 			//	newpath.replace_extension(".mesh");
 			//	convert_mesh(p.path(), newpath);
 			//}
-			if (p.path().extension() == ".gltf")
-			{
-				using namespace tinygltf;
-				Model model;
-				TinyGLTF loader;
-				std::string err;
-				std::string warn;
-
-				bool ret = loader.LoadASCIIFromFile(&model, &err, &warn, p.path().string().c_str());
-
-				if (!warn.empty()) {
-					printf("Warn: %s\n", warn.c_str());
-				}
-
-				if (!err.empty()) {
-					printf("Err: %s\n", err.c_str());
-				}
-
-				if (!ret) {
-					printf("Failed to parse glTF\n");
-					return -1;
-				}
-				else {
-					auto folder = p.path().parent_path() / p.path().stem();
-					fs::create_directory(folder);
-
-					extract_gltf_meshes(model, p.path(), folder);
-
-					extract_gltf_materials(model, p.path(), folder);
-
-					extract_gltf_nodes(model, p.path(), folder);
-				}
-			}
+			//if (p.path().extension() == ".gltf")
+			//{
+			//	using namespace tinygltf;
+			//	Model model;
+			//	TinyGLTF loader;
+			//	std::string err;
+			//	std::string warn;
+			//
+			//	bool ret = loader.LoadASCIIFromFile(&model, &err, &warn, p.path().string().c_str());
+			//
+			//	if (!warn.empty()) {
+			//		printf("Warn: %s\n", warn.c_str());
+			//	}
+			//
+			//	if (!err.empty()) {
+			//		printf("Err: %s\n", err.c_str());
+			//	}
+			//
+			//	if (!ret) {
+			//		printf("Failed to parse glTF\n");
+			//		return -1;
+			//	}
+			//	else {
+			//		auto folder = p.path().parent_path() / p.path().stem();
+			//		fs::create_directory(folder);
+			//
+			//		extract_gltf_meshes(model, p.path(), folder);
+			//
+			//		extract_gltf_materials(model, p.path(), folder);
+			//
+			//		extract_gltf_nodes(model, p.path(), folder);
+			//	}
+			//}
 		}
 
 		//else 

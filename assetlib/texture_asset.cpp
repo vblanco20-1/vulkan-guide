@@ -36,13 +36,14 @@ assets::TextureInfo assets::read_texture_info(AssetFile* file)
 void assets::unpack_texture(TextureInfo* info, const char* sourcebuffer, size_t sourceSize, char* destination)
 {
 	if (info->compressionMode == CompressionMode::LZ4) {
+	
 		LZ4_decompress_safe(sourcebuffer, destination, sourceSize, info->textureSize);
 	}
 	else {
 		memcpy(destination, sourcebuffer, sourceSize);
 	}
 }
-
+#include <iostream>
 assets::AssetFile assets::pack_texture(TextureInfo* info, void* pixelData)
 {
 	nlohmann::json texture_metadata;
@@ -61,6 +62,7 @@ assets::AssetFile assets::pack_texture(TextureInfo* info, void* pixelData)
 	file.type[3] = 'I';
 	file.version = 1;
 
+	
 	//compress buffer into blob
 	int compressStaging = LZ4_compressBound(info->textureSize);
 
@@ -71,6 +73,20 @@ assets::AssetFile assets::pack_texture(TextureInfo* info, void* pixelData)
 	file.binaryBlob.resize(compressedSize);
 
 	texture_metadata["compression"] = "LZ4";
+
+	float compression_rate = float(compressedSize) / float(info->textureSize);
+	std::cout << "compression rate = " << compression_rate << std::endl;
+
+	//if the compression is more than 80% of the original size, its not worth to use it
+	if (compression_rate > 0.8)
+	{
+		file.binaryBlob.resize(info->textureSize);
+
+		memcpy(file.binaryBlob.data(), pixelData, info->textureSize);
+
+		texture_metadata["compression"] = "None";
+	}
+	
 
 	std::string stringified = texture_metadata.dump();
 	file.json = stringified;

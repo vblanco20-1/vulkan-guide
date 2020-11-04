@@ -13,6 +13,10 @@ add_library(lz4 STATIC)
 
 add_subdirectory(gltf)
 
+set(TRACY_DIR "${CMAKE_CURRENT_SOURCE_DIR}/tracy" CACHE FILEPATH "Path to Tracy")
+add_library(tracy OBJECT "${TRACY_DIR}/TracyClient.cpp")
+target_include_directories(tracy PUBLIC "${TRACY_DIR}")
+target_compile_definitions(tracy PUBLIC TRACY_ENABLE)
 target_sources(vkbootstrap PRIVATE 
     "${CMAKE_CURRENT_SOURCE_DIR}/vkbootstrap/VkBootstrap.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/vkbootstrap/VkBootstrap.cpp"
@@ -76,3 +80,6 @@ target_link_libraries(imgui PUBLIC Vulkan::Vulkan sdl2)
 
 
 target_include_directories(stb_image INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/stb_image" )
+
+
+

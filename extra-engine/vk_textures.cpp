@@ -9,6 +9,7 @@
 #include <SDL_filesystem.h>
 #include "texture_asset.h"
 #include "asset_loader.h"
+#include "Tracy.hpp"
 
 
 bool vkutil::load_image_from_file(VulkanEngine& engine, const char* file, AllocatedImage & outImage)
@@ -79,8 +80,17 @@ bool vkutil::load_image_from_asset(VulkanEngine& engine, const char* filename, A
 	void* data;
 	vmaMapMemory(engine._allocator, stagingBuffer._allocation, &data);
 
-	assets::unpack_texture(&textureInfo, file.binaryBlob.data(), file.binaryBlob.size(), (char*)data);	
+	{
+		ZoneScopedNC("Unpack Texture", tracy::Color::Magenta);
 
+		std::vector<char> unpackedData;
+		unpackedData.resize(imageSize);
+
+		assets::unpack_texture(&textureInfo, file.binaryBlob.data(), file.binaryBlob.size(), (char*)unpackedData.data());
+
+		memcpy(data, unpackedData.data(), imageSize);
+
+	}
 	vmaUnmapMemory(engine._allocator, stagingBuffer._allocation);	
 
 

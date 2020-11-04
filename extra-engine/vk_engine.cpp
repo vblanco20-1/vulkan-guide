@@ -25,9 +25,11 @@
 #include "prefab_asset.h"
 #include "material_asset.h"
 
+#include "Tracy.hpp"
 
 
-constexpr bool bUseValidationLayers = true;
+
+constexpr bool bUseValidationLayers = false;
 
 //we want to immediately abort when there is an error. In normal engines this would give an error message to the user, or perform a dump of state.
 using namespace std;
@@ -45,6 +47,7 @@ using namespace std;
 
 void VulkanEngine::init()
 {
+	ZoneScopedN("Engine Init");
 	// We initialize SDL and create a window with it. 
 	SDL_Init(SDL_INIT_VIDEO);
 
@@ -119,21 +122,29 @@ void VulkanEngine::cleanup()
 
 void VulkanEngine::draw()
 {
+	ZoneScopedN("Engine Draw");
+
 	ImGui::Render();
 
-	//wait until the gpu has finished rendering the last frame. Timeout of 1 second
-	VK_CHECK(vkWaitForFences(_device, 1, &get_current_frame()._renderFence, true, 1000000000));
-	VK_CHECK(vkResetFences(_device, 1, &get_current_frame()._renderFence));
+	{
+		ZoneScopedN("Fence Wait");
+		//wait until the gpu has finished rendering the last frame. Timeout of 1 second
+		VK_CHECK(vkWaitForFences(_device, 1, &get_current_frame()._renderFence, true, 1000000000));
+		VK_CHECK(vkResetFences(_device, 1, &get_current_frame()._renderFence));
 
+	}
 	get_current_frame().dynamicDescriptorAllocator->reset_pools();
 
 	//now that we are sure that the commands finished executing, we can safely reset the command buffer to begin recording again.
 	VK_CHECK(vkResetCommandBuffer(get_current_frame()._mainCommandBuffer, 0));
-
-	//request image from the swapchain
 	uint32_t swapchainImageIndex;
-	VK_CHECK(vkAcquireNextImageKHR(_device, _swapchain, 0, get_current_frame()._presentSemaphore, nullptr, &swapchainImageIndex));
+	{
+		ZoneScopedN("Aquire Image");
+		//request image from the swapchain
+		
+		VK_CHECK(vkAcquireNextImageKHR(_device, _swapchain, 0, get_current_frame()._presentSemaphore, nullptr, &swapchainImageIndex));
 
+	}
 	//naming it cmd for shorter writing
 	VkCommandBuffer cmd = get_current_frame()._mainCommandBuffer;
 
@@ -187,11 +198,13 @@ void VulkanEngine::draw()
 
 	submit.signalSemaphoreCount = 1;
 	submit.pSignalSemaphores = &get_current_frame()._renderSemaphore;
+	{
+		ZoneScopedN("Queue Submit");
+		//submit command buffer to the queue and execute it.
+		// _renderFence will now block until the graphic commands finish execution
+		VK_CHECK(vkQueueSubmit(_graphicsQueue, 1, &submit, get_current_frame()._renderFence));
 
-	//submit command buffer to the queue and execute it.
-	// _renderFence will now block until the graphic commands finish execution
-	VK_CHECK(vkQueueSubmit(_graphicsQueue, 1, &submit, get_current_frame()._renderFence));
-
+	}
 	//prepare present
 	// this will put the image we just rendered to into the visible window.
 	// we want to wait on the _renderSemaphore for that, 
@@ -206,8 +219,11 @@ void VulkanEngine::draw()
 
 	presentInfo.pImageIndices = &swapchainImageIndex;
 
-	VK_CHECK(vkQueuePresentKHR(_graphicsQueue, &presentInfo));
+	{
+		ZoneScopedN("Queue Present");
+		VK_CHECK(vkQueuePresentKHR(_graphicsQueue, &presentInfo));
 
+	}
 	//increase the number of frames drawn
 	_frameNumber++;
 }
@@ -408,7 +424,7 @@ void VulkanEngine::init_swapchain()
 	vkb::Swapchain vkbSwapchain = swapchainBuilder
 		.use_default_format_selection()
 		//use vsync present mode
-		.set_desired_present_mode(VK_PRESENT_MODE_FIFO_KHR)
+		.set_desired_present_mode(VK_PRESENT_MODE_MAILBOX_KHR)
 		.set_desired_extent(_windowExtent.width, _windowExtent.height)
 		.build()
 		.value();
@@ -921,6 +937,7 @@ void VulkanEngine::load_images()
 
 void VulkanEngine::load_image_to_cache(const char* name, const char* path)
 {
+	ZoneScopedNC("Load Texture", tracy::Color::Yellow);
 	Texture newtex;
 
 	vkutil::load_image_from_asset(*this, path, newtex.image);
@@ -933,6 +950,9 @@ void VulkanEngine::load_image_to_cache(const char* name, const char* path)
 
 void VulkanEngine::upload_mesh(Mesh& mesh)
 {
+	ZoneScopedNC("Upload Mesh", tracy::Color::Orange);
+
+
 	const size_t vertex_buffer_size = mesh._vertices.size() * sizeof(Vertex);
 	const size_t index_buffer_size = mesh._indices.size() * sizeof(uint32_t);
 	const size_t bufferSize = vertex_buffer_size + index_buffer_size;
@@ -1081,6 +1101,7 @@ Mesh* VulkanEngine::get_mesh(const std::string& name)
 
 void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderObject* first, int count)
 {
+	ZoneScopedNC("DrawObjects", tracy::Color::Blue);
 	//make a model view matrix for rendering the object
 	//camera view
 	glm::vec3 camPos = _camera.position;
@@ -1143,6 +1164,7 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderObject* first, int co
 
 	Mesh* lastMesh = nullptr;
 	Material* lastMaterial = nullptr;
+	VkPipeline lastPipeline = VK_NULL_HANDLE;
 	ShaderDescriptorBinder binder{};
 
 	VkDescriptorBufferInfo objectBufferInfo;
@@ -1166,61 +1188,91 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderObject* first, int co
 		.bind_buffer(0, &objectBufferInfo, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
 		.build(ObjectDataSet);
 
-	for (int i = 0; i < count; i++)
 	{
-		RenderObject& object = first[i];		
+		ZoneScopedNC("Draw Loop", tracy::Color::Blue2);
 
-		//only bind the pipeline if it doesnt match with the already bound one
-		if (object.material != lastMaterial) {
+		struct RenderBatch {
+			RenderObject* object;
+			uint64_t sortKey;
+			uint64_t objectIndex;
+		};
 
-			vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipeline);
-			lastMaterial = object.material;
+		std::vector<RenderBatch> batch;
+		batch.resize(count);
+		for (int i = 0; i < count; i++) {
+			RenderObject* object = &first[i];
 
-			vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->effect->builtLayout, 1, 1, &ObjectDataSet, 0, nullptr);
+			batch[i].object = object;
+			batch[i].objectIndex = i;
+			uint64_t material_hash = std::hash<void*>()(object->material) & UINT32_MAX;
+			uint64_t mesh_hash = std::hash<void*>()(object->mesh) & UINT32_MAX;
+
+			batch[i].sortKey = material_hash << 32 | mesh_hash;
 		}
 
-		//update dynamic binds
-		uint32_t dynamicBinds[] = { camera_data_offsets[0],scene_data_offset };
-		vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->effect->builtLayout, 0, 1, &GlobalSet, 2, dynamicBinds);
-			
-		if (object.material->textureSet != VK_NULL_HANDLE) {
-			//texture descriptor
-			vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->effect->builtLayout, 2, 1, &object.material->textureSet, 0, nullptr);
-		}
+		std::sort(batch.begin(), batch.end(), [](const RenderBatch& A,const RenderBatch& B) {
+			return A.sortKey < B.sortKey;
+		});
 
-		glm::mat4 model = object.transformMatrix;
-		//final render matrix, that we are calculating on the cpu
-		glm::mat4 mesh_matrix = model;
+		for (int i = 0; i < count; i++)
+		{
+			RenderObject& object = *batch[i].object;
 
-		MeshPushConstants constants;
-		constants.render_matrix = mesh_matrix;
+			//only bind the pipeline if it doesnt match with the already bound one
+			if (object.material != lastMaterial) {
 
-		//upload the mesh to the gpu via pushconstants
-		vkCmdPushConstants(cmd, object.material->effect->builtLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(MeshPushConstants), &constants);
+				if (object.material->pipeline != lastPipeline) {
+					lastPipeline = object.material->pipeline;
+					vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipeline);
+					vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->effect->builtLayout, 1, 1, &ObjectDataSet, 0, nullptr);
+				}
+				
+				lastMaterial = object.material;
 
-		//only bind the mesh if its a different one from last bind
-		if (object.mesh != lastMesh) {
-			//bind the mesh vertex buffer with offset 0
-			VkDeviceSize offset = 0;
-			vkCmdBindVertexBuffers(cmd, 0, 1, &object.mesh->_vertexBuffer._buffer, &offset);
-			lastMesh = object.mesh;
-
-			if (object.mesh->_indexBuffer._buffer != VK_NULL_HANDLE) {
-				vkCmdBindIndexBuffer(cmd, object.mesh->_indexBuffer._buffer, 0, VK_INDEX_TYPE_UINT32);
+				
 			}
-			
-		}
-		//we can now draw
 
-		bool bHasIndices = object.mesh->_indices.size() > 0;
-		if (!bHasIndices) {
-			vkCmdDraw(cmd, object.mesh->_vertices.size(), 1, 0, i);
+			//update dynamic binds
+			uint32_t dynamicBinds[] = { camera_data_offsets[0],scene_data_offset };
+			vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->effect->builtLayout, 0, 1, &GlobalSet, 2, dynamicBinds);
+
+			if (object.material->textureSet != VK_NULL_HANDLE) {
+				//texture descriptor
+				vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->effect->builtLayout, 2, 1, &object.material->textureSet, 0, nullptr);
+			}
+
+			glm::mat4 model = object.transformMatrix;
+			//final render matrix, that we are calculating on the cpu
+			glm::mat4 mesh_matrix = model;
+
+			MeshPushConstants constants;
+			constants.render_matrix = mesh_matrix;
+
+			//upload the mesh to the gpu via pushconstants
+			vkCmdPushConstants(cmd, object.material->effect->builtLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(MeshPushConstants), &constants);
+
+			//only bind the mesh if its a different one from last bind
+			if (object.mesh != lastMesh) {
+				//bind the mesh vertex buffer with offset 0
+				VkDeviceSize offset = 0;
+				vkCmdBindVertexBuffers(cmd, 0, 1, &object.mesh->_vertexBuffer._buffer, &offset);
+				lastMesh = object.mesh;
+
+				if (object.mesh->_indexBuffer._buffer != VK_NULL_HANDLE) {
+					vkCmdBindIndexBuffer(cmd, object.mesh->_indexBuffer._buffer, 0, VK_INDEX_TYPE_UINT32);
+				}
+
+			}
+			//we can now draw
+
+			bool bHasIndices = object.mesh->_indices.size() > 0;
+			if (!bHasIndices) {
+				vkCmdDraw(cmd, object.mesh->_vertices.size(), 1, 0, batch[i].objectIndex);
+			}
+			else {
+				vkCmdDrawIndexed(cmd, object.mesh->_indices.size(), 1, 0, 0, batch[i].objectIndex);
+			}
 		}
-		else {
-			vkCmdDrawIndexed(cmd, object.mesh->_indices.size(), 1, 0, 0,i);
-		}
-	
-		
 	}
 }
 
@@ -1333,6 +1385,8 @@ size_t VulkanEngine::pad_uniform_buffer_size(size_t originalSize)
 
 void VulkanEngine::immediate_submit(std::function<void(VkCommandBuffer cmd)>&& function)
 {
+	ZoneScopedNC("Inmediate Submit", tracy::Color::White);
+
 	VkCommandBuffer cmd;
 
 	//allocate the default command buffer that we will use for rendering
@@ -1367,7 +1421,7 @@ void VulkanEngine::immediate_submit(std::function<void(VkCommandBuffer cmd)>&& f
 
 bool VulkanEngine::load_prefab(const char* path, glm::mat4 root)
 {
-	
+	ZoneScopedNC("Load Prefab", tracy::Color::Red);
 	
 	auto pf = _prefabCache.find(path);
 	if (pf == _prefabCache.end())
