@@ -246,6 +246,9 @@ public:
 	void immediate_submit(std::function<void(VkCommandBuffer cmd)>&& function);
 
 	bool load_prefab(const char* path, glm::mat4 root);
+
+	std::string asset_path(const char* path);
+	std::string asset_path(std::string& path);
 private:
 
 	void process_input_event(SDL_Event* ev);

@@ -855,6 +855,9 @@ void VulkanEngine::load_meshes()
 	triMesh._vertices[1].color = { 0.f,1.f, 0.0f }; //pure green
 	triMesh._vertices[2].color = { 0.f,1.f, 0.0f }; //pure green
 	//we dont care about the vertex normals
+	upload_mesh(triMesh);
+	_meshes["triangle"] = triMesh;
+#if 0
 
 	//load the monkey
 	Mesh monkeyMesh{};
@@ -872,66 +875,19 @@ void VulkanEngine::load_meshes()
 
 
 
-	upload_mesh(triMesh);
 	upload_mesh(monkeyMesh);
 	upload_mesh(lostEmpire);
-	upload_mesh(helmet1);
-
 
 	_meshes["monkey"] = monkeyMesh;
-	_meshes["helmet1"] = helmet1;
-	_meshes["triangle"] = triMesh;
+	
 	_meshes["empire"] = lostEmpire;
-
-	{
-		Mesh helmet{};
-		//lostEmpire.load_from_obj("../../assets/lost_empire.obj");
-		helmet.load_from_meshasset("../../assets/FlightHelmet/FlightHelmet/GlassPlastic_low.mesh");
-		upload_mesh(helmet);
-		_meshes["helmet2"] = helmet;
-	}
-	{
-		Mesh helmet{};
-		//lostEmpire.load_from_obj("../../assets/lost_empire.obj");
-		helmet.load_from_meshasset("../../assets/FlightHelmet/FlightHelmet/Hose_low.mesh");
-		upload_mesh(helmet);
-		_meshes["helmet3"] = helmet;
-	}
-	{
-		Mesh helmet{};
-		//lostEmpire.load_from_obj("../../assets/lost_empire.obj");
-		helmet.load_from_meshasset("../../assets/FlightHelmet/FlightHelmet/Lenses_low.mesh");
-		upload_mesh(helmet);
-		_meshes["helmet4"] = helmet;
-	}
-	{
-		Mesh helmet{};
-		//lostEmpire.load_from_obj("../../assets/lost_empire.obj");
-		helmet.load_from_meshasset("../../assets/FlightHelmet/FlightHelmet/MetalParts_low.mesh");
-		upload_mesh(helmet);
-		_meshes["helmet5"] = helmet;
-	}
-	{
-		Mesh helmet{};
-		
-		helmet.load_from_meshasset("../../assets/FlightHelmet/FlightHelmet/RubberWood_low.mesh");
-		upload_mesh(helmet);
-		_meshes["helmet6"] = helmet;
-	}
+#endif
 }
 
 
 void VulkanEngine::load_images()
 {
 	load_image_to_cache("empire_diffuse", "../../assets/lost_empire-RGBA.tx");
-
-	load_image_to_cache("GlassPlastic_diffuse", "../../assets/FlightHelmet/FlightHelmet_Materials_GlassPlasticMat_BaseColor.tx");
-	load_image_to_cache("LeatherParts_diffuse", "../../assets/FlightHelmet/FlightHelmet_Materials_LeatherPartsMat_BaseColor.tx");
-
-	load_image_to_cache("MetalPartsMat_diffuse", "../../assets/FlightHelmet/FlightHelmet_Materials_MetalPartsMat_BaseColor.tx");
-	load_image_to_cache("LensesMat_diffuse", "../../assets/FlightHelmet/FlightHelmet_Materials_LensesMat_BaseColor.tx");
-
-	load_image_to_cache("RubberWoodMat_diffuse", "../../assets/FlightHelmet/FlightHelmet_Materials_RubberWoodMat_BaseColor.tx");
 }
 
 
@@ -1295,10 +1251,10 @@ void VulkanEngine::init_scene()
 	vkCreateSampler(_device, &samplerInfo, nullptr, &smoothSampler);
 
 
-	RenderObject monkey;
-	monkey.mesh = get_mesh("monkey");
-	monkey.material = get_material("defaultmesh");
-	monkey.transformMatrix = glm::mat4{ 1.0f };
+	//RenderObject monkey;
+	//monkey.mesh = get_mesh("monkey");
+	//monkey.material = get_material("defaultmesh");
+	//monkey.transformMatrix = glm::mat4{ 1.0f };
 
 	for (int x = -10; x <= 10; x++) {
 		for (int y = -10; y <= 10; y++) {
@@ -1306,13 +1262,13 @@ void VulkanEngine::init_scene()
 			glm::mat4 translation = glm::translate(glm::mat4{ 1.0 }, glm::vec3(x * 5, 0, y * 5));
 			glm::mat4 scale = glm::scale(glm::mat4{ 1.0 }, glm::vec3(10));
 
-			load_prefab("K:/Programming/vulkan-guide-otherbranch/assets/FlightHelmet/FlightHelmet.pfb", translation * scale);
+			load_prefab(asset_path("FlightHelmet/FlightHelmet.pfb").c_str(), translation * scale);
 		}
 	}
 
 	glm::mat4 sponzaMatrix = glm::scale(glm::mat4{ 1.0 }, glm::vec3(0.1, 0.1, 0.1));;
 
-	load_prefab("K:/Programming/vulkan-guide-otherbranch/assets/Sponza/Sponza.pfb", sponzaMatrix);
+	load_prefab(asset_path("Sponza/Sponza.pfb").c_str(), sponzaMatrix);
 
 	for (int x = -20; x <= 20; x++) {
 		for (int y = -20; y <= 20; y++) {
@@ -1333,9 +1289,6 @@ void VulkanEngine::init_scene()
 	
 
 	build_texture_set(blockySampler, get_material("texturedmesh"), "empire_diffuse");
-
-
-
 }
 
 
@@ -1466,7 +1419,7 @@ bool VulkanEngine::load_prefab(const char* path, glm::mat4 root)
 		if (!get_mesh(v.mesh_path.c_str()))
 		{
 			Mesh mesh{};
-			mesh.load_from_meshasset(v.mesh_path.c_str());
+			mesh.load_from_meshasset(asset_path(v.mesh_path).c_str());
 
 			upload_mesh(mesh);
 
@@ -1478,12 +1431,12 @@ bool VulkanEngine::load_prefab(const char* path, glm::mat4 root)
 		if (!get_material(v.material_path.c_str()))
 		{
 			assets::AssetFile materialFile;
-			bool loaded = assets::load_binaryfile(v.material_path.c_str(), materialFile);
+			bool loaded = assets::load_binaryfile(asset_path(v.material_path).c_str(), materialFile);
 
 			assets::MaterialInfo material = assets::read_material_info(&materialFile);
 
 			auto texture = material.textures["baseColor"];
-			load_image_to_cache(texture.c_str(), texture.c_str());
+			load_image_to_cache(texture.c_str(), asset_path(texture).c_str());
 
 			Material* mat = clone_material("texturedmesh", v.material_path.c_str());
 
@@ -1500,6 +1453,16 @@ bool VulkanEngine::load_prefab(const char* path, glm::mat4 root)
 	}
 
 	return true;
+}
+
+
+std::string VulkanEngine::asset_path(const char* path)
+{
+	return "../../assets_export/" + std::string(path);
+}
+std::string VulkanEngine::asset_path(std::string& path)
+{
+	return "../../assets_export/" + (path);
 }
 
 void VulkanEngine::init_descriptors()

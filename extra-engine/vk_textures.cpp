@@ -94,21 +94,13 @@ bool vkutil::load_image_from_asset(VulkanEngine& engine, const char* filename, A
 
 			offset += mip.dataSize;
 		}
-
-		
 	}
-	vmaUnmapMemory(engine._allocator, stagingBuffer._allocation);	
-
-
-	
-	
+	vmaUnmapMemory(engine._allocator, stagingBuffer._allocation);		
 
 	outImage = upload_image_mipmapped(textureInfo.pages[0].width, textureInfo.pages[0].height, image_format, engine, stagingBuffer,mips);
 
-
 	vmaDestroyBuffer(engine._allocator, stagingBuffer._buffer, stagingBuffer._allocation);
 
-	//std::cout << "Texture loaded succesfully " << file << std::endl;
 	return true;
 }
 
@@ -268,7 +260,7 @@ AllocatedImage vkutil::upload_image_mipmapped(int texWidth, int texHeight, VkFor
 	engine._mainDeletionQueue.push_function([=, &engine]() {
 
 		vmaDestroyImage(engine._allocator, newImage._image, newImage._allocation);
-		});
+	});
 
 	return newImage;
 }

@@ -26,6 +26,13 @@ namespace fs = std::filesystem;
 using namespace assets;
 
 
+struct ConverterState {
+	fs::path asset_path;
+	fs::path export_path;
+
+	fs::path convert_to_export_relative(fs::path path)const;
+};
+
 bool convert_image(const fs::path& input, const fs::path& output)
 {
 	int texWidth, texHeight, texChannels;
@@ -446,7 +453,7 @@ std::string calculate_gltf_mesh_name(tinygltf::Model& model, int meshIndex, int 
 	
 	return meshname;
 }
-bool extract_gltf_meshes(tinygltf::Model& model, const fs::path& input, const fs::path& outputFolder)
+bool extract_gltf_meshes(tinygltf::Model& model, const fs::path& input, const fs::path& outputFolder, const ConverterState& convState)
 {
 	tinygltf::Model* glmod = &model;
 	for (auto meshindex = 0; meshindex < model.meshes.size(); meshindex++){
@@ -465,7 +472,7 @@ bool extract_gltf_meshes(tinygltf::Model& model, const fs::path& input, const fs
 			_vertices.clear();
 			_indices.clear();
 
-			std::string meshname = calculate_gltf_mesh_name(model, meshindex, 0);
+			std::string meshname = calculate_gltf_mesh_name(model, meshindex, primindex);
 
 			auto& primitive = glmesh.primitives[primindex];
 			
@@ -484,6 +491,8 @@ bool extract_gltf_meshes(tinygltf::Model& model, const fs::path& input, const fs
 			assets::AssetFile newFile = assets::pack_mesh(&meshinfo, (char*)_vertices.data(), (char*)_indices.data());
 
 			fs::path meshpath = outputFolder / (meshname + ".mesh");
+
+
 			//save to disk
 			save_binaryfile(meshpath.string().c_str(), newFile);
 		}
@@ -501,7 +510,7 @@ std::string calculate_gltf_material_name(tinygltf::Model& model, int materialInd
 	return matname;
 }
 
-void extract_gltf_materials(tinygltf::Model& model, const fs::path& input, const fs::path& outputFolder)
+void extract_gltf_materials(tinygltf::Model& model, const fs::path& input, const fs::path& outputFolder, const ConverterState& convState)
 {
 
 	int nm = 0;
@@ -519,15 +528,17 @@ void extract_gltf_materials(tinygltf::Model& model, const fs::path& input, const
 		auto baseColor = model.textures[pbr.baseColorTexture.index];
 		auto baseImage = model.images[baseColor.source];
 
-
-		//fs::path baseColorPath = input.parent_path() / baseColor.name;
-		fs::path baseColorPath = input.parent_path() / baseImage.uri;
+		fs::path baseColorPath = outputFolder.parent_path() / baseImage.uri;
 
 		baseColorPath.replace_extension(".tx");
 
+		baseColorPath = convState.convert_to_export_relative(baseColorPath);
+
 		newMaterial.textures["baseColor"] = baseColorPath.string();
 
-		fs::path materialPath = outputFolder.parent_path() / (matname + ".mat");
+		fs::path materialPath = outputFolder / (matname + ".mat");
+
+		
 
 		assets::AssetFile newFile = assets::pack_material(&newMaterial);
 
@@ -536,7 +547,7 @@ void extract_gltf_materials(tinygltf::Model& model, const fs::path& input, const
 	}
 }
 
-void extract_gltf_nodes(tinygltf::Model& model, const fs::path& input, const fs::path& outputFolder)
+void extract_gltf_nodes(tinygltf::Model& model, const fs::path& input, const fs::path& outputFolder, const ConverterState& convState)
 {
 	assets::PrefabInfo prefab;
 
@@ -578,17 +589,15 @@ void extract_gltf_nodes(tinygltf::Model& model, const fs::path& input, const fs:
 
 				std::string matname = calculate_gltf_material_name(model, material);
 
-				fs::path materialpath = outputFolder.parent_path() / (matname + ".mat");
+				fs::path materialpath = outputFolder / (matname + ".mat");
 
 				assets::PrefabInfo::NodeMesh nmesh;
-				nmesh.mesh_path = meshpath.string();
-				nmesh.material_path = materialpath.string();
+				nmesh.mesh_path = convState.convert_to_export_relative(meshpath).string();
+				nmesh.material_path = convState.convert_to_export_relative(materialpath).string();
 
 				prefab.node_meshes[i] = nmesh;
 			}
-			
 		}
-
 	}
 
 
@@ -617,12 +626,12 @@ void extract_gltf_nodes(tinygltf::Model& model, const fs::path& input, const fs:
 			std::string matname = calculate_gltf_material_name(model, material);
 			std::string meshname = calculate_gltf_mesh_name(model, node.mesh, primindex);
 
-			fs::path materialpath = outputFolder.parent_path() / (matname + ".mat");
+			fs::path materialpath = outputFolder / (matname + ".mat");
 			fs::path meshpath = outputFolder / (meshname + ".mesh");
 
 			assets::PrefabInfo::NodeMesh nmesh;
-			nmesh.mesh_path = meshpath.string();
-			nmesh.material_path = materialpath.string();
+			nmesh.mesh_path = convState.convert_to_export_relative(meshpath).string();
+			nmesh.material_path = convState.convert_to_export_relative(materialpath).string();
 
 			prefab.node_meshes[newnode] = nmesh;
 		}
@@ -632,12 +641,12 @@ void extract_gltf_nodes(tinygltf::Model& model, const fs::path& input, const fs:
 
 	assets::AssetFile newFile = assets::pack_prefab(prefab);
 
-	fs::path materialPath = input;
+	fs::path scenefilepath = (outputFolder.parent_path()) / input.stem();
 
-	materialPath.replace_extension(".pfb");
+	scenefilepath.replace_extension(".pfb");
 
 	//save to disk
-	save_binaryfile(materialPath.string().c_str(), newFile);
+	save_binaryfile(scenefilepath.string().c_str(), newFile);
 }
 
 
@@ -654,59 +663,76 @@ int main(int argc, char* argv[])
 	
 		fs::path directory = path;
 		
+		fs::path exported_dir = path.parent_path() / "assets_export";
+
 		std::cout << "loaded asset directory at " << directory << std::endl;
+
+		ConverterState convstate;
+		convstate.asset_path = path;
+		convstate.export_path = exported_dir;
 
 		for (auto& p : fs::recursive_directory_iterator(directory))
 		{
 			std::cout << "File: " << p << std::endl;
 
-			if (p.path().extension() == ".png" || p.path().extension() == ".jpg") {
-				std::cout << "found a texture" << std::endl;
-			
-				auto newpath = p.path();
-				newpath.replace_extension(".tx");
-				convert_image(p.path(), newpath);
+			auto relative = p.path().lexically_proximate(directory);
+
+			auto export_path = exported_dir / relative;			
+
+			if (!fs::is_directory(export_path.parent_path()))
+			{
+				fs::create_directory(export_path.parent_path());
 			}
+
+			//if (p.path().extension() == ".png" || p.path().extension() == ".jpg") {
+			//	std::cout << "found a texture" << std::endl;
+			//
+			//	auto newpath = p.path();
+			//
+			//	
+			//	export_path.replace_extension(".tx");
+			//
+			//	convert_image(p.path(), export_path);
+			//}
 			//if (p.path().extension() == ".obj") {
 			//	std::cout << "found a mesh" << std::endl;
 			//
-			//	auto newpath = p.path();
-			//	newpath.replace_extension(".mesh");
-			//	convert_mesh(p.path(), newpath);
+			//	export_path.replace_extension(".mesh");
+			//	convert_mesh(p.path(), export_path);
 			//}
-			//if (p.path().extension() == ".gltf")
-			//{
-			//	using namespace tinygltf;
-			//	Model model;
-			//	TinyGLTF loader;
-			//	std::string err;
-			//	std::string warn;
-			//
-			//	bool ret = loader.LoadASCIIFromFile(&model, &err, &warn, p.path().string().c_str());
-			//
-			//	if (!warn.empty()) {
-			//		printf("Warn: %s\n", warn.c_str());
-			//	}
-			//
-			//	if (!err.empty()) {
-			//		printf("Err: %s\n", err.c_str());
-			//	}
-			//
-			//	if (!ret) {
-			//		printf("Failed to parse glTF\n");
-			//		return -1;
-			//	}
-			//	else {
-			//		auto folder = p.path().parent_path() / p.path().stem();
-			//		fs::create_directory(folder);
-			//
-			//		extract_gltf_meshes(model, p.path(), folder);
-			//
-			//		extract_gltf_materials(model, p.path(), folder);
-			//
-			//		extract_gltf_nodes(model, p.path(), folder);
-			//	}
-			//}
+			if (p.path().extension() == ".gltf")
+			{
+				using namespace tinygltf;
+				Model model;
+				TinyGLTF loader;
+				std::string err;
+				std::string warn;
+			
+				bool ret = loader.LoadASCIIFromFile(&model, &err, &warn, p.path().string().c_str());
+			
+				if (!warn.empty()) {
+					printf("Warn: %s\n", warn.c_str());
+				}
+			
+				if (!err.empty()) {
+					printf("Err: %s\n", err.c_str());
+				}
+			
+				if (!ret) {
+					printf("Failed to parse glTF\n");
+					return -1;
+				}
+				else {
+					auto folder = export_path.parent_path() / (p.path().stem().string() + "_GLTF");
+					fs::create_directory(folder);
+			
+					extract_gltf_meshes(model, p.path(), folder, convstate);
+			
+					extract_gltf_materials(model, p.path(), folder, convstate);
+			
+					extract_gltf_nodes(model, p.path(), folder, convstate);
+				}
+			}
 		}
 
 		//else 
@@ -724,4 +750,9 @@ int main(int argc, char* argv[])
 	//engine.cleanup();
 	//
 	return 0;
+}
+
+fs::path ConverterState::convert_to_export_relative(fs::path path) const
+{
+	return path.lexically_proximate(export_path);
 }
