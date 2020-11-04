@@ -374,12 +374,32 @@ void extract_gltf_indices(tinygltf::Primitive& primitive, tinygltf::Model& model
 	}
 }
 
+std::string calculate_gltf_mesh_name(tinygltf::Model& model, int meshIndex, int primitiveIndex)
+{
+	char buffer0[50];
+	char buffer1[50];
+	itoa(meshIndex, buffer0, 10);
+	itoa(primitiveIndex, buffer1, 10);
+
+	std::string meshname = "MESH_" + std::string{ &buffer0[0] } + "_" + model.meshes[meshIndex].name;
+
+	bool multiprim = model.meshes[meshIndex].primitives.size() > 1;
+	if (multiprim)
+	{
+		meshname += "_PRIM_" + std::string{ &buffer1[0] };
+
+		
+	}
+	
+	return meshname;
+}
 bool extract_gltf_meshes(tinygltf::Model& model, const fs::path& input, const fs::path& outputFolder)
 {
 	tinygltf::Model* glmod = &model;
-	for (auto& glmesh : model.meshes) {
+	for (auto meshindex = 0; meshindex < model.meshes.size(); meshindex++){
 
-		fs::path meshpath = outputFolder / (glmesh.name + ".mesh");
+		auto& glmesh = model.meshes[meshindex];
+		
 
 		using VertexFormat = assets::Vertex_f32_PNCV;
 		auto VertexFormatEnum = assets::VertexFormat::PNCV_F32;
@@ -387,53 +407,56 @@ bool extract_gltf_meshes(tinygltf::Model& model, const fs::path& input, const fs
 		std::vector<VertexFormat> _vertices;
 		std::vector<uint32_t> _indices;
 
-		for (auto& primitive : glmesh.primitives) {
+		for (auto primindex = 0; primindex < glmesh.primitives.size(); primindex++){
 
+			_vertices.clear();
+			_indices.clear();
 
-			std::vector<assets::Vertex_f32_PNCV> _primvertices;
-			std::vector<uint32_t> _primindices;
+			std::string meshname = calculate_gltf_mesh_name(model, meshindex, 0);
 
-			extract_gltf_indices(primitive, model, _primindices);
-			extract_gltf_vertices(primitive, model, _primvertices);
-
-		
-			int first_vert = _vertices.size();
+			auto& primitive = glmesh.primitives[primindex];
 			
-			for (auto& v : _primvertices) {
-				_vertices.push_back(v);
-			}
+			extract_gltf_indices(primitive, model, _indices);
+			extract_gltf_vertices(primitive, model, _vertices);
+			
 
-			for (uint32_t index : _primindices) {
-				_indices.push_back(index + first_vert);
-			}
+			MeshInfo meshinfo;
+			meshinfo.vertexFormat = VertexFormatEnum;
+			meshinfo.vertexBuferSize = _vertices.size() * sizeof(VertexFormat);
+			meshinfo.indexBuferSize = _indices.size() * sizeof(uint32_t);
+			meshinfo.indexSize = sizeof(uint32_t);
+			meshinfo.originalFile = input.string();
+
+
+			assets::AssetFile newFile = assets::pack_mesh(&meshinfo, (char*)_vertices.data(), (char*)_indices.data());
+
+			fs::path meshpath = outputFolder / (meshname + ".mesh");
+			//save to disk
+			save_binaryfile(meshpath.string().c_str(), newFile);
 		}
-
-		MeshInfo meshinfo;
-		meshinfo.vertexFormat = VertexFormatEnum;
-		meshinfo.vertexBuferSize = _vertices.size() * sizeof(VertexFormat);
-		meshinfo.indexBuferSize = _indices.size() * sizeof(uint32_t);
-		meshinfo.indexSize = sizeof(uint32_t);
-		meshinfo.originalFile = input.string();
-
-	//pack mesh file
-	//auto start = std::chrono::high_resolution_clock::now();
-
-		assets::AssetFile newFile = assets::pack_mesh(&meshinfo, (char*)_vertices.data(), (char*)_indices.data());
-
-		//save to disk
-		save_binaryfile(meshpath.string().c_str(), newFile);
-
 	}
 	return true;
 }
 
 
+std::string calculate_gltf_material_name(tinygltf::Model& model, int materialIndex)
+{
+	char buffer[50];
+
+	itoa(materialIndex, buffer, 10);
+	std::string matname = "MAT_" + std::string{ &buffer[0] } + "_" + model.materials[materialIndex].name;
+	return matname;
+}
+
 void extract_gltf_materials(tinygltf::Model& model, const fs::path& input, const fs::path& outputFolder)
 {
+
+	int nm = 0;
 	for (auto& glmat : model.materials) {
+		std::string matname = calculate_gltf_material_name(model, nm);
 
-		std::string matname = glmat.name;
 
+		nm++;
 		auto& pbr = glmat.pbrMetallicRoughness;
 
 
@@ -441,8 +464,11 @@ void extract_gltf_materials(tinygltf::Model& model, const fs::path& input, const
 		newMaterial.baseEffect = "defaultPBR";
 
 		auto baseColor = model.textures[pbr.baseColorTexture.index];
+		auto baseImage = model.images[baseColor.source];
 
-		fs::path baseColorPath = input.parent_path() / baseColor.name;
+
+		//fs::path baseColorPath = input.parent_path() / baseColor.name;
+		fs::path baseColorPath = input.parent_path() / baseImage.uri;
 
 		baseColorPath.replace_extension(".tx");
 
@@ -461,6 +487,7 @@ void extract_gltf_nodes(tinygltf::Model& model, const fs::path& input, const fs:
 {
 	assets::PrefabInfo prefab;
 
+	std::vector<uint64_t> meshnodes;
 	for (int i = 0; i < model.nodes.size(); i++)
 	{
 		auto& node = model.nodes[i];
@@ -484,20 +511,71 @@ void extract_gltf_nodes(tinygltf::Model& model, const fs::path& input, const fs:
 		if (node.mesh >= 0)
 		{
 			auto mesh = model.meshes[node.mesh];
-			fs::path meshpath = outputFolder / (mesh.name + ".mesh");
 
-			int material = mesh.primitives[0].material;
+			if (mesh.primitives.size() > 1) {			
+				meshnodes.push_back(i);
+			}
+			else {
+				auto primitive = mesh.primitives[0];
+				std::string meshname = calculate_gltf_mesh_name(model, node.mesh, 0);
+				
+				fs::path meshpath = outputFolder / (meshname + ".mesh");
+
+				int material = primitive.material;
+
+				std::string matname = calculate_gltf_material_name(model, material);
+
+				fs::path materialpath = outputFolder.parent_path() / (matname + ".mat");
+
+				assets::PrefabInfo::NodeMesh nmesh;
+				nmesh.mesh_path = meshpath.string();
+				nmesh.material_path = materialpath.string();
+
+				prefab.node_meshes[i] = nmesh;
+			}
+			
+		}
+
+	}
+
+
+	int nodeindex = model.nodes.size();
+	//iterate nodes with mesh, convert each submesh into a node
+	for (int i = 0; i < meshnodes.size(); i++)
+	{
+		auto& node = model.nodes[i];
+
+		auto mesh = model.meshes[node.mesh];
+		
+
+		for (int primindex = 0 ; primindex < mesh.primitives.size(); primindex++)
+		{
+			auto primitive = mesh.primitives[primindex];
+			int newnode = nodeindex++;
+
+			char buffer[50];
+
+			itoa(primindex, buffer, 10);
+
+			prefab.node_names[newnode] = prefab.node_names[i] +  "_PRIM_" + &buffer[0];
+
+			int material = primitive.material;
 			auto mat = model.materials[material];
+			std::string matname = calculate_gltf_material_name(model, material);
+			std::string meshname = calculate_gltf_mesh_name(model, node.mesh, primindex);
 
-			fs::path materialpath = outputFolder.parent_path() / (mat.name + ".mat");
+			fs::path materialpath = outputFolder.parent_path() / (matname + ".mat");
+			fs::path meshpath = outputFolder / (meshname + ".mesh");
 
 			assets::PrefabInfo::NodeMesh nmesh;
 			nmesh.mesh_path = meshpath.string();
 			nmesh.material_path = materialpath.string();
 
-			prefab.node_meshes[i] = nmesh;
+			prefab.node_meshes[newnode] = nmesh;
 		}
+		
 	}
+
 
 	assets::AssetFile newFile = assets::pack_prefab(prefab);
 
@@ -529,13 +607,13 @@ int main(int argc, char* argv[])
 		{
 			std::cout << "File: " << p << std::endl;
 
-			//if (p.path().extension() == ".png") {
-			//	std::cout << "found a texture" << std::endl;
-			//
-			//	auto newpath = p.path();
-			//	newpath.replace_extension(".tx");
-			//	convert_image(p.path(), newpath);
-			//}
+			if (p.path().extension() == ".png" || p.path().extension() == ".jpg") {
+				std::cout << "found a texture" << std::endl;
+			
+				auto newpath = p.path();
+				newpath.replace_extension(".tx");
+				convert_image(p.path(), newpath);
+			}
 			//if (p.path().extension() == ".obj") {
 			//	std::cout << "found a mesh" << std::endl;
 			//

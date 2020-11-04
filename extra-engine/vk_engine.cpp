@@ -1252,6 +1252,9 @@ void VulkanEngine::init_scene()
 		}
 	}
 
+	glm::mat4 sponzaMatrix = glm::scale(glm::mat4{ 1.0 }, glm::vec3(0.1, 0.1, 0.1));;
+
+	load_prefab("K:/Programming/vulkan-guide-otherbranch/assets/Sponza/Sponza.pfb", sponzaMatrix);
 
 	for (int x = -20; x <= 20; x++) {
 		for (int y = -20; y <= 20; y++) {
