@@ -38,7 +38,15 @@ assets::MeshInfo assets::read_mesh_info(AssetFile* file)
 	boundsData.reserve(7);
 	boundsData = metadata["bounds"].get<std::vector<float>>();
 
+	info.bounds.origin[0] = boundsData[0];
+	info.bounds.origin[1] = boundsData[1];
+	info.bounds.origin[2] = boundsData[2];
+		
+	info.bounds.radius = boundsData[3];
 	
+	info.bounds.extents[0] = boundsData[4];
+	info.bounds.extents[1] = boundsData[5];
+	info.bounds.extents[2] = boundsData[6];
 
 	std::string vertexFormat = metadata["vertex_format"];
 	info.vertexFormat = parse_format(vertexFormat.c_str());

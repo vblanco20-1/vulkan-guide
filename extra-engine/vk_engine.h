@@ -15,6 +15,7 @@
 #include <glm/gtx/transform.hpp>
 
 #include <SDL_events.h>
+#include <frustum_cull.h>
 
 
 namespace assets { struct PrefabInfo; }
@@ -82,6 +83,8 @@ struct Texture {
 	VkImageView imageView;
 };
 
+
+
 struct RenderObject {
 	Mesh* mesh;
 
@@ -89,7 +92,7 @@ struct RenderObject {
 
 	glm::mat4 transformMatrix;
 
-	
+	RenderBounds bounds;
 };
 
 
@@ -116,6 +119,8 @@ struct GPUCameraData{
 	glm::mat4 view;
 	glm::mat4 proj;
 	glm::mat4 viewproj;
+
+	
 };
 
 
@@ -136,10 +141,19 @@ struct PlayerCamera {
 	glm::vec3 velocity;
 	glm::vec3 inputAxis;
 
+	
+
 	float pitch{0}; //up-down rotation
 	float yaw{0}; //left-right rotation
 
 	glm::mat4 get_rotation_matrix();
+};
+
+struct EngineStats {
+	float frametime;
+	int objects;
+	int drawcalls;
+	int draws;
 };
 
 
@@ -249,8 +263,10 @@ public:
 
 	std::string asset_path(const char* path);
 	std::string asset_path(std::string& path);
-private:
 
+	void refresh_renderbounds(RenderObject* object);
+private:
+	EngineStats stats;
 	void process_input_event(SDL_Event* ev);
 	void update_camera(float deltaSeconds);
 

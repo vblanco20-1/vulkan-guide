@@ -20,13 +20,20 @@ struct Vertex {
 	glm::vec2 uv;
 	static VertexInputDescription get_vertex_description();
 }; 
-
+struct RenderBounds {
+	glm::vec3 origin;
+	float radius;
+	glm::vec3 extents;
+	bool valid;
+};
 struct Mesh {
 	std::vector<Vertex> _vertices;
 	std::vector<uint32_t> _indices;
 
 	AllocatedBuffer _vertexBuffer;
 	AllocatedBuffer _indexBuffer;
+
+	RenderBounds bounds;
 
 	bool load_from_obj(const char* filename);
 	bool load_from_meshasset(const char* filename);

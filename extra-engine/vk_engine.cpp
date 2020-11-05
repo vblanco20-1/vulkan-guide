@@ -12,7 +12,7 @@
 
 #include <iostream>
 #include <fstream>
-
+#include <chrono>
 #include "vk_textures.h"
 #include "vk_shaders.h"
 
@@ -242,9 +242,19 @@ void VulkanEngine::run()
 	SDL_Event e;
 	bool bQuit = false;
 
+	// Using time point and system_clock 
+	std::chrono::time_point<std::chrono::system_clock> start, end;
+	
+	start = std::chrono::system_clock::now();
+	end = std::chrono::system_clock::now();
 	//main loop
 	while (!bQuit)
 	{
+		end = std::chrono::system_clock::now();
+		std::chrono::duration<double> elapsed_seconds = end - start;
+		stats.frametime = elapsed_seconds.count() * 1000.f;
+
+		start = std::chrono::system_clock::now();
 		//Handle events on queue
 		while (SDL_PollEvent(&e) != 0)
 		{
@@ -274,9 +284,16 @@ void VulkanEngine::run()
 		ImGui::NewFrame();
 
 
-		//imgui commands
-		ImGui::ShowDemoWindow();
+		ImGui::Begin("stats");
 
+
+
+		ImGui::Text("Frametimes: %f", stats.frametime);
+		ImGui::Text("Objects: %d", stats.objects);
+		ImGui::Text("Drawcalls: %d", stats.drawcalls);
+		ImGui::Text("Draws: %d", stats.draws);
+
+		ImGui::End();
 
 		update_camera(1.0 / 60.f);
 
@@ -863,6 +880,7 @@ VkPipeline PipelineBuilder::build_pipeline(VkDevice device, VkRenderPass pass)
 void VulkanEngine::load_meshes()
 {
 	Mesh triMesh{};
+	triMesh.bounds.valid = false;
 	//make the array 3 vertices long
 	triMesh._vertices.resize(3);
 
@@ -1070,10 +1088,17 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderObject* first, int co
 	glm::mat4 projection = glm::perspective(glm::radians(70.f), 1700.f / 900.f, 0.1f, 200.0f);
 	projection[1][1] *= -1;
 
+
+
+	
+	
+
 	GPUCameraData camData;
 	camData.proj = projection;
 	camData.view = view;
 	camData.viewproj = projection * view;
+
+	Frustum view_frustrum{ camData.viewproj };
 
 	float framed = (_frameNumber / 120.f);
 	_sceneParameters.ambientColor = { sin(framed),0,cos(framed),1 };
@@ -1157,18 +1182,29 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderObject* first, int co
 		};
 
 		std::vector<RenderBatch> batch;
-		batch.resize(count);
+		batch.reserve(count);
 
 		for (int i = 0; i < count; i++) {
 			RenderObject* object = &first[i];
 
-			batch[i].object = object;
-			batch[i].objectIndex = i;
-			uint64_t material_hash = std::hash<void*>()(object->material) & UINT32_MAX;
-			uint64_t mesh_hash = std::hash<void*>()(object->mesh) & UINT32_MAX;
+			glm::vec3 boundmin = object->bounds.origin - object->bounds.extents;
+			glm::vec3 boundmax = object->bounds.origin + object->bounds.extents;
+			if (!object->bounds.valid || view_frustrum.IsBoxVisible(boundmin, boundmax))
+			{
+				RenderBatch newBatch;
 
-			batch[i].sortKey = material_hash << 32 | mesh_hash;
+				newBatch.object = object;
+				newBatch.objectIndex = i;
+				uint64_t material_hash = std::hash<void*>()(object->material) & UINT32_MAX;
+				uint64_t mesh_hash = std::hash<void*>()(object->mesh) & UINT32_MAX;
+
+				newBatch.sortKey = material_hash << 32 | mesh_hash;
+
+				batch.push_back(newBatch);
+			}
 		}
+		if (batch.size() == 0) 
+			return;
 
 		std::sort(batch.begin(), batch.end(), [](const RenderBatch& A, const RenderBatch& B) {
 			return A.sortKey < B.sortKey;
@@ -1177,7 +1213,7 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderObject* first, int co
 		void* instanceData;
 		vmaMapMemory(_allocator, get_current_frame().instanceBuffer._allocation, &instanceData);
 
-		for (int i = 0; i < count; i++)
+		for (int i = 0; i < batch.size(); i++)
 		{
 			((uint32_t*)instanceData)[i] = batch[i].objectIndex;
 		}
@@ -1194,7 +1230,7 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderObject* first, int co
 		};
 
 		std::vector<InstanceBatch> instancedDraws;
-		instancedDraws.reserve(count / 3);
+		instancedDraws.reserve(batch.size() / 3);
 
 		InstanceBatch newBatch;
 		newBatch.first = 0;
@@ -1203,7 +1239,7 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderObject* first, int co
 		newBatch.mesh = batch[0].object->mesh;
 
 		instancedDraws.push_back(newBatch);
-		for (int i = 0; i < count; i++) {
+		for (int i = 0; i < batch.size(); i++) {
 			RenderObject* obj = batch[i].object;
 
 			if (obj->mesh == instancedDraws.back().mesh
@@ -1224,6 +1260,9 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderObject* first, int co
 		Material* lastMaterial = nullptr;
 		Mesh* lastMesh = nullptr;
 
+		stats.draws = instancedDraws.size();
+		stats.drawcalls = batch.size();
+		stats.objects = count;
 		for (auto& instanceDraw : instancedDraws)
 		{
 			Material* drawMat = instanceDraw.material;
@@ -1477,6 +1516,8 @@ bool VulkanEngine::load_prefab(const char* path, glm::mat4 root)
 		loadmesh.transformMatrix = root;
 		loadmesh.material = get_material(v.material_path.c_str());
 
+		refresh_renderbounds(&loadmesh);
+
 		_renderables.push_back(loadmesh);
 	}
 
@@ -1491,6 +1532,62 @@ std::string VulkanEngine::asset_path(const char* path)
 std::string VulkanEngine::asset_path(std::string& path)
 {
 	return "../../assets_export/" + (path);
+}
+
+
+void VulkanEngine::refresh_renderbounds(RenderObject* object)
+{
+	//dont try to update invalid bounds
+	if (!object->mesh->bounds.valid) return;
+
+	RenderBounds originalBounds = object->mesh->bounds;
+
+	//convert bounds to 8 vertices, and transform those
+	std::array<glm::vec3, 8> boundsVerts;
+
+	for (int i = 0; i < 8; i++) {
+		boundsVerts[i] = originalBounds.origin;
+	}
+
+	boundsVerts[0] += originalBounds.extents * glm::vec3(1, 1, 1);
+	boundsVerts[1] += originalBounds.extents * glm::vec3(1, 1, -1);
+	boundsVerts[2] += originalBounds.extents * glm::vec3(1, -1, 1);
+	boundsVerts[3] += originalBounds.extents * glm::vec3(1, -1, -1);
+	boundsVerts[4] += originalBounds.extents * glm::vec3(-1, 1, 1);
+	boundsVerts[5] += originalBounds.extents * glm::vec3(-1, 1, -1);
+	boundsVerts[6] += originalBounds.extents * glm::vec3(-1, -1, 1);
+	boundsVerts[7] += originalBounds.extents * glm::vec3(-1, -1, -1);
+	
+	//recalc max/min
+	glm::vec3 min{ std::numeric_limits<float>().max() };
+	glm::vec3 max{ std::numeric_limits<float>().min() };
+
+	glm::mat4 m = object->transformMatrix;
+
+	//transform every vertex, accumulating max/min
+	for (int i = 0; i < 8; i++) {
+		boundsVerts[i] = m * glm::vec4(boundsVerts[i],1.f);
+
+		min = glm::min(boundsVerts[i], min);
+		max = glm::max(boundsVerts[i], max);
+	}
+
+	glm::vec3 extents = (max - min) / 2.f;
+	glm::vec3 origin = min + extents;
+
+	glm::vec3 scale;	
+
+	float max_scale = 0;
+	max_scale = std::max( glm::length(glm::vec3(m[0][0], m[0][1], m[0][2])),max_scale);
+	max_scale = std::max( glm::length(glm::vec3(m[1][0], m[1][1], m[1][2])),max_scale);
+	max_scale = std::max( glm::length(glm::vec3(m[2][0], m[2][1], m[2][2])),max_scale);
+
+	float radius = max_scale * originalBounds.radius;
+
+
+	object->bounds.extents = extents;
+	object->bounds.origin = origin;
+	object->bounds.radius = radius;
 }
 
 void VulkanEngine::init_descriptors()

@@ -7,6 +7,7 @@ add_executable (extra
  "vk_types.h" 
  "vk_mesh.cpp"
  "vk_mesh.h"
+"frustum_cull.h"
 "vk_textures.cpp"
  "vk_textures.h"
 "vk_descriptors.cpp"

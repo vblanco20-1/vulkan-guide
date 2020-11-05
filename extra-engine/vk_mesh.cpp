@@ -134,6 +134,7 @@ bool Mesh::load_from_obj(const char* filename)
 	for (int i = 0; i < _vertices.size(); i++) {
 		_indices.push_back(i);
 	}
+	bounds.valid = false;
 	return true;
 }
 
@@ -158,6 +159,17 @@ bool Mesh::load_from_meshasset(const char* filename)
 	indexBuffer.resize(meshinfo.indexBuferSize);
 
 	assets::unpack_mesh(&meshinfo, file.binaryBlob.data(), file.binaryBlob.size(), vertexBuffer.data(), indexBuffer.data());
+
+	bounds.extents.x = meshinfo.bounds.extents[0];
+	bounds.extents.y = meshinfo.bounds.extents[1];
+	bounds.extents.z = meshinfo.bounds.extents[2];
+
+	bounds.origin.x = meshinfo.bounds.origin[0];
+	bounds.origin.y = meshinfo.bounds.origin[1];
+	bounds.origin.z = meshinfo.bounds.origin[2];
+
+	bounds.radius = meshinfo.bounds.radius;
+	bounds.valid = true;
 
 	_vertices.clear();
 
