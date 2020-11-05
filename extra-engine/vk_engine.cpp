@@ -29,7 +29,8 @@
 
 
 
-constexpr bool bUseValidationLayers = false;
+
+constexpr bool bUseValidationLayers = true;
 
 //we want to immediately abort when there is an error. In normal engines this would give an error message to the user, or perform a dump of state.
 using namespace std;
@@ -48,13 +49,17 @@ using namespace std;
 void VulkanEngine::init()
 {
 	ZoneScopedN("Engine Init");
+	std::cout << "init" << std::endl;
+
+
+
 	// We initialize SDL and create a window with it. 
 	SDL_Init(SDL_INIT_VIDEO);
-
-	SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_VULKAN);
+	std::cout << "SDL inited" << std::endl;
+	SDL_WindowFlags window_flags = (SDL_WINDOW_VULKAN);
 
 	_window = SDL_CreateWindow(
-		"Vulkan Engine",
+		"",
 		SDL_WINDOWPOS_UNDEFINED,
 		SDL_WINDOWPOS_UNDEFINED,
 		_windowExtent.width,
@@ -66,6 +71,7 @@ void VulkanEngine::init()
 
 	init_swapchain();
 
+
 	init_default_renderpass();
 
 	init_framebuffers();
@@ -75,6 +81,8 @@ void VulkanEngine::init()
 	init_sync_structures();
 
 	init_descriptors();
+
+	std::cout << "timetoload" << std::endl;
 
 	init_pipelines();
 
@@ -89,7 +97,7 @@ void VulkanEngine::init()
 	_isInitialized = true;
 
 	_camera = {};
-	_camera.position = { 0.f,6.f,10.f };
+	_camera.position = { 0.f,15.f,10.f };
 }
 void VulkanEngine::cleanup()
 {
@@ -141,7 +149,7 @@ void VulkanEngine::draw()
 	{
 		ZoneScopedN("Aquire Image");
 		//request image from the swapchain
-		
+
 		VK_CHECK(vkAcquireNextImageKHR(_device, _swapchain, 0, get_current_frame()._presentSemaphore, nullptr, &swapchainImageIndex));
 
 	}
@@ -230,6 +238,7 @@ void VulkanEngine::draw()
 
 void VulkanEngine::run()
 {
+	std::cout << "Run -- " << std::endl;
 	SDL_Event e;
 	bool bQuit = false;
 
@@ -346,13 +355,13 @@ void VulkanEngine::update_camera(float deltaSeconds)
 	glm::vec3 forward = { 0,0,-1 };
 	glm::vec3 right = { 1,0,0 };
 
-	
+
 
 
 	glm::mat4 cam_rot = _camera.get_rotation_matrix();
 
 	forward = cam_rot * glm::vec4(forward, 0.f);
-	right =  cam_rot * glm::vec4(right, 0.f);
+	right = cam_rot * glm::vec4(right, 0.f);
 
 	_camera.velocity = _camera.inputAxis.x * forward + _camera.inputAxis.y * right;
 
@@ -363,13 +372,17 @@ void VulkanEngine::update_camera(float deltaSeconds)
 
 void VulkanEngine::init_vulkan()
 {
+	std::cout << "vkinit1" << std::endl;
 	vkb::InstanceBuilder builder;
-
+	std::cout << "vkinit" << std::endl;
 	//make the vulkan instance, with basic debug features
 	auto inst_ret = builder.set_app_name("Example Vulkan Application")
+
 		.request_validation_layers(bUseValidationLayers)
 		.use_default_debug_messenger()
 		.build();
+
+	std::cout << "instance" << std::endl;
 
 	vkb::Instance vkb_inst = inst_ret.value();
 
@@ -377,22 +390,22 @@ void VulkanEngine::init_vulkan()
 	_instance = vkb_inst.instance;
 
 	SDL_Vulkan_CreateSurface(_window, _instance, &_surface);
-
+	std::cout << "surface" << std::endl;
 	//use vkbootstrap to select a gpu. 
 	//We want a gpu that can write to the SDL surface and supports vulkan 1.2
 	vkb::PhysicalDeviceSelector selector{ vkb_inst };
 	vkb::PhysicalDevice physicalDevice = selector
-		.set_minimum_version(1, 2)
+		.set_minimum_version(1, 1)
 		.set_surface(_surface)
 		.select()
 		.value();
-
+	std::cout << "selector" << std::endl;
 	//create the final vulkan device
 
 	vkb::DeviceBuilder deviceBuilder{ physicalDevice };
 
 	vkb::Device vkbDevice = deviceBuilder.build().value();
-
+	std::cout << "builder" << std::endl;
 	// Get the VkDevice handle used in the rest of a vulkan application
 	_device = vkbDevice.device;
 	_chosenGPU = physicalDevice.physical_device;
@@ -419,6 +432,7 @@ void VulkanEngine::init_vulkan()
 
 void VulkanEngine::init_swapchain()
 {
+
 	vkb::SwapchainBuilder swapchainBuilder{ _chosenGPU,_device,_surface };
 
 	vkb::Swapchain vkbSwapchain = swapchainBuilder
@@ -652,7 +666,9 @@ void VulkanEngine::init_pipelines()
 
 	ShaderModule colorModule;
 
-	if (!vkutil::load_shader_module(_device,"../../shaders/default_lit.frag.spv", &colorModule))
+
+	if (!vkutil::load_shader_module(_device, "../../shaders/default_lit.frag.spv", &colorModule))
+
 	{
 		std::cout << "Error when building the colored mesh shader" << std::endl;
 	}
@@ -662,14 +678,19 @@ void VulkanEngine::init_pipelines()
 
 	VkShaderModule texturedMeshShader;
 	ShaderModule textureModule;
-	if (!vkutil::load_shader_module(_device ,"../../shaders/textured_lit.frag.spv", &textureModule))
+
+	if (!vkutil::load_shader_module(_device, "../../shaders/textured_lit.frag.spv", &textureModule))
+
 	{
 		std::cout << "Error when building the colored mesh shader" << std::endl;
 	}
 	texturedMeshShader = textureModule.module;
 	VkShaderModule meshVertShader;
 	ShaderModule meshModule;
-	if (!vkutil::load_shader_module(_device,"../../shaders/tri_mesh_ssbo.vert.spv", &meshModule))
+
+
+	if (!vkutil::load_shader_module(_device, "../../shaders/tri_mesh_ssbo_instanced.vert.spv", &meshModule))
+	
 	{
 		std::cout << "Error when building the mesh vertex shader module" << std::endl;
 	}
@@ -680,9 +701,9 @@ void VulkanEngine::init_pipelines()
 	mainEffect->add_stage(&colorModule, VK_SHADER_STAGE_FRAGMENT_BIT);
 
 
-	ShaderEffect::ReflectionOverrides overrides[] = { 
+	ShaderEffect::ReflectionOverrides overrides[] = {
 		{"sceneData", VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC},
-		{"cameraData", VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC}	
+		{"cameraData", VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC}
 	};
 	mainEffect->reflect_layout(this, overrides, 2);
 
@@ -698,7 +719,7 @@ void VulkanEngine::init_pipelines()
 
 	VkPipelineLayout meshPipLayout = mainEffect->builtLayout;
 
-	
+
 	ShaderEffect* texturedEffect = new ShaderEffect();;
 	texturedEffect->add_stage(&meshModule, VK_SHADER_STAGE_VERTEX_BIT);
 	texturedEffect->add_stage(&textureModule, VK_SHADER_STAGE_FRAGMENT_BIT);
@@ -706,7 +727,7 @@ void VulkanEngine::init_pipelines()
 	texturedEffect->reflect_layout(this, overrides, 2);
 
 	VkPipelineLayout texturedPipeLayout = texturedEffect->builtLayout;
-	
+
 
 	//hook the push constants layout
 	pipelineBuilder._pipelineLayout = meshPipLayout;
@@ -954,17 +975,17 @@ void VulkanEngine::upload_mesh(Mesh& mesh)
 			&mesh._indexBuffer._allocation,
 			nullptr));
 	}
-	
+
 
 
 	//add the destruction of triangle mesh buffer to the deletion queue
 	_mainDeletionQueue.push_function([=]() {
-	
+
 		vmaDestroyBuffer(_allocator, mesh._vertexBuffer._buffer, mesh._vertexBuffer._allocation);
 		if (index_buffer_size > 0) {
 			vmaDestroyBuffer(_allocator, mesh._indexBuffer._buffer, mesh._indexBuffer._allocation);
 		}
-	});
+		});
 
 	immediate_submit([=](VkCommandBuffer cmd) {
 		VkBufferCopy copy;
@@ -979,7 +1000,7 @@ void VulkanEngine::upload_mesh(Mesh& mesh)
 			copy.size = index_buffer_size;
 			vkCmdCopyBuffer(cmd, stagingBuffer._buffer, mesh._indexBuffer._buffer, 1, &copy);
 		}
-	});
+		});
 
 	vmaDestroyBuffer(_allocator, stagingBuffer._buffer, stagingBuffer._allocation);
 }
@@ -1003,7 +1024,7 @@ Material* VulkanEngine::clone_material(const std::string& originalname, const st
 	mat.effect = m->effect;
 	_materials[copyname] = mat;
 	return &_materials[copyname];
-	
+
 }
 
 Material* VulkanEngine::get_material(const std::string& name)
@@ -1037,11 +1058,11 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderObject* first, int co
 	//make a model view matrix for rendering the object
 	//camera view
 	glm::vec3 camPos = _camera.position;
-	
+
 	glm::mat4 cam_rot = _camera.get_rotation_matrix();
 
 	glm::mat4 view = glm::translate(glm::mat4{ 1 }, camPos) * cam_rot;
-	
+
 	//we need to invert the camera matrix
 	view = glm::inverse(view);
 
@@ -1079,15 +1100,15 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderObject* first, int co
 	char* dynData;
 	vmaMapMemory(_allocator, get_current_frame().dynamicDataBuffer._allocation, (void**)&dynData);
 
-	for (int i = 0; i < 3; i++) {
-		camera_data_offsets[i] = dyn_offset;
-		memcpy(dynData, &camData, sizeof(GPUCameraData));
-		dyn_offset += sizeof(GPUCameraData);
-		dyn_offset = pad_uniform_buffer_size(dyn_offset);
 
-		dynData += dyn_offset;
-	}
-	
+	camera_data_offsets[0] = dyn_offset;
+	memcpy(dynData, &camData, sizeof(GPUCameraData));
+	dyn_offset += sizeof(GPUCameraData);
+	dyn_offset = pad_uniform_buffer_size(dyn_offset);
+
+	dynData += dyn_offset;
+
+
 
 	scene_data_offset = dyn_offset;
 	memcpy(dynData, &_sceneParameters, sizeof(GPUSceneData));
@@ -1109,15 +1130,21 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderObject* first, int co
 	dynamicInfo.offset = 0;
 	dynamicInfo.range = 100;
 
+	VkDescriptorBufferInfo instanceInfo;
+	instanceInfo.buffer = get_current_frame().instanceBuffer._buffer;
+	instanceInfo.offset = 0;
+	instanceInfo.range = sizeof(uint32_t) * 10000;
+
 	VkDescriptorSet GlobalSet;
 	vkutil::DescriptorBuilder::begin(_descriptorLayoutCache, get_current_frame().dynamicDescriptorAllocator)
-		.bind_buffer(0, &dynamicInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_VERTEX_BIT )
+		.bind_buffer(0, &dynamicInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_VERTEX_BIT)
 		.bind_buffer(1, &dynamicInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_FRAGMENT_BIT)
 		.build(GlobalSet);
 
 	VkDescriptorSet ObjectDataSet;
 	vkutil::DescriptorBuilder::begin(_descriptorLayoutCache, get_current_frame().dynamicDescriptorAllocator)
 		.bind_buffer(0, &objectBufferInfo, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
+		.bind_buffer(1, &instanceInfo, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
 		.build(ObjectDataSet);
 
 	{
@@ -1131,6 +1158,7 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderObject* first, int co
 
 		std::vector<RenderBatch> batch;
 		batch.resize(count);
+
 		for (int i = 0; i < count; i++) {
 			RenderObject* object = &first[i];
 
@@ -1142,67 +1170,103 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderObject* first, int co
 			batch[i].sortKey = material_hash << 32 | mesh_hash;
 		}
 
-		std::sort(batch.begin(), batch.end(), [](const RenderBatch& A,const RenderBatch& B) {
+		std::sort(batch.begin(), batch.end(), [](const RenderBatch& A, const RenderBatch& B) {
 			return A.sortKey < B.sortKey;
-		});
+			});
+
+		void* instanceData;
+		vmaMapMemory(_allocator, get_current_frame().instanceBuffer._allocation, &instanceData);
 
 		for (int i = 0; i < count; i++)
 		{
-			RenderObject& object = *batch[i].object;
+			((uint32_t*)instanceData)[i] = batch[i].objectIndex;
+		}
 
-			//only bind the pipeline if it doesnt match with the already bound one
-			if (object.material != lastMaterial) {
+		vmaUnmapMemory(_allocator, get_current_frame().instanceBuffer._allocation);
 
-				if (object.material->pipeline != lastPipeline) {
-					lastPipeline = object.material->pipeline;
-					vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipeline);
-					vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->effect->builtLayout, 1, 1, &ObjectDataSet, 0, nullptr);
-				}
-				
-				lastMaterial = object.material;
 
-				
-			}
+		struct InstanceBatch {
+			Mesh* mesh;
+			Material* material;
 
-			//update dynamic binds
-			uint32_t dynamicBinds[] = { camera_data_offsets[0],scene_data_offset };
-			vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->effect->builtLayout, 0, 1, &GlobalSet, 2, dynamicBinds);
+			uint64_t first;
+			uint64_t count;
+		};
 
-			if (object.material->textureSet != VK_NULL_HANDLE) {
-				//texture descriptor
-				vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->effect->builtLayout, 2, 1, &object.material->textureSet, 0, nullptr);
-			}
+		std::vector<InstanceBatch> instancedDraws;
+		instancedDraws.reserve(count / 3);
 
-			glm::mat4 model = object.transformMatrix;
-			//final render matrix, that we are calculating on the cpu
-			glm::mat4 mesh_matrix = model;
+		InstanceBatch newBatch;
+		newBatch.first = 0;
+		newBatch.count = 0;
+		newBatch.material = batch[0].object->material;
+		newBatch.mesh = batch[0].object->mesh;
 
-			MeshPushConstants constants;
-			constants.render_matrix = mesh_matrix;
+		instancedDraws.push_back(newBatch);
+		for (int i = 0; i < count; i++) {
+			RenderObject* obj = batch[i].object;
 
-			//upload the mesh to the gpu via pushconstants
-			vkCmdPushConstants(cmd, object.material->effect->builtLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(MeshPushConstants), &constants);
-
-			//only bind the mesh if its a different one from last bind
-			if (object.mesh != lastMesh) {
-				//bind the mesh vertex buffer with offset 0
-				VkDeviceSize offset = 0;
-				vkCmdBindVertexBuffers(cmd, 0, 1, &object.mesh->_vertexBuffer._buffer, &offset);
-				lastMesh = object.mesh;
-
-				if (object.mesh->_indexBuffer._buffer != VK_NULL_HANDLE) {
-					vkCmdBindIndexBuffer(cmd, object.mesh->_indexBuffer._buffer, 0, VK_INDEX_TYPE_UINT32);
-				}
-
-			}
-			//we can now draw
-
-			bool bHasIndices = object.mesh->_indices.size() > 0;
-			if (!bHasIndices) {
-				vkCmdDraw(cmd, object.mesh->_vertices.size(), 1, 0, batch[i].objectIndex);
+			if (obj->mesh == instancedDraws.back().mesh
+				&& obj->material == instancedDraws.back().material)
+			{
+				instancedDraws.back().count++;
 			}
 			else {
-				vkCmdDrawIndexed(cmd, object.mesh->_indices.size(), 1, 0, 0, batch[i].objectIndex);
+
+				newBatch.first = i;
+				newBatch.count = 1;
+				newBatch.material = obj->material;
+				newBatch.mesh = obj->mesh;
+
+				instancedDraws.push_back(newBatch);
+			}
+		}
+		Material* lastMaterial = nullptr;
+		Mesh* lastMesh = nullptr;
+
+		for (auto& instanceDraw : instancedDraws)
+		{
+			Material* drawMat = instanceDraw.material;
+			Mesh* drawMesh = instanceDraw.mesh;
+
+			if (lastMaterial != drawMat) {
+
+				if (lastMaterial == nullptr || lastMaterial->pipeline != drawMat->pipeline) {
+
+					vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, drawMat->pipeline);
+
+					vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, drawMat->effect->builtLayout, 1, 1, &ObjectDataSet, 0, nullptr);
+
+					//update dynamic binds
+					uint32_t dynamicBinds[] = { camera_data_offsets[0],scene_data_offset };
+					vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, drawMat->effect->builtLayout, 0, 1, &GlobalSet, 2, dynamicBinds);
+				}
+
+				if (lastMaterial == nullptr || drawMat->textureSet != VK_NULL_HANDLE && drawMat->textureSet != lastMaterial->textureSet) {
+					//texture descriptor
+					vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, drawMat->effect->builtLayout, 2, 1, &drawMat->textureSet, 0, nullptr);
+				}
+				lastMaterial = drawMat;
+			}
+
+			if (lastMesh == nullptr || lastMesh != drawMesh) {
+
+				//bind the mesh vertex buffer with offset 0
+				VkDeviceSize offset = 0;
+				vkCmdBindVertexBuffers(cmd, 0, 1, &drawMesh->_vertexBuffer._buffer, &offset);
+
+				if (drawMesh->_indexBuffer._buffer != VK_NULL_HANDLE) {
+					vkCmdBindIndexBuffer(cmd, drawMesh->_indexBuffer._buffer, 0, VK_INDEX_TYPE_UINT32);
+				}
+				lastMesh = drawMesh;
+			}
+
+			bool bHasIndices = drawMesh->_indices.size() > 0;
+			if (!bHasIndices) {
+				vkCmdDraw(cmd, drawMesh->_vertices.size(), instanceDraw.count, 0, instanceDraw.first);
+			}
+			else {
+				vkCmdDrawIndexed(cmd, drawMesh->_indices.size(), instanceDraw.count, 0, 0, instanceDraw.first);
 			}
 		}
 	}
@@ -1222,12 +1286,12 @@ void VulkanEngine::init_scene()
 	samplerInfo.mipLodBias = 2;
 	samplerInfo.maxLod = 30.f;
 	samplerInfo.minLod = 3;
-	VkSampler smoothSampler;	
-	
-	vkCreateSampler(_device, &samplerInfo, nullptr, &smoothSampler);
+	VkSampler smoothSampler;
 
-	for (int x = -10; x <= 10; x++) {
-		for (int y = -10; y <= 10; y++) {
+	vkCreateSampler(_device, &samplerInfo, nullptr, &smoothSampler);
+	int dimHelmets = 5;
+	for (int x = -dimHelmets; x <= dimHelmets; x++) {
+		for (int y = -dimHelmets; y <= dimHelmets; y++) {
 
 			glm::mat4 translation = glm::translate(glm::mat4{ 1.0 }, glm::vec3(x * 5, 0, y * 5));
 			glm::mat4 scale = glm::scale(glm::mat4{ 1.0 }, glm::vec3(10));
@@ -1256,7 +1320,7 @@ void VulkanEngine::init_scene()
 }
 
 
-void VulkanEngine::build_texture_set(VkSampler blockySampler, Material* texturedMat, const char * textureName)
+void VulkanEngine::build_texture_set(VkSampler blockySampler, Material* texturedMat, const char* textureName)
 {
 	VkDescriptorImageInfo imageBufferInfo;
 	imageBufferInfo.sampler = blockySampler;
@@ -1268,7 +1332,7 @@ void VulkanEngine::build_texture_set(VkSampler blockySampler, Material* textured
 		.build(texturedMat->textureSet);
 }
 
-AllocatedBuffer VulkanEngine::create_buffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage ,VkMemoryPropertyFlags required_flags)
+AllocatedBuffer VulkanEngine::create_buffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage, VkMemoryPropertyFlags required_flags)
 {
 	//allocate vertex buffer
 	VkBufferCreateInfo bufferInfo = {};
@@ -1345,7 +1409,7 @@ void VulkanEngine::immediate_submit(std::function<void(VkCommandBuffer cmd)>&& f
 bool VulkanEngine::load_prefab(const char* path, glm::mat4 root)
 {
 	ZoneScopedNC("Load Prefab", tracy::Color::Red);
-	
+
 	auto pf = _prefabCache.find(path);
 	if (pf == _prefabCache.end())
 	{
@@ -1358,7 +1422,7 @@ bool VulkanEngine::load_prefab(const char* path, glm::mat4 root)
 		}
 
 		_prefabCache[path] = new assets::PrefabInfo;
-		
+
 		*_prefabCache[path] = assets::read_prefab_info(&file);
 	}
 
@@ -1366,13 +1430,13 @@ bool VulkanEngine::load_prefab(const char* path, glm::mat4 root)
 
 	VkSamplerCreateInfo samplerInfo = vkinit::sampler_create_info(VK_FILTER_LINEAR);
 
-	
+
 	samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
 	//info.anisotropyEnable = true;
 	//samplerInfo.mipLodBias = 2;
 	samplerInfo.maxLod = 30.f;
 	//samplerInfo.minLod = 3;
-	
+
 	VkSampler smoothSampler;
 	vkCreateSampler(_device, &samplerInfo, nullptr, &smoothSampler);
 
@@ -1388,7 +1452,7 @@ bool VulkanEngine::load_prefab(const char* path, glm::mat4 root)
 			upload_mesh(mesh);
 
 			_meshes[v.mesh_path.c_str()] = mesh;
-		}		
+		}
 
 		//load material
 
@@ -1406,11 +1470,11 @@ bool VulkanEngine::load_prefab(const char* path, glm::mat4 root)
 
 			build_texture_set(smoothSampler, mat, texture.c_str());
 		}
-		
+
 
 		RenderObject loadmesh;
 		loadmesh.mesh = get_mesh(v.mesh_path.c_str());
-		loadmesh.transformMatrix = root;		
+		loadmesh.transformMatrix = root;
 		loadmesh.material = get_material(v.material_path.c_str());
 
 		_renderables.push_back(loadmesh);
@@ -1439,29 +1503,31 @@ void VulkanEngine::init_descriptors()
 
 
 	VkDescriptorSetLayoutBinding textureBind = vkinit::descriptorset_layout_binding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0);
-	
+
 	VkDescriptorSetLayoutCreateInfo set3info = {};
 	set3info.bindingCount = 1;
 	set3info.flags = 0;
 	set3info.pNext = nullptr;
 	set3info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
 	set3info.pBindings = &textureBind;
-	
+
 	_singleTextureSetLayout = _descriptorLayoutCache->create_descriptor_layout(&set3info);
-	
-	
-	const size_t sceneParamBufferSize = FRAME_OVERLAP * pad_uniform_buffer_size(sizeof(GPUSceneData));	
-	
+
+
+	const size_t sceneParamBufferSize = FRAME_OVERLAP * pad_uniform_buffer_size(sizeof(GPUSceneData));
+
 	for (int i = 0; i < FRAME_OVERLAP; i++)
 	{
 		_frames[i].dynamicDescriptorAllocator = new vkutil::DescriptorAllocator{};
 		_frames[i].dynamicDescriptorAllocator->init(_device);
-		
+
 		const int MAX_OBJECTS = 10000;
 		_frames[i].objectBuffer = create_buffer(sizeof(GPUObjectData) * MAX_OBJECTS, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
 
+		_frames[i].instanceBuffer = create_buffer(sizeof(uint32_t) * MAX_OBJECTS, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+
 		//1 megabyte of dynamic data buffer
-		_frames[i].dynamicDataBuffer = create_buffer( 10000000 , VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+		_frames[i].dynamicDataBuffer = create_buffer(10000000, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
 	}
 }
 
@@ -1488,7 +1554,7 @@ void VulkanEngine::init_imgui()
 	pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
 	pool_info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
 	pool_info.maxSets = 1000;
-	pool_info.poolSizeCount = std::size(pool_sizes);
+	pool_info.poolSizeCount = 11;// std::size(pool_sizes);
 	pool_info.pPoolSizes = pool_sizes;
 
 	VkDescriptorPool imguiPool;
@@ -1499,6 +1565,7 @@ void VulkanEngine::init_imgui()
 
 	//this initializes the core structures of imgui
 	ImGui::CreateContext();
+	ImGui::GetIO().IniFilename = NULL;
 
 	//this initializes imgui for SDL
 	ImGui_ImplSDL2_InitForVulkan(_window);

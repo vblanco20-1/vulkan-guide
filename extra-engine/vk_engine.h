@@ -103,7 +103,7 @@ struct FrameData {
 	VkCommandBuffer _mainCommandBuffer;
 
 	AllocatedBuffer objectBuffer;
-
+	AllocatedBuffer instanceBuffer;
 	AllocatedBuffer dynamicDataBuffer;
 	vkutil::DescriptorAllocator* dynamicDescriptorAllocator;
 };

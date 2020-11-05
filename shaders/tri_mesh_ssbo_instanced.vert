@@ -23,9 +23,17 @@ layout(std140,set = 1, binding = 0) readonly buffer ObjectBuffer{
 	ObjectData objects[];
 } objectBuffer;
 
+//all object indices
+layout(set = 1, binding = 1) readonly buffer InstanceBuffer{   
+
+	int IDs[];
+} instanceBuffer;
+
 void main() 
 {	
-	mat4 modelMatrix = objectBuffer.objects[gl_InstanceIndex].model;
+	int index = instanceBuffer.IDs[gl_InstanceIndex];
+	
+	mat4 modelMatrix = objectBuffer.objects[index].model;
 	mat4 transformMatrix = (cameraData.viewproj * modelMatrix);
 	gl_Position = transformMatrix * vec4(vPosition, 1.0f);
 	outColor = vColor;
