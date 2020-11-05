@@ -234,8 +234,8 @@ bool convert_mesh(const fs::path& input, const fs::path& output)
 		return false;
 	}
 
-	using VertexFormat = assets::Vertex_P32N8C8V16;
-	auto VertexFormatEnum = assets::VertexFormat::P32N8C8V16;
+	using VertexFormat = assets::Vertex_f32_PNCV;
+	auto VertexFormatEnum = assets::VertexFormat::PNCV_F32;
 
 	std::vector<VertexFormat> _vertices;
 	std::vector<uint32_t> _indices;
@@ -250,6 +250,7 @@ bool convert_mesh(const fs::path& input, const fs::path& output)
 	meshinfo.indexSize = sizeof(uint32_t);
 	meshinfo.originalFile = input.string();	
 
+	meshinfo.bounds = assets::calculateBounds(_vertices.data(), _vertices.size());
 	//pack mesh file
 	auto start = std::chrono::high_resolution_clock::now();
 
@@ -487,11 +488,11 @@ bool extract_gltf_meshes(tinygltf::Model& model, const fs::path& input, const fs
 			meshinfo.indexSize = sizeof(uint32_t);
 			meshinfo.originalFile = input.string();
 
+			meshinfo.bounds = assets::calculateBounds(_vertices.data(), _vertices.size());
 
 			assets::AssetFile newFile = assets::pack_mesh(&meshinfo, (char*)_vertices.data(), (char*)_indices.data());
 
 			fs::path meshpath = outputFolder / (meshname + ".mesh");
-
 
 			//save to disk
 			save_binaryfile(meshpath.string().c_str(), newFile);

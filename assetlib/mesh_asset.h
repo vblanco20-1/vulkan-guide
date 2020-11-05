@@ -20,6 +20,8 @@ namespace assets {
 		float uv[2];
 	};
 
+
+
 	enum class VertexFormat : uint32_t
 	{
 		Unknown = 0,
@@ -27,10 +29,18 @@ namespace assets {
 		P32N8C8V16 //position at 32 bits, normal at 8 bits, color at 8 bits, uvs at 16 bits float
 	};
 
+	struct MeshBounds {
+		
+		float origin[3];
+		float radius;
+		float extents[3];
+	};
+
 
 	struct MeshInfo {
 		uint64_t vertexBuferSize;
 		uint64_t indexBuferSize;
+		MeshBounds bounds;
 		VertexFormat vertexFormat;
 		char indexSize;
 		CompressionMode compressionMode;
@@ -42,4 +52,6 @@ namespace assets {
 	void unpack_mesh(MeshInfo* info, const char* sourcebuffer, size_t sourceSize, char* vertexBufer, char* indexBuffer);
 
 	AssetFile pack_mesh(MeshInfo* info, char* vertexData, char* indexData);
+
+	MeshBounds calculateBounds(Vertex_f32_PNCV* vertices, size_t count);
 }
