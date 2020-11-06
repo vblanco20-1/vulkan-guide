@@ -97,7 +97,7 @@ void VulkanEngine::init()
 	_isInitialized = true;
 
 	_camera = {};
-	_camera.position = { 0.f,15.f,10.f };
+	_camera.position = { 0.f,6.f,5.f };
 }
 void VulkanEngine::cleanup()
 {
@@ -183,6 +183,9 @@ void VulkanEngine::draw()
 
 	vkCmdBeginRenderPass(cmd, &rpInfo, VK_SUBPASS_CONTENTS_INLINE);
 
+	stats.drawcalls = 0;
+	stats.draws = 0;
+	stats.objects = 0;
 	draw_objects(cmd, _renderables.data(), _renderables.size());
 
 	ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmd);
@@ -901,22 +904,28 @@ void VulkanEngine::load_meshes()
 
 void VulkanEngine::load_images()
 {
-	//load_image_to_cache("empire_diffuse", "../../assets/lost_empire-RGBA.tx");
+	load_image_to_cache("white", asset_path("Sponza/white.tx").c_str());
 }
 
 
-void VulkanEngine::load_image_to_cache(const char* name, const char* path)
+bool VulkanEngine::load_image_to_cache(const char* name, const char* path)
 {
 	ZoneScopedNC("Load Texture", tracy::Color::Yellow);
 	Texture newtex;
 
-	vkutil::load_image_from_asset(*this, path, newtex.image);
+	bool result = vkutil::load_image_from_asset(*this, path, newtex.image);
 
+	if (!result)
+	{
+		std::cout << "Error when loading texture: " << path << endl;
+		return false;
+	}
 	VkImageViewCreateInfo imageinfo = vkinit::imageview_create_info(VK_FORMAT_R8G8B8A8_UNORM, newtex.image._image, VK_IMAGE_ASPECT_COLOR_BIT);
 	imageinfo.subresourceRange.levelCount = newtex.image.mipLevels;
 	vkCreateImageView(_device, &imageinfo, nullptr, &newtex.imageView);
 
 	_loadedTextures[name] = newtex;
+	return true;
 }
 
 void VulkanEngine::upload_mesh(Mesh& mesh)
@@ -1085,12 +1094,8 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderObject* first, int co
 	view = glm::inverse(view);
 
 	//camera projection
-	glm::mat4 projection = glm::perspective(glm::radians(70.f), 1700.f / 900.f, 0.1f, 200.0f);
+	glm::mat4 projection = glm::perspective(glm::radians(70.f), 1700.f / 900.f, 0.1f, 500.0f);
 	projection[1][1] *= -1;
-
-
-
-	
 	
 
 	GPUCameraData camData;
@@ -1101,7 +1106,9 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderObject* first, int co
 	Frustum view_frustrum{ camData.viewproj };
 
 	float framed = (_frameNumber / 120.f);
-	_sceneParameters.ambientColor = { sin(framed),0,cos(framed),1 };
+	_sceneParameters.ambientColor = glm::vec4{ 0.5 };
+	_sceneParameters.sunlightColor = glm::vec4{ 1.f };
+	_sceneParameters.sunlightDirection = glm::vec4{0.5f, -1.f, 0.2f,1.f};
 
 	void* objectData;
 	vmaMapMemory(_allocator, get_current_frame().objectBuffer._allocation, &objectData);
@@ -1313,6 +1320,9 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderObject* first, int co
 
 void VulkanEngine::init_scene()
 {
+
+
+
 	VkSamplerCreateInfo samplerInfo = vkinit::sampler_create_info(VK_FILTER_NEAREST);
 
 	VkSampler blockySampler;
@@ -1328,21 +1338,29 @@ void VulkanEngine::init_scene()
 	VkSampler smoothSampler;
 
 	vkCreateSampler(_device, &samplerInfo, nullptr, &smoothSampler);
-	int dimHelmets = 5;
-	for (int x = -dimHelmets; x <= dimHelmets; x++) {
-		for (int y = -dimHelmets; y <= dimHelmets; y++) {
 
-			glm::mat4 translation = glm::translate(glm::mat4{ 1.0 }, glm::vec3(x * 5, 0, y * 5));
-			glm::mat4 scale = glm::scale(glm::mat4{ 1.0 }, glm::vec3(10));
+	auto whitemat = clone_material("texturedmesh", "default");
 
-			load_prefab(asset_path("FlightHelmet/FlightHelmet.pfb").c_str(), translation * scale);
-		}
-	}
+	build_texture_set(smoothSampler, whitemat, "white");
+
+
+	//int dimHelmets = 5;
+	//for (int x = -dimHelmets; x <= dimHelmets; x++) {
+	//	for (int y = -dimHelmets; y <= dimHelmets; y++) {
+	//
+	//		glm::mat4 translation = glm::translate(glm::mat4{ 1.0 }, glm::vec3(x * 5, 0, y * 5));
+	//		glm::mat4 scale = glm::scale(glm::mat4{ 1.0 }, glm::vec3(10));
+	//
+	//		load_prefab(asset_path("FlightHelmet/FlightHelmet.pfb").c_str(), translation * scale);
+	//	}
+	//}
 
 	glm::mat4 sponzaMatrix = glm::scale(glm::mat4{ 1.0 }, glm::vec3(0.1, 0.1, 0.1));;
 
-	load_prefab(asset_path("Sponza/Sponza.pfb").c_str(), sponzaMatrix);
-
+	//load_prefab(asset_path("Sponza/Sponza.pfb").c_str(), sponzaMatrix);
+	glm::mat4 rotationMat = glm::rotate(glm::radians(-90.f), glm::vec3{ 1,0,0 });
+	glm::mat4 cityMatrix = rotationMat *   glm::scale(glm::mat4{ 1.0 }, glm::vec3(.01));
+	load_prefab(asset_path("PolyCity/PolyCity.pfb").c_str(), cityMatrix);
 	for (int x = -20; x <= 20; x++) {
 		for (int y = -20; y <= 20; y++) {
 
@@ -1479,6 +1497,56 @@ bool VulkanEngine::load_prefab(const char* path, glm::mat4 root)
 	VkSampler smoothSampler;
 	vkCreateSampler(_device, &samplerInfo, nullptr, &smoothSampler);
 
+
+	std::unordered_map<uint64_t, glm::mat4> node_worldmats;
+
+	std::vector<std::pair<uint64_t, glm::mat4>> pending_nodes;
+	for (auto& [k, v] : prefab->node_matrices)
+	{
+		
+		glm::mat4 nodematrix{ 1.f };
+
+		auto nm = prefab->matrices[v];
+		memcpy(&nodematrix, &nm, sizeof(glm::mat4));
+
+		//check if it has parents
+		auto matrixIT = prefab->node_parents.find(k);
+		if (matrixIT == prefab->node_parents.end()) {
+			//add to worldmats 
+			node_worldmats[k] = root * nodematrix;
+		}
+		else {
+			//enqueue
+			pending_nodes.push_back({ k,nodematrix });
+		}
+	}
+
+	//process pending nodes list until it empties
+	while (pending_nodes.size() > 0)
+	{
+		for (int i = 0; i < pending_nodes.size(); i++)
+		{
+			uint64_t node = pending_nodes[i].first;
+			uint64_t parent = prefab->node_parents[node];
+
+			//try to find parent in cache
+			auto matrixIT = node_worldmats.find(parent);
+			if (matrixIT != node_worldmats.end()) {
+
+				//transform with the parent
+				glm::mat4 nodematrix = (matrixIT)->second * pending_nodes[i].second;
+
+				node_worldmats[node] = nodematrix;
+
+				//remove from queue, pop last
+				pending_nodes[i] = pending_nodes.back();
+				pending_nodes.pop_back();
+				i--;
+			}
+		}
+		
+	}
+
 	for (auto& [k, v] : prefab->node_meshes)
 	{
 		//load mesh
@@ -1494,27 +1562,54 @@ bool VulkanEngine::load_prefab(const char* path, glm::mat4 root)
 		}
 
 		//load material
+		Material* mat = get_material("default");
 
 		if (!get_material(v.material_path.c_str()))
 		{
 			assets::AssetFile materialFile;
 			bool loaded = assets::load_binaryfile(asset_path(v.material_path).c_str(), materialFile);
+			
+			if (loaded)
+			{
+				assets::MaterialInfo material = assets::read_material_info(&materialFile);
 
-			assets::MaterialInfo material = assets::read_material_info(&materialFile);
+				auto texture = material.textures["baseColor"];
+				if (texture.size() <= 3)
+				{
+					texture = "Sponza/white.tx";
+				}
 
-			auto texture = material.textures["baseColor"];
-			load_image_to_cache(texture.c_str(), asset_path(texture).c_str());
+				loaded = load_image_to_cache(texture.c_str(), asset_path(texture).c_str());
+				
+				if (loaded)
+				{
+					mat = clone_material("texturedmesh", v.material_path.c_str());
 
-			Material* mat = clone_material("texturedmesh", v.material_path.c_str());
-
-			build_texture_set(smoothSampler, mat, texture.c_str());
+					build_texture_set(smoothSampler, mat, texture.c_str());
+				}
+			}
+			else
+			{
+				std::cout << "Error when loading material: " << v.material_path << std::endl;;
+			}
+		}
+		else {
+			mat = get_material(v.material_path.c_str());
 		}
 
+		glm::mat4 nodematrix{ 1.f };
 
+		auto matrixIT = node_worldmats.find(k);
+		if (matrixIT != node_worldmats.end()) {
+			auto nm = (*matrixIT).second;
+			memcpy(&nodematrix, &nm, sizeof(glm::mat4));
+		}
+
+		
 		RenderObject loadmesh;
 		loadmesh.mesh = get_mesh(v.mesh_path.c_str());
-		loadmesh.transformMatrix = root;
-		loadmesh.material = get_material(v.material_path.c_str());
+		loadmesh.transformMatrix = nodematrix;
+		loadmesh.material = mat;
 
 		refresh_renderbounds(&loadmesh);
 
@@ -1588,6 +1683,7 @@ void VulkanEngine::refresh_renderbounds(RenderObject* object)
 	object->bounds.extents = extents;
 	object->bounds.origin = origin;
 	object->bounds.radius = radius;
+	object->bounds.valid = true;
 }
 
 void VulkanEngine::init_descriptors()

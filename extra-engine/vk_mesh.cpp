@@ -144,7 +144,7 @@ bool Mesh::load_from_meshasset(const char* filename)
 	bool loaded = assets::load_binaryfile(filename, file);
 
 	if (!loaded) {
-		std::cout << "Error when loading mesh ";
+		std::cout << "Error when loading mesh " << filename << std::endl;;
 		return false;
 	}
 

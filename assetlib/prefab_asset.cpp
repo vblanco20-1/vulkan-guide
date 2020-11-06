@@ -12,7 +12,9 @@ assets::PrefabInfo assets::read_prefab_info(AssetFile* file)
 	//info.node_matrices = std::unordered_map<uint64_t,int>(prefab_metadata["node_matrices"]) ;
 	for (auto pair : prefab_metadata["node_matrices"].items())
 	{
-		info.node_matrices[uint64_t(atoi(pair.key().c_str()))] = pair.value();
+		auto value = pair.value();
+		auto k = pair.key();
+		info.node_matrices[value[0]] = value[1];
 	}
 
 	//info.node_names = std::unordered_map<uint64_t, std::string>(prefab_metadata["node_names"]);

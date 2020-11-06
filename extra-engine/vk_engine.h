@@ -298,7 +298,7 @@ private:
 
 	void load_images();
 
-	void load_image_to_cache(const char* name, const char* path);
+	bool load_image_to_cache(const char* name, const char* path);
 
 	void upload_mesh(Mesh& mesh);
 };

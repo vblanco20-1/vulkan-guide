@@ -58,7 +58,7 @@ bool vkutil::load_image_from_asset(VulkanEngine& engine, const char* filename, A
 	bool loaded = assets::load_binaryfile(filename, file);
 
 	if (!loaded) {
-		std::cout << "Error when loading mesh ";
+		std::cout << "Error when loading texture " << filename << std::endl;
 		return false;
 	}
 	
