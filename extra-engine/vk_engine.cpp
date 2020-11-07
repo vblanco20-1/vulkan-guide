@@ -637,10 +637,12 @@ void VulkanEngine::init_commands()
 			vkDestroyCommandPool(_device, _frames[i]._commandPool, nullptr);
 		});
 
-		_frames[i]._profilerContext = TracyVkContext(_chosenGPU, _device, _graphicsQueue, _frames[i]._mainCommandBuffer);
+		
 	}
+	auto tracyContext = TracyVkContext(_chosenGPU, _device, _graphicsQueue, _frames[0]._mainCommandBuffer);
 
-
+	_frames[0]._profilerContext = tracyContext;
+	_frames[1]._profilerContext = tracyContext;
 	VkCommandPoolCreateInfo uploadCommandPoolInfo = vkinit::command_pool_create_info(_graphicsQueueFamily);
 	//create pool for upload context
 	VK_CHECK(vkCreateCommandPool(_device, &uploadCommandPoolInfo, nullptr, &_uploadContext._commandPool));
