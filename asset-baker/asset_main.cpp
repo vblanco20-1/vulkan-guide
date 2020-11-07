@@ -849,8 +849,8 @@ void extract_assimp_meshes(const aiScene* scene, const fs::path& input, const fs
 					 _vertices[v2].position[2]
 				};
 
-				glm::vec3 normal = glm::cross(p2 - p0, p1 - p0);
-
+				glm::vec3 normal =  glm::normalize(glm::cross(p2 - p0, p1 - p0));
+				
 				memcpy(_vertices[v0].normal, &normal, sizeof(float) * 3);
 				memcpy(_vertices[v1].normal, &normal, sizeof(float) * 3);
 				memcpy(_vertices[v2].normal, &normal, sizeof(float) * 3);

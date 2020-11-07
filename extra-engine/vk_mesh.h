@@ -17,8 +17,8 @@ struct Vertex {
 
 	glm::vec3 position;
 	//glm::vec3 normal;
-	glm::vec<2, char> oct_normal;//color;
-	glm::vec<3, char> color;
+	glm::vec<2, uint8_t> oct_normal;//color;
+	glm::vec<3, uint8_t> color;
 	glm::vec2 uv;
 	static VertexInputDescription get_vertex_description();
 

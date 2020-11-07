@@ -194,8 +194,10 @@ void VulkanEngine::draw()
 	}
 
 	
-
-	ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmd);
+	{
+		TracyVkZone(_graphicsQueueContext, get_current_frame()._mainCommandBuffer, "Imgui Draw");
+		ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmd);
+	}
 
 	//finalize the render pass
 	vkCmdEndRenderPass(cmd);
@@ -1459,6 +1461,7 @@ size_t VulkanEngine::pad_uniform_buffer_size(size_t originalSize)
 
 void VulkanEngine::immediate_submit(std::function<void(VkCommandBuffer cmd)>&& function)
 {
+	
 	ZoneScopedNC("Inmediate Submit", tracy::Color::White);
 
 	VkCommandBuffer cmd;
@@ -1473,9 +1476,8 @@ void VulkanEngine::immediate_submit(std::function<void(VkCommandBuffer cmd)>&& f
 
 	VK_CHECK(vkBeginCommandBuffer(cmd, &cmdBeginInfo));
 
-
 	function(cmd);
-
+	
 
 	VK_CHECK(vkEndCommandBuffer(cmd));
 
@@ -1495,6 +1497,7 @@ void VulkanEngine::immediate_submit(std::function<void(VkCommandBuffer cmd)>&& f
 
 bool VulkanEngine::load_prefab(const char* path, glm::mat4 root)
 {
+	
 	ZoneScopedNC("Load Prefab", tracy::Color::Red);
 
 	auto pf = _prefabCache.find(path);

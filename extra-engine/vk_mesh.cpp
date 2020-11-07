@@ -98,8 +98,8 @@ void Vertex::pack_normal(glm::vec3 n)
 {
 	vec2 oct = OctNormalEncode(n);
 
-	oct_normal.x = (oct.x * 255);
-	oct_normal.y = (oct.y * 255);
+	oct_normal.x = uint8_t(oct.x * 255);
+	oct_normal.y = uint8_t(oct.y * 255);
 }
 
 void Vertex::pack_color(glm::vec3 c)
@@ -255,8 +255,8 @@ bool Mesh::load_from_meshasset(const char* filename)
 			//_vertices[i].normal.x = unpackedVertices[i].normal[0];
 			//_vertices[i].normal.y = unpackedVertices[i].normal[1];
 			//_vertices[i].normal.z = unpackedVertices[i].normal[2];
-
-			_vertices[i].pack_normal(vec3{ unpackedVertices[i].normal[0],unpackedVertices[i].normal[1],unpackedVertices[i].normal[2] });
+			vec3 normal = vec3( unpackedVertices[i].normal[0],unpackedVertices[i].normal[1],unpackedVertices[i].normal[2] );
+			_vertices[i].pack_normal(normal);
 
 			_vertices[i].pack_color(vec3{ unpackedVertices[i].color[0] ,unpackedVertices[i].color[1] ,unpackedVertices[i].color[2] });
 			//_vertices[i].color.x = unpackedVertices[i].color[0];

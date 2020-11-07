@@ -29,7 +29,7 @@ vec3 OctNormalDecode(vec2 f)
 	
 	n.x += n.x >= 0.0f ? -t : t;
     n.y += n.y >= 0.0f ? -t : t;
-	;
+
     return normalize( n );
 }
 
@@ -54,7 +54,7 @@ void main()
 	mat4 modelMatrix = objectBuffer.objects[index].model;
 	mat4 transformMatrix = (cameraData.viewproj * modelMatrix);
 	gl_Position = transformMatrix * vec4(vPosition, 1.0f);
-	outNormal = (modelMatrix * vec4(vNormal,0.f)).xyz;
+	outNormal = normalize((modelMatrix * vec4(vNormal,0.f)).xyz);
 	outColor = vColor;
 	texCoord = vTexCoord;
 }
