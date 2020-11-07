@@ -1,0 +1,236 @@
+#version 450
+
+
+layout (local_size_x = 256) in;
+
+layout(set = 0, binding = 0) uniform  CameraBuffer{   
+    mat4 view;
+    mat4 proj;
+	mat4 viewproj;
+} cameraData;
+
+layout(set = 0, binding = 1) uniform  CullingDataBuffer{   
+    mat4 view;
+    mat4 proj;
+	mat4 viewproj;
+} cullData;
+
+struct Bounds{
+	vec4 sphereBounds;
+}; 
+
+layout(set = 0, binding = 2) buffer  CullBoundsBuffer{   
+    Bounds  objBounds[];
+} cullBounds;
+
+
+struct ObjectData{
+	mat4 model;
+}; 
+//all object matrices
+layout(std140,set = 1, binding = 0) readonly buffer ObjectBuffer{   
+
+	ObjectData objects[];
+} objectBuffer;
+
+struct DrawCommand
+{
+	
+	uint    indexCount;
+    uint    instanceCount;
+    uint    firstIndex;
+    int     vertexOffset;
+    uint    firstInstance;
+int objectID;
+};
+//draw indirect buffer
+layout(set = 1, binding = 1)  buffer InstanceBuffer{   
+
+	DrawCommand Draws[];
+} instanceBuffer;
+
+
+vec4 sphere_screen_extents(vec3 pos_, float rad_, mat4 v2p_)
+{
+  // calculate horizontal extents
+  vec4 res;
+  float rad2=rad_*rad_, d=pos_.z*rad_;
+  float hv=sqrt(pos_.x*pos_.x+pos_.z*pos_.z-rad2);
+  float ha=pos_.x*hv, hb=pos_.x*rad_, hc=pos_.z*hv;
+  res.x=(ha-d)*v2p_[0].x/(hc+hb); // left
+  res.z=(ha+d)*v2p_[0].x/(hc-hb); // right
+
+  // calculate vertical extents
+  float vv=sqrt(pos_.y*pos_.y+pos_.z*pos_.z-rad2);
+  float va=pos_.y*vv, vb=pos_.y*rad_, vc=pos_.z*vv;
+  res.y=(va-d)*v2p_[1].y/(vc+vb); // bottom
+  res.w=(va+d)*v2p_[1].y/(vc-vb); // top
+  return res;
+}
+
+/*
+bool GetProjectedBounds(vec3 center, float radius, mat4 Transform ,inout vec3 boxMin, inout vec3 boxMax)
+{
+ 
+
+
+    float d2 = dot(center,center);
+
+    float a = sqrt(d2 - radius * radius);
+
+    /// view-aligned "right" vector (right angle to the view plane from the center of the sphere. Since  "up" is always (0,n,0), replaced cross product with vec3(-c.z, 0, c.x)
+    vec3 right = (radius / a) * vec3(-center.z, 0, center.x);
+    vec3 up = vec3(0,radius,0);
+
+    vec4 projectedRight  = Transform * vec4(right,0);
+    vec4 projectedUp     = Transform * vec4(up,0);
+
+    vec4 projectedCenter = Transform * vec4(center,1);
+
+    vec4 north  = projectedCenter + projectedUp;
+    vec4 east   = projectedCenter + projectedRight;
+    vec4 south  = projectedCenter - projectedUp;
+    vec4 west   = projectedCenter - projectedRight;
+
+    north /= north.w ;
+    east  /= east.w  ;
+    west  /= west.w  ;
+    south /= south.w ;
+
+	boxMin = min(min(min(east,west),north),south).xyz;
+    boxMax = max(max(max(east,west),north),south).xyz;
+
+
+    return true;
+}
+*/
+
+bool IsVisible(in Bounds b, in mat4 TotalTransform)
+{
+	//vec4 transformed_pos = Transform * vec4(b.sphereBounds.xyz, 1.0f);
+	//transformed_pos /= transformed_pos.w;
+	//if(transformed_pos.z < 0 || transformed_pos.z > 1) return false;
+
+
+	int index = instanceBuffer.Draws[gl_GlobalInvocationID.x].objectID;
+
+	mat4 modelView = (objectBuffer.objects[index].model);
+
+	mat4 modelViewProj = (cameraData.viewproj * objectBuffer.objects[index].model);
+
+	vec3 viewspace_origin = (modelView * vec4(b.sphereBounds.xyz, 1.0f)).xyz;
+
+
+	const vec3 axis[3] = vec3[3](
+		vec3(1.f,0.f, 0.0f),
+		vec3(0.f,1.f, 0.0f),
+		vec3(0.f,0.f, 1.0f)
+	);
+
+	//corners of unit cube
+	const vec3 corners[8] = vec3[8](
+		vec3(1.f,-1.f, 1.0f),
+		vec3(-1.f,1.f, 1.0f),
+		vec3(1.f,1.f,  1.0f),
+		vec3(-1.f,-1.f, 1.0f),
+
+		vec3(1.f,-1.f, -1.0f),
+		vec3(-1.f,1.f, -1.0f),
+		vec3(1.f, 1.f,  -1.0f),
+		vec3(-1.f,-1.f, -1.0f)
+	);
+
+	vec3 pmin = vec3(999);
+	vec3 pmax = vec3(-999);
+
+	//calculate each corner, project to screenspace, set min/max
+	for(int i = 0; i < 8 ;i++){
+		//world-space
+		vec3 point = (corners[i] * b.sphereBounds.w) + b.sphereBounds.xyz;
+		//clip space
+		vec4 ptransf = (cameraData.proj* cameraData.view * vec4(point, 1.0f));
+
+		vec3 div = (ptransf/ptransf.w).xyz;
+
+		
+		pmin.x = min(div.x,pmin.x);
+		pmin.y = min(div.y,pmin.y);
+		pmin.z = min(div.z,pmin.z);
+		
+		pmax.x = max(div.x,pmax.x);
+		pmax.y = max(div.y,pmax.y);
+		pmax.z = max(div.z,pmax.z);
+		
+	}
+
+	float left = pmin.x;
+	float bottom = pmin.y;
+	float right = pmax.x;
+	float up = pmax.y;
+
+
+	vec2 ssize = vec2(right-left,up-bottom);
+	if(length(ssize) < 0.01) return false;
+	if(pmin.z > 1) return false;
+
+	if(up < -1 || bottom > 1)
+	{
+		return false;
+	}
+	else if (right< -1 || left > 1)
+	{
+		return false;
+	}
+
+	
+
+	//convert sphere to aabb
+
+	/*
+
+	//vec4 extents = sphere_screen_extents(viewspace_origin,b.sphereBounds.w,cameraData.proj * cameraData.view);
+	vec4 extents = sphere_screen_extents(b.sphereBounds.xyz,b.sphereBounds.w,TotalTransform);
+	
+	float left = extents.x;
+	float bottom = extents.y;
+	float right = extents.z;
+	float up = extents.w;
+
+	if(up < -1 || bottom > 1)
+	{
+		return false;
+	}
+	else if (right< -1 || left > 1)
+	{
+		return false;
+	}*/
+/*
+	vec3 bmin,bmax;	
+	GetProjectedBounds(b.sphereBounds.xyz,b.sphereBounds.w,Transform,bmin,bmax);
+	//vec4 projectedPos =Transform * vec4(b.sphereBounds.xyz, 1.0f);
+
+	if(bmax.x < -1 || bmin.x > 1)
+	{
+		return false;
+	}
+	else if (bmax.y < -1 || bmin.y > 1)
+	{
+		return false;
+	}
+*/
+	return true;
+}
+
+void main() 
+{	
+
+	int index = instanceBuffer.Draws[gl_GlobalInvocationID.x].objectID;
+
+	mat4 objectMatrix = (cameraData.viewproj * objectBuffer.objects[index].model);
+
+	bool visible = IsVisible(cullBounds.objBounds[index], objectMatrix);
+	if(!visible)
+	{
+		 instanceBuffer.Draws[gl_GlobalInvocationID.x].indexCount = 0;
+	}
+}

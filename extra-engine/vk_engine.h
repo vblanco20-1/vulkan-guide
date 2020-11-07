@@ -45,6 +45,14 @@ public:
 	VkPipeline build_pipeline(VkDevice device, VkRenderPass pass);
 };
 
+class ComputePipelineBuilder {
+public:
+
+	VkPipelineShaderStageCreateInfo  _shaderStage;
+	VkPipelineLayout _pipelineLayout;
+	VkPipeline build_pipeline(VkDevice device);
+};
+
 
 
 struct DeletionQueue
@@ -111,10 +119,18 @@ struct FrameData {
 
 	AllocatedBuffer objectBuffer;
 	AllocatedBuffer instanceBuffer;
+	AllocatedBuffer indirectBuffer;
 	AllocatedBuffer dynamicDataBuffer;
+
+	AllocatedBuffer cullBuffer;
+
 	vkutil::DescriptorAllocator* dynamicDescriptorAllocator;
 };
 
+struct IndirectObject {
+	VkDrawIndexedIndirectCommand command;
+	uint32_t objectID;	
+};
 struct UploadContext {
 	VkFence _uploadFence;
 	VkCommandPool _commandPool;	
@@ -161,6 +177,16 @@ struct EngineStats {
 	int triangles;
 };
 
+
+struct MeshDrawCommands {
+	struct RenderBatch {
+		RenderObject* object;
+		uint64_t sortKey;
+		uint64_t objectIndex;
+	};
+
+	std::vector<RenderBatch> batch;
+};
 
 constexpr unsigned int FRAME_OVERLAP = 2;
 
@@ -221,6 +247,15 @@ public:
 
 	PlayerCamera _camera;
 
+	VkPipeline _cullPipeline;
+	VkPipelineLayout _cullLayout;
+
+	MeshDrawCommands currentCommands;
+
+
+
+
+	void ready_mesh_draw(RenderObject* first, int count);
 	//initializes everything in the engine
 	void init();
 
@@ -259,6 +294,8 @@ public:
 
 	//our draw function
 	void draw_objects(VkCommandBuffer cmd, RenderObject* first, int count);
+
+	void execute_compute_cull( VkCommandBuffer cmd, int count);
 
 	AllocatedBuffer create_buffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage, VkMemoryPropertyFlags required_flags = 0);
 

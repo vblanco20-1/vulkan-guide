@@ -28,7 +28,7 @@
 #include "Tracy.hpp"
 #include "TracyVulkan.hpp"
 
-constexpr bool bUseValidationLayers = false;
+constexpr bool bUseValidationLayers = true;
 
 //we want to immediately abort when there is an error. In normal engines this would give an error message to the user, or perform a dump of state.
 using namespace std;
@@ -42,6 +42,8 @@ using namespace std;
 			abort();                                                \
 		}                                                           \
 	} while (0)
+
+
 
 
 void VulkanEngine::init()
@@ -180,6 +182,10 @@ void VulkanEngine::draw()
 	VkClearValue clearValues[] = { clearValue, depthClear };
 
 	rpInfo.pClearValues = &clearValues[0];
+
+	ready_mesh_draw(_renderables.data(), _renderables.size());
+
+	execute_compute_cull(cmd, _renderables.size());
 
 	vkCmdBeginRenderPass(cmd, &rpInfo, VK_SUBPASS_CONTENTS_INLINE);
 
@@ -424,6 +430,13 @@ void VulkanEngine::init_vulkan()
 	//use vkbootstrap to select a gpu. 
 	//We want a gpu that can write to the SDL surface and supports vulkan 1.2
 	vkb::PhysicalDeviceSelector selector{ vkb_inst };
+	VkPhysicalDeviceFeatures feats{};
+
+	feats.multiDrawIndirect = true;
+	feats.drawIndirectFirstInstance = true;
+	feats.samplerAnisotropy = true;
+	selector.set_required_features(feats);
+
 	vkb::PhysicalDevice physicalDevice = selector
 		.set_minimum_version(1, 1)
 		.set_surface(_surface)
@@ -433,6 +446,9 @@ void VulkanEngine::init_vulkan()
 	//create the final vulkan device
 
 	vkb::DeviceBuilder deviceBuilder{ physicalDevice };
+
+
+	
 
 	vkb::Device vkbDevice = deviceBuilder.build().value();
 	std::cout << "builder" << std::endl;
@@ -453,7 +469,7 @@ void VulkanEngine::init_vulkan()
 	vmaCreateAllocator(&allocatorInfo, &_allocator);
 
 
-
+	
 	vkGetPhysicalDeviceProperties(_chosenGPU, &_gpuProperties);
 
 	std::cout << "The gpu has a minimum buffer alignement of " << _gpuProperties.limits.minUniformBufferOffsetAlignment << std::endl;
@@ -824,6 +840,25 @@ void VulkanEngine::init_pipelines()
 	VkPipeline texPipeline = pipelineBuilder.build_pipeline(_device, _renderPass);
 	create_material(texPipeline, texturedEffect, "texturedmesh");
 
+	ShaderModule cullModule;
+
+	if (!vkutil::load_shader_module(_device, "../../shaders/indirect_cull.comp.spv", &cullModule))
+
+	{
+		std::cout << "Error when building the cull compute shader shader module" << std::endl;
+	}
+
+	ShaderEffect* cullEffect = new ShaderEffect();;
+	cullEffect->add_stage(&cullModule, VK_SHADER_STAGE_COMPUTE_BIT);
+
+	cullEffect->reflect_layout(this, nullptr, 0);
+
+	ComputePipelineBuilder computeBuilder;
+	computeBuilder._pipelineLayout = cullEffect->builtLayout;
+	computeBuilder._shaderStage = vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_COMPUTE_BIT, cullModule.module);
+
+	_cullLayout = cullEffect->builtLayout;
+	_cullPipeline = computeBuilder.build_pipeline(_device);
 
 	vkDestroyShaderModule(_device, meshVertShader, nullptr);
 	vkDestroyShaderModule(_device, colorMeshShader, nullptr);
@@ -835,7 +870,27 @@ void VulkanEngine::init_pipelines()
 		});
 }
 
+VkPipeline ComputePipelineBuilder::build_pipeline(VkDevice device)
+{
+	VkComputePipelineCreateInfo pipelineInfo{};
+	pipelineInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+	pipelineInfo.pNext = nullptr;
 
+	pipelineInfo.stage = _shaderStage;
+	pipelineInfo.layout = _pipelineLayout;
+
+
+	VkPipeline newPipeline;
+	if (vkCreateComputePipelines(
+		device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &newPipeline) != VK_SUCCESS) {
+		std::cout << "failed to create pipline\n";
+		return VK_NULL_HANDLE; // failed to create graphics pipeline
+	}
+	else
+	{
+		return newPipeline;
+	}
+}
 VkPipeline PipelineBuilder::build_pipeline(VkDevice device, VkRenderPass pass)
 {
 	//make viewport state from our stored viewport and scissor.
@@ -1090,11 +1145,8 @@ Mesh* VulkanEngine::get_mesh(const std::string& name)
 		return &(*it).second;
 	}
 }
-
-
-void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderObject* first, int count)
+void VulkanEngine::ready_mesh_draw(RenderObject* first, int count)
 {
-	ZoneScopedNC("DrawObjects", tracy::Color::Blue);
 	//make a model view matrix for rendering the object
 	//camera view
 	glm::vec3 camPos = _camera.position;
@@ -1109,7 +1161,7 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderObject* first, int co
 	//camera projection
 	glm::mat4 projection = glm::perspective(glm::radians(70.f), 1700.f / 900.f, 0.1f, 500.0f);
 	projection[1][1] *= -1;
-	
+
 
 	GPUCameraData camData;
 	camData.proj = projection;
@@ -1121,20 +1173,26 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderObject* first, int co
 	float framed = (_frameNumber / 120.f);
 	_sceneParameters.ambientColor = glm::vec4{ 0.5 };
 	_sceneParameters.sunlightColor = glm::vec4{ 1.f };
-	_sceneParameters.sunlightDirection = glm::vec4{0.5f, -1.f, 0.2f,1.f};
+	_sceneParameters.sunlightDirection = glm::vec4{ 0.5f, -1.f, 0.2f,1.f };
 
 	void* objectData;
 	vmaMapMemory(_allocator, get_current_frame().objectBuffer._allocation, &objectData);
 
-	GPUObjectData* objectSSBO = (GPUObjectData*)objectData;
+	void* cullData;
+	vmaMapMemory(_allocator, get_current_frame().cullBuffer._allocation, &cullData);
 
+	GPUObjectData* objectSSBO = (GPUObjectData*)objectData;
+	glm::vec4* cullData_v = (glm::vec4*)cullData;
 	for (int i = 0; i < count; i++)
 	{
 		RenderObject& object = first[i];
 		objectSSBO[i].modelMatrix = object.transformMatrix;
+		cullData_v[i] = glm::vec4{ object.bounds.origin, glm::length(object.bounds.extents)/*object.bounds.radius*/ };
+
 	}
 
 	vmaUnmapMemory(_allocator, get_current_frame().objectBuffer._allocation);
+	vmaUnmapMemory(_allocator, get_current_frame().cullBuffer._allocation);
 
 	//push data to dynmem
 	uint32_t camera_data_offsets[3];
@@ -1180,6 +1238,156 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderObject* first, int co
 	instanceInfo.offset = 0;
 	instanceInfo.range = sizeof(uint32_t) * 10000;
 
+	VkDescriptorBufferInfo cullBoundsInfo;
+	cullBoundsInfo.buffer = get_current_frame().cullBuffer._buffer;
+	cullBoundsInfo.offset = 0;
+	cullBoundsInfo.range = sizeof(glm::vec4) * 10000;
+
+	VkDescriptorBufferInfo indirectInfo;
+	indirectInfo.buffer = get_current_frame().indirectBuffer._buffer;
+	indirectInfo.offset = 0;
+	indirectInfo.range = sizeof(IndirectObject) * 10000;
+
+	
+	currentCommands.batch.clear();
+	currentCommands.batch.reserve(count);
+
+	{
+		ZoneScopedNC("Draw Gather", tracy::Color::Blue3);
+
+		for (int i = 0; i < count; i++) {
+			RenderObject* object = &first[i];
+
+			glm::vec3 boundmin = object->bounds.origin - object->bounds.extents;
+			glm::vec3 boundmax = object->bounds.origin + object->bounds.extents;
+			//if (!object->bounds.valid || view_frustrum.IsBoxVisible(boundmin, boundmax))
+			{
+				MeshDrawCommands::RenderBatch newBatch;
+
+				newBatch.object = object;
+				newBatch.objectIndex = i;
+				uint64_t material_hash = std::hash<void*>()(object->material) & UINT32_MAX;
+				uint64_t mesh_hash = std::hash<void*>()(object->mesh) & UINT32_MAX;
+
+				newBatch.sortKey = material_hash << 32 | mesh_hash;
+
+				currentCommands.batch.push_back(newBatch);
+			}
+		}
+	}
+	if (currentCommands.batch.size() == 0)
+		return;
+	{
+		ZoneScopedNC("Draw Sort", tracy::Color::Blue1);
+		std::sort(currentCommands.batch.begin(), currentCommands.batch.end(), [](const MeshDrawCommands::RenderBatch& A, const MeshDrawCommands::RenderBatch& B) {
+			return A.sortKey < B.sortKey;
+			});
+	}
+
+}
+
+void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderObject* first, int count)
+{
+	ZoneScopedNC("DrawObjects", tracy::Color::Blue);
+	//make a model view matrix for rendering the object
+	//camera view
+	glm::vec3 camPos = _camera.position;
+
+	glm::mat4 cam_rot = _camera.get_rotation_matrix();
+
+	glm::mat4 view = glm::translate(glm::mat4{ 1 }, camPos) * cam_rot;
+
+	//we need to invert the camera matrix
+	view = glm::inverse(view);
+
+	//camera projection
+	glm::mat4 projection = glm::perspective(glm::radians(70.f), 1700.f / 900.f, 0.1f, 500.0f);
+	projection[1][1] *= -1;
+	
+
+	GPUCameraData camData;
+	camData.proj = projection;
+	camData.view = view;
+	camData.viewproj = projection * view;
+
+	Frustum view_frustrum{ camData.viewproj };
+
+	float framed = (_frameNumber / 120.f);
+	_sceneParameters.ambientColor = glm::vec4{ 0.5 };
+	_sceneParameters.sunlightColor = glm::vec4{ 1.f };
+	_sceneParameters.sunlightDirection = glm::vec4{0.5f, -1.f, 0.2f,1.f};
+
+	//void* objectData;
+	//vmaMapMemory(_allocator, get_current_frame().objectBuffer._allocation, &objectData);
+	//
+	//void* cullData;
+	//vmaMapMemory(_allocator, get_current_frame().cullBuffer._allocation, &cullData);
+	//
+	//GPUObjectData* objectSSBO = (GPUObjectData*)objectData;
+	//glm::vec4 *cullData_v = (glm::vec4*)cullData;
+	//for (int i = 0; i < count; i++)
+	//{
+	//	RenderObject& object = first[i];
+	//	objectSSBO[i].modelMatrix = object.transformMatrix;
+	//	cullData_v[i] = glm::vec4{ object.bounds.origin,object.bounds.radius };
+	//
+	//}
+	//
+	//vmaUnmapMemory(_allocator, get_current_frame().objectBuffer._allocation);
+	//vmaUnmapMemory(_allocator, get_current_frame().cullBuffer._allocation);
+
+	//push data to dynmem
+	uint32_t camera_data_offsets[3];
+	uint32_t scene_data_offset;
+
+	uint32_t dyn_offset = 0;
+
+	char* dynData;
+	vmaMapMemory(_allocator, get_current_frame().dynamicDataBuffer._allocation, (void**)&dynData);
+	
+	
+	camera_data_offsets[0] = dyn_offset;
+	memcpy(dynData, &camData, sizeof(GPUCameraData));
+	dyn_offset += sizeof(GPUCameraData);
+	dyn_offset = pad_uniform_buffer_size(dyn_offset);
+	
+	dynData += dyn_offset;	
+	
+	scene_data_offset = dyn_offset;
+	memcpy(dynData, &_sceneParameters, sizeof(GPUSceneData));
+	
+	vmaUnmapMemory(_allocator, get_current_frame().dynamicDataBuffer._allocation);
+
+	Mesh* lastMesh = nullptr;
+	Material* lastMaterial = nullptr;
+	VkPipeline lastPipeline = VK_NULL_HANDLE;
+	ShaderDescriptorBinder binder{};
+
+	VkDescriptorBufferInfo objectBufferInfo;
+	objectBufferInfo.buffer = get_current_frame().objectBuffer._buffer;
+	objectBufferInfo.offset = 0;
+	objectBufferInfo.range = sizeof(GPUObjectData) * 10000;
+
+	VkDescriptorBufferInfo dynamicInfo;
+	dynamicInfo.buffer = get_current_frame().dynamicDataBuffer._buffer;;
+	dynamicInfo.offset = 0;
+	dynamicInfo.range = 100;
+
+	VkDescriptorBufferInfo instanceInfo;
+	instanceInfo.buffer = get_current_frame().instanceBuffer._buffer;
+	instanceInfo.offset = 0;
+	instanceInfo.range = sizeof(uint32_t) * 10000;
+
+	VkDescriptorBufferInfo cullBoundsInfo;
+	cullBoundsInfo.buffer = get_current_frame().cullBuffer._buffer;
+	cullBoundsInfo.offset = 0;
+	cullBoundsInfo.range = sizeof(glm::vec4) * 10000;
+
+	VkDescriptorBufferInfo indirectInfo;
+	indirectInfo.buffer = get_current_frame().indirectBuffer._buffer;
+	indirectInfo.offset = 0;
+	indirectInfo.range = sizeof(IndirectObject) * 10000;
+
 	VkDescriptorSet GlobalSet;
 	vkutil::DescriptorBuilder::begin(_descriptorLayoutCache, get_current_frame().dynamicDescriptorAllocator)
 		.bind_buffer(0, &dynamicInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_VERTEX_BIT)
@@ -1195,48 +1403,50 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderObject* first, int co
 	{
 		ZoneScopedNC("Draw Loop", tracy::Color::Blue2);
 
-		struct RenderBatch {
-			RenderObject* object;
-			uint64_t sortKey;
-			uint64_t objectIndex;
-		};
+		const std::vector<MeshDrawCommands::RenderBatch> &batch = currentCommands.batch;
+		//struct RenderBatch {
+		//	RenderObject* object;
+		//	uint64_t sortKey;
+		//	uint64_t objectIndex;
+		//};
 
-		static std::vector<RenderBatch> batch;
-		batch.clear();
-		batch.reserve(count);
+		//static std::vector<RenderBatch> batch;
+		//batch.clear();
+		//batch.reserve(count);
+		//
+		//{
+		//	ZoneScopedNC("Draw Gather", tracy::Color::Blue3);
+		//
+		//	for (int i = 0; i < count; i++) {
+		//		RenderObject* object = &first[i];
+		//
+		//		glm::vec3 boundmin = object->bounds.origin - object->bounds.extents;
+		//		glm::vec3 boundmax = object->bounds.origin + object->bounds.extents;
+		//		//if (!object->bounds.valid || view_frustrum.IsBoxVisible(boundmin, boundmax))
+		//		{
+		//			RenderBatch newBatch;
+		//
+		//			newBatch.object = object;
+		//			newBatch.objectIndex = i;
+		//			uint64_t material_hash = std::hash<void*>()(object->material) & UINT32_MAX;
+		//			uint64_t mesh_hash = std::hash<void*>()(object->mesh) & UINT32_MAX;
+		//
+		//			newBatch.sortKey = material_hash << 32 | mesh_hash;
+		//
+		//			batch.push_back(newBatch);
+		//		}
+		//	}
+		//}
+		//if (batch.size() == 0) 
+		//	return;
+		//{
+		//	ZoneScopedNC("Draw Sort", tracy::Color::Blue1);
+		//	std::sort(batch.begin(), batch.end(), [](const RenderBatch& A, const RenderBatch& B) {
+		//		return A.sortKey < B.sortKey;
+		//	});
+		//}
 
-		{
-			ZoneScopedNC("Draw Gather", tracy::Color::Blue3);
-
-			for (int i = 0; i < count; i++) {
-				RenderObject* object = &first[i];
-
-				glm::vec3 boundmin = object->bounds.origin - object->bounds.extents;
-				glm::vec3 boundmax = object->bounds.origin + object->bounds.extents;
-				if (!object->bounds.valid || view_frustrum.IsBoxVisible(boundmin, boundmax))
-				{
-					RenderBatch newBatch;
-
-					newBatch.object = object;
-					newBatch.objectIndex = i;
-					uint64_t material_hash = std::hash<void*>()(object->material) & UINT32_MAX;
-					uint64_t mesh_hash = std::hash<void*>()(object->mesh) & UINT32_MAX;
-
-					newBatch.sortKey = material_hash << 32 | mesh_hash;
-
-					batch.push_back(newBatch);
-				}
-			}
-		}
-		if (batch.size() == 0) 
-			return;
-		{
-			ZoneScopedNC("Draw Sort", tracy::Color::Blue1);
-			std::sort(batch.begin(), batch.end(), [](const RenderBatch& A, const RenderBatch& B) {
-				return A.sortKey < B.sortKey;
-				});
-		}
-
+		
 		
 
 
@@ -1265,11 +1475,23 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderObject* first, int co
 
 			void* instanceData;
 			vmaMapMemory(_allocator, get_current_frame().instanceBuffer._allocation, &instanceData);
+			void* indirectData;
+			vmaMapMemory(_allocator, get_current_frame().indirectBuffer._allocation, &indirectData);
+
+			IndirectObject* indirect = (IndirectObject*)indirectData;
 
 			for (int i = 0; i < batch.size(); i++) {
 				RenderObject* obj = batch[i].object;
 
 				((uint32_t*)instanceData)[i] = batch[i].objectIndex;
+
+				indirect[i].command.firstInstance = i;
+				indirect[i].command.instanceCount = 1;
+				indirect[i].command.firstIndex = 0;
+				indirect[i].command.vertexOffset = 0;
+				indirect[i].command.indexCount = obj->mesh->_indices.size();
+				indirect[i].objectID = batch[i].objectIndex;
+				
 
 				if (obj->mesh == instancedDraws.back().mesh
 					&& obj->material == instancedDraws.back().material)
@@ -1287,8 +1509,10 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderObject* first, int co
 				}
 			}
 
+			vmaUnmapMemory(_allocator, get_current_frame().indirectBuffer._allocation);
 			vmaUnmapMemory(_allocator, get_current_frame().instanceBuffer._allocation);
 		}
+
 		{
 			ZoneScopedNC("Draw Commit", tracy::Color::Blue4);
 			Material* lastMaterial = nullptr;
@@ -1343,11 +1567,84 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderObject* first, int co
 				}
 				else {
 					stats.triangles += (drawMesh->_indices.size() / 3) * instanceDraw.count;
-					vkCmdDrawIndexed(cmd, drawMesh->_indices.size(), instanceDraw.count, 0, 0, instanceDraw.first);
+					//vkCmdDrawIndexed(cmd, drawMesh->_indices.size(), instanceDraw.count, 0, 0, instanceDraw.first);
+					//for (int inst = instanceDraw.first; inst < instanceDraw.count; inst++) {
+					//	vkCmdDrawIndexedIndirect(cmd, get_current_frame().indirectBuffer._buffer, inst * sizeof(IndirectObject),1, 0);
+					//
+					//}
+
+					vkCmdDrawIndexedIndirect(cmd, get_current_frame().indirectBuffer._buffer, instanceDraw.first * sizeof(IndirectObject), instanceDraw.count, sizeof(IndirectObject));
+
 				}
 			}
 		}
 	}
+}
+
+
+void VulkanEngine::execute_compute_cull(VkCommandBuffer cmd, int count)
+{
+	VkDescriptorBufferInfo objectBufferInfo;
+	objectBufferInfo.buffer = get_current_frame().objectBuffer._buffer;
+	objectBufferInfo.offset = 0;
+	objectBufferInfo.range = sizeof(GPUObjectData) * 10000;
+
+	VkDescriptorBufferInfo dynamicInfo;
+	dynamicInfo.buffer = get_current_frame().dynamicDataBuffer._buffer;;
+	dynamicInfo.offset = 0;
+	dynamicInfo.range = 100;
+
+	VkDescriptorBufferInfo instanceInfo;
+	instanceInfo.buffer = get_current_frame().instanceBuffer._buffer;
+	instanceInfo.offset = 0;
+	instanceInfo.range = sizeof(uint32_t) * 10000;
+
+	VkDescriptorBufferInfo cullBoundsInfo;
+	cullBoundsInfo.buffer = get_current_frame().cullBuffer._buffer;
+	cullBoundsInfo.offset = 0;
+	cullBoundsInfo.range = sizeof(glm::vec4) * 10000;
+
+	VkDescriptorBufferInfo indirectInfo;
+	indirectInfo.buffer = get_current_frame().indirectBuffer._buffer;
+	indirectInfo.offset = 0;
+	indirectInfo.range = sizeof(IndirectObject) * 10000;
+
+	//COMPUTE CULL
+
+	VkDescriptorSet COMPGlobalSet;
+	vkutil::DescriptorBuilder::begin(_descriptorLayoutCache, get_current_frame().dynamicDescriptorAllocator)
+		.bind_buffer(0, &dynamicInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT)
+		.bind_buffer(1, &dynamicInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT)
+		.bind_buffer(2, &cullBoundsInfo, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT)
+		.build(COMPGlobalSet);
+
+	VkDescriptorSet COMPObjectDataSet;
+	vkutil::DescriptorBuilder::begin(_descriptorLayoutCache, get_current_frame().dynamicDescriptorAllocator)
+		.bind_buffer(0, &objectBufferInfo, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT)
+		.bind_buffer(1, &indirectInfo, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT)
+		.build(COMPObjectDataSet);
+
+
+	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, _cullPipeline);
+
+
+	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, _cullLayout, 0, 1, &COMPGlobalSet, 0, nullptr);
+
+	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, _cullLayout, 1, 1, &COMPObjectDataSet, 0, nullptr);
+
+	vkCmdDispatch(cmd, count / 256, 1, 1);
+
+	VkBufferMemoryBarrier barrier{};
+	barrier.buffer = get_current_frame().indirectBuffer._buffer;
+	barrier.size = VK_WHOLE_SIZE;
+	barrier.dstAccessMask = VK_ACCESS_INDIRECT_COMMAND_READ_BIT;
+	barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+	barrier.srcQueueFamilyIndex = _graphicsQueueFamily;
+	barrier.dstQueueFamilyIndex = _graphicsQueueFamily;
+	barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+	barrier.pNext = nullptr;
+
+	vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT, 0, 0, nullptr, 1, &barrier, 0, nullptr);
 }
 
 void VulkanEngine::init_scene()
@@ -1772,6 +2069,10 @@ void VulkanEngine::init_descriptors()
 
 		_frames[i].instanceBuffer = create_buffer(sizeof(uint32_t) * MAX_OBJECTS, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
 
+		_frames[i].indirectBuffer = create_buffer(sizeof(IndirectObject) * MAX_OBJECTS, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+
+		_frames[i].cullBuffer = create_buffer(sizeof(glm::vec4) * MAX_OBJECTS, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+
 		//1 megabyte of dynamic data buffer
 		_frames[i].dynamicDataBuffer = create_buffer(10000000, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
 	}
@@ -1851,3 +2152,5 @@ glm::mat4 PlayerCamera::get_rotation_matrix()
 
 	return pitch_rot;
 }
+
+

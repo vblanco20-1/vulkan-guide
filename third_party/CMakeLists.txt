@@ -115,5 +115,15 @@ target_link_libraries(imgui PUBLIC Vulkan::Vulkan sdl2)
 
 target_include_directories(stb_image INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/stb_image" )
 
+add_library(assimp INTERFACE)
+
+
+set(assimp_dir "${CMAKE_CURRENT_SOURCE_DIR}/assimp_build")
+set(assimp_dll "${CMAKE_CURRENT_SOURCE_DIR}/assimp_build/code/Release/assimp-vc142-mt.dll")
+set(assimp_lib "${CMAKE_CURRENT_SOURCE_DIR}/assimp_build/code/Release/assimp-vc142-mt.lib")
+
+
+target_include_directories(assimp INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/assimp/include")
+target_link_libraries(assimp INTERFACE "${assimp_lib}" )
 
 
