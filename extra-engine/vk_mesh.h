@@ -12,14 +12,19 @@ struct VertexInputDescription {
 };
 
 
+
 struct Vertex {
 
 	glm::vec3 position;
-	glm::vec3 normal;
-	glm::vec3 color;
+	//glm::vec3 normal;
+	glm::vec<2, char> oct_normal;//color;
+	glm::vec<3, char> color;
 	glm::vec2 uv;
 	static VertexInputDescription get_vertex_description();
-}; 
+
+	void pack_normal(glm::vec3 n);
+	void pack_color(glm::vec3 c);
+};
 struct RenderBounds {
 	glm::vec3 origin;
 	float radius;

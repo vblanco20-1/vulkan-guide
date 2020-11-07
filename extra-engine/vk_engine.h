@@ -17,6 +17,8 @@
 #include <SDL_events.h>
 #include <frustum_cull.h>
 
+namespace tracy { class VkCtx; }
+
 
 namespace assets { struct PrefabInfo; }
 
@@ -74,6 +76,7 @@ struct MeshPushConstants {
 struct Material {
 	VkDescriptorSet textureSet{VK_NULL_HANDLE};
 	VkPipeline pipeline;
+	std::vector<std::string> textures;
 	//VkPipelineLayout pipelineLayout;
 	struct ShaderEffect* effect;
 };
@@ -104,6 +107,7 @@ struct FrameData {
 
 	VkCommandPool _commandPool;
 	VkCommandBuffer _mainCommandBuffer;
+	tracy::VkCtx* _profilerContext;
 
 	AllocatedBuffer objectBuffer;
 	AllocatedBuffer instanceBuffer;
@@ -154,6 +158,7 @@ struct EngineStats {
 	int objects;
 	int drawcalls;
 	int draws;
+	int triangles;
 };
 
 

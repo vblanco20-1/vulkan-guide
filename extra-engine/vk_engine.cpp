@@ -26,11 +26,9 @@
 #include "material_asset.h"
 
 #include "Tracy.hpp"
+#include "TracyVulkan.hpp"
 
-
-
-
-constexpr bool bUseValidationLayers = true;
+constexpr bool bUseValidationLayers = false;
 
 //we want to immediately abort when there is an error. In normal engines this would give an error message to the user, or perform a dump of state.
 using namespace std;
@@ -98,6 +96,8 @@ void VulkanEngine::init()
 
 	_camera = {};
 	_camera.position = { 0.f,6.f,5.f };
+
+	
 }
 void VulkanEngine::cleanup()
 {
@@ -186,12 +186,22 @@ void VulkanEngine::draw()
 	stats.drawcalls = 0;
 	stats.draws = 0;
 	stats.objects = 0;
-	draw_objects(cmd, _renderables.data(), _renderables.size());
+	stats.triangles = 0;
+
+	{
+		TracyVkZone(get_current_frame()._profilerContext, get_current_frame()._mainCommandBuffer, "All Frame");
+		draw_objects(cmd, _renderables.data(), _renderables.size());
+	}
+
+	
 
 	ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmd);
 
 	//finalize the render pass
 	vkCmdEndRenderPass(cmd);
+
+	TracyVkCollect(get_current_frame()._profilerContext, get_current_frame()._mainCommandBuffer);
+
 	//finalize the command buffer (we can no longer add commands, but it can now be executed)
 	VK_CHECK(vkEndCommandBuffer(cmd));
 
@@ -286,15 +296,13 @@ void VulkanEngine::run()
 
 		ImGui::NewFrame();
 
-
 		ImGui::Begin("stats");
-
-
 
 		ImGui::Text("Frametimes: %f", stats.frametime);
 		ImGui::Text("Objects: %d", stats.objects);
 		ImGui::Text("Drawcalls: %d", stats.drawcalls);
 		ImGui::Text("Draws: %d", stats.draws);
+		ImGui::Text("Triangles: %d", stats.triangles);
 
 		ImGui::End();
 
@@ -627,7 +635,9 @@ void VulkanEngine::init_commands()
 
 		_mainDeletionQueue.push_function([=]() {
 			vkDestroyCommandPool(_device, _frames[i]._commandPool, nullptr);
-			});
+		});
+
+		_frames[i]._profilerContext = TracyVkContext(_chosenGPU, _device, _graphicsQueue, _frames[i]._mainCommandBuffer);
 	}
 
 
@@ -1188,44 +1198,43 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderObject* first, int co
 			uint64_t objectIndex;
 		};
 
-		std::vector<RenderBatch> batch;
+		static std::vector<RenderBatch> batch;
+		batch.clear();
 		batch.reserve(count);
 
-		for (int i = 0; i < count; i++) {
-			RenderObject* object = &first[i];
+		{
+			ZoneScopedNC("Draw Gather", tracy::Color::Blue3);
 
-			glm::vec3 boundmin = object->bounds.origin - object->bounds.extents;
-			glm::vec3 boundmax = object->bounds.origin + object->bounds.extents;
-			if (!object->bounds.valid || view_frustrum.IsBoxVisible(boundmin, boundmax))
-			{
-				RenderBatch newBatch;
+			for (int i = 0; i < count; i++) {
+				RenderObject* object = &first[i];
 
-				newBatch.object = object;
-				newBatch.objectIndex = i;
-				uint64_t material_hash = std::hash<void*>()(object->material) & UINT32_MAX;
-				uint64_t mesh_hash = std::hash<void*>()(object->mesh) & UINT32_MAX;
+				glm::vec3 boundmin = object->bounds.origin - object->bounds.extents;
+				glm::vec3 boundmax = object->bounds.origin + object->bounds.extents;
+				if (!object->bounds.valid || view_frustrum.IsBoxVisible(boundmin, boundmax))
+				{
+					RenderBatch newBatch;
 
-				newBatch.sortKey = material_hash << 32 | mesh_hash;
+					newBatch.object = object;
+					newBatch.objectIndex = i;
+					uint64_t material_hash = std::hash<void*>()(object->material) & UINT32_MAX;
+					uint64_t mesh_hash = std::hash<void*>()(object->mesh) & UINT32_MAX;
 
-				batch.push_back(newBatch);
+					newBatch.sortKey = material_hash << 32 | mesh_hash;
+
+					batch.push_back(newBatch);
+				}
 			}
 		}
 		if (batch.size() == 0) 
 			return;
-
-		std::sort(batch.begin(), batch.end(), [](const RenderBatch& A, const RenderBatch& B) {
-			return A.sortKey < B.sortKey;
-			});
-
-		void* instanceData;
-		vmaMapMemory(_allocator, get_current_frame().instanceBuffer._allocation, &instanceData);
-
-		for (int i = 0; i < batch.size(); i++)
 		{
-			((uint32_t*)instanceData)[i] = batch[i].objectIndex;
+			ZoneScopedNC("Draw Sort", tracy::Color::Blue1);
+			std::sort(batch.begin(), batch.end(), [](const RenderBatch& A, const RenderBatch& B) {
+				return A.sortKey < B.sortKey;
+				});
 		}
 
-		vmaUnmapMemory(_allocator, get_current_frame().instanceBuffer._allocation);
+		
 
 
 		struct InstanceBatch {
@@ -1236,83 +1245,103 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderObject* first, int co
 			uint64_t count;
 		};
 
-		std::vector<InstanceBatch> instancedDraws;
+		static std::vector<InstanceBatch> instancedDraws;
+		instancedDraws.clear();
 		instancedDraws.reserve(batch.size() / 3);
 
-		InstanceBatch newBatch;
-		newBatch.first = 0;
-		newBatch.count = 0;
-		newBatch.material = batch[0].object->material;
-		newBatch.mesh = batch[0].object->mesh;
-
-		instancedDraws.push_back(newBatch);
-		for (int i = 0; i < batch.size(); i++) {
-			RenderObject* obj = batch[i].object;
-
-			if (obj->mesh == instancedDraws.back().mesh
-				&& obj->material == instancedDraws.back().material)
-			{
-				instancedDraws.back().count++;
-			}
-			else {
-
-				newBatch.first = i;
-				newBatch.count = 1;
-				newBatch.material = obj->material;
-				newBatch.mesh = obj->mesh;
-
-				instancedDraws.push_back(newBatch);
-			}
-		}
-		Material* lastMaterial = nullptr;
-		Mesh* lastMesh = nullptr;
-
-		stats.draws = instancedDraws.size();
-		stats.drawcalls = batch.size();
-		stats.objects = count;
-		for (auto& instanceDraw : instancedDraws)
 		{
-			Material* drawMat = instanceDraw.material;
-			Mesh* drawMesh = instanceDraw.mesh;
+			ZoneScopedNC("Draw Merge", tracy::Color::Blue);
 
-			if (lastMaterial != drawMat) {
+			InstanceBatch newBatch;
+			newBatch.first = 0;
+			newBatch.count = 0;
+			newBatch.material = batch[0].object->material;
+			newBatch.mesh = batch[0].object->mesh;
 
-				if (lastMaterial == nullptr || lastMaterial->pipeline != drawMat->pipeline) {
+			instancedDraws.push_back(newBatch);
 
-					vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, drawMat->pipeline);
+			void* instanceData;
+			vmaMapMemory(_allocator, get_current_frame().instanceBuffer._allocation, &instanceData);
 
-					vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, drawMat->effect->builtLayout, 1, 1, &ObjectDataSet, 0, nullptr);
+			for (int i = 0; i < batch.size(); i++) {
+				RenderObject* obj = batch[i].object;
 
-					//update dynamic binds
-					uint32_t dynamicBinds[] = { camera_data_offsets[0],scene_data_offset };
-					vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, drawMat->effect->builtLayout, 0, 1, &GlobalSet, 2, dynamicBinds);
+				((uint32_t*)instanceData)[i] = batch[i].objectIndex;
+
+				if (obj->mesh == instancedDraws.back().mesh
+					&& obj->material == instancedDraws.back().material)
+				{
+					instancedDraws.back().count++;
 				}
+				else {
 
-				if (lastMaterial == nullptr || drawMat->textureSet != VK_NULL_HANDLE && drawMat->textureSet != lastMaterial->textureSet) {
-					//texture descriptor
-					vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, drawMat->effect->builtLayout, 2, 1, &drawMat->textureSet, 0, nullptr);
+					newBatch.first = i;
+					newBatch.count = 1;
+					newBatch.material = obj->material;
+					newBatch.mesh = obj->mesh;
+
+					instancedDraws.push_back(newBatch);
 				}
-				lastMaterial = drawMat;
 			}
 
-			if (lastMesh == nullptr || lastMesh != drawMesh) {
+			vmaUnmapMemory(_allocator, get_current_frame().instanceBuffer._allocation);
+		}
+		{
+			ZoneScopedNC("Draw Commit", tracy::Color::Blue4);
+			Material* lastMaterial = nullptr;
+			Mesh* lastMesh = nullptr;
 
-				//bind the mesh vertex buffer with offset 0
-				VkDeviceSize offset = 0;
-				vkCmdBindVertexBuffers(cmd, 0, 1, &drawMesh->_vertexBuffer._buffer, &offset);
+			stats.draws = instancedDraws.size();
+			stats.drawcalls = batch.size();
+			stats.objects = count;
+			for (auto& instanceDraw : instancedDraws)
+			{
+				Material* drawMat = instanceDraw.material;
+				Mesh* drawMesh = instanceDraw.mesh;
 
-				if (drawMesh->_indexBuffer._buffer != VK_NULL_HANDLE) {
-					vkCmdBindIndexBuffer(cmd, drawMesh->_indexBuffer._buffer, 0, VK_INDEX_TYPE_UINT32);
+				if (lastMaterial != drawMat) {
+
+					ShaderEffect* newEffect = drawMat->effect;
+					if (lastMaterial == nullptr || lastMaterial->pipeline != drawMat->pipeline) {
+
+						vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, drawMat->pipeline);
+
+						vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, newEffect->builtLayout, 1, 1, &ObjectDataSet, 0, nullptr);
+
+						//update dynamic binds
+						uint32_t dynamicBinds[] = { camera_data_offsets[0],scene_data_offset };
+						vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, newEffect->builtLayout, 0, 1, &GlobalSet, 2, dynamicBinds);
+					}
+
+					if (lastMaterial == nullptr || drawMat->textureSet != VK_NULL_HANDLE && drawMat->textureSet != lastMaterial->textureSet) {
+						//texture descriptor
+						vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, newEffect->builtLayout, 2, 1, &drawMat->textureSet, 0, nullptr);
+					}
+					lastMaterial = drawMat;
 				}
-				lastMesh = drawMesh;
-			}
 
-			bool bHasIndices = drawMesh->_indices.size() > 0;
-			if (!bHasIndices) {
-				vkCmdDraw(cmd, drawMesh->_vertices.size(), instanceDraw.count, 0, instanceDraw.first);
-			}
-			else {
-				vkCmdDrawIndexed(cmd, drawMesh->_indices.size(), instanceDraw.count, 0, 0, instanceDraw.first);
+				if (lastMesh == nullptr || lastMesh != drawMesh) {
+
+					//bind the mesh vertex buffer with offset 0
+					VkDeviceSize offset = 0;
+					vkCmdBindVertexBuffers(cmd, 0, 1, &drawMesh->_vertexBuffer._buffer, &offset);
+
+					if (drawMesh->_indexBuffer._buffer != VK_NULL_HANDLE) {
+						vkCmdBindIndexBuffer(cmd, drawMesh->_indexBuffer._buffer, 0, VK_INDEX_TYPE_UINT32);
+					}
+					lastMesh = drawMesh;
+				}
+
+				bool bHasIndices = drawMesh->_indices.size() > 0;
+				if (!bHasIndices) {
+
+					stats.triangles += (drawMesh->_vertices.size() / 3) * instanceDraw.count;
+					vkCmdDraw(cmd, drawMesh->_vertices.size(), instanceDraw.count, 0, instanceDraw.first);
+				}
+				else {
+					stats.triangles += (drawMesh->_indices.size() / 3) * instanceDraw.count;
+					vkCmdDrawIndexed(cmd, drawMesh->_indices.size(), instanceDraw.count, 0, 0, instanceDraw.first);
+				}
 			}
 		}
 	}
@@ -1563,7 +1592,7 @@ bool VulkanEngine::load_prefab(const char* path, glm::mat4 root)
 
 		//load material
 		Material* mat = get_material("default");
-
+		Material* texturedMat = get_material("texturedmesh");
 		if (!get_material(v.material_path.c_str()))
 		{
 			assets::AssetFile materialFile;
@@ -1583,9 +1612,29 @@ bool VulkanEngine::load_prefab(const char* path, glm::mat4 root)
 				
 				if (loaded)
 				{
-					mat = clone_material("texturedmesh", v.material_path.c_str());
-
-					build_texture_set(smoothSampler, mat, texture.c_str());
+					//search for a material that is the same
+					Material* cached = nullptr;
+					for (auto [k, v] : _materials)
+					{
+						if ((v.effect == texturedMat->effect)
+							&& (v.pipeline == texturedMat->pipeline)	
+							&& (v.textures.size() == 1)
+							&& (v.textures[0].compare(texture) == 0)
+							)
+						{
+							cached = &v;
+							break;
+						}
+					}
+					if (cached)
+					{
+						mat = cached;
+					}
+					else {
+						mat = clone_material("texturedmesh", v.material_path.c_str());
+				
+						build_texture_set(smoothSampler, mat, texture.c_str());
+					}
 				}
 			}
 			else

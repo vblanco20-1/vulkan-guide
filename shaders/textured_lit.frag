@@ -16,6 +16,9 @@ layout(set = 0, binding = 1) uniform  SceneData{
 	vec4 sunlightColor;
 } sceneData;
 
+
+
+
 layout(set = 2, binding = 0) uniform sampler2D tex1;
 
 void main() 
