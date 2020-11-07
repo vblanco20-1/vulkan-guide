@@ -189,7 +189,7 @@ void VulkanEngine::draw()
 	stats.triangles = 0;
 
 	{
-		TracyVkZone(get_current_frame()._profilerContext, get_current_frame()._mainCommandBuffer, "All Frame");
+		TracyVkZone(_graphicsQueueContext, get_current_frame()._mainCommandBuffer, "All Frame");
 		draw_objects(cmd, _renderables.data(), _renderables.size());
 	}
 
@@ -200,7 +200,7 @@ void VulkanEngine::draw()
 	//finalize the render pass
 	vkCmdEndRenderPass(cmd);
 
-	TracyVkCollect(get_current_frame()._profilerContext, get_current_frame()._mainCommandBuffer);
+	TracyVkCollect(_graphicsQueueContext, get_current_frame()._mainCommandBuffer);
 
 	//finalize the command buffer (we can no longer add commands, but it can now be executed)
 	VK_CHECK(vkEndCommandBuffer(cmd));
@@ -639,10 +639,9 @@ void VulkanEngine::init_commands()
 
 		
 	}
-	auto tracyContext = TracyVkContext(_chosenGPU, _device, _graphicsQueue, _frames[0]._mainCommandBuffer);
+	_graphicsQueueContext = TracyVkContext(_chosenGPU, _device, _graphicsQueue, _frames[0]._mainCommandBuffer);
 
-	_frames[0]._profilerContext = tracyContext;
-	_frames[1]._profilerContext = tracyContext;
+	
 	VkCommandPoolCreateInfo uploadCommandPoolInfo = vkinit::command_pool_create_info(_graphicsQueueFamily);
 	//create pool for upload context
 	VK_CHECK(vkCreateCommandPool(_device, &uploadCommandPoolInfo, nullptr, &_uploadContext._commandPool));

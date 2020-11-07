@@ -107,7 +107,7 @@ struct FrameData {
 
 	VkCommandPool _commandPool;
 	VkCommandBuffer _mainCommandBuffer;
-	tracy::VkCtx* _profilerContext;
+	
 
 	AllocatedBuffer objectBuffer;
 	AllocatedBuffer instanceBuffer;
@@ -186,6 +186,8 @@ public:
 	VkQueue _graphicsQueue;
 	uint32_t _graphicsQueueFamily;
 	
+	tracy::VkCtx* _graphicsQueueContext;
+
 	VkRenderPass _renderPass;
 
 	VkSurfaceKHR _surface;
