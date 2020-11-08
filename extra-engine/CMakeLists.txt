@@ -26,7 +26,7 @@ target_include_directories(extra PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 
 
 target_compile_definitions(extra PUBLIC TRACY_ENABLE)
-
+target_compile_definitions(extra PUBLIC GLM_FORCE_DEPTH_ZERO_TO_ONE )
 target_link_libraries(extra vkbootstrap vma glm tinyobjloader imgui stb_image spirv_reflect)
 
 target_link_libraries(extra Vulkan::Vulkan sdl2 assetlib tracy)

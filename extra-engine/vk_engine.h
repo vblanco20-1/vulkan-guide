@@ -187,7 +187,7 @@ struct MeshDrawCommands {
 };
 
 constexpr unsigned int FRAME_OVERLAP = 2;
-
+const int MAX_OBJECTS = 500000;
 class VulkanEngine {
 public:
 
@@ -291,7 +291,10 @@ public:
 	//our draw function
 	void draw_objects(VkCommandBuffer cmd);
 
-	void execute_compute_cull( VkCommandBuffer cmd, int count);
+
+	glm::mat4 get_projection_matrix(bool bReverse = true);
+
+	void execute_compute_cull(VkCommandBuffer cmd, int count);
 
 	AllocatedBuffer create_buffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage, VkMemoryPropertyFlags required_flags = 0);
 

@@ -28,7 +28,7 @@
 #include "Tracy.hpp"
 #include "TracyVulkan.hpp"
 
-constexpr bool bUseValidationLayers = true;
+constexpr bool bUseValidationLayers = false;
 
 //we want to immediately abort when there is an error. In normal engines this would give an error message to the user, or perform a dump of state.
 using namespace std;
@@ -176,9 +176,9 @@ void VulkanEngine::draw()
 	float flash = abs(sin(_frameNumber / 120.f));
 	clearValue.color = { { 0.1f, 0.1f, 0.1f, 1.0f } };
 
-	//clear depth at 1
+	//clear depth at 0
 	VkClearValue depthClear;
-	depthClear.depthStencil.depth = 1.f;
+	depthClear.depthStencil.depth = 0.f;
 
 	//start the main renderpass. 
 	//We will use the clear color from above, and the framebuffer of the index the swapchain gave us
@@ -828,7 +828,7 @@ void VulkanEngine::init_pipelines()
 
 
 	//default depthtesting
-	pipelineBuilder._depthStencil = vkinit::depth_stencil_create_info(true, true, VK_COMPARE_OP_LESS_OR_EQUAL);
+	pipelineBuilder._depthStencil = vkinit::depth_stencil_create_info(true, true, VK_COMPARE_OP_GREATER_OR_EQUAL);
 
 	//build the mesh pipeline
 
@@ -998,6 +998,8 @@ bool VulkanEngine::load_image_to_cache(const char* name, const char* path)
 {
 	ZoneScopedNC("Load Texture", tracy::Color::Yellow);
 	Texture newtex;
+
+	if (_loadedTextures.find(name) != _loadedTextures.end()) return true;
 
 	bool result = vkutil::load_image_from_asset(*this, path, newtex.image);
 
@@ -1177,15 +1179,14 @@ void VulkanEngine::ready_mesh_draw()
 	view = glm::inverse(view);
 
 	//camera projection
-	glm::mat4 projection = glm::perspective(glm::radians(70.f), 1700.f / 900.f, 0.1f, 500.0f);
-	projection[1][1] *= -1;
+	glm::mat4 projection = get_projection_matrix(false);
 
 	GPUCameraData camData;
 	camData.proj = projection;
 	camData.view = view;
 	camData.viewproj = projection * view;
 
-	Frustum view_frustrum{ camData.viewproj };
+	Frustum view_frustrum{ projection * view };
 
 	float framed = (_frameNumber / 120.f);
 	_sceneParameters.ambientColor = glm::vec4{ 0.5 };
@@ -1239,8 +1240,8 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd)
 	view = glm::inverse(view);
 
 	//camera projection
-	glm::mat4 projection = glm::perspective(glm::radians(70.f), 1700.f / 900.f, 0.1f, 500.0f);
-	projection[1][1] *= -1;
+	glm::mat4 projection=get_projection_matrix();
+
 	
 
 	GPUCameraData camData;
@@ -1248,7 +1249,7 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd)
 	camData.view = view;
 	camData.viewproj = projection * view;
 
-	Frustum view_frustrum{ camData.viewproj };
+	Frustum view_frustrum{ get_projection_matrix(false) * view };
 
 	float framed = (_frameNumber / 120.f);
 	_sceneParameters.ambientColor = glm::vec4{ 0.5 };
@@ -1284,7 +1285,7 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd)
 	VkDescriptorBufferInfo objectBufferInfo;
 	objectBufferInfo.buffer = get_current_frame().objectBuffer._buffer;
 	objectBufferInfo.offset = 0;
-	objectBufferInfo.range = sizeof(GPUObjectData) * 10000;
+	objectBufferInfo.range = sizeof(GPUObjectData) * MAX_OBJECTS;
 
 	VkDescriptorBufferInfo dynamicInfo;
 	dynamicInfo.buffer = get_current_frame().dynamicDataBuffer._buffer;;
@@ -1294,12 +1295,12 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd)
 	VkDescriptorBufferInfo instanceInfo;
 	instanceInfo.buffer = get_current_frame().instanceBuffer._buffer;
 	instanceInfo.offset = 0;
-	instanceInfo.range = sizeof(uint32_t) * 10000;
+	instanceInfo.range = sizeof(uint32_t) * MAX_OBJECTS;
 
 	VkDescriptorBufferInfo indirectInfo;
 	indirectInfo.buffer = get_current_frame().indirectBuffer._buffer;
 	indirectInfo.offset = 0;
-	indirectInfo.range = sizeof(IndirectObject) * 10000;
+	indirectInfo.range = sizeof(IndirectObject) * MAX_OBJECTS;
 
 	VkDescriptorSet GlobalSet;
 	vkutil::DescriptorBuilder::begin(_descriptorLayoutCache, get_current_frame().dynamicDescriptorAllocator)
@@ -1392,13 +1393,28 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd)
 		}
 }
 
+glm::mat4 VulkanEngine::get_projection_matrix(bool bReverse /*= true*/)
+{
+	if (bReverse)
+	{
+		glm::mat4 pro = glm::perspective(glm::radians(70.f), 1700.f / 900.f, 5000.0f, 0.1f);
+		pro[1][1] *= -1;
+		return pro;
+	}
+	else {
+		glm::mat4 pro = glm::perspective(glm::radians(70.f), 1700.f / 900.f, 0.1f, 5000.0f);
+		pro[1][1] *= -1;
+		return pro;
+	}
+	
+}
 
 void VulkanEngine::execute_compute_cull(VkCommandBuffer cmd, int count)
 {
 	VkDescriptorBufferInfo objectBufferInfo;
 	objectBufferInfo.buffer = get_current_frame().objectBuffer._buffer;
 	objectBufferInfo.offset = 0;
-	objectBufferInfo.range = sizeof(GPUObjectData) * 10000;
+	objectBufferInfo.range = sizeof(GPUObjectData) * MAX_OBJECTS;
 
 	VkDescriptorBufferInfo dynamicInfo;
 	dynamicInfo.buffer = get_current_frame().dynamicDataBuffer._buffer;;
@@ -1408,12 +1424,12 @@ void VulkanEngine::execute_compute_cull(VkCommandBuffer cmd, int count)
 	VkDescriptorBufferInfo instanceInfo;
 	instanceInfo.buffer = get_current_frame().instanceBuffer._buffer;
 	instanceInfo.offset = 0;
-	instanceInfo.range = sizeof(uint32_t) * 10000;
+	instanceInfo.range = sizeof(uint32_t) * MAX_OBJECTS;
 
 	VkDescriptorBufferInfo indirectInfo;
 	indirectInfo.buffer = get_current_frame().indirectBuffer._buffer;
 	indirectInfo.offset = 0;
-	indirectInfo.range = sizeof(IndirectObject) * 10000;
+	indirectInfo.range = sizeof(IndirectObject) * MAX_OBJECTS;
 
 	//COMPUTE CULL
 
@@ -1479,23 +1495,33 @@ void VulkanEngine::init_scene()
 	build_texture_set(smoothSampler, whitemat, "white");
 	build_texture_set(smoothSampler, get_material("texturedmesh"), "white");
 	build_texture_set(smoothSampler, get_material("default"), "white");
-	//int dimHelmets = 5;
+	//int dimHelmets =1;
 	//for (int x = -dimHelmets; x <= dimHelmets; x++) {
 	//	for (int y = -dimHelmets; y <= dimHelmets; y++) {
 	//
 	//		glm::mat4 translation = glm::translate(glm::mat4{ 1.0 }, glm::vec3(x * 5, 0, y * 5));
 	//		glm::mat4 scale = glm::scale(glm::mat4{ 1.0 }, glm::vec3(10));
 	//
-	//		load_prefab(asset_path("FlightHelmet/FlightHelmet.pfb").c_str(), translation * scale);
+	//	load_prefab(asset_path("FlightHelmet/FlightHelmet.pfb").c_str(), translation * scale);
 	//	}
 	//}
 
 	glm::mat4 sponzaMatrix = glm::scale(glm::mat4{ 1.0 }, glm::vec3(0.1, 0.1, 0.1));;
 
 	//load_prefab(asset_path("Sponza/Sponza.pfb").c_str(), sponzaMatrix);
-	glm::mat4 rotationMat = glm::rotate(glm::radians(-90.f), glm::vec3{ 1,0,0 });
-	glm::mat4 cityMatrix = rotationMat *   glm::scale(glm::mat4{ 1.0 }, glm::vec3(.01));
-	load_prefab(asset_path("PolyCity/PolyCity.pfb").c_str(), cityMatrix);
+	int dimcities = 2;
+	for (int x = -dimcities; x <= dimcities; x++) {
+		for (int y = -dimcities; y <= dimcities; y++) {
+	
+			glm::mat4 translation = glm::translate(glm::mat4{ 1.0 }, glm::vec3(x * 200, y, y * 200));
+			glm::mat4 scale = glm::scale(glm::mat4{ 1.0 }, glm::vec3(10));
+	
+			glm::mat4 rotationMat = glm::rotate(glm::radians(-90.f), glm::vec3{ 1,0,0 });
+			glm::mat4 cityMatrix = translation *  rotationMat * glm::scale(glm::mat4{ 1.0 }, glm::vec3(.01));
+			load_prefab(asset_path("PolyCity/PolyCity.pfb").c_str(), cityMatrix);
+		}
+	}
+	
 
 	for (int x = -20; x <= 20; x++) {
 		for (int y = -20; y <= 20; y++) {
@@ -1692,7 +1718,12 @@ bool VulkanEngine::load_prefab(const char* path, glm::mat4 root)
 
 	for (auto& [k, v] : prefab->node_meshes)
 	{
+		
 		//load mesh
+
+		if (v.mesh_path.find("Sky") != std::string::npos) {
+			continue;
+		}
 
 		if (!get_mesh(v.mesh_path.c_str()))
 		{
@@ -1883,7 +1914,7 @@ void VulkanEngine::init_descriptors()
 		_frames[i].dynamicDescriptorAllocator = new vkutil::DescriptorAllocator{};
 		_frames[i].dynamicDescriptorAllocator->init(_device);
 
-		const int MAX_OBJECTS = 10000;
+		
 		_frames[i].objectBuffer = create_buffer(sizeof(GPUObjectData) * MAX_OBJECTS, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
 
 		_frames[i].instanceBuffer = create_buffer(sizeof(uint32_t) * MAX_OBJECTS, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);

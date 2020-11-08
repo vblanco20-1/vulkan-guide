@@ -232,6 +232,9 @@ void main()
 	bool visible = IsVisible(b, objectMatrix);
 	if(!visible)
 	{
-		 instanceBuffer.Draws[gl_GlobalInvocationID.x].indexCount = 0;
+		 instanceBuffer.Draws[gl_GlobalInvocationID.x].instanceCount = 0;
 	}
+else{
+instanceBuffer.Draws[gl_GlobalInvocationID.x].instanceCount = 1;
+}
 }
