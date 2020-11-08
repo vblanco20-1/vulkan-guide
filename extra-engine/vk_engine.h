@@ -9,6 +9,7 @@
 #include <deque>
 #include <memory>
 #include <vk_mesh.h>
+#include <vk_scene.h>
 #include <unordered_map>
 
 #include <glm/glm.hpp>
@@ -83,10 +84,10 @@ struct MeshPushConstants {
 
 struct Material {
 	VkDescriptorSet textureSet{VK_NULL_HANDLE};
-	VkPipeline pipeline;
+	VkPipeline pipeline{ VK_NULL_HANDLE };
 	std::vector<std::string> textures;
 	//VkPipelineLayout pipelineLayout;
-	struct ShaderEffect* effect;
+	struct ShaderEffect* effect{nullptr};
 };
 
 struct Texture {
@@ -97,9 +98,9 @@ struct Texture {
 
 
 struct RenderObject {
-	Mesh* mesh;
+	Mesh* mesh{ nullptr };
 
-	Material* material;
+	Material* material{nullptr};
 
 	glm::mat4 transformMatrix;
 
@@ -122,15 +123,10 @@ struct FrameData {
 	AllocatedBuffer indirectBuffer;
 	AllocatedBuffer dynamicDataBuffer;
 
-	AllocatedBuffer cullBuffer;
-
 	vkutil::DescriptorAllocator* dynamicDescriptorAllocator;
 };
 
-struct IndirectObject {
-	VkDrawIndexedIndirectCommand command;
-	uint32_t objectID;	
-};
+
 struct UploadContext {
 	VkFence _uploadFence;
 	VkCommandPool _commandPool;	
@@ -154,6 +150,8 @@ struct GPUSceneData {
 
 struct GPUObjectData {
 	glm::mat4 modelMatrix;
+	glm::vec4 origin_rad; // bounds
+	glm::vec4 extents;  // bounds
 };
 
 struct PlayerCamera {
@@ -251,11 +249,12 @@ public:
 	VkPipelineLayout _cullLayout;
 
 	MeshDrawCommands currentCommands;
+	RenderScene _renderScene;
 
 
 
-
-	void ready_mesh_draw(RenderObject* first, int count);
+	void ready_mesh_draw();
+	
 	//initializes everything in the engine
 	void init();
 
@@ -270,9 +269,6 @@ public:
 	
 	FrameData& get_current_frame();
 	FrameData& get_last_frame();
-
-	//default array of renderable objects
-	std::vector<RenderObject> _renderables;
 
 	std::unordered_map<std::string, Material> _materials;
 	std::unordered_map<std::string, Mesh> _meshes;
@@ -293,7 +289,7 @@ public:
 	Mesh* get_mesh(const std::string& name);
 
 	//our draw function
-	void draw_objects(VkCommandBuffer cmd, RenderObject* first, int count);
+	void draw_objects(VkCommandBuffer cmd);
 
 	void execute_compute_cull( VkCommandBuffer cmd, int count);
 

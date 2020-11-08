@@ -19,13 +19,10 @@ struct Bounds{
 	vec4 sphereBounds;
 }; 
 
-layout(set = 0, binding = 2) buffer  CullBoundsBuffer{   
-    Bounds  objBounds[];
-} cullBounds;
-
-
 struct ObjectData{
 	mat4 model;
+vec4 spherebounds;
+vec4 extents;
 }; 
 //all object matrices
 layout(std140,set = 1, binding = 0) readonly buffer ObjectBuffer{   
@@ -226,9 +223,13 @@ void main()
 
 	int index = instanceBuffer.Draws[gl_GlobalInvocationID.x].objectID;
 
+	Bounds b;
+	b.sphereBounds = objectBuffer.objects[index].spherebounds;
+
 	mat4 objectMatrix = (cameraData.viewproj * objectBuffer.objects[index].model);
 
-	bool visible = IsVisible(cullBounds.objBounds[index], objectMatrix);
+
+	bool visible = IsVisible(b, objectMatrix);
 	if(!visible)
 	{
 		 instanceBuffer.Draws[gl_GlobalInvocationID.x].indexCount = 0;
