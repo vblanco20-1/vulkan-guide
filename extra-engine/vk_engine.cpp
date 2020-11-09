@@ -322,13 +322,15 @@ void VulkanEngine::run()
 
 		ImGui::NewFrame();
 
-		ImGui::Begin("stats");
+		ImGui::Begin("engine");
 
 		ImGui::Text("Frametimes: %f", stats.frametime);
 		ImGui::Text("Objects: %d", stats.objects);
 		ImGui::Text("Drawcalls: %d", stats.drawcalls);
 		ImGui::Text("Draws: %d", stats.draws);
 		ImGui::Text("Triangles: %d", stats.triangles);
+
+		ImGui::InputFloat("Draw Distance", &_config.drawDistance);
 
 		ImGui::End();
 
@@ -406,7 +408,7 @@ void VulkanEngine::process_input_event(SDL_Event* ev)
 
 void VulkanEngine::update_camera(float deltaSeconds)
 {
-	glm::vec3 forward = { 0,0,-1 };
+	glm::vec3 forward = { 0,0,1 };
 	glm::vec3 right = { 1,0,0 };
 
 
@@ -1169,14 +1171,9 @@ void VulkanEngine::ready_mesh_draw()
 	ZoneScopedNC("Ready Draw", tracy::Color::Blue3);
 	//make a model view matrix for rendering the object
 	//camera view
-	glm::vec3 camPos = _camera.position;
 
-	glm::mat4 cam_rot = _camera.get_rotation_matrix();
 
-	glm::mat4 view = glm::translate(glm::mat4{ 1 }, camPos) * cam_rot;
-
-	//we need to invert the camera matrix
-	view = glm::inverse(view);
+	glm::mat4 view = get_view_matrix();
 
 	//camera projection
 	glm::mat4 projection = get_projection_matrix(false);
@@ -1230,14 +1227,8 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd)
 	ZoneScopedNC("DrawObjects", tracy::Color::Blue);
 	//make a model view matrix for rendering the object
 	//camera view
-	glm::vec3 camPos = _camera.position;
+	glm::mat4 view = get_view_matrix();
 
-	glm::mat4 cam_rot = _camera.get_rotation_matrix();
-
-	glm::mat4 view = glm::translate(glm::mat4{ 1 }, camPos) * cam_rot;
-
-	//we need to invert the camera matrix
-	view = glm::inverse(view);
 
 	//camera projection
 	glm::mat4 projection=get_projection_matrix();
@@ -1249,7 +1240,7 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd)
 	camData.view = view;
 	camData.viewproj = projection * view;
 
-	Frustum view_frustrum{ get_projection_matrix(false) * view };
+	Frustum view_frustrum{ get_projection_matrix(false) *view };
 
 	float framed = (_frameNumber / 120.f);
 	_sceneParameters.ambientColor = glm::vec4{ 0.5 };
@@ -1393,8 +1384,46 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd)
 		}
 }
 
+
+glm::mat4 VulkanEngine::get_view_matrix()
+{
+	glm::vec3 camPos = _camera.position;
+
+	glm::mat4 cam_rot = (_camera.get_rotation_matrix());
+
+
+	//glm::vec3 cameraPos = camPos;
+	//glm::vec4 cameraFront = glm::vec4(0.0f, 0.0f, -1.0f,0.f);
+	//glm::vec4 cameraUp = glm::vec4(0.0f, -1.0f, 0.0f,0.f);
+	//
+	//cameraFront = cam_rot* cameraFront;
+	//cameraUp = cam_rot* cameraUp;
+	//
+	//glm::vec3 cf = cameraPos + glm::vec3{ cameraFront.x,cameraFront.y,cameraFront.z };
+	//glm::vec3 cu = glm::vec3{ cameraUp.x,cameraUp.y,cameraUp.z };
+	//
+	//glm::mat4 view = glm::lookAt(cameraPos,cf , cu);
+	glm::mat4 view = glm::translate(glm::mat4{ 1 }, camPos) * cam_rot;
+
+	//we need to invert the camera matrix
+	view = glm::inverse(view);
+
+	return view;
+}
+glm::mat4 perspectiveProjection(float fovY, float aspectWbyH, float zNear)
+{
+	float f = 1.0f / tanf(fovY / 2.0f);
+	return glm::mat4(
+		f / aspectWbyH, 0.0f, 0.0f, 0.0f,
+		0.0f, f, 0.0f, 0.0f,
+		0.0f, 0.0f, 0.0f, 1.0f,
+		0.0f, 0.0f, zNear, 0.0f);
+}
 glm::mat4 VulkanEngine::get_projection_matrix(bool bReverse /*= true*/)
 {
+
+	//return perspectiveProjection(glm::radians(70.f), 1700.f / 900.f, 0.1f);
+
 	if (bReverse)
 	{
 		glm::mat4 pro = glm::perspective(glm::radians(70.f), 1700.f / 900.f, 5000.0f, 0.1f);
@@ -1407,6 +1436,10 @@ glm::mat4 VulkanEngine::get_projection_matrix(bool bReverse /*= true*/)
 		return pro;
 	}
 	
+}
+glm::vec4 normalizePlane(glm::vec4 p)
+{
+	return p / glm::length(glm::vec3(p));
 }
 
 void VulkanEngine::execute_compute_cull(VkCommandBuffer cmd, int count)
@@ -1447,6 +1480,33 @@ void VulkanEngine::execute_compute_cull(VkCommandBuffer cmd, int count)
 		.build(COMPObjectDataSet);
 
 
+	glm::mat4 projection = get_projection_matrix(false) ;
+	glm::mat4 projectionT = transpose(projection);
+
+	glm::vec4 frustumX = normalizePlane(projectionT[3] + projectionT[0]); // x + w < 0
+	glm::vec4 frustumY = normalizePlane(projectionT[3] + projectionT[1]); // y + w < 0
+	
+	DrawCullData cullData = {};
+	cullData.P00 = projection[0][0];
+	cullData.P11 = projection[1][1];
+	cullData.znear = 0.1f;
+	cullData.zfar = _config.drawDistance;
+	cullData.frustum[0] = frustumX.x;
+	cullData.frustum[1] = frustumX.z;
+	cullData.frustum[2] = frustumY.y;
+	cullData.frustum[3] = frustumY.z;
+	cullData.drawCount = count;
+	cullData.cullingEnabled = true;
+	cullData.lodEnabled = false;
+	cullData.occlusionEnabled = true;
+	cullData.lodBase = 10.f;
+	cullData.lodStep = 1.5f;
+	cullData.pyramidWidth = 1700.f;
+	cullData.pyramidHeight = 900.f;
+	cullData.viewMat = get_view_matrix();
+
+	vkCmdPushConstants(cmd, _cullLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(DrawCullData), &cullData);
+
 	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, _cullPipeline);
 
 
@@ -1454,6 +1514,7 @@ void VulkanEngine::execute_compute_cull(VkCommandBuffer cmd, int count)
 
 	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, _cullLayout, 1, 1, &COMPObjectDataSet, 0, nullptr);
 
+	TracyVkZone(_graphicsQueueContext, cmd, "Cull Dispatch");
 	vkCmdDispatch(cmd, count / 256, 1, 1);
 
 	VkBufferMemoryBarrier barrier{};
@@ -1495,29 +1556,29 @@ void VulkanEngine::init_scene()
 	build_texture_set(smoothSampler, whitemat, "white");
 	build_texture_set(smoothSampler, get_material("texturedmesh"), "white");
 	build_texture_set(smoothSampler, get_material("default"), "white");
-	//int dimHelmets =1;
-	//for (int x = -dimHelmets; x <= dimHelmets; x++) {
-	//	for (int y = -dimHelmets; y <= dimHelmets; y++) {
-	//
-	//		glm::mat4 translation = glm::translate(glm::mat4{ 1.0 }, glm::vec3(x * 5, 0, y * 5));
-	//		glm::mat4 scale = glm::scale(glm::mat4{ 1.0 }, glm::vec3(10));
-	//
-	//	load_prefab(asset_path("FlightHelmet/FlightHelmet.pfb").c_str(), translation * scale);
-	//	}
-	//}
+	int dimHelmets =1;
+	for (int x = -dimHelmets; x <= dimHelmets; x++) {
+		for (int y = -dimHelmets; y <= dimHelmets; y++) {
+	
+			glm::mat4 translation = glm::translate(glm::mat4{ 1.0 }, glm::vec3(x * 5, 10, y * 5));
+			glm::mat4 scale = glm::scale(glm::mat4{ 1.0 }, glm::vec3(10));
+	
+		//load_prefab(asset_path("FlightHelmet/FlightHelmet.pfb").c_str(), translation * scale);
+		}
+	}
 
 	glm::mat4 sponzaMatrix = glm::scale(glm::mat4{ 1.0 }, glm::vec3(0.1, 0.1, 0.1));;
 
 	//load_prefab(asset_path("Sponza/Sponza.pfb").c_str(), sponzaMatrix);
-	int dimcities = 2;
+	int dimcities = 0;
 	for (int x = -dimcities; x <= dimcities; x++) {
 		for (int y = -dimcities; y <= dimcities; y++) {
-	
-			glm::mat4 translation = glm::translate(glm::mat4{ 1.0 }, glm::vec3(x * 200, y, y * 200));
+
+			glm::mat4 translation = glm::translate(glm::mat4{ 1.0 }, glm::vec3(x * 300, y, y * 300));
 			glm::mat4 scale = glm::scale(glm::mat4{ 1.0 }, glm::vec3(10));
-	
+
 			glm::mat4 rotationMat = glm::rotate(glm::radians(-90.f), glm::vec3{ 1,0,0 });
-			glm::mat4 cityMatrix = translation *  rotationMat * glm::scale(glm::mat4{ 1.0 }, glm::vec3(.01));
+			glm::mat4 cityMatrix = translation * rotationMat * glm::scale(glm::mat4{ 1.0 }, glm::vec3(.01));
 			load_prefab(asset_path("PolyCity/PolyCity.pfb").c_str(), cityMatrix);
 		}
 	}
@@ -1533,6 +1594,7 @@ void VulkanEngine::init_scene()
 			glm::mat4 scale = glm::scale(glm::mat4{ 1.0 }, glm::vec3(0.2, 0.2, 0.2));
 			tri.transformMatrix = translation * scale;
 
+			refresh_renderbounds(&tri);
 			_renderScene.register_object(&tri, PassTypeFlags::Forward);
 		}
 	}
@@ -1630,6 +1692,7 @@ void VulkanEngine::immediate_submit(std::function<void(VkCommandBuffer cmd)>&& f
 
 bool VulkanEngine::load_prefab(const char* path, glm::mat4 root)
 {
+	int rng = rand();
 	
 	ZoneScopedNC("Load Prefab", tracy::Color::Red);
 
@@ -1805,10 +1868,19 @@ bool VulkanEngine::load_prefab(const char* path, glm::mat4 root)
 		loadmesh.mesh = get_mesh(v.mesh_path.c_str());
 		loadmesh.transformMatrix = nodematrix;
 		loadmesh.material = mat;
+		
+		refresh_renderbounds(&loadmesh);
 
+		//sort key from location
+		int32_t lx = int(loadmesh.bounds.origin.x / 10.f);
+		int32_t ly = int(loadmesh.bounds.origin.z / 10.f);
+
+		uint32_t key =  uint32_t(std::hash<int32_t>()(lx) ^ std::hash<int32_t>()(ly^1337));
+
+		loadmesh.customSortKey = 0;//rng;// key;
 		assert(mat->textures.size() <= 1);
 
-		refresh_renderbounds(&loadmesh);
+		
 
 		prefab_renderables.push_back(loadmesh);
 		//_renderables.push_back(loadmesh);
@@ -1855,7 +1927,7 @@ void VulkanEngine::refresh_renderbounds(RenderObject* object)
 	
 	//recalc max/min
 	glm::vec3 min{ std::numeric_limits<float>().max() };
-	glm::vec3 max{ std::numeric_limits<float>().min() };
+	glm::vec3 max{ -std::numeric_limits<float>().max() };
 
 	glm::mat4 m = object->transformMatrix;
 
@@ -1995,8 +2067,8 @@ void VulkanEngine::init_imgui()
 
 glm::mat4 PlayerCamera::get_rotation_matrix()
 {
-	glm::mat4 yaw_rot = glm::rotate(glm::mat4{ 1 }, yaw, { 0,1,0 });
-	glm::mat4 pitch_rot = glm::rotate(glm::mat4{ yaw_rot }, pitch, { 1,0,0 });
+	glm::mat4 yaw_rot = glm::rotate(glm::mat4{ 1 }, yaw, { 0,-1,0 });
+	glm::mat4 pitch_rot = glm::rotate(glm::mat4{ yaw_rot }, pitch, { -1,0,0 });
 
 	return pitch_rot;
 }

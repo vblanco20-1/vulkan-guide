@@ -102,6 +102,7 @@ struct RenderObject {
 
 	Material* material{nullptr};
 
+	uint32_t customSortKey;
 	glm::mat4 transformMatrix;
 
 	RenderBounds bounds;
@@ -186,6 +187,27 @@ struct MeshDrawCommands {
 	std::vector<RenderBatch> batch;
 };
 
+struct alignas(16) DrawCullData
+{
+	glm::mat4 viewMat;
+	float P00, P11, znear, zfar; // symmetric projection parameters
+	float frustum[4]; // data for left/right/top/bottom frustum planes
+	float lodBase, lodStep; // lod distance i = base * pow(step, i)
+	float pyramidWidth, pyramidHeight; // depth pyramid size in texels
+
+	uint32_t drawCount;
+
+	int cullingEnabled;
+	int lodEnabled;
+	int occlusionEnabled;
+
+	int lateWorkaroundAMD;
+};
+
+struct EngineConfig {
+	float drawDistance{5000};
+};
+
 constexpr unsigned int FRAME_OVERLAP = 2;
 const int MAX_OBJECTS = 500000;
 class VulkanEngine {
@@ -251,7 +273,7 @@ public:
 	MeshDrawCommands currentCommands;
 	RenderScene _renderScene;
 
-
+	EngineConfig _config;
 
 	void ready_mesh_draw();
 	
@@ -290,6 +312,8 @@ public:
 
 	//our draw function
 	void draw_objects(VkCommandBuffer cmd);
+
+	glm::mat4 get_view_matrix();
 
 
 	glm::mat4 get_projection_matrix(bool bReverse = true);
