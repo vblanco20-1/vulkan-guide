@@ -120,7 +120,7 @@ struct FrameData {
 	
 
 	AllocatedBuffer objectBuffer;
-	AllocatedBuffer instanceBuffer;
+	
 	AllocatedBuffer indirectBuffer;
 	AllocatedBuffer dynamicDataBuffer;
 

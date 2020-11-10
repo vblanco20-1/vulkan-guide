@@ -84,7 +84,6 @@ public:
 	void update_object(Handle<RenderObject2> objectID);
 	
 	void fill_objectData(GPUObjectData* data);
-	void fill_instanceArray(uint32_t* data);
 	void fill_indirectArray(IndirectObject* data);
 
 	void build_batches();

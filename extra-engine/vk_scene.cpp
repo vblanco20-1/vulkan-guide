@@ -68,16 +68,6 @@ void RenderScene::fill_objectData(GPUObjectData* data)
 	}
 }
 
-void RenderScene::fill_instanceArray(uint32_t* data)
-{
-	static int ntimes = 0;
-	ntimes++;
-	if (ntimes > 3) return;
-	for (int i = 0; i < meshPasses[0].flat_batches.size(); i++)
-	{
-		data[i] = meshPasses[0].flat_batches[i].object.handle;
-	}
-}
 
 void RenderScene::fill_indirectArray(IndirectObject* data)
 {
@@ -87,7 +77,7 @@ void RenderScene::fill_indirectArray(IndirectObject* data)
 	for (int i = 0; i < meshPasses[0].flat_batches.size(); i++) {
 		RenderObject2* obj = get_object(meshPasses[0].flat_batches[i].object);
 
-		data[i].command.firstInstance = i;
+		data[i].command.firstInstance = meshPasses[0].flat_batches[i].object.handle;//i;
 		data[i].command.instanceCount = 1;
 		data[i].command.firstIndex = 0;
 		data[i].command.vertexOffset = 0;
@@ -115,11 +105,14 @@ void RenderScene::refresh_pass(MeshPass* pass)
 				newCommand.object = pass->unbatchedObjects[i];
 
 				//pack mesh id and material into 32 bits
-				uint64_t meshmat = object->material.handle << 32 | object->meshID.handle;
+				uint32_t meshmat = (uint64_t(object->material.handle) << 10) | uint64_t(object->meshID.handle);
 
-				newCommand.sortKey = meshmat;
+				//pack mesh id and material into 64 bits
+				//uint64_t meshmat = uint64_t(meshmat) | object->customSortKey << 32;//object->material.handle << 32 | object->meshID.handle;
 
-				pass->flat_batches.push_back(newCommand);
+				newCommand.sortKey = uint64_t(meshmat) | (uint64_t(object->customSortKey) << 32);
+
+			pass->flat_batches.push_back(newCommand);
 			}
 		}
 	}

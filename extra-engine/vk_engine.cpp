@@ -1240,7 +1240,12 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd)
 	camData.view = view;
 	camData.viewproj = projection * view;
 
-	Frustum view_frustrum{ get_projection_matrix(false) *view };
+
+	glm::mat4 cullpro = glm::perspective(glm::radians(70.f), 1700.f / 900.f, 0.1f, _config.drawDistance);
+	cullpro[1][1] *= -1;
+	
+
+	Frustum view_frustrum{ cullpro *view };
 
 	float framed = (_frameNumber / 120.f);
 	_sceneParameters.ambientColor = glm::vec4{ 0.5 };
@@ -1283,10 +1288,6 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd)
 	dynamicInfo.offset = 0;
 	dynamicInfo.range = 100;
 
-	VkDescriptorBufferInfo instanceInfo;
-	instanceInfo.buffer = get_current_frame().instanceBuffer._buffer;
-	instanceInfo.offset = 0;
-	instanceInfo.range = sizeof(uint32_t) * MAX_OBJECTS;
 
 	VkDescriptorBufferInfo indirectInfo;
 	indirectInfo.buffer = get_current_frame().indirectBuffer._buffer;
@@ -1302,22 +1303,20 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd)
 	VkDescriptorSet ObjectDataSet;
 	vkutil::DescriptorBuilder::begin(_descriptorLayoutCache, get_current_frame().dynamicDescriptorAllocator)
 		.bind_buffer(0, &objectBufferInfo, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
-		.bind_buffer(1, &instanceInfo, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
+		
 		.build(ObjectDataSet);
 
 	{
 		ZoneScopedNC("Draw Merge", tracy::Color::Blue);
-		void* instanceData;
-		vmaMapMemory(_allocator, get_current_frame().instanceBuffer._allocation, &instanceData);
+	
 		void* indirectData;
 		vmaMapMemory(_allocator, get_current_frame().indirectBuffer._allocation, &indirectData);
 
 		IndirectObject* indirect = (IndirectObject*)indirectData;
 		_renderScene.fill_indirectArray(indirect);
-		_renderScene.fill_instanceArray((uint32_t*)instanceData);
 
 		vmaUnmapMemory(_allocator, get_current_frame().indirectBuffer._allocation);
-		vmaUnmapMemory(_allocator, get_current_frame().instanceBuffer._allocation);
+		
 	}
 		{
 			ZoneScopedNC("Draw Commit", tracy::Color::Blue4);
@@ -1348,9 +1347,13 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd)
 						vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, newEffect->builtLayout, 0, 1, &GlobalSet, 2, dynamicBinds);
 					}
 
-					if (lastMaterial == nullptr || drawMat->textureSet != VK_NULL_HANDLE && drawMat->textureSet != lastMaterial->textureSet) {
-						//texture descriptor
-						vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, newEffect->builtLayout, 2, 1, &drawMat->textureSet, 0, nullptr);
+					if (lastMaterial == nullptr ||  drawMat->textureSet != lastMaterial->textureSet) {
+						if (drawMat->textureSet != VK_NULL_HANDLE)
+						{
+							//texture descriptor
+							vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, newEffect->builtLayout, 2, 1, &drawMat->textureSet, 0, nullptr);
+
+						}
 					}
 					lastMaterial = drawMat;
 				}
@@ -1454,10 +1457,7 @@ void VulkanEngine::execute_compute_cull(VkCommandBuffer cmd, int count)
 	dynamicInfo.offset = 0;
 	dynamicInfo.range = 100;
 
-	VkDescriptorBufferInfo instanceInfo;
-	instanceInfo.buffer = get_current_frame().instanceBuffer._buffer;
-	instanceInfo.offset = 0;
-	instanceInfo.range = sizeof(uint32_t) * MAX_OBJECTS;
+	
 
 	VkDescriptorBufferInfo indirectInfo;
 	indirectInfo.buffer = get_current_frame().indirectBuffer._buffer;
@@ -1532,9 +1532,6 @@ void VulkanEngine::execute_compute_cull(VkCommandBuffer cmd, int count)
 
 void VulkanEngine::init_scene()
 {
-
-
-
 	VkSamplerCreateInfo samplerInfo = vkinit::sampler_create_info(VK_FILTER_NEAREST);
 
 	VkSampler blockySampler;
@@ -1570,7 +1567,7 @@ void VulkanEngine::init_scene()
 	glm::mat4 sponzaMatrix = glm::scale(glm::mat4{ 1.0 }, glm::vec3(0.1, 0.1, 0.1));;
 
 	//load_prefab(asset_path("Sponza/Sponza.pfb").c_str(), sponzaMatrix);
-	int dimcities = 0;
+	int dimcities = 2;
 	for (int x = -dimcities; x <= dimcities; x++) {
 		for (int y = -dimcities; y <= dimcities; y++) {
 
@@ -1873,11 +1870,11 @@ bool VulkanEngine::load_prefab(const char* path, glm::mat4 root)
 
 		//sort key from location
 		int32_t lx = int(loadmesh.bounds.origin.x / 10.f);
-		int32_t ly = int(loadmesh.bounds.origin.z / 10.f);
+		int32_t ly = int(loadmesh.bounds.origin.y / 10.f);
 
 		uint32_t key =  uint32_t(std::hash<int32_t>()(lx) ^ std::hash<int32_t>()(ly^1337));
 
-		loadmesh.customSortKey = 0;//rng;// key;
+		loadmesh.customSortKey = rng;// key;
 		assert(mat->textures.size() <= 1);
 
 		
@@ -1989,8 +1986,7 @@ void VulkanEngine::init_descriptors()
 		
 		_frames[i].objectBuffer = create_buffer(sizeof(GPUObjectData) * MAX_OBJECTS, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
 
-		_frames[i].instanceBuffer = create_buffer(sizeof(uint32_t) * MAX_OBJECTS, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
-
+		
 		_frames[i].indirectBuffer = create_buffer(sizeof(IndirectObject) * MAX_OBJECTS, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
 
 		//1 megabyte of dynamic data buffer
