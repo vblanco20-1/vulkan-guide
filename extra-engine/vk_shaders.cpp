@@ -202,7 +202,7 @@ void ShaderEffect::reflect_layout(VulkanEngine* engine, ReflectionOverrides* ove
 		ly.create_info.pBindings = ly.bindings.data();
 		ly.create_info.flags = 0;
 		ly.create_info.pNext = 0;
-
+		
 
 		if (ly.create_info.bindingCount > 0) {
 			setHashes[i] = vkutil::hash_descriptor_layout_info(&ly.create_info);
@@ -216,15 +216,6 @@ void ShaderEffect::reflect_layout(VulkanEngine* engine, ReflectionOverrides* ove
 
 	//we start from just the default empty pipeline layout info
 	VkPipelineLayoutCreateInfo mesh_pipeline_layout_info = vkinit::pipeline_layout_create_info();
-
-	//setup push constants
-	VkPushConstantRange push_constant;
-	//offset 0
-	push_constant.offset = 0;
-	//size of a MeshPushConstant struct
-	push_constant.size = sizeof(MeshPushConstants);
-	//for the vertex shader
-	push_constant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 
 	mesh_pipeline_layout_info.pPushConstantRanges = constant_ranges.data();
 	mesh_pipeline_layout_info.pushConstantRangeCount = constant_ranges.size();
@@ -241,7 +232,7 @@ void ShaderEffect::reflect_layout(VulkanEngine* engine, ReflectionOverrides* ove
 	mesh_pipeline_layout_info.setLayoutCount = s;
 	mesh_pipeline_layout_info.pSetLayouts = compactedLayouts.data();
 
-	VkPipelineLayout meshPipLayout;
+	
 	vkCreatePipelineLayout(engine->_device, &mesh_pipeline_layout_info, nullptr, &builtLayout);
 
 }

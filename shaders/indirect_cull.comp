@@ -10,7 +10,8 @@ layout(set = 0, binding = 0) uniform  CameraBuffer{
 } cameraData;
 
 struct DrawCullData
-{mat4 view;
+{
+	mat4 view;
 	float P00, P11, znear, zfar; // symmetric projection parameters
 	float frustum[4]; // data for left/right/top/bottom frustum planes
 	float lodBase, lodStep; // lod distance i = base * pow(step, i)
@@ -32,7 +33,7 @@ layout(push_constant) uniform  constants{
 struct Bounds{
 	vec4 sphereBounds;
 }; 
-
+layout(set = 1,binding = 4) uniform sampler2D depthPyramid;
 struct ObjectData{
 	mat4 model;
 vec4 spherebounds;
@@ -123,6 +124,9 @@ bool IsVisible(uint objectIndex)
 
 	visible = visible || cullData.cullingEnabled == 0;
 
+	//flip Y because we access depth texture that way
+	center.y *= -1;
+
 	if(visible)
 	{
 		vec4 aabb;
@@ -131,18 +135,14 @@ bool IsVisible(uint objectIndex)
 			float width = (aabb.z - aabb.x) * cullData.pyramidWidth;
 			float height = (aabb.w - aabb.y) * cullData.pyramidHeight;
 
-			//cull if object is very small
-			if(width < 5 && height < 5)
-			{
-				visible = false;
-			}
-			//float level = floor(log2(max(width, height)));
+			float level = floor(log2(max(width, height)));
 
 			// Sampler is set up to do min reduction, so this computes the minimum depth of a 2x2 texel quad
 			//float depth = textureLod(depthPyramid, (aabb.xy + aabb.zw) * 0.5, level).x;
-			//float depthSphere = cullData.znear / (center.z - radius);
+			float depth = textureLod(depthPyramid, (aabb.xy + aabb.zw) * 0.5, level).x;
+			float depthSphere =cullData.znear / (center.z - radius);
 
-			//visible = visible && depthSphere > depth;
+			visible = visible && depthSphere >= depth;
 		}
 	}
 

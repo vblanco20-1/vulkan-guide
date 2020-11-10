@@ -194,7 +194,7 @@ struct MeshDrawCommands {
 	std::vector<RenderBatch> batch;
 };
 
-struct alignas(16) DrawCullData
+struct /*alignas(16)*/DrawCullData
 {
 	glm::mat4 viewMat;
 	float P00, P11, znear, zfar; // symmetric projection parameters
@@ -208,7 +208,6 @@ struct alignas(16) DrawCullData
 	int lodEnabled;
 	int occlusionEnabled;
 
-	int lateWorkaroundAMD;
 };
 
 struct EngineConfig {
@@ -258,7 +257,12 @@ public:
 	//depth resources
 	VkImageView _depthImageView;
 	AllocatedImage _depthImage;
-
+	AllocatedImage _depthPyramid;
+	VkImageView _depthPyramidView;
+	int depthPyramidWidth ;
+	int depthPyramidHeight;
+	int depthPyramidLevels;
+	
 	//the format for the depth image
 	VkFormat _depthFormat;
 
@@ -279,6 +283,12 @@ public:
 
 	VkPipeline _cullPipeline;
 	VkPipelineLayout _cullLayout;
+
+	VkPipeline _depthReducePipeline;
+	VkPipelineLayout _depthReduceLayout;
+
+	VkSampler _depthSampler;
+	VkImageView depthPyramidMips[16] = {};
 
 	MeshDrawCommands currentCommands;
 	RenderScene _renderScene;
@@ -322,6 +332,8 @@ public:
 
 	//our draw function
 	void draw_objects(VkCommandBuffer cmd);
+
+	void reduce_depth(VkCommandBuffer cmd);
 
 	glm::mat4 get_view_matrix();
 

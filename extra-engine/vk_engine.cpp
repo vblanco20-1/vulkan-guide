@@ -219,6 +219,8 @@ void VulkanEngine::draw()
 	//finalize the render pass
 	vkCmdEndRenderPass(cmd);
 
+	reduce_depth(cmd);
+
 	TracyVkCollect(_graphicsQueueContext, get_current_frame()._mainCommandBuffer);
 
 	//finalize the command buffer (we can no longer add commands, but it can now be executed)
@@ -460,6 +462,7 @@ void VulkanEngine::init_vulkan()
 	vkb::PhysicalDevice physicalDevice = selector
 		.set_minimum_version(1, 1)
 		.set_surface(_surface)
+		.add_required_extension(VK_EXT_SAMPLER_FILTER_MINMAX_EXTENSION_NAME)
 		.select()
 		.value();
 	std::cout << "selector" << std::endl;
@@ -495,7 +498,28 @@ void VulkanEngine::init_vulkan()
 	std::cout << "The gpu has a minimum buffer alignement of " << _gpuProperties.limits.minUniformBufferOffsetAlignment << std::endl;
 
 }
+uint32_t previousPow2(uint32_t v)
+{
+	uint32_t r = 1;
 
+	while (r * 2 < v)
+		r *= 2;
+
+	return r;
+}
+uint32_t getImageMipLevels(uint32_t width, uint32_t height)
+{
+	uint32_t result = 1;
+
+	while (width > 1 || height > 1)
+	{
+		result++;
+		width /= 2;
+		height /= 2;
+	}
+
+	return result;
+}
 void VulkanEngine::init_swapchain()
 {
 
@@ -531,7 +555,7 @@ void VulkanEngine::init_swapchain()
 	_depthFormat = VK_FORMAT_D32_SFLOAT;
 
 	//the depth image will be a image with the format we selected and Depth Attachment usage flag
-	VkImageCreateInfo dimg_info = vkinit::image_create_info(_depthFormat, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, depthImageExtent);
+	VkImageCreateInfo dimg_info = vkinit::image_create_info(_depthFormat, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, depthImageExtent);
 
 	//for the depth image, we want to allocate it from gpu local memory
 	VmaAllocationCreateInfo dimg_allocinfo = {};
@@ -545,6 +569,75 @@ void VulkanEngine::init_swapchain()
 	VkImageViewCreateInfo dview_info = vkinit::imageview_create_info(_depthFormat, _depthImage._image, VK_IMAGE_ASPECT_DEPTH_BIT);;
 
 	VK_CHECK(vkCreateImageView(_device, &dview_info, nullptr, &_depthImageView));
+
+	// Note: previousPow2 makes sure all reductions are at most by 2x2 which makes sure they are conservative
+	depthPyramidWidth = previousPow2(_windowExtent.width);
+	depthPyramidHeight = previousPow2(_windowExtent.height);
+	depthPyramidLevels = getImageMipLevels(depthPyramidWidth, depthPyramidHeight);
+
+	VkExtent3D pyramidExtent = {
+		depthPyramidWidth,
+		depthPyramidHeight,
+		1
+	};
+	//the depth image will be a image with the format we selected and Depth Attachment usage flag
+	VkImageCreateInfo pyramidInfo = vkinit::image_create_info(VK_FORMAT_R32_SFLOAT, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, pyramidExtent);
+
+	pyramidInfo.mipLevels = depthPyramidLevels;
+
+	//allocate and create the image
+	vmaCreateImage(_allocator, &pyramidInfo, &dimg_allocinfo, &_depthPyramid._image, &_depthPyramid._allocation, nullptr);
+
+	//build a image-view for the depth image to use for rendering
+	VkImageViewCreateInfo priview_info = vkinit::imageview_create_info(VK_FORMAT_R32_SFLOAT, _depthPyramid._image, VK_IMAGE_ASPECT_COLOR_BIT);
+	priview_info.subresourceRange.levelCount = depthPyramidLevels;
+
+
+	VK_CHECK(vkCreateImageView(_device, &priview_info, nullptr, &_depthPyramidView));
+
+
+	for (uint32_t i = 0; i < depthPyramidLevels; ++i)
+	{
+		VkImageViewCreateInfo level_info = vkinit::imageview_create_info(VK_FORMAT_R32_SFLOAT, _depthPyramid._image, VK_IMAGE_ASPECT_COLOR_BIT);
+		level_info.subresourceRange.levelCount = 1;
+		level_info.subresourceRange.baseMipLevel = i;
+
+		VkImageView pyramid;
+		vkCreateImageView(_device, &level_info, nullptr, &pyramid);
+
+		depthPyramidMips[i] = pyramid;
+		assert(depthPyramidMips[i]);
+	}
+
+
+
+
+	
+	VkSamplerCreateInfo createInfo = { VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
+
+	auto reductionMode = VK_SAMPLER_REDUCTION_MODE_MIN;
+
+	createInfo.magFilter = VK_FILTER_LINEAR;
+	createInfo.minFilter = VK_FILTER_LINEAR;
+	createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+	createInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+	createInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+	createInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+	createInfo.minLod = 0;
+	createInfo.maxLod = 16.f;
+
+	VkSamplerReductionModeCreateInfoEXT createInfoReduction = { VK_STRUCTURE_TYPE_SAMPLER_REDUCTION_MODE_CREATE_INFO_EXT };
+
+	if (reductionMode != VK_SAMPLER_REDUCTION_MODE_WEIGHTED_AVERAGE_EXT)
+	{
+		createInfoReduction.reductionMode = reductionMode;
+
+		createInfo.pNext = &createInfoReduction;
+	}
+
+	
+	VK_CHECK(vkCreateSampler(_device, &createInfo, 0, &_depthSampler));
+
 
 	//add to deletion queues
 	_mainDeletionQueue.push_function([=]() {
@@ -868,10 +961,23 @@ void VulkanEngine::init_pipelines()
 		std::cout << "Error when building the cull compute shader shader module" << std::endl;
 	}
 
+	ShaderModule reduceModule;
+	if (!vkutil::load_shader_module(_device, "../../shaders/depthReduce.comp.spv", &reduceModule))
+
+	{
+		std::cout << "Error when building the cull compute shader shader module" << std::endl;
+	}
+
+
 	ShaderEffect* cullEffect = new ShaderEffect();;
 	cullEffect->add_stage(&cullModule, VK_SHADER_STAGE_COMPUTE_BIT);
 
 	cullEffect->reflect_layout(this, nullptr, 0);
+
+	ShaderEffect* reduceEffect = new ShaderEffect();;
+	reduceEffect->add_stage(&reduceModule, VK_SHADER_STAGE_COMPUTE_BIT);
+
+	reduceEffect->reflect_layout(this, nullptr, 0);
 
 	ComputePipelineBuilder computeBuilder;
 	computeBuilder._pipelineLayout = cullEffect->builtLayout;
@@ -879,6 +985,12 @@ void VulkanEngine::init_pipelines()
 
 	_cullLayout = cullEffect->builtLayout;
 	_cullPipeline = computeBuilder.build_pipeline(_device);
+
+	computeBuilder._pipelineLayout = reduceEffect->builtLayout;
+	computeBuilder._shaderStage = vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_COMPUTE_BIT, reduceModule.module);
+
+	_depthReduceLayout = reduceEffect->builtLayout;
+	_depthReducePipeline = computeBuilder.build_pipeline(_device);
 
 	vkDestroyShaderModule(_device, meshVertShader, nullptr);
 	vkDestroyShaderModule(_device, colorMeshShader, nullptr);
@@ -1410,6 +1522,97 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd)
 		}
 }
 
+struct alignas(16) DepthReduceData
+{
+	glm::vec2 imageSize;
+};
+inline uint32_t getGroupCount(uint32_t threadCount, uint32_t localSize)
+{
+	return (threadCount + localSize - 1) / localSize;
+}
+
+VkImageMemoryBarrier imageBarrier(VkImage image, VkAccessFlags srcAccessMask, VkAccessFlags dstAccessMask, VkImageLayout oldLayout, VkImageLayout newLayout, VkImageAspectFlags aspectMask)
+{
+	VkImageMemoryBarrier result = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
+
+	result.srcAccessMask = srcAccessMask;
+	result.dstAccessMask = dstAccessMask;
+	result.oldLayout = oldLayout;
+	result.newLayout = newLayout;
+	result.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	result.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	result.image = image;
+	result.subresourceRange.aspectMask = aspectMask;
+	result.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
+	result.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
+
+	return result;
+}
+
+
+void VulkanEngine::reduce_depth(VkCommandBuffer cmd)
+{
+	VkImageMemoryBarrier depthReadBarriers[] =
+	{
+		imageBarrier(_depthImage._image, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_ASPECT_DEPTH_BIT),
+	};
+
+	vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, 0, 0, 0, 1, depthReadBarriers);
+
+	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, _depthReducePipeline);
+
+	for (uint32_t i = 0; i < depthPyramidLevels; ++i)
+	{
+		VkDescriptorImageInfo destTarget;
+		destTarget.sampler = _depthSampler;
+		destTarget.imageView = depthPyramidMips[i];
+		destTarget.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+
+		VkDescriptorImageInfo sourceTarget;
+		sourceTarget.sampler = _depthSampler;
+		if (i == 0)
+		{
+			sourceTarget.imageView = _depthImageView;
+			sourceTarget.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		}
+		else {
+			sourceTarget.imageView = depthPyramidMips[i - 1];
+			sourceTarget.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+		}
+		
+		
+
+		
+		VkDescriptorSet depthSet;
+		vkutil::DescriptorBuilder::begin(_descriptorLayoutCache,get_current_frame().dynamicDescriptorAllocator)
+			.bind_image(0, &destTarget, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, VK_SHADER_STAGE_COMPUTE_BIT)
+			.bind_image(1, &sourceTarget, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_COMPUTE_BIT)
+			.build(depthSet);
+
+		vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, _depthReduceLayout, 0, 1, &depthSet, 0, nullptr);
+		
+
+		uint32_t levelWidth = depthPyramidWidth >> i;
+		uint32_t levelHeight = depthPyramidHeight >> i;
+		if (levelHeight < 1) levelHeight = 1;
+		if (levelWidth < 1) levelWidth = 1;
+
+		DepthReduceData reduceData = { glm::vec2(levelWidth, levelHeight) };
+
+		vkCmdPushConstants(cmd, _depthReduceLayout,VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(reduceData), &reduceData);
+		vkCmdDispatch(cmd, getGroupCount(levelWidth, 32), getGroupCount(levelHeight, 32), 1);
+
+
+		VkImageMemoryBarrier reduceBarrier= imageBarrier(_depthPyramid._image, VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_ASPECT_COLOR_BIT);
+
+		vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, 0, 0, 0, 1, &reduceBarrier);
+	}
+
+	VkImageMemoryBarrier depthWriteBarrier = imageBarrier(_depthImage._image, VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_DEPTH_BIT);
+
+	vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, 0, 0, 0, 1, &depthWriteBarrier);
+
+}
 
 glm::mat4 VulkanEngine::get_view_matrix()
 {
@@ -1493,14 +1696,19 @@ void VulkanEngine::execute_compute_cull(VkCommandBuffer cmd, int count)
 	VkDescriptorBufferInfo indirectInfo;
 	indirectInfo.buffer = get_current_frame().indirectBuffer._buffer;
 	indirectInfo.offset = 0;
-	indirectInfo.range = sizeof(GPUIndirectObject) * MAX_OBJECTS;	
+	indirectInfo.range = sizeof(GPUIndirectObject) * MAX_OBJECTS;
+
+	VkDescriptorImageInfo depthPyramid;
+	depthPyramid.sampler = _depthSampler;
+	depthPyramid.imageView = _depthPyramidView;
+	depthPyramid.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 
 	//COMPUTE CULL
 
 	VkDescriptorSet COMPGlobalSet;
 	vkutil::DescriptorBuilder::begin(_descriptorLayoutCache, get_current_frame().dynamicDescriptorAllocator)
 		.bind_buffer(0, &dynamicInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT)
-		.bind_buffer(1, &dynamicInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT)
+		//.bind_buffer(1, &dynamicInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT)
 		//.bind_buffer(2, &cullBoundsInfo, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT)
 		.build(COMPGlobalSet);
 
@@ -1510,10 +1718,11 @@ void VulkanEngine::execute_compute_cull(VkCommandBuffer cmd, int count)
 		.bind_buffer(1, &indirectInfo, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT)
 		.bind_buffer(2, &instanceInfo, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT)
 		.bind_buffer(3, &finalInfo, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT)
+		.bind_image(4,&depthPyramid, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_COMPUTE_BIT)
 		.build(COMPObjectDataSet);
 
 
-	glm::mat4 projection = get_projection_matrix(false) ;
+	glm::mat4 projection = get_projection_matrix(true) ;
 	glm::mat4 projectionT = transpose(projection);
 
 	glm::vec4 frustumX = normalizePlane(projectionT[3] + projectionT[0]); // x + w < 0
@@ -1534,8 +1743,8 @@ void VulkanEngine::execute_compute_cull(VkCommandBuffer cmd, int count)
 	cullData.occlusionEnabled = true;
 	cullData.lodBase = 10.f;
 	cullData.lodStep = 1.5f;
-	cullData.pyramidWidth = 1700.f;
-	cullData.pyramidHeight = 900.f;
+	cullData.pyramidWidth = depthPyramidWidth;
+	cullData.pyramidHeight = depthPyramidHeight;
 	cullData.viewMat = get_view_matrix();
 
 	VkBufferCopy indirectCopy;
@@ -1555,13 +1764,17 @@ void VulkanEngine::execute_compute_cull(VkCommandBuffer cmd, int count)
 		barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
 		barrier.pNext = nullptr;
 
-		vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr, 1, &barrier, 0, nullptr);
-	}
+		//VkImageMemoryBarrier readBarrier = imageBarrier(_depthPyramid._image, 0, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_ASPECT_COLOR_BIT);
 
+		vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr, 1, &barrier, 0, nullptr);//1, &readBarrier);
+	}
+	
+
+	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, _cullPipeline);
 
 	vkCmdPushConstants(cmd, _cullLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(DrawCullData), &cullData);
 
-	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, _cullPipeline);
+	
 
 
 	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, _cullLayout, 0, 1, &COMPGlobalSet, 0, nullptr);
@@ -1638,20 +1851,20 @@ void VulkanEngine::init_scene()
 	}
 	
 
-	for (int x = -20; x <= 20; x++) {
-		for (int y = -20; y <= 20; y++) {
-
-			RenderObject tri;
-			tri.mesh = get_mesh("triangle");
-			tri.material = get_material("defaultmesh");
-			glm::mat4 translation = glm::translate(glm::mat4{ 1.0 }, glm::vec3(x, 0, y));
-			glm::mat4 scale = glm::scale(glm::mat4{ 1.0 }, glm::vec3(0.2, 0.2, 0.2));
-			tri.transformMatrix = translation * scale;
-
-			refresh_renderbounds(&tri);
-			_renderScene.register_object(&tri, PassTypeFlags::Forward);
-		}
-	}
+	//for (int x = -20; x <= 20; x++) {
+	//	for (int y = -20; y <= 20; y++) {
+	//
+	//		RenderObject tri;
+	//		tri.mesh = get_mesh("triangle");
+	//		tri.material = get_material("defaultmesh");
+	//		glm::mat4 translation = glm::translate(glm::mat4{ 1.0 }, glm::vec3(x, 0, y));
+	//		glm::mat4 scale = glm::scale(glm::mat4{ 1.0 }, glm::vec3(0.2, 0.2, 0.2));
+	//		tri.transformMatrix = translation * scale;
+	//
+	//		refresh_renderbounds(&tri);
+	//		_renderScene.register_object(&tri, PassTypeFlags::Forward);
+	//	}
+	//}
 }
 
 
@@ -2036,9 +2249,9 @@ void VulkanEngine::init_descriptors()
 	const size_t sceneParamBufferSize = FRAME_OVERLAP * pad_uniform_buffer_size(sizeof(GPUSceneData));
 
 
-	compactedInstanceBuffer = create_buffer(sizeof(uint32_t) * MAX_OBJECTS, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+	compactedInstanceBuffer = create_buffer(sizeof(uint32_t) * MAX_OBJECTS, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
 
-	drawIndirectBuffer = create_buffer(sizeof(GPUIndirectObject) * MAX_OBJECTS, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+	drawIndirectBuffer = create_buffer(sizeof(GPUIndirectObject) * MAX_OBJECTS, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
 
 
 
@@ -2052,7 +2265,7 @@ void VulkanEngine::init_descriptors()
 	
 		_frames[i].instanceBuffer = create_buffer(sizeof(GPUInstance) * MAX_OBJECTS, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
 		
-		_frames[i].indirectBuffer = create_buffer(sizeof(GPUIndirectObject) * MAX_OBJECTS, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+		_frames[i].indirectBuffer = create_buffer(sizeof(GPUIndirectObject) * MAX_OBJECTS,VK_BUFFER_USAGE_TRANSFER_SRC_BIT| VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
 		
 		//1 megabyte of dynamic data buffer
 		_frames[i].dynamicDataBuffer = create_buffer(10000000, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
