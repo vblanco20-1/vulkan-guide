@@ -25,9 +25,15 @@ struct RenderObject;
 struct Mesh;
 struct GPUObjectData;
 
-struct IndirectObject {
+struct GPUIndirectObject {
 	VkDrawIndexedIndirectCommand command;
 	uint32_t objectID;
+	uint32_t batchID;
+};
+
+struct GPUBatch {
+	uint32_t count;
+	uint32_t offset;
 };
 enum class PassTypeFlags : uint8_t {
 	Forward = 1 << 0,
@@ -62,6 +68,8 @@ public:
 
 		glm::vec3 AABBMin;
 		glm::vec3 AABBMax;
+
+		std::vector<Handle<RenderObject2>> objects;
 	};
 	struct RenderBatch {
 		Handle<RenderObject2> object;
@@ -84,7 +92,8 @@ public:
 	void update_object(Handle<RenderObject2> objectID);
 	
 	void fill_objectData(GPUObjectData* data);
-	void fill_indirectArray(IndirectObject* data);
+	void fill_indirectArray(GPUIndirectObject* data);
+	void fill_batchArray(GPUBatch* data);
 
 	void build_batches();
 

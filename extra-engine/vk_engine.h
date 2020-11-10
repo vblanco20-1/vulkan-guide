@@ -121,8 +121,11 @@ struct FrameData {
 
 	AllocatedBuffer objectBuffer;
 	
+
+	AllocatedBuffer compactIndirectBuffer;
 	AllocatedBuffer indirectBuffer;
 	AllocatedBuffer dynamicDataBuffer;
+	AllocatedBuffer batchBuffer;
 
 	vkutil::DescriptorAllocator* dynamicDescriptorAllocator;
 };

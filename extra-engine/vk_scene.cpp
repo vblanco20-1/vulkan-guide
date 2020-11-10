@@ -69,20 +69,43 @@ void RenderScene::fill_objectData(GPUObjectData* data)
 }
 
 
-void RenderScene::fill_indirectArray(IndirectObject* data)
+void RenderScene::fill_indirectArray(GPUIndirectObject* data)
 {
 	static int ntimes = 0;
 	ntimes++;
 	if (ntimes > 3) return;
-	for (int i = 0; i < meshPasses[0].flat_batches.size(); i++) {
-		RenderObject2* obj = get_object(meshPasses[0].flat_batches[i].object);
+	int dataIndex = 0;
+	for (int i = 0; i < meshPasses[0].batches.size(); i++) {
 
-		data[i].command.firstInstance = meshPasses[0].flat_batches[i].object.handle;//i;
-		data[i].command.instanceCount = 1;
-		data[i].command.firstIndex = 0;
-		data[i].command.vertexOffset = 0;
-		data[i].command.indexCount = get_mesh(obj->meshID)->_indices.size();
-		data[i].objectID = meshPasses[0].flat_batches[i].object.handle;
+		auto batch = meshPasses[0].batches[i];
+
+		for (auto objID : batch.objects)
+		{
+			RenderObject2* obj = get_object(objID);
+
+			data[dataIndex].command.firstInstance = objID.handle;//i;
+			data[dataIndex].command.instanceCount = 1;
+			data[dataIndex].command.firstIndex = 0;
+			data[dataIndex].command.vertexOffset = 0;
+			data[dataIndex].command.indexCount = get_mesh(obj->meshID)->_indices.size();
+			data[dataIndex].objectID = objID.handle;
+			data[dataIndex].batchID = i;
+
+			dataIndex++;
+		}
+	}
+}
+
+void RenderScene::fill_batchArray(GPUBatch* data)
+{
+	int dataIndex = 0;
+	for (int i = 0; i < meshPasses[0].batches.size(); i++) {
+
+		auto batch = meshPasses[0].batches[i];
+
+		data[dataIndex].count = 0;//batch.count;
+		data[dataIndex].offset = batch.first;
+		dataIndex++;
 	}
 }
 
@@ -159,7 +182,10 @@ void RenderScene::refresh_pass(MeshPass* pass)
 
 				pass->batches.push_back(newBatch);
 			}
+			pass->batches.back().objects.push_back(pass->flat_batches[i].object);
+			//obj->batchIndex = pass->batches.size() - 1;
 		}
+		
 	}
 }
 

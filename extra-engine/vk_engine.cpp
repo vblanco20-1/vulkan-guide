@@ -1199,6 +1199,16 @@ void VulkanEngine::ready_mesh_draw()
 
 	vmaUnmapMemory(_allocator, get_current_frame().objectBuffer._allocation);
 
+	void* batchData;
+	vmaMapMemory(_allocator, get_current_frame().batchBuffer._allocation, &batchData);
+
+	GPUBatch* batchSSSBO = (GPUBatch*)batchData;
+
+	_renderScene.fill_batchArray(batchSSSBO);
+
+	vmaUnmapMemory(_allocator, get_current_frame().batchBuffer._allocation);
+
+
 	//push data to dynmem
 	uint32_t camera_data_offsets[3];
 	uint32_t scene_data_offset;
@@ -1292,7 +1302,7 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd)
 	VkDescriptorBufferInfo indirectInfo;
 	indirectInfo.buffer = get_current_frame().indirectBuffer._buffer;
 	indirectInfo.offset = 0;
-	indirectInfo.range = sizeof(IndirectObject) * MAX_OBJECTS;
+	indirectInfo.range = sizeof(GPUIndirectObject) * MAX_OBJECTS;
 
 	VkDescriptorSet GlobalSet;
 	vkutil::DescriptorBuilder::begin(_descriptorLayoutCache, get_current_frame().dynamicDescriptorAllocator)
@@ -1312,7 +1322,7 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd)
 		void* indirectData;
 		vmaMapMemory(_allocator, get_current_frame().indirectBuffer._allocation, &indirectData);
 
-		IndirectObject* indirect = (IndirectObject*)indirectData;
+		GPUIndirectObject* indirect = (GPUIndirectObject*)indirectData;
 		_renderScene.fill_indirectArray(indirect);
 
 		vmaUnmapMemory(_allocator, get_current_frame().indirectBuffer._allocation);
@@ -1325,8 +1335,9 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd)
 
 
 			stats.objects = _renderScene.meshPasses[0].flat_batches.size();
-			for (auto& instanceDraw : _renderScene.meshPasses[0].batches)
+			for (int i = 0; i < _renderScene.meshPasses[0].batches.size();i++)//)
 			{
+				auto& instanceDraw = _renderScene.meshPasses[0].batches[i];
 				//cull the whole batch
 				if (!view_frustrum.IsBoxVisible(instanceDraw.AABBMin, instanceDraw.AABBMax)) continue;
 
@@ -1379,7 +1390,14 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd)
 				else {
 					stats.triangles += (drawMesh->_indices.size() / 3) * instanceDraw.count;
 
-					vkCmdDrawIndexedIndirect(cmd, get_current_frame().indirectBuffer._buffer, instanceDraw.first * sizeof(IndirectObject), instanceDraw.count, sizeof(IndirectObject));
+					//vkCmdDrawIndexedIndirectCount(cmd, get_current_frame().indirectBuffer._buffer, instanceDraw.first * sizeof(GPUIndirectObject), get_current_frame().batchBuffer._buffer, i * sizeof(GPUBatch), instanceDraw.count, sizeof(GPUIndirectObject));
+
+					vkCmdDrawIndexedIndirectCount(cmd, get_current_frame().compactIndirectBuffer._buffer, 
+						instanceDraw.first * sizeof(VkDrawIndexedIndirectCommand), 
+						get_current_frame().batchBuffer._buffer, i * sizeof(GPUBatch), 
+						instanceDraw.count, sizeof(VkDrawIndexedIndirectCommand));
+
+					//vkCmdDrawIndexedIndirect(cmd, get_current_frame().indirectBuffer._buffer, instanceDraw.first * sizeof(GPUIndirectObject), instanceDraw.count, sizeof(GPUIndirectObject));
 					stats.draws++;
 					stats.drawcalls += instanceDraw.count;
 				}
@@ -1462,7 +1480,17 @@ void VulkanEngine::execute_compute_cull(VkCommandBuffer cmd, int count)
 	VkDescriptorBufferInfo indirectInfo;
 	indirectInfo.buffer = get_current_frame().indirectBuffer._buffer;
 	indirectInfo.offset = 0;
-	indirectInfo.range = sizeof(IndirectObject) * MAX_OBJECTS;
+	indirectInfo.range = sizeof(GPUIndirectObject) * MAX_OBJECTS;
+
+	VkDescriptorBufferInfo compatctindirectInfo;
+	compatctindirectInfo.buffer = get_current_frame().compactIndirectBuffer._buffer;
+	compatctindirectInfo.offset = 0;
+	compatctindirectInfo.range = sizeof(VkDrawIndexedIndirectCommand) * MAX_OBJECTS;
+
+	VkDescriptorBufferInfo batchInfo;
+	batchInfo.buffer = get_current_frame().batchBuffer._buffer;
+	batchInfo.offset = 0;
+	batchInfo.range = sizeof(GPUBatch) * MAX_OBJECTS;
 
 	//COMPUTE CULL
 
@@ -1477,6 +1505,8 @@ void VulkanEngine::execute_compute_cull(VkCommandBuffer cmd, int count)
 	vkutil::DescriptorBuilder::begin(_descriptorLayoutCache, get_current_frame().dynamicDescriptorAllocator)
 		.bind_buffer(0, &objectBufferInfo, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT)
 		.bind_buffer(1, &indirectInfo, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT)
+		.bind_buffer(2, &compatctindirectInfo, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT)
+		.bind_buffer(3, &batchInfo, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT)
 		.build(COMPObjectDataSet);
 
 
@@ -1517,17 +1547,32 @@ void VulkanEngine::execute_compute_cull(VkCommandBuffer cmd, int count)
 	TracyVkZone(_graphicsQueueContext, cmd, "Cull Dispatch");
 	vkCmdDispatch(cmd, count / 256, 1, 1);
 
-	VkBufferMemoryBarrier barrier{};
-	barrier.buffer = get_current_frame().indirectBuffer._buffer;
-	barrier.size = VK_WHOLE_SIZE;
-	barrier.dstAccessMask = VK_ACCESS_INDIRECT_COMMAND_READ_BIT;
-	barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-	barrier.srcQueueFamilyIndex = _graphicsQueueFamily;
-	barrier.dstQueueFamilyIndex = _graphicsQueueFamily;
-	barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
-	barrier.pNext = nullptr;
+	{
+		VkBufferMemoryBarrier barrier{};
+		barrier.buffer = get_current_frame().compactIndirectBuffer._buffer;
+		barrier.size = VK_WHOLE_SIZE;
+		barrier.dstAccessMask = VK_ACCESS_INDIRECT_COMMAND_READ_BIT;
+		barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+		barrier.srcQueueFamilyIndex = _graphicsQueueFamily;
+		barrier.dstQueueFamilyIndex = _graphicsQueueFamily;
+		barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+		barrier.pNext = nullptr;
 
-	vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT, 0, 0, nullptr, 1, &barrier, 0, nullptr);
+		vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT, 0, 0, nullptr, 1, &barrier, 0, nullptr);
+	}
+	{
+		VkBufferMemoryBarrier barrier{};
+		barrier.buffer = get_current_frame().batchBuffer._buffer;
+		barrier.size = VK_WHOLE_SIZE;
+		barrier.dstAccessMask = VK_ACCESS_INDIRECT_COMMAND_READ_BIT;
+		barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+		barrier.srcQueueFamilyIndex = _graphicsQueueFamily;
+		barrier.dstQueueFamilyIndex = _graphicsQueueFamily;
+		barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+		barrier.pNext = nullptr;
+
+		vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT, 0, 0, nullptr, 1, &barrier, 0, nullptr);
+	}
 }
 
 void VulkanEngine::init_scene()
@@ -1874,7 +1919,7 @@ bool VulkanEngine::load_prefab(const char* path, glm::mat4 root)
 
 		uint32_t key =  uint32_t(std::hash<int32_t>()(lx) ^ std::hash<int32_t>()(ly^1337));
 
-		loadmesh.customSortKey = rng;// key;
+		loadmesh.customSortKey = 0;// rng;// key;
 		assert(mat->textures.size() <= 1);
 
 		
@@ -1986,8 +2031,12 @@ void VulkanEngine::init_descriptors()
 		
 		_frames[i].objectBuffer = create_buffer(sizeof(GPUObjectData) * MAX_OBJECTS, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
 
+		_frames[i].batchBuffer = create_buffer(sizeof(GPUBatch) * MAX_OBJECTS, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
 		
-		_frames[i].indirectBuffer = create_buffer(sizeof(IndirectObject) * MAX_OBJECTS, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+		_frames[i].indirectBuffer = create_buffer(sizeof(GPUIndirectObject) * MAX_OBJECTS, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+
+		_frames[i].compactIndirectBuffer = create_buffer(sizeof(VkDrawIndexedIndirectCommand) * MAX_OBJECTS, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+
 
 		//1 megabyte of dynamic data buffer
 		_frames[i].dynamicDataBuffer = create_buffer(10000000, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
