@@ -59,36 +59,24 @@ struct DrawCommand
 layout(set = 1, binding = 1)  buffer InstanceBuffer{   
 
 	DrawCommand Draws[];
-} instanceBuffer;
+} drawBuffer;
 
-
-struct GPUBatch
-{
-	uint count;
-    uint offset;    
+struct GPUInstance {
+	uint objectID;
+	uint batchID;
 };
+//draw indirect buffer
+layout(set = 1, binding = 2)  buffer InstanceBuffer2{   
+
+	GPUInstance Instances[];
+} compactInstanceBuffer;
 
 //draw indirect buffer
-layout(set = 1, binding = 3)  buffer BatchBuffer{   
+layout(set = 1, binding = 3)  buffer InstanceBuffer3{   
 
-	GPUBatch Batches[];
-} batchBuffer;
+	uint IDs[];
+} finalInstanceBuffer;
 
-struct VkDrawCommand
-{
-	
-	uint    indexCount;
-    uint    instanceCount;
-    uint    firstIndex;
-    int     vertexOffset;
-    uint    firstInstance;
-};
-
-//draw indirect buffer
-layout(set = 1, binding = 2)  buffer IndirectBuffer{   
-
-	VkDrawCommand Draws[];
-} compactIndirectBuffer;
 
 // 2D Polyhedral Bounds of a Clipped, Perspective-Projected 3D Sphere. Michael Mara, Morgan McGuire. 2013
 bool projectSphere(vec3 C, float r, float znear, float P00, float P11, out vec4 aabb)
@@ -113,7 +101,7 @@ bool projectSphere(vec3 C, float r, float znear, float P00, float P11, out vec4 
 }
 
 
-bool IsVisible3(uint objectIndex)
+bool IsVisible(uint objectIndex)
 {
 	uint index = objectIndex;
 
@@ -161,38 +149,22 @@ bool IsVisible3(uint objectIndex)
 	return visible;
 }
 
-void copyCommands(uint orig, uint dest)
-{
-	compactIndirectBuffer.Draws[dest].indexCount = instanceBuffer.Draws[orig].indexCount;
-	compactIndirectBuffer.Draws[dest].instanceCount = 1;
-	compactIndirectBuffer.Draws[dest].firstIndex = instanceBuffer.Draws[orig].firstIndex;
-	compactIndirectBuffer.Draws[dest].vertexOffset = instanceBuffer.Draws[orig].vertexOffset;
-	compactIndirectBuffer.Draws[dest].firstInstance = instanceBuffer.Draws[orig].firstInstance;
-}
-void clearCommand(uint dest)
-{
-}
-
 void main() 
 {		
-	uint objectIndex = gl_GlobalInvocationID.x;
-	bool visible = IsVisible3(instanceBuffer.Draws[objectIndex].objectID);
-	if(!visible)
+	uint gID = gl_GlobalInvocationID.x;
+	if(gID < cullData.drawCount)
 	{
-		
-		//uint copmactIndex = gl_GlobalInvocationID.x;
+		uint objectID = compactInstanceBuffer.Instances[gID].objectID;
+		uint batchIndex = compactInstanceBuffer.Instances[gID].batchID;
 
-		//copyCommands(objectIndex,copmactIndex);
-		//compactIndirectBuffer.Draws[copmactIndex].instanceCount = 0;
-	}
-	else{
+		bool visible = IsVisible(objectID);
+		if(visible)
+		{
+			uint countIndex = atomicAdd(drawBuffer.Draws[batchIndex].instanceCount,1);
 
-		uint batchIndex = instanceBuffer.Draws[objectIndex].batchID;
+			uint instanceIndex = drawBuffer.Draws[batchIndex].firstInstance + countIndex;
 
-
-		uint countIndex = atomicAdd(batchBuffer.Batches[batchIndex].count,1); //gl_GlobalInvocationID.x;
-		uint copmactIndex = batchBuffer.Batches[batchIndex].offset + countIndex;
-
-		copyCommands(objectIndex,copmactIndex);		
+			finalInstanceBuffer.IDs[instanceIndex] = objectID;
+		}
 	}
 }

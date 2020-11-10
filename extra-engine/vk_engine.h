@@ -124,6 +124,10 @@ struct FrameData {
 
 	AllocatedBuffer compactIndirectBuffer;
 	AllocatedBuffer indirectBuffer;
+
+	
+	AllocatedBuffer instanceBuffer;
+
 	AllocatedBuffer dynamicDataBuffer;
 	AllocatedBuffer batchBuffer;
 
@@ -208,11 +212,11 @@ struct alignas(16) DrawCullData
 };
 
 struct EngineConfig {
-	float drawDistance{5000};
+	float drawDistance{500};
 };
 
 constexpr unsigned int FRAME_OVERLAP = 2;
-const int MAX_OBJECTS = 500000;
+const int MAX_OBJECTS = 150000;
 class VulkanEngine {
 public:
 
@@ -258,6 +262,9 @@ public:
 	//the format for the depth image
 	VkFormat _depthFormat;
 
+
+	AllocatedBuffer compactedInstanceBuffer;
+	AllocatedBuffer drawIndirectBuffer;
 	
 	vkutil::DescriptorAllocator* _descriptorAllocator;
 	vkutil::DescriptorLayoutCache* _descriptorLayoutCache;

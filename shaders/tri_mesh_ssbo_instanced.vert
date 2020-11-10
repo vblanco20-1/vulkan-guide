@@ -41,16 +41,20 @@ layout(std140,set = 1, binding = 0) readonly buffer ObjectBuffer{
 	ObjectData objects[];
 } objectBuffer;
 
+//all object indices
+layout(set = 1, binding = 1) readonly buffer InstanceBuffer{   
+
+	uint IDs[];
+} instanceBuffer;
+
 void main() 
 {	
-	int index = gl_InstanceIndex;
+	uint index = instanceBuffer.IDs[gl_InstanceIndex];
 	
 	vec3 vNormal = OctNormalDecode(vOctNormal);
 
 	mat4 modelMatrix = objectBuffer.objects[index].model;
-
 	mat4 transformMatrix = (cameraData.viewproj * modelMatrix);
-
 	gl_Position = transformMatrix * vec4(vPosition, 1.0f);
 	outNormal = normalize((modelMatrix * vec4(vNormal,0.f)).xyz);
 	outColor = vColor;

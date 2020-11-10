@@ -71,14 +71,15 @@ void RenderScene::fill_objectData(GPUObjectData* data)
 
 void RenderScene::fill_indirectArray(GPUIndirectObject* data)
 {
-	static int ntimes = 0;
-	ntimes++;
-	if (ntimes > 3) return;
+	//static int ntimes = 0;
+	//ntimes++;
+	//if (ntimes > 3) return;
 	int dataIndex = 0;
 	for (int i = 0; i < meshPasses[0].batches.size(); i++) {
 
 		auto batch = meshPasses[0].batches[i];
 
+#if 0
 		for (auto objID : batch.objects)
 		{
 			RenderObject2* obj = get_object(objID);
@@ -93,19 +94,35 @@ void RenderScene::fill_indirectArray(GPUIndirectObject* data)
 
 			dataIndex++;
 		}
+#endif
+		data[dataIndex].command.firstInstance = batch.first;//i;
+		data[dataIndex].command.instanceCount = 0;
+		data[dataIndex].command.firstIndex = 0;
+		data[dataIndex].command.vertexOffset = 0;
+		data[dataIndex].command.indexCount = get_mesh(batch.meshID)->_indices.size();
+		data[dataIndex].objectID = 0;
+		data[dataIndex].batchID = i;
+
+		dataIndex++;
 	}
 }
 
-void RenderScene::fill_batchArray(GPUBatch* data)
+void RenderScene::fill_instancesArray(GPUInstance* data)
 {
+	static int ntimes = 0;
+	ntimes++;
+	if (ntimes > 3) return;
 	int dataIndex = 0;
 	for (int i = 0; i < meshPasses[0].batches.size(); i++) {
 
 		auto batch = meshPasses[0].batches[i];
 
-		data[dataIndex].count = 0;//batch.count;
-		data[dataIndex].offset = batch.first;
-		dataIndex++;
+		for (auto objID : batch.objects)
+		{			
+			data[dataIndex].objectID = objID.handle;
+			data[dataIndex].batchID = i;
+			dataIndex++;
+		}
 	}
 }
 

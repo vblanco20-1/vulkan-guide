@@ -31,10 +31,7 @@ struct GPUIndirectObject {
 	uint32_t batchID;
 };
 
-struct GPUBatch {
-	uint32_t count;
-	uint32_t offset;
-};
+
 enum class PassTypeFlags : uint8_t {
 	Forward = 1 << 0,
 	Prepass = 1 << 1,
@@ -54,7 +51,10 @@ struct RenderObject2 {
 	RenderBounds bounds;
 };
 
-
+struct GPUInstance {
+	uint32_t objectID;
+	uint32_t batchID;
+};
 
 
 class RenderScene {
@@ -93,7 +93,8 @@ public:
 	
 	void fill_objectData(GPUObjectData* data);
 	void fill_indirectArray(GPUIndirectObject* data);
-	void fill_batchArray(GPUBatch* data);
+	void fill_instancesArray(GPUInstance* data);
+
 
 	void build_batches();
 
