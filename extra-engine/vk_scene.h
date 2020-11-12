@@ -21,7 +21,7 @@ struct Handle {
 };
 
 struct Material;
-struct RenderObject;
+struct MeshObject;
 struct Mesh;
 struct GPUObjectData;
 
@@ -38,7 +38,7 @@ enum class PassTypeFlags : uint8_t {
 	DirectionalShadow = 1 << 2
 };
 
-struct RenderObject2 {
+struct RenderObject {
 
 	Handle<Mesh> meshID;
 	Handle<Material> material;
@@ -69,27 +69,31 @@ public:
 		glm::vec3 AABBMin;
 		glm::vec3 AABBMax;
 
-		std::vector<Handle<RenderObject2>> objects;
+		std::vector<Handle<RenderObject>> objects;
 	};
 	struct RenderBatch {
-		Handle<RenderObject2> object;
+		Handle<RenderObject> object;
 		uint64_t sortKey;
 	};
 
 	struct MeshPass {
 		std::vector<RenderScene::IndirectBatch> batches;
 
-		std::vector<Handle<RenderObject2>> unbatchedObjects;
+		std::vector<Handle<RenderObject>> unbatchedObjects;
 
 		std::vector<RenderScene::RenderBatch> flat_batches;
+
+		
+		AllocatedBuffer<uint32_t> compactedInstanceBuffer;
+		AllocatedBuffer<GPUIndirectObject> drawIndirectBuffer;
 	};
 
-	Handle<RenderObject2> register_object(RenderObject* object, PassTypeFlags passes);
+	Handle<RenderObject> register_object(MeshObject* object, PassTypeFlags passes);
 
-	void register_object_batch(RenderObject* first, uint32_t count, PassTypeFlags passes);
+	void register_object_batch(MeshObject* first, uint32_t count, PassTypeFlags passes);
 
-	void update_transform(Handle<RenderObject2> objectID,const glm::mat4 &localToWorld);
-	void update_object(Handle<RenderObject2> objectID);
+	void update_transform(Handle<RenderObject> objectID,const glm::mat4 &localToWorld);
+	void update_object(Handle<RenderObject> objectID);
 	
 	void fill_objectData(GPUObjectData* data);
 	void fill_indirectArray(GPUIndirectObject* data);
@@ -100,17 +104,17 @@ public:
 
 	void refresh_pass(MeshPass* pass);
 
-	RenderObject2* get_object(Handle<RenderObject2> objectID);
+	RenderObject* get_object(Handle<RenderObject> objectID);
 	Mesh* get_mesh(Handle<Mesh> objectID);
 	Material* get_material(Handle<Material> objectID);
 
-	std::vector<RenderObject2> renderables;
+	std::vector<RenderObject> renderables;
 	std::vector<Material*> materials;
 	std::vector<Mesh*> meshes;
 
-	std::vector<Handle<RenderObject2>> dirtyObjects;
+	std::vector<Handle<RenderObject>> dirtyObjects;
 
-	std::array<MeshPass,8> meshPasses;
+	MeshPass _forwardPass;
 
 	std::unordered_map<Material*, Handle<Material>> materialConvert;
 	std::unordered_map<Mesh*, Handle<Mesh>> meshConvert;
@@ -118,9 +122,8 @@ public:
 	Handle<Material> getMaterialHandle(Material* m);
 	Handle<Mesh> getMeshHandle(Mesh* m);
 
+	AllocatedBufferUntyped uploadBuffer[2];
 
-	AllocatedBuffer uploadBuffer[2];
-
-	AllocatedBuffer objectDataBuffer;
-	AllocatedBuffer indirectDrawBuffer;
+	AllocatedBufferUntyped objectDataBuffer;
+	
 };

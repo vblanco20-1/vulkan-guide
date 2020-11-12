@@ -28,7 +28,7 @@ bool vkutil::load_image_from_file(VulkanEngine& engine, const char* file, Alloca
 
 	VkFormat image_format = VK_FORMAT_R8G8B8A8_UNORM;
 
-	AllocatedBuffer stagingBuffer = engine.create_buffer(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
+	AllocatedBufferUntyped stagingBuffer = engine.create_buffer(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
 
 	void* data;
 	vmaMapMemory(engine._allocator, stagingBuffer._allocation, &data);
@@ -75,7 +75,7 @@ bool vkutil::load_image_from_asset(VulkanEngine& engine, const char* filename, A
 		return false;
 	}
 
-	AllocatedBuffer stagingBuffer = engine.create_buffer(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_UNKNOWN, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_CACHED_BIT);
+	AllocatedBufferUntyped stagingBuffer = engine.create_buffer(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_UNKNOWN, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_CACHED_BIT);
 	
 	std::vector<MipmapInfo> mips;
 
@@ -104,7 +104,7 @@ bool vkutil::load_image_from_asset(VulkanEngine& engine, const char* filename, A
 	return true;
 }
 
-AllocatedImage vkutil::upload_image(int texWidth, int texHeight, VkFormat image_format, VulkanEngine& engine, AllocatedBuffer& stagingBuffer)
+AllocatedImage vkutil::upload_image(int texWidth, int texHeight, VkFormat image_format, VulkanEngine& engine, AllocatedBufferUntyped& stagingBuffer)
 {
 	VkExtent3D imageExtent;
 	imageExtent.width = static_cast<uint32_t>(texWidth);
@@ -177,11 +177,13 @@ AllocatedImage vkutil::upload_image(int texWidth, int texHeight, VkFormat image_
 	});
 
 
+
+
 	newImage.mipLevels = 1;// mips.size();
 	return newImage;
 }
 
-AllocatedImage vkutil::upload_image_mipmapped(int texWidth, int texHeight, VkFormat image_format, VulkanEngine& engine, AllocatedBuffer& stagingBuffer, std::vector<MipmapInfo> mips)
+AllocatedImage vkutil::upload_image_mipmapped(int texWidth, int texHeight, VkFormat image_format, VulkanEngine& engine, AllocatedBufferUntyped& stagingBuffer, std::vector<MipmapInfo> mips)
 {
 	VkExtent3D imageExtent;
 	imageExtent.width = static_cast<uint32_t>(texWidth);

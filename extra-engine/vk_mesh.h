@@ -35,8 +35,8 @@ struct Mesh {
 	std::vector<Vertex> _vertices;
 	std::vector<uint32_t> _indices;
 
-	AllocatedBuffer _vertexBuffer;
-	AllocatedBuffer _indexBuffer;
+	AllocatedBuffer<Vertex> _vertexBuffer;
+	AllocatedBuffer<uint32_t> _indexBuffer;
 
 	RenderBounds bounds;
 

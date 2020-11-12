@@ -1152,7 +1152,7 @@ void VulkanEngine::upload_mesh(Mesh& mesh)
 	VmaAllocationCreateInfo vmaallocInfo = {};
 	vmaallocInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY;
 
-	AllocatedBuffer stagingBuffer;
+	AllocatedBufferUntyped stagingBuffer;
 
 	//allocate the buffer
 	VK_CHECK(vmaCreateBuffer(_allocator, &stagingBufferInfo, &vmaallocInfo,
@@ -1345,7 +1345,6 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd)
 
 	//camera projection
 	glm::mat4 projection=get_projection_matrix();
-
 	
 
 	GPUCameraData camData;
@@ -1391,26 +1390,14 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd)
 	VkPipeline lastPipeline = VK_NULL_HANDLE;
 	ShaderDescriptorBinder binder{};
 
-	VkDescriptorBufferInfo objectBufferInfo;
-	objectBufferInfo.buffer = get_current_frame().objectBuffer._buffer;
-	objectBufferInfo.offset = 0;
-	objectBufferInfo.range = sizeof(GPUObjectData) * MAX_OBJECTS;
+	VkDescriptorBufferInfo objectBufferInfo = get_current_frame().objectBuffer.get_info();
 
-	VkDescriptorBufferInfo dynamicInfo;
-	dynamicInfo.buffer = get_current_frame().dynamicDataBuffer._buffer;;
-	dynamicInfo.offset = 0;
-	dynamicInfo.range = 100;
+	VkDescriptorBufferInfo dynamicInfo = get_current_frame().dynamicDataBuffer.get_info();
+	
+	VkDescriptorBufferInfo instanceInfo = _renderScene._forwardPass.compactedInstanceBuffer.get_info();	
 
-	VkDescriptorBufferInfo instanceInfo;
-	instanceInfo.buffer = compactedInstanceBuffer._buffer;
-	instanceInfo.offset = 0;
-	instanceInfo.range = sizeof(uint32_t) * MAX_OBJECTS;
+	VkDescriptorBufferInfo indirectInfo = get_current_frame().indirectBuffer.get_info();
 
-
-	VkDescriptorBufferInfo indirectInfo;
-	indirectInfo.buffer = get_current_frame().indirectBuffer._buffer;
-	indirectInfo.offset = 0;
-	indirectInfo.range = sizeof(GPUIndirectObject) * MAX_OBJECTS;
 
 	VkDescriptorSet GlobalSet;
 	vkutil::DescriptorBuilder::begin(_descriptorLayoutCache, get_current_frame().dynamicDescriptorAllocator)
@@ -1425,7 +1412,7 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd)
 		.build(ObjectDataSet);
 
 	{
-		ZoneScopedNC("Draw Merge", tracy::Color::Blue);
+		ZoneScopedNC("Draw Upload", tracy::Color::Blue);
 	
 		void* indirectData;
 		vmaMapMemory(_allocator, get_current_frame().indirectBuffer._allocation, &indirectData);
@@ -1443,83 +1430,83 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd)
 		vmaUnmapMemory(_allocator, get_current_frame().instanceBuffer._allocation);
 		
 	}
+	{
+		ZoneScopedNC("Draw Commit", tracy::Color::Blue4);
+		Material* lastMaterial = nullptr;
+		Mesh* lastMesh = nullptr;
+
+
+		stats.objects = _renderScene._forwardPass.flat_batches.size();
+		for (int i = 0; i < _renderScene._forwardPass.batches.size(); i++)//)
 		{
-			ZoneScopedNC("Draw Commit", tracy::Color::Blue4);
-			Material* lastMaterial = nullptr;
-			Mesh* lastMesh = nullptr;
+			auto& instanceDraw = _renderScene._forwardPass.batches[i];
+			//cull the whole batch
+			if (!view_frustrum.IsBoxVisible(instanceDraw.AABBMin, instanceDraw.AABBMax)) continue;
 
+			Material* drawMat = _renderScene.get_material(instanceDraw.material);
+			Mesh* drawMesh = _renderScene.get_mesh(instanceDraw.meshID);
 
-			stats.objects = _renderScene.meshPasses[0].flat_batches.size();
-			for (int i = 0; i < _renderScene.meshPasses[0].batches.size();i++)//)
-			{
-				auto& instanceDraw = _renderScene.meshPasses[0].batches[i];
-				//cull the whole batch
-				if (!view_frustrum.IsBoxVisible(instanceDraw.AABBMin, instanceDraw.AABBMax)) continue;
+			if (lastMaterial != drawMat) {
 
-				Material* drawMat = _renderScene.get_material(instanceDraw.material);
-				Mesh* drawMesh = _renderScene.get_mesh(instanceDraw.meshID);
+				ShaderEffect* newEffect = drawMat->effect;
+				if (lastMaterial == nullptr || lastMaterial->pipeline != drawMat->pipeline) {
 
-				if (lastMaterial != drawMat) {
+					vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, drawMat->pipeline);
 
-					ShaderEffect* newEffect = drawMat->effect;
-					if (lastMaterial == nullptr || lastMaterial->pipeline != drawMat->pipeline) {
+					vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, newEffect->builtLayout, 1, 1, &ObjectDataSet, 0, nullptr);
 
-						vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, drawMat->pipeline);
+					//update dynamic binds
+					uint32_t dynamicBinds[] = { camera_data_offsets[0],scene_data_offset };
+					vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, newEffect->builtLayout, 0, 1, &GlobalSet, 2, dynamicBinds);
+				}
 
-						vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, newEffect->builtLayout, 1, 1, &ObjectDataSet, 0, nullptr);
+				if (lastMaterial == nullptr || drawMat->textureSet != lastMaterial->textureSet) {
+					if (drawMat->textureSet != VK_NULL_HANDLE)
+					{
+						//texture descriptor
+						vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, newEffect->builtLayout, 2, 1, &drawMat->textureSet, 0, nullptr);
 
-						//update dynamic binds
-						uint32_t dynamicBinds[] = { camera_data_offsets[0],scene_data_offset };
-						vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, newEffect->builtLayout, 0, 1, &GlobalSet, 2, dynamicBinds);
 					}
-
-					if (lastMaterial == nullptr ||  drawMat->textureSet != lastMaterial->textureSet) {
-						if (drawMat->textureSet != VK_NULL_HANDLE)
-						{
-							//texture descriptor
-							vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, newEffect->builtLayout, 2, 1, &drawMat->textureSet, 0, nullptr);
-
-						}
-					}
-					lastMaterial = drawMat;
 				}
+				lastMaterial = drawMat;
+			}
 
-				if (lastMesh == nullptr || lastMesh != drawMesh) {
+			if (lastMesh == nullptr || lastMesh != drawMesh) {
 
-					//bind the mesh vertex buffer with offset 0
-					VkDeviceSize offset = 0;
-					vkCmdBindVertexBuffers(cmd, 0, 1, &drawMesh->_vertexBuffer._buffer, &offset);
+				//bind the mesh vertex buffer with offset 0
+				VkDeviceSize offset = 0;
+				vkCmdBindVertexBuffers(cmd, 0, 1, &drawMesh->_vertexBuffer._buffer, &offset);
 
-					if (drawMesh->_indexBuffer._buffer != VK_NULL_HANDLE) {
-						vkCmdBindIndexBuffer(cmd, drawMesh->_indexBuffer._buffer, 0, VK_INDEX_TYPE_UINT32);
-					}
-					lastMesh = drawMesh;
+				if (drawMesh->_indexBuffer._buffer != VK_NULL_HANDLE) {
+					vkCmdBindIndexBuffer(cmd, drawMesh->_indexBuffer._buffer, 0, VK_INDEX_TYPE_UINT32);
 				}
+				lastMesh = drawMesh;
+			}
 
-				bool bHasIndices = drawMesh->_indices.size() > 0;
-				if (!bHasIndices) {
-					stats.draws++;
-					stats.triangles += (drawMesh->_vertices.size() / 3) * instanceDraw.count;
-					vkCmdDraw(cmd, drawMesh->_vertices.size(), instanceDraw.count, 0, instanceDraw.first);
-				}
-				else {
-					stats.triangles += (drawMesh->_indices.size() / 3) * instanceDraw.count;
+			bool bHasIndices = drawMesh->_indices.size() > 0;
+			if (!bHasIndices) {
+				stats.draws++;
+				stats.triangles += (drawMesh->_vertices.size() / 3) * instanceDraw.count;
+				vkCmdDraw(cmd, drawMesh->_vertices.size(), instanceDraw.count, 0, instanceDraw.first);
+			}
+			else {
+				stats.triangles += (drawMesh->_indices.size() / 3) * instanceDraw.count;
 
-					//vkCmdDrawIndexedIndirectCount(cmd, get_current_frame().indirectBuffer._buffer, instanceDraw.first * sizeof(GPUIndirectObject), get_current_frame().batchBuffer._buffer, i * sizeof(GPUBatch), instanceDraw.count, sizeof(GPUIndirectObject));
+				//vkCmdDrawIndexedIndirectCount(cmd, get_current_frame().indirectBuffer._buffer, instanceDraw.first * sizeof(GPUIndirectObject), get_current_frame().batchBuffer._buffer, i * sizeof(GPUBatch), instanceDraw.count, sizeof(GPUIndirectObject));
 
-					//vkCmdDrawIndexedIndirectCount(cmd, get_current_frame().compactIndirectBuffer._buffer, 
-					//	instanceDraw.first * sizeof(VkDrawIndexedIndirectCommand), 
-					//	get_current_frame().batchBuffer._buffer, i * sizeof(GPUBatch), 
-					//	instanceDraw.count, sizeof(VkDrawIndexedIndirectCommand));
+				//vkCmdDrawIndexedIndirectCount(cmd, get_current_frame().compactIndirectBuffer._buffer, 
+				//	instanceDraw.first * sizeof(VkDrawIndexedIndirectCommand), 
+				//	get_current_frame().batchBuffer._buffer, i * sizeof(GPUBatch), 
+				//	instanceDraw.count, sizeof(VkDrawIndexedIndirectCommand));
 
-					vkCmdDrawIndexedIndirect(cmd, get_current_frame().indirectBuffer._buffer, i * sizeof(GPUIndirectObject), 1, sizeof(GPUIndirectObject));
-					
-					
-					stats.draws++;
-					stats.drawcalls += instanceDraw.count;
-				}
+				vkCmdDrawIndexedIndirect(cmd, get_current_frame().indirectBuffer._buffer, i * sizeof(GPUIndirectObject), 1, sizeof(GPUIndirectObject));
+				
+
+				stats.draws++;
+				stats.drawcalls += instanceDraw.count;
 			}
 		}
+	}
 }
 
 struct alignas(16) DepthReduceData
@@ -1620,18 +1607,6 @@ glm::mat4 VulkanEngine::get_view_matrix()
 
 	glm::mat4 cam_rot = (_camera.get_rotation_matrix());
 
-
-	//glm::vec3 cameraPos = camPos;
-	//glm::vec4 cameraFront = glm::vec4(0.0f, 0.0f, -1.0f,0.f);
-	//glm::vec4 cameraUp = glm::vec4(0.0f, -1.0f, 0.0f,0.f);
-	//
-	//cameraFront = cam_rot* cameraFront;
-	//cameraUp = cam_rot* cameraUp;
-	//
-	//glm::vec3 cf = cameraPos + glm::vec3{ cameraFront.x,cameraFront.y,cameraFront.z };
-	//glm::vec3 cu = glm::vec3{ cameraUp.x,cameraUp.y,cameraUp.z };
-	//
-	//glm::mat4 view = glm::lookAt(cameraPos,cf , cu);
 	glm::mat4 view = glm::translate(glm::mat4{ 1 }, camPos) * cam_rot;
 
 	//we need to invert the camera matrix
@@ -1673,43 +1648,26 @@ glm::vec4 normalizePlane(glm::vec4 p)
 
 void VulkanEngine::execute_compute_cull(VkCommandBuffer cmd, int count)
 {
-	VkDescriptorBufferInfo objectBufferInfo;
-	objectBufferInfo.buffer = get_current_frame().objectBuffer._buffer;
-	objectBufferInfo.offset = 0;
-	objectBufferInfo.range = sizeof(GPUObjectData) * MAX_OBJECTS;
+	VkDescriptorBufferInfo objectBufferInfo = get_current_frame().objectBuffer.get_info();	
 
-	VkDescriptorBufferInfo dynamicInfo;
-	dynamicInfo.buffer = get_current_frame().dynamicDataBuffer._buffer;;
-	dynamicInfo.offset = 0;
-	dynamicInfo.range = 100;
+	VkDescriptorBufferInfo dynamicInfo = get_current_frame().dynamicDataBuffer.get_info();
 
-	VkDescriptorBufferInfo instanceInfo;
-	instanceInfo.buffer = get_current_frame().instanceBuffer._buffer;
-	instanceInfo.offset = 0;
-	instanceInfo.range = sizeof(GPUInstance) * MAX_OBJECTS;
+	VkDescriptorBufferInfo instanceInfo = get_current_frame().instanceBuffer.get_info();
 
-	VkDescriptorBufferInfo finalInfo;
-	finalInfo.buffer = compactedInstanceBuffer._buffer;
-	finalInfo.offset = 0;
-	finalInfo.range = sizeof(uint32_t) * MAX_OBJECTS;
+	VkDescriptorBufferInfo finalInfo = _renderScene._forwardPass.compactedInstanceBuffer.get_info();
 
-	VkDescriptorBufferInfo indirectInfo;
-	indirectInfo.buffer = get_current_frame().indirectBuffer._buffer;
-	indirectInfo.offset = 0;
-	indirectInfo.range = sizeof(GPUIndirectObject) * MAX_OBJECTS;
+	VkDescriptorBufferInfo indirectInfo =get_current_frame().indirectBuffer.get_info();	
 
 	VkDescriptorImageInfo depthPyramid;
 	depthPyramid.sampler = _depthSampler;
 	depthPyramid.imageView = _depthPyramidView;
 	depthPyramid.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 
-	//COMPUTE CULL
 
+	//COMPUTE CULL
 	VkDescriptorSet COMPGlobalSet;
 	vkutil::DescriptorBuilder::begin(_descriptorLayoutCache, get_current_frame().dynamicDescriptorAllocator)
 		.bind_buffer(0, &dynamicInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT)
-		//.bind_buffer(1, &dynamicInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT)
-		//.bind_buffer(2, &cullBoundsInfo, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT)
 		.build(COMPGlobalSet);
 
 	VkDescriptorSet COMPObjectDataSet;
@@ -1751,11 +1709,11 @@ void VulkanEngine::execute_compute_cull(VkCommandBuffer cmd, int count)
 	indirectCopy.dstOffset = 0;
 	indirectCopy.size = count * sizeof(GPUIndirectObject);
 	indirectCopy.srcOffset = 0;
-	vkCmdCopyBuffer(cmd, indirectInfo.buffer, drawIndirectBuffer._buffer, 1, &indirectCopy);
+	vkCmdCopyBuffer(cmd, indirectInfo.buffer, _renderScene._forwardPass.drawIndirectBuffer._buffer, 1, &indirectCopy);
 
 	{
 		VkBufferMemoryBarrier barrier{};
-		barrier.buffer = drawIndirectBuffer._buffer;
+		barrier.buffer = _renderScene._forwardPass.drawIndirectBuffer._buffer;
 		barrier.size = VK_WHOLE_SIZE;
 		barrier.dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
 		barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
@@ -1774,9 +1732,6 @@ void VulkanEngine::execute_compute_cull(VkCommandBuffer cmd, int count)
 
 	vkCmdPushConstants(cmd, _cullLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(DrawCullData), &cullData);
 
-	
-
-
 	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, _cullLayout, 0, 1, &COMPGlobalSet, 0, nullptr);
 
 	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, _cullLayout, 1, 1, &COMPObjectDataSet, 0, nullptr);
@@ -1786,7 +1741,7 @@ void VulkanEngine::execute_compute_cull(VkCommandBuffer cmd, int count)
 
 	{
 		VkBufferMemoryBarrier barrier{};
-		barrier.buffer = compactedInstanceBuffer._buffer;
+		barrier.buffer = _renderScene._forwardPass.compactedInstanceBuffer._buffer;
 		barrier.size = VK_WHOLE_SIZE;
 		barrier.dstAccessMask = VK_ACCESS_INDIRECT_COMMAND_READ_BIT;
 		barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
@@ -1796,8 +1751,7 @@ void VulkanEngine::execute_compute_cull(VkCommandBuffer cmd, int count)
 		barrier.pNext = nullptr;
 
 		vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT, 0, 0, nullptr, 1, &barrier, 0, nullptr);
-	}
-	
+	}	
 }
 
 void VulkanEngine::init_scene()
@@ -1883,7 +1837,7 @@ void VulkanEngine::build_texture_set(VkSampler blockySampler, Material* textured
 		.build(texturedMat->textureSet);
 }
 
-AllocatedBuffer VulkanEngine::create_buffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage, VkMemoryPropertyFlags required_flags)
+AllocatedBufferUntyped VulkanEngine::create_buffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage, VkMemoryPropertyFlags required_flags)
 {
 	//allocate vertex buffer
 	VkBufferCreateInfo bufferInfo = {};
@@ -1898,14 +1852,14 @@ AllocatedBuffer VulkanEngine::create_buffer(size_t allocSize, VkBufferUsageFlags
 	VmaAllocationCreateInfo vmaallocInfo = {};
 	vmaallocInfo.usage = memoryUsage;
 	vmaallocInfo.requiredFlags = required_flags;
-	AllocatedBuffer newBuffer;
+	AllocatedBufferUntyped newBuffer;
 
 	//allocate the buffer
 	VK_CHECK(vmaCreateBuffer(_allocator, &bufferInfo, &vmaallocInfo,
 		&newBuffer._buffer,
 		&newBuffer._allocation,
 		nullptr));
-
+	newBuffer._size = allocSize;
 	return newBuffer;
 }
 
@@ -2043,7 +1997,7 @@ bool VulkanEngine::load_prefab(const char* path, glm::mat4 root)
 		
 	}
 
-	std::vector<RenderObject> prefab_renderables;
+	std::vector<MeshObject> prefab_renderables;
 	prefab_renderables.reserve(prefab->node_meshes.size());
 
 	for (auto& [k, v] : prefab->node_meshes)
@@ -2131,7 +2085,7 @@ bool VulkanEngine::load_prefab(const char* path, glm::mat4 root)
 		}
 
 		
-		RenderObject loadmesh;
+		MeshObject loadmesh;
 		loadmesh.mesh = get_mesh(v.mesh_path.c_str());
 		loadmesh.transformMatrix = nodematrix;
 		loadmesh.material = mat;
@@ -2169,7 +2123,7 @@ std::string VulkanEngine::asset_path(std::string& path)
 }
 
 
-void VulkanEngine::refresh_renderbounds(RenderObject* object)
+void VulkanEngine::refresh_renderbounds(MeshObject* object)
 {
 	//dont try to update invalid bounds
 	if (!object->mesh->bounds.valid) return;
@@ -2249,9 +2203,9 @@ void VulkanEngine::init_descriptors()
 	const size_t sceneParamBufferSize = FRAME_OVERLAP * pad_uniform_buffer_size(sizeof(GPUSceneData));
 
 
-	compactedInstanceBuffer = create_buffer(sizeof(uint32_t) * MAX_OBJECTS, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+	_renderScene._forwardPass.compactedInstanceBuffer = create_buffer(sizeof(uint32_t) * MAX_OBJECTS, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
 
-	drawIndirectBuffer = create_buffer(sizeof(GPUIndirectObject) * MAX_OBJECTS, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+	_renderScene._forwardPass.drawIndirectBuffer = create_buffer(sizeof(GPUIndirectObject) * MAX_OBJECTS, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
 
 
 

@@ -6,9 +6,20 @@
 #include <vulkan/vulkan.h>
 #include <vk_mem_alloc.h>
 
-struct AllocatedBuffer {
+struct AllocatedBufferUntyped {
 	VkBuffer _buffer;
 	VmaAllocation _allocation;
+	VkDeviceSize _size;
+	VkDescriptorBufferInfo get_info(VkDeviceSize offset = 0);
+};
+
+template<typename T>
+struct AllocatedBuffer : public AllocatedBufferUntyped {
+	void operator=(const AllocatedBufferUntyped& other) {
+		_buffer = other._buffer;
+		_allocation = other._allocation;
+		_size = other._size;
+	}
 };
 
 struct AllocatedImage {
@@ -16,3 +27,13 @@ struct AllocatedImage {
 	VmaAllocation _allocation;
 	int mipLevels;
 };
+
+
+inline VkDescriptorBufferInfo AllocatedBufferUntyped::get_info(VkDeviceSize offset)
+{
+	VkDescriptorBufferInfo info;
+	info.buffer = _buffer;
+	info.offset = offset;
+	info.range = _size;
+	return info;
+}

@@ -97,7 +97,7 @@ struct Texture {
 
 
 
-struct RenderObject {
+struct MeshObject {
 	Mesh* mesh{ nullptr };
 
 	Material* material{nullptr};
@@ -119,17 +119,14 @@ struct FrameData {
 	VkCommandBuffer _mainCommandBuffer;
 	
 
-	AllocatedBuffer objectBuffer;
+	AllocatedBuffer<GPUObjectData> objectBuffer;
+
+	AllocatedBuffer<GPUIndirectObject> indirectBuffer;
 	
+	AllocatedBuffer<GPUInstance> instanceBuffer;
 
-	AllocatedBuffer compactIndirectBuffer;
-	AllocatedBuffer indirectBuffer;
+	AllocatedBufferUntyped dynamicDataBuffer;
 
-	
-	AllocatedBuffer instanceBuffer;
-
-	AllocatedBuffer dynamicDataBuffer;
-	AllocatedBuffer batchBuffer;
 
 	vkutil::DescriptorAllocator* dynamicDescriptorAllocator;
 };
@@ -139,12 +136,11 @@ struct UploadContext {
 	VkFence _uploadFence;
 	VkCommandPool _commandPool;	
 };
+
 struct GPUCameraData{
 	glm::mat4 view;
 	glm::mat4 proj;
 	glm::mat4 viewproj;
-
-	
 };
 
 
@@ -167,8 +163,6 @@ struct PlayerCamera {
 	glm::vec3 velocity;
 	glm::vec3 inputAxis;
 
-	
-
 	float pitch{0}; //up-down rotation
 	float yaw{0}; //left-right rotation
 
@@ -186,7 +180,7 @@ struct EngineStats {
 
 struct MeshDrawCommands {
 	struct RenderBatch {
-		RenderObject* object;
+		MeshObject* object;
 		uint64_t sortKey;
 		uint64_t objectIndex;
 	};
@@ -265,10 +259,6 @@ public:
 	
 	//the format for the depth image
 	VkFormat _depthFormat;
-
-
-	AllocatedBuffer compactedInstanceBuffer;
-	AllocatedBuffer drawIndirectBuffer;
 	
 	vkutil::DescriptorAllocator* _descriptorAllocator;
 	vkutil::DescriptorLayoutCache* _descriptorLayoutCache;
@@ -342,7 +332,7 @@ public:
 
 	void execute_compute_cull(VkCommandBuffer cmd, int count);
 
-	AllocatedBuffer create_buffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage, VkMemoryPropertyFlags required_flags = 0);
+	AllocatedBufferUntyped create_buffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage, VkMemoryPropertyFlags required_flags = 0);
 
 	size_t pad_uniform_buffer_size(size_t originalSize);
 
@@ -353,7 +343,7 @@ public:
 	std::string asset_path(const char* path);
 	std::string asset_path(std::string& path);
 
-	void refresh_renderbounds(RenderObject* object);
+	void refresh_renderbounds(MeshObject* object);
 private:
 	EngineStats stats;
 	void process_input_event(SDL_Event* ev);
@@ -379,9 +369,7 @@ private:
 
 	void init_descriptors();
 
-	void init_imgui();
-
-	
+	void init_imgui();	
 
 	void load_meshes();
 

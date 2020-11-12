@@ -2,30 +2,30 @@
 #include <vk_engine.h>
 #include "Tracy.hpp"
 
-Handle<RenderObject2> RenderScene::register_object(RenderObject* object, PassTypeFlags passes)
+Handle<RenderObject> RenderScene::register_object(MeshObject* object, PassTypeFlags passes)
 {
-	RenderObject2 newObj;
+	RenderObject newObj;
 	newObj.bounds = object->bounds;
 	newObj.transformMatrix = object->transformMatrix;
 	newObj.material = getMaterialHandle(object->material);
 	newObj.meshID = getMeshHandle(object->mesh);
 	newObj.updateIndex = (uint32_t)-1;
 	newObj.customSortKey = object->customSortKey;
-	Handle<RenderObject2> handle;
+	Handle<RenderObject> handle;
 	handle.handle = renderables.size();
 	
 	renderables.push_back(newObj);
 
 	if (passes == PassTypeFlags::Forward)
 	{
-		meshPasses[0].unbatchedObjects.push_back(handle);
+		_forwardPass.unbatchedObjects.push_back(handle);
 	}
 
 	update_object(handle);
 	return handle;
 }
 
-void RenderScene::register_object_batch(RenderObject* first, uint32_t count, PassTypeFlags passes)
+void RenderScene::register_object_batch(MeshObject* first, uint32_t count, PassTypeFlags passes)
 {
 	renderables.reserve(count);
 
@@ -34,14 +34,14 @@ void RenderScene::register_object_batch(RenderObject* first, uint32_t count, Pas
 	}
 }
 
-void RenderScene::update_transform(Handle<RenderObject2> objectID, const glm::mat4& localToWorld)
+void RenderScene::update_transform(Handle<RenderObject> objectID, const glm::mat4& localToWorld)
 {
 	get_object(objectID)->transformMatrix = localToWorld;
 	update_object(objectID);
 }
 
 
-void RenderScene::update_object(Handle<RenderObject2> objectID)
+void RenderScene::update_object(Handle<RenderObject> objectID)
 {
 	if (get_object(objectID)->updateIndex == (uint32_t)-1)
 	{
@@ -58,7 +58,7 @@ void RenderScene::fill_objectData(GPUObjectData* data)
 	for(int i = 0; i < renderables.size(); i++)
 	{
 		GPUObjectData object;
-		const RenderObject2 &renderable = renderables[i];
+		const RenderObject &renderable = renderables[i];
 
 		object.modelMatrix = renderable.transformMatrix;
 		object.origin_rad = glm::vec4(renderable.bounds.origin, renderable.bounds.radius);
@@ -75,9 +75,9 @@ void RenderScene::fill_indirectArray(GPUIndirectObject* data)
 	//ntimes++;
 	//if (ntimes > 3) return;
 	int dataIndex = 0;
-	for (int i = 0; i < meshPasses[0].batches.size(); i++) {
+	for (int i = 0; i < _forwardPass.batches.size(); i++) {
 
-		auto batch = meshPasses[0].batches[i];
+		auto batch = _forwardPass.batches[i];
 
 #if 0
 		for (auto objID : batch.objects)
@@ -113,9 +113,9 @@ void RenderScene::fill_instancesArray(GPUInstance* data)
 	ntimes++;
 	if (ntimes > 3) return;
 	int dataIndex = 0;
-	for (int i = 0; i < meshPasses[0].batches.size(); i++) {
+	for (int i = 0; i < _forwardPass.batches.size(); i++) {
 
-		auto batch = meshPasses[0].batches[i];
+		auto batch = _forwardPass.batches[i];
 
 		for (auto objID : batch.objects)
 		{			
@@ -128,7 +128,7 @@ void RenderScene::fill_instancesArray(GPUInstance* data)
 
 void RenderScene::build_batches()
 {
-	refresh_pass(&meshPasses[0]);
+	refresh_pass(&_forwardPass);
 }
 
 void RenderScene::refresh_pass(MeshPass* pass)
@@ -137,7 +137,7 @@ void RenderScene::refresh_pass(MeshPass* pass)
 		pass->flat_batches.clear();
 		ZoneScopedNC("Fill DrawList", tracy::Color::Blue2);
 		for (int i = 0; i < pass->unbatchedObjects.size(); i++) {
-			RenderObject2* object = get_object(pass->unbatchedObjects[i]);
+			RenderObject* object = get_object(pass->unbatchedObjects[i]);
 		
 			{
 				RenderScene::RenderBatch newCommand;
@@ -178,7 +178,7 @@ void RenderScene::refresh_pass(MeshPass* pass)
 		pass->batches.push_back(newBatch);
 
 		for (int i = 0; i < pass->flat_batches.size(); i++) {
-			RenderObject2* obj = get_object(pass->flat_batches[i].object);
+			RenderObject* obj = get_object(pass->flat_batches[i].object);
 			RenderScene::IndirectBatch* back = &pass->batches.back();
 
 			if (obj->meshID.handle == back->meshID.handle
@@ -206,7 +206,7 @@ void RenderScene::refresh_pass(MeshPass* pass)
 	}
 }
 
-RenderObject2* RenderScene::get_object(Handle<RenderObject2> objectID)
+RenderObject* RenderScene::get_object(Handle<RenderObject> objectID)
 {
 	return &renderables[objectID.handle];
 }
