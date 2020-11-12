@@ -193,7 +193,7 @@ void VulkanEngine::draw()
 	rpInfo.pClearValues = &clearValues[0];
 
 	
-	ready_mesh_draw();
+	ready_mesh_draw(cmd);
 
 	
 	execute_compute_cull(cmd, _renderScene._forwardPass);
@@ -1279,21 +1279,53 @@ Mesh* VulkanEngine::get_mesh(const std::string& name)
 		return &(*it).second;
 	}
 }
-void VulkanEngine::ready_mesh_draw()
+void VulkanEngine::ready_mesh_draw(VkCommandBuffer cmd)
 {
 	ZoneScopedNC("Draw Upload", tracy::Color::Blue);
 
 	//upload object data to gpu
 	
-	GPUObjectData* objectSSBO = map_buffer(get_current_frame().objectBuffer);
-	_renderScene.fill_objectData(objectSSBO);
-
-	//GPUInstance* instanceData = map_buffer(get_current_frame().instanceBuffer);
-	//_renderScene.fill_instancesArray(instanceData);
-
-	unmap_buffer(get_current_frame().objectBuffer);
 	
-	//unmap_buffer(get_current_frame().instanceBuffer);
+	
+	std::vector<VkBufferMemoryBarrier> initialBarriers;
+	if (_renderScene.needsObjectRefresh)
+	{
+		ZoneScopedNC("Refresh Instancing Buffer", tracy::Color::Red);
+
+		AllocatedBuffer<GPUObjectData> newBuffer = create_buffer(sizeof(GPUObjectData) * _renderScene.renderables.size(), VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+
+		GPUObjectData* objectSSBO = map_buffer(newBuffer);
+		_renderScene.fill_objectData(objectSSBO);		
+		unmap_buffer(newBuffer);
+
+		get_current_frame()._frameDeletionQueue.push_function([=]() {
+
+			vmaDestroyBuffer(_allocator, newBuffer._buffer, newBuffer._allocation);
+			});
+
+		//copy from the uploaded cpu side instance buffer to the gpu one
+		VkBufferCopy indirectCopy;
+		indirectCopy.dstOffset = 0;
+		indirectCopy.size = _renderScene.renderables.size() * sizeof(GPUObjectData);
+		indirectCopy.srcOffset = 0;
+		vkCmdCopyBuffer(cmd, newBuffer._buffer, _renderScene.objectDataBuffer._buffer, 1, &indirectCopy);
+
+
+		VkBufferMemoryBarrier barrier{};
+		barrier.buffer = _renderScene.objectDataBuffer._buffer;
+		barrier.size = VK_WHOLE_SIZE;
+		barrier.dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_SHADER_READ_BIT;
+		barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+		barrier.srcQueueFamilyIndex = _graphicsQueueFamily;
+		barrier.dstQueueFamilyIndex = _graphicsQueueFamily;
+		barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+		barrier.pNext = nullptr;
+
+		vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr, 1, &barrier, 0, nullptr);//1, &readBarrier);
+
+
+		_renderScene.needsObjectRefresh = false;
+	}
 }
 
 void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderScene::MeshPass& pass)
@@ -1351,7 +1383,7 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderScene::MeshPass& pass
 	VkPipeline lastPipeline = VK_NULL_HANDLE;
 	ShaderDescriptorBinder binder{};
 
-	VkDescriptorBufferInfo objectBufferInfo = get_current_frame().objectBuffer.get_info();
+	VkDescriptorBufferInfo objectBufferInfo = _renderScene.objectDataBuffer.get_info();//get_current_frame().objectBuffer.get_info();
 
 	VkDescriptorBufferInfo dynamicInfo = get_current_frame().dynamicDataBuffer.get_info();
 	
@@ -1589,7 +1621,7 @@ glm::vec4 normalizePlane(glm::vec4 p)
 
 void VulkanEngine::execute_compute_cull(VkCommandBuffer cmd, RenderScene::MeshPass& pass)
 {
-	VkDescriptorBufferInfo objectBufferInfo = get_current_frame().objectBuffer.get_info();	
+	VkDescriptorBufferInfo objectBufferInfo = _renderScene.objectDataBuffer.get_info();//get_current_frame().objectBuffer.get_info();	
 
 	VkDescriptorBufferInfo dynamicInfo = get_current_frame().dynamicDataBuffer.get_info();
 	dynamicInfo.range = sizeof(GPUCameraData);
@@ -2230,6 +2262,7 @@ void VulkanEngine::init_descriptors()
 	_renderScene._forwardPass.drawIndirectBuffer = create_buffer(sizeof(GPUIndirectObject) * MAX_OBJECTS, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
 
 	_renderScene._forwardPass.instanceBuffer = create_buffer(sizeof(GPUInstance) * MAX_OBJECTS, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+	_renderScene.objectDataBuffer = create_buffer(sizeof(GPUObjectData) * MAX_OBJECTS, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
 
 
 	for (int i = 0; i < FRAME_OVERLAP; i++)
@@ -2238,8 +2271,8 @@ void VulkanEngine::init_descriptors()
 		_frames[i].dynamicDescriptorAllocator->init(_device);
 
 		
-		_frames[i].objectBuffer = create_buffer(sizeof(GPUObjectData) * MAX_OBJECTS, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
-	
+		//_frames[i].objectBuffer = create_buffer(sizeof(GPUObjectData) * MAX_OBJECTS, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+
 		//_frames[i].instanceBuffer = create_buffer(sizeof(GPUInstance) * MAX_OBJECTS, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
 		
 		//_frames[i].indirectBuffer = create_buffer(sizeof(GPUIndirectObject) * MAX_OBJECTS,VK_BUFFER_USAGE_TRANSFER_SRC_BIT| VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);

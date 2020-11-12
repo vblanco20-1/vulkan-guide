@@ -119,11 +119,11 @@ struct FrameData {
 	VkCommandBuffer _mainCommandBuffer;
 	
 
-	AllocatedBuffer<GPUObjectData> objectBuffer;
+	//AllocatedBuffer<GPUObjectData> objectBuffer;
 
 	//AllocatedBuffer<GPUIndirectObject> indirectBuffer;
 	
-	AllocatedBuffer<GPUInstance> instanceBuffer;
+	//AllocatedBuffer<GPUInstance> instanceBuffer;
 
 	AllocatedBufferUntyped dynamicDataBuffer;
 
@@ -283,7 +283,7 @@ public:
 
 	EngineConfig _config;
 
-	void ready_mesh_draw();
+	void ready_mesh_draw(VkCommandBuffer cmd);
 	
 	//initializes everything in the engine
 	void init();
