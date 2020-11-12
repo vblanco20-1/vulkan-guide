@@ -85,7 +85,15 @@ public:
 
 		
 		AllocatedBuffer<uint32_t> compactedInstanceBuffer;
+
 		AllocatedBuffer<GPUIndirectObject> drawIndirectBuffer;
+
+		AllocatedBuffer<GPUInstance> instanceBuffer;
+
+		AllocatedBuffer<GPUIndirectObject> clearIndirectBuffer;
+
+		bool needsIndirectRefresh = true;
+		bool needsInstanceRefresh = true;
 	};
 
 	Handle<RenderObject> register_object(MeshObject* object, PassTypeFlags passes);
@@ -124,6 +132,7 @@ public:
 
 	AllocatedBufferUntyped uploadBuffer[2];
 
-	AllocatedBufferUntyped objectDataBuffer;
-	
+	AllocatedBuffer<GPUObjectData> objectDataBuffer;
+
+	bool needsObjectRefresh = true;
 };

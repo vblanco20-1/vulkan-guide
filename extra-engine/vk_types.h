@@ -20,6 +20,12 @@ struct AllocatedBuffer : public AllocatedBufferUntyped {
 		_allocation = other._allocation;
 		_size = other._size;
 	}
+	AllocatedBuffer(AllocatedBufferUntyped& other) {
+		_buffer = other._buffer;
+		_allocation = other._allocation;
+		_size = other._size;
+	}
+	AllocatedBuffer() = default;
 };
 
 struct AllocatedImage {

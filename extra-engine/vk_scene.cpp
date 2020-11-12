@@ -52,9 +52,7 @@ void RenderScene::update_object(Handle<RenderObject> objectID)
 
 void RenderScene::fill_objectData(GPUObjectData* data)
 {
-	static int ntimes = 0;
-	ntimes++;
-	if (ntimes > 3) return;
+	
 	for(int i = 0; i < renderables.size(); i++)
 	{
 		GPUObjectData object;
@@ -71,9 +69,7 @@ void RenderScene::fill_objectData(GPUObjectData* data)
 
 void RenderScene::fill_indirectArray(GPUIndirectObject* data)
 {
-	//static int ntimes = 0;
-	//ntimes++;
-	//if (ntimes > 3) return;
+	
 	int dataIndex = 0;
 	for (int i = 0; i < _forwardPass.batches.size(); i++) {
 
@@ -109,9 +105,7 @@ void RenderScene::fill_indirectArray(GPUIndirectObject* data)
 
 void RenderScene::fill_instancesArray(GPUInstance* data)
 {
-	static int ntimes = 0;
-	ntimes++;
-	if (ntimes > 3) return;
+	
 	int dataIndex = 0;
 	for (int i = 0; i < _forwardPass.batches.size(); i++) {
 

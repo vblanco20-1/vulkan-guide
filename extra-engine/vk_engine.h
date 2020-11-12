@@ -121,12 +121,11 @@ struct FrameData {
 
 	AllocatedBuffer<GPUObjectData> objectBuffer;
 
-	AllocatedBuffer<GPUIndirectObject> indirectBuffer;
+	//AllocatedBuffer<GPUIndirectObject> indirectBuffer;
 	
 	AllocatedBuffer<GPUInstance> instanceBuffer;
 
 	AllocatedBufferUntyped dynamicDataBuffer;
-
 
 	vkutil::DescriptorAllocator* dynamicDescriptorAllocator;
 };
@@ -201,7 +200,6 @@ struct /*alignas(16)*/DrawCullData
 	int cullingEnabled;
 	int lodEnabled;
 	int occlusionEnabled;
-
 };
 
 struct EngineConfig {
@@ -321,7 +319,7 @@ public:
 	Mesh* get_mesh(const std::string& name);
 
 	//our draw function
-	void draw_objects(VkCommandBuffer cmd);
+	void draw_objects(VkCommandBuffer cmd, RenderScene::MeshPass& pass);
 
 	void reduce_depth(VkCommandBuffer cmd);
 
@@ -330,7 +328,7 @@ public:
 
 	glm::mat4 get_projection_matrix(bool bReverse = true);
 
-	void execute_compute_cull(VkCommandBuffer cmd, int count);
+	void execute_compute_cull(VkCommandBuffer cmd, RenderScene::MeshPass& pass);
 
 	AllocatedBufferUntyped create_buffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage, VkMemoryPropertyFlags required_flags = 0);
 
@@ -344,6 +342,11 @@ public:
 	std::string asset_path(std::string& path);
 
 	void refresh_renderbounds(MeshObject* object);
+
+	template<typename T>
+	T* map_buffer(AllocatedBuffer<T> &buffer);
+	
+	void unmap_buffer(AllocatedBufferUntyped& buffer);
 private:
 	EngineStats stats;
 	void process_input_event(SDL_Event* ev);
@@ -379,3 +382,11 @@ private:
 
 	void upload_mesh(Mesh& mesh);
 };
+
+template<typename T>
+T* VulkanEngine::map_buffer(AllocatedBuffer<T>& buffer)
+{
+	void* data;
+	vmaMapMemory(_allocator, buffer._allocation, &data);
+	return(T*)data;
+}

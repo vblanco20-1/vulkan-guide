@@ -3,7 +3,7 @@
 
 layout (local_size_x = 256) in;
 
-layout(set = 0, binding = 0) uniform  CameraBuffer{   
+layout(set = 0, binding = 5) uniform  CameraBuffer{   
     mat4 view;
     mat4 proj;
 	mat4 viewproj;
@@ -33,14 +33,14 @@ layout(push_constant) uniform  constants{
 struct Bounds{
 	vec4 sphereBounds;
 }; 
-layout(set = 1,binding = 4) uniform sampler2D depthPyramid;
+layout(set = 0,binding = 4) uniform sampler2D depthPyramid;
 struct ObjectData{
 	mat4 model;
 vec4 spherebounds;
 vec4 extents;
 }; 
 //all object matrices
-layout(std140,set = 1, binding = 0) readonly buffer ObjectBuffer{   
+layout(std140,set = 0, binding = 0) readonly buffer ObjectBuffer{   
 
 	ObjectData objects[];
 } objectBuffer;
@@ -57,7 +57,7 @@ struct DrawCommand
 	uint batchID;
 };
 //draw indirect buffer
-layout(set = 1, binding = 1)  buffer InstanceBuffer{   
+layout(set = 0, binding = 1)  buffer InstanceBuffer{   
 
 	DrawCommand Draws[];
 } drawBuffer;
@@ -67,13 +67,13 @@ struct GPUInstance {
 	uint batchID;
 };
 //draw indirect buffer
-layout(set = 1, binding = 2)  buffer InstanceBuffer2{   
+layout(set = 0, binding = 2) readonly buffer InstanceBuffer2{   
 
 	GPUInstance Instances[];
 } compactInstanceBuffer;
 
 //draw indirect buffer
-layout(set = 1, binding = 3)  buffer InstanceBuffer3{   
+layout(set = 0, binding = 3)  buffer InstanceBuffer3{   
 
 	uint IDs[];
 } finalInstanceBuffer;
