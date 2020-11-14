@@ -1285,23 +1285,21 @@ void VulkanEngine::ready_mesh_draw(VkCommandBuffer cmd)
 
 	//upload object data to gpu
 	
-	
-	
 	std::vector<VkBufferMemoryBarrier> initialBarriers;
-	if (_renderScene.needsObjectRefresh)
+	if (_renderScene.dirtyObjects.size() > 0)
 	{
 		ZoneScopedNC("Refresh Instancing Buffer", tracy::Color::Red);
 
 		AllocatedBuffer<GPUObjectData> newBuffer = create_buffer(sizeof(GPUObjectData) * _renderScene.renderables.size(), VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
 
 		GPUObjectData* objectSSBO = map_buffer(newBuffer);
-		_renderScene.fill_objectData(objectSSBO);		
+		_renderScene.fill_objectData(objectSSBO);
 		unmap_buffer(newBuffer);
 
 		get_current_frame()._frameDeletionQueue.push_function([=]() {
 
 			vmaDestroyBuffer(_allocator, newBuffer._buffer, newBuffer._allocation);
-			});
+		});
 
 		//copy from the uploaded cpu side instance buffer to the gpu one
 		VkBufferCopy indirectCopy;
@@ -1321,10 +1319,9 @@ void VulkanEngine::ready_mesh_draw(VkCommandBuffer cmd)
 		barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
 		barrier.pNext = nullptr;
 
-		vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr, 1, &barrier, 0, nullptr);//1, &readBarrier);
+		vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr, 1, &barrier, 0, nullptr);
 
-
-		_renderScene.needsObjectRefresh = false;
+		_renderScene.clear_dirty_objects();
 	}
 }
 

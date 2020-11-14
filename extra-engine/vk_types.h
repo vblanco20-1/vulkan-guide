@@ -7,9 +7,9 @@
 #include <vk_mem_alloc.h>
 
 struct AllocatedBufferUntyped {
-	VkBuffer _buffer;
-	VmaAllocation _allocation;
-	VkDeviceSize _size;
+	VkBuffer _buffer{};
+	VmaAllocation _allocation{};
+	VkDeviceSize _size{0};
 	VkDescriptorBufferInfo get_info(VkDeviceSize offset = 0);
 };
 

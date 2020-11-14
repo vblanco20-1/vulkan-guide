@@ -107,6 +107,8 @@ public:
 	void fill_indirectArray(GPUIndirectObject* data);
 	void fill_instancesArray(GPUInstance* data);
 
+	
+	void clear_dirty_objects();
 
 	void build_batches();
 
@@ -132,7 +134,5 @@ public:
 
 	AllocatedBufferUntyped uploadBuffer[2];
 
-	AllocatedBuffer<GPUObjectData> objectDataBuffer;
-
-	bool needsObjectRefresh = true;
+	AllocatedBuffer<GPUObjectData> objectDataBuffer;	
 };

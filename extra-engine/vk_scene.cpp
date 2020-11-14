@@ -120,6 +120,15 @@ void RenderScene::fill_instancesArray(GPUInstance* data)
 	}
 }
 
+void RenderScene::clear_dirty_objects()
+{
+	for (auto obj : dirtyObjects)
+	{
+		get_object(obj)->updateIndex = (uint32_t)-1;
+	}
+	dirtyObjects.clear();
+}
+
 void RenderScene::build_batches()
 {
 	refresh_pass(&_forwardPass);
@@ -127,6 +136,8 @@ void RenderScene::build_batches()
 
 void RenderScene::refresh_pass(MeshPass* pass)
 {
+	pass->needsIndirectRefresh = true;
+	pass->needsInstanceRefresh = true;
 	{
 		pass->flat_batches.clear();
 		ZoneScopedNC("Fill DrawList", tracy::Color::Blue2);
@@ -146,7 +157,7 @@ void RenderScene::refresh_pass(MeshPass* pass)
 
 				newCommand.sortKey = uint64_t(meshmat) | (uint64_t(object->customSortKey) << 32);
 
-			pass->flat_batches.push_back(newCommand);
+				pass->flat_batches.push_back(newCommand);
 			}
 		}
 	}
