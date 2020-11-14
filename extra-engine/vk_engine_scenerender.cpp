@@ -1,0 +1,496 @@
+﻿#include "vk_engine.h"
+
+#include <SDL.h>
+#include <SDL_vulkan.h>
+
+#include <vk_types.h>
+#include <vk_initializers.h>
+#include <vk_descriptors.h>
+
+#include "vk_textures.h"
+#include "vk_shaders.h"
+
+#include "Tracy.hpp"
+#include "TracyVulkan.hpp"
+
+
+glm::vec4 normalizePlane(glm::vec4 p)
+{
+	return p / glm::length(glm::vec3(p));
+}
+
+
+void VulkanEngine::execute_compute_cull(VkCommandBuffer cmd, RenderScene::MeshPass& pass)
+{
+	VkDescriptorBufferInfo objectBufferInfo = _renderScene.objectDataBuffer.get_info();//get_current_frame().objectBuffer.get_info();	
+
+	VkDescriptorBufferInfo dynamicInfo = get_current_frame().dynamicDataBuffer.get_info();
+	dynamicInfo.range = sizeof(GPUCameraData);
+
+	VkDescriptorBufferInfo instanceInfo = pass.instanceBuffer.get_info(); //get_current_frame().instanceBuffer.get_info();
+
+	VkDescriptorBufferInfo finalInfo = pass.compactedInstanceBuffer.get_info();
+
+	VkDescriptorBufferInfo indirectInfo = pass.drawIndirectBuffer.get_info();//get_current_frame().indirectBuffer.get_info();	
+
+	VkDescriptorImageInfo depthPyramid;
+	depthPyramid.sampler = _depthSampler;
+	depthPyramid.imageView = _depthPyramidView;
+	depthPyramid.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+
+
+	VkDescriptorSet COMPObjectDataSet;
+	vkutil::DescriptorBuilder::begin(_descriptorLayoutCache, get_current_frame().dynamicDescriptorAllocator)
+		.bind_buffer(0, &objectBufferInfo, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT)
+		.bind_buffer(1, &indirectInfo, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT)
+		.bind_buffer(2, &instanceInfo, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT)
+		.bind_buffer(3, &finalInfo, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT)
+		.bind_image(4, &depthPyramid, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_COMPUTE_BIT)
+		.bind_buffer(5, &dynamicInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT)
+		.build(COMPObjectDataSet);
+
+
+	glm::mat4 projection = get_projection_matrix(true);
+	glm::mat4 projectionT = transpose(projection);
+
+	glm::vec4 frustumX = normalizePlane(projectionT[3] + projectionT[0]); // x + w < 0
+	glm::vec4 frustumY = normalizePlane(projectionT[3] + projectionT[1]); // y + w < 0
+
+	DrawCullData cullData = {};
+	cullData.P00 = projection[0][0];
+	cullData.P11 = projection[1][1];
+	cullData.znear = 0.1f;
+	cullData.zfar = _config.drawDistance;
+	cullData.frustum[0] = frustumX.x;
+	cullData.frustum[1] = frustumX.z;
+	cullData.frustum[2] = frustumY.y;
+	cullData.frustum[3] = frustumY.z;
+	cullData.drawCount = pass.flat_batches.size();
+	cullData.cullingEnabled = true;
+	cullData.lodEnabled = false;
+	cullData.occlusionEnabled = true;
+	cullData.lodBase = 10.f;
+	cullData.lodStep = 1.5f;
+	cullData.pyramidWidth = depthPyramidWidth;
+	cullData.pyramidHeight = depthPyramidHeight;
+	cullData.viewMat = get_view_matrix();
+
+
+	//if the pass has changed the batches, need to reupload them
+	if (pass.needsIndirectRefresh)
+	{
+		ZoneScopedNC("Refresh Indirect Buffer", tracy::Color::Red);
+
+		AllocatedBuffer<GPUIndirectObject> newBuffer = create_buffer(sizeof(GPUIndirectObject) * pass.batches.size(), VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+
+		GPUIndirectObject* indirect = map_buffer(newBuffer);
+		_renderScene.fill_indirectArray(indirect);
+		unmap_buffer(newBuffer);
+
+		if (pass.clearIndirectBuffer._buffer != VK_NULL_HANDLE)
+		{
+			AllocatedBufferUntyped deletionBuffer = pass.clearIndirectBuffer;
+			//add buffer to deletion queue of this frame
+			get_current_frame()._frameDeletionQueue.push_function([=]() {
+
+				vmaDestroyBuffer(_allocator, deletionBuffer._buffer, deletionBuffer._allocation);
+				});
+		}
+
+		pass.clearIndirectBuffer = newBuffer;
+		pass.needsIndirectRefresh = false;
+	}
+
+	std::vector<VkBufferMemoryBarrier> initialBarriers;
+	if (pass.needsInstanceRefresh)
+	{
+		ZoneScopedNC("Refresh Instancing Buffer", tracy::Color::Red);
+
+		AllocatedBuffer<GPUInstance> newBuffer = create_buffer(sizeof(GPUInstance) * pass.flat_batches.size(), VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+
+		GPUInstance* instanceData = map_buffer(newBuffer);
+		_renderScene.fill_instancesArray(instanceData);
+		unmap_buffer(newBuffer);
+
+		get_current_frame()._frameDeletionQueue.push_function([=]() {
+
+			vmaDestroyBuffer(_allocator, newBuffer._buffer, newBuffer._allocation);
+			});
+
+		//copy from the uploaded cpu side instance buffer to the gpu one
+		VkBufferCopy indirectCopy;
+		indirectCopy.dstOffset = 0;
+		indirectCopy.size = pass.flat_batches.size() * sizeof(GPUInstance);
+		indirectCopy.srcOffset = 0;
+		vkCmdCopyBuffer(cmd, newBuffer._buffer, pass.instanceBuffer._buffer, 1, &indirectCopy);
+
+
+		VkBufferMemoryBarrier barrier{};
+		barrier.buffer = pass.instanceBuffer._buffer;
+		barrier.size = VK_WHOLE_SIZE;
+		barrier.dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_SHADER_READ_BIT;
+		barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+		barrier.srcQueueFamilyIndex = _graphicsQueueFamily;
+		barrier.dstQueueFamilyIndex = _graphicsQueueFamily;
+		barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+		barrier.pNext = nullptr;
+
+		initialBarriers.push_back(barrier);
+
+		pass.needsInstanceRefresh = false;
+	}
+
+
+	//copy from the cleared indirect buffer into the one we will use on rendering
+	VkBufferCopy indirectCopy;
+	indirectCopy.dstOffset = 0;
+	indirectCopy.size = pass.flat_batches.size() * sizeof(GPUIndirectObject);
+	indirectCopy.srcOffset = 0;
+	vkCmdCopyBuffer(cmd, pass.clearIndirectBuffer._buffer, pass.drawIndirectBuffer._buffer, 1, &indirectCopy);
+
+	{
+		VkBufferMemoryBarrier barrier{};
+		barrier.buffer = pass.drawIndirectBuffer._buffer;
+		barrier.size = VK_WHOLE_SIZE;
+		barrier.dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_SHADER_READ_BIT;
+		barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+		barrier.srcQueueFamilyIndex = _graphicsQueueFamily;
+		barrier.dstQueueFamilyIndex = _graphicsQueueFamily;
+		barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+		barrier.pNext = nullptr;
+		initialBarriers.push_back(barrier);
+		//VkImageMemoryBarrier readBarrier = imageBarrier(_depthPyramid._image, 0, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_ASPECT_COLOR_BIT);
+
+		vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr, initialBarriers.size(), initialBarriers.data(), 0, nullptr);//1, &readBarrier);
+	}
+
+
+	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, _cullPipeline);
+
+	vkCmdPushConstants(cmd, _cullLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(DrawCullData), &cullData);
+
+	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, _cullLayout, 0, 1, &COMPObjectDataSet, 0, nullptr);
+
+	TracyVkZone(_graphicsQueueContext, cmd, "Cull Dispatch");
+	vkCmdDispatch(cmd, pass.flat_batches.size() / 256, 1, 1);
+
+
+	//barrier the 2 buffers we just wrote for culling, the indirect draw one, and the instances one, so that they can be read well when rendering the pass
+	{
+		VkBufferMemoryBarrier barrier{};
+		barrier.buffer = pass.compactedInstanceBuffer._buffer;
+		barrier.size = VK_WHOLE_SIZE;
+		barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+		barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+		barrier.srcQueueFamilyIndex = _graphicsQueueFamily;
+		barrier.dstQueueFamilyIndex = _graphicsQueueFamily;
+		barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+		barrier.pNext = nullptr;
+
+		VkBufferMemoryBarrier barrier2{};
+		barrier2.buffer = pass.drawIndirectBuffer._buffer;
+		barrier2.size = VK_WHOLE_SIZE;
+		barrier2.dstAccessMask = VK_ACCESS_INDIRECT_COMMAND_READ_BIT;
+		barrier2.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+		barrier2.srcQueueFamilyIndex = _graphicsQueueFamily;
+		barrier2.dstQueueFamilyIndex = _graphicsQueueFamily;
+		barrier2.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+		barrier2.pNext = nullptr;
+
+		VkBufferMemoryBarrier barriers[] = { barrier,barrier2 };
+
+		vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT, 0, 0, nullptr, 2, barriers, 0, nullptr);
+	}
+}
+
+void VulkanEngine::ready_mesh_draw(VkCommandBuffer cmd)
+{
+	ZoneScopedNC("Draw Upload", tracy::Color::Blue);
+
+	//upload object data to gpu
+
+	std::vector<VkBufferMemoryBarrier> initialBarriers;
+	if (_renderScene.dirtyObjects.size() > 0)
+	{
+		ZoneScopedNC("Refresh Instancing Buffer", tracy::Color::Red);
+
+		AllocatedBuffer<GPUObjectData> newBuffer = create_buffer(sizeof(GPUObjectData) * _renderScene.renderables.size(), VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+
+		GPUObjectData* objectSSBO = map_buffer(newBuffer);
+		_renderScene.fill_objectData(objectSSBO);
+		unmap_buffer(newBuffer);
+
+		get_current_frame()._frameDeletionQueue.push_function([=]() {
+
+			vmaDestroyBuffer(_allocator, newBuffer._buffer, newBuffer._allocation);
+			});
+
+		//copy from the uploaded cpu side instance buffer to the gpu one
+		VkBufferCopy indirectCopy;
+		indirectCopy.dstOffset = 0;
+		indirectCopy.size = _renderScene.renderables.size() * sizeof(GPUObjectData);
+		indirectCopy.srcOffset = 0;
+		vkCmdCopyBuffer(cmd, newBuffer._buffer, _renderScene.objectDataBuffer._buffer, 1, &indirectCopy);
+
+
+		VkBufferMemoryBarrier barrier{};
+		barrier.buffer = _renderScene.objectDataBuffer._buffer;
+		barrier.size = VK_WHOLE_SIZE;
+		barrier.dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_SHADER_READ_BIT;
+		barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+		barrier.srcQueueFamilyIndex = _graphicsQueueFamily;
+		barrier.dstQueueFamilyIndex = _graphicsQueueFamily;
+		barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+		barrier.pNext = nullptr;
+
+		vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr, 1, &barrier, 0, nullptr);
+
+		_renderScene.clear_dirty_objects();
+	}
+}
+
+void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderScene::MeshPass& pass)
+{
+	ZoneScopedNC("DrawObjects", tracy::Color::Blue);
+	//make a model view matrix for rendering the object
+	//camera view
+	glm::mat4 view = get_view_matrix();
+
+
+	//camera projection
+	glm::mat4 projection = get_projection_matrix();
+
+
+	GPUCameraData camData;
+	camData.proj = projection;
+	camData.view = view;
+	camData.viewproj = projection * view;
+
+
+	glm::mat4 cullpro = glm::perspective(glm::radians(70.f), 1700.f / 900.f, 0.1f, _config.drawDistance);
+	cullpro[1][1] *= -1;
+
+
+	Frustum view_frustrum{ cullpro * view };
+
+	float framed = (_frameNumber / 120.f);
+	_sceneParameters.ambientColor = glm::vec4{ 0.5 };
+	_sceneParameters.sunlightColor = glm::vec4{ 1.f };
+	_sceneParameters.sunlightDirection = glm::vec4{ 0.5f, -1.f, 0.2f,1.f };
+
+	//push data to dynmem
+	uint32_t camera_data_offsets[3];
+	uint32_t scene_data_offset;
+
+	uint32_t dyn_offset = 0;
+
+	char* dynData;
+	vmaMapMemory(_allocator, get_current_frame().dynamicDataBuffer._allocation, (void**)&dynData);
+
+	camera_data_offsets[0] = dyn_offset;
+	memcpy(dynData, &camData, sizeof(GPUCameraData));
+	dyn_offset += sizeof(GPUCameraData);
+	dyn_offset = pad_uniform_buffer_size(dyn_offset);
+
+	dynData += dyn_offset;
+
+	scene_data_offset = dyn_offset;
+	memcpy(dynData, &_sceneParameters, sizeof(GPUSceneData));
+
+	vmaUnmapMemory(_allocator, get_current_frame().dynamicDataBuffer._allocation);
+
+	Mesh* lastMesh = nullptr;
+	Material* lastMaterial = nullptr;
+	VkPipeline lastPipeline = VK_NULL_HANDLE;
+	ShaderDescriptorBinder binder{};
+
+	VkDescriptorBufferInfo objectBufferInfo = _renderScene.objectDataBuffer.get_info();//get_current_frame().objectBuffer.get_info();
+
+	VkDescriptorBufferInfo dynamicInfo = get_current_frame().dynamicDataBuffer.get_info();
+
+	VkDescriptorBufferInfo instanceInfo = pass.compactedInstanceBuffer.get_info();
+
+
+	VkDescriptorSet GlobalSet;
+	vkutil::DescriptorBuilder::begin(_descriptorLayoutCache, get_current_frame().dynamicDescriptorAllocator)
+		.bind_buffer(0, &dynamicInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_VERTEX_BIT)
+		.bind_buffer(1, &dynamicInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_FRAGMENT_BIT)
+		.build(GlobalSet);
+
+	VkDescriptorSet ObjectDataSet;
+	vkutil::DescriptorBuilder::begin(_descriptorLayoutCache, get_current_frame().dynamicDescriptorAllocator)
+		.bind_buffer(0, &objectBufferInfo, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
+		.bind_buffer(1, &instanceInfo, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
+		.build(ObjectDataSet);
+
+
+	{
+		ZoneScopedNC("Draw Commit", tracy::Color::Blue4);
+		Material* lastMaterial = nullptr;
+		Mesh* lastMesh = nullptr;
+
+
+		stats.objects = pass.flat_batches.size();
+		for (int i = 0; i < pass.batches.size(); i++)//)
+		{
+			auto& instanceDraw = pass.batches[i];
+			//cull the whole batch
+			if (!view_frustrum.IsBoxVisible(instanceDraw.AABBMin, instanceDraw.AABBMax)) continue;
+
+			Material* drawMat = _renderScene.get_material(instanceDraw.material);
+			Mesh* drawMesh = _renderScene.get_mesh(instanceDraw.meshID);
+
+			if (lastMaterial != drawMat) {
+
+				ShaderEffect* newEffect = drawMat->effect;
+				if (lastMaterial == nullptr || lastMaterial->pipeline != drawMat->pipeline) {
+
+					vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, drawMat->pipeline);
+
+					vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, newEffect->builtLayout, 1, 1, &ObjectDataSet, 0, nullptr);
+
+					//update dynamic binds
+					uint32_t dynamicBinds[] = { camera_data_offsets[0],scene_data_offset };
+					vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, newEffect->builtLayout, 0, 1, &GlobalSet, 2, dynamicBinds);
+				}
+
+				if (lastMaterial == nullptr || drawMat->textureSet != lastMaterial->textureSet) {
+					if (drawMat->textureSet != VK_NULL_HANDLE)
+					{
+						//texture descriptor
+						vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, newEffect->builtLayout, 2, 1, &drawMat->textureSet, 0, nullptr);
+
+					}
+				}
+				lastMaterial = drawMat;
+			}
+
+			if (lastMesh == nullptr || lastMesh != drawMesh) {
+
+				//bind the mesh vertex buffer with offset 0
+				VkDeviceSize offset = 0;
+				vkCmdBindVertexBuffers(cmd, 0, 1, &drawMesh->_vertexBuffer._buffer, &offset);
+
+				if (drawMesh->_indexBuffer._buffer != VK_NULL_HANDLE) {
+					vkCmdBindIndexBuffer(cmd, drawMesh->_indexBuffer._buffer, 0, VK_INDEX_TYPE_UINT32);
+				}
+				lastMesh = drawMesh;
+			}
+
+			bool bHasIndices = drawMesh->_indices.size() > 0;
+			if (!bHasIndices) {
+				stats.draws++;
+				stats.triangles += (drawMesh->_vertices.size() / 3) * instanceDraw.count;
+				vkCmdDraw(cmd, drawMesh->_vertices.size(), instanceDraw.count, 0, instanceDraw.first);
+			}
+			else {
+				stats.triangles += (drawMesh->_indices.size() / 3) * instanceDraw.count;
+
+				//vkCmdDrawIndexedIndirectCount(cmd, get_current_frame().indirectBuffer._buffer, instanceDraw.first * sizeof(GPUIndirectObject), get_current_frame().batchBuffer._buffer, i * sizeof(GPUBatch), instanceDraw.count, sizeof(GPUIndirectObject));
+
+				//vkCmdDrawIndexedIndirectCount(cmd, get_current_frame().compactIndirectBuffer._buffer, 
+				//	instanceDraw.first * sizeof(VkDrawIndexedIndirectCommand), 
+				//	get_current_frame().batchBuffer._buffer, i * sizeof(GPUBatch), 
+				//	instanceDraw.count, sizeof(VkDrawIndexedIndirectCommand));
+
+				vkCmdDrawIndexedIndirect(cmd, pass.drawIndirectBuffer._buffer, i * sizeof(GPUIndirectObject), 1, sizeof(GPUIndirectObject));
+
+
+				stats.draws++;
+				stats.drawcalls += instanceDraw.count;
+			}
+		}
+	}
+}
+
+struct alignas(16) DepthReduceData
+{
+	glm::vec2 imageSize;
+};
+inline uint32_t getGroupCount(uint32_t threadCount, uint32_t localSize)
+{
+	return (threadCount + localSize - 1) / localSize;
+}
+
+VkImageMemoryBarrier imageBarrier(VkImage image, VkAccessFlags srcAccessMask, VkAccessFlags dstAccessMask, VkImageLayout oldLayout, VkImageLayout newLayout, VkImageAspectFlags aspectMask)
+{
+	VkImageMemoryBarrier result = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
+
+	result.srcAccessMask = srcAccessMask;
+	result.dstAccessMask = dstAccessMask;
+	result.oldLayout = oldLayout;
+	result.newLayout = newLayout;
+	result.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	result.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	result.image = image;
+	result.subresourceRange.aspectMask = aspectMask;
+	result.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
+	result.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
+
+	return result;
+}
+
+
+void VulkanEngine::reduce_depth(VkCommandBuffer cmd)
+{
+	VkImageMemoryBarrier depthReadBarriers[] =
+	{
+		imageBarrier(_depthImage._image, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_ASPECT_DEPTH_BIT),
+	};
+
+	vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, 0, 0, 0, 1, depthReadBarriers);
+
+	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, _depthReducePipeline);
+
+	for (uint32_t i = 0; i < depthPyramidLevels; ++i)
+	{
+		VkDescriptorImageInfo destTarget;
+		destTarget.sampler = _depthSampler;
+		destTarget.imageView = depthPyramidMips[i];
+		destTarget.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+
+		VkDescriptorImageInfo sourceTarget;
+		sourceTarget.sampler = _depthSampler;
+		if (i == 0)
+		{
+			sourceTarget.imageView = _depthImageView;
+			sourceTarget.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		}
+		else {
+			sourceTarget.imageView = depthPyramidMips[i - 1];
+			sourceTarget.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+		}
+
+
+
+
+		VkDescriptorSet depthSet;
+		vkutil::DescriptorBuilder::begin(_descriptorLayoutCache, get_current_frame().dynamicDescriptorAllocator)
+			.bind_image(0, &destTarget, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, VK_SHADER_STAGE_COMPUTE_BIT)
+			.bind_image(1, &sourceTarget, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_COMPUTE_BIT)
+			.build(depthSet);
+
+		vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, _depthReduceLayout, 0, 1, &depthSet, 0, nullptr);
+
+
+		uint32_t levelWidth = depthPyramidWidth >> i;
+		uint32_t levelHeight = depthPyramidHeight >> i;
+		if (levelHeight < 1) levelHeight = 1;
+		if (levelWidth < 1) levelWidth = 1;
+
+		DepthReduceData reduceData = { glm::vec2(levelWidth, levelHeight) };
+
+		vkCmdPushConstants(cmd, _depthReduceLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(reduceData), &reduceData);
+		vkCmdDispatch(cmd, getGroupCount(levelWidth, 32), getGroupCount(levelHeight, 32), 1);
+
+
+		VkImageMemoryBarrier reduceBarrier = imageBarrier(_depthPyramid._image, VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_ASPECT_COLOR_BIT);
+
+		vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, 0, 0, 0, 1, &reduceBarrier);
+	}
+
+	VkImageMemoryBarrier depthWriteBarrier = imageBarrier(_depthImage._image, VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_DEPTH_BIT);
+
+	vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, 0, 0, 0, 1, &depthWriteBarrier);
+
+}

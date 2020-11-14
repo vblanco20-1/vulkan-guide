@@ -3,6 +3,7 @@ set(CMAKE_CXX_STANDARD 17)
 add_executable (extra
 "main.cpp"
  "vk_engine.cpp"
+"vk_engine_scenerender.cpp"
  "vk_engine.h" 
  "vk_types.h" 
  "vk_mesh.cpp"
