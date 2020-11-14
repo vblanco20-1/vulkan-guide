@@ -75,6 +75,94 @@ void VulkanEngine::execute_compute_cull(VkCommandBuffer cmd, RenderScene::MeshPa
 	cullData.pyramidHeight = depthPyramidHeight;
 	cullData.viewMat = get_view_matrix();
 
+	//copy from the cleared indirect buffer into the one we will use on rendering. This one happens every frame
+	VkBufferCopy indirectCopy;
+	indirectCopy.dstOffset = 0;
+	indirectCopy.size = pass.flat_batches.size() * sizeof(GPUIndirectObject);
+	indirectCopy.srcOffset = 0;
+	vkCmdCopyBuffer(cmd, pass.clearIndirectBuffer._buffer, pass.drawIndirectBuffer._buffer, 1, &indirectCopy);
+
+	{
+		VkBufferMemoryBarrier barrier = vkinit::buffer_barrier(pass.drawIndirectBuffer._buffer, _graphicsQueueFamily);
+		barrier.dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_SHADER_READ_BIT;
+		barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+
+		uploadBarriers.push_back(barrier);
+		
+
+		vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr, 1, &barrier, 0, nullptr);
+	}
+
+	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, _cullPipeline);
+
+	vkCmdPushConstants(cmd, _cullLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(DrawCullData), &cullData);
+
+	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, _cullLayout, 0, 1, &COMPObjectDataSet, 0, nullptr);
+
+	TracyVkZone(_graphicsQueueContext, cmd, "Cull Dispatch");
+	vkCmdDispatch(cmd, pass.flat_batches.size() / 256, 1, 1);
+
+
+	//barrier the 2 buffers we just wrote for culling, the indirect draw one, and the instances one, so that they can be read well when rendering the pass
+	{
+		VkBufferMemoryBarrier barrier = vkinit::buffer_barrier(pass.compactedInstanceBuffer._buffer, _graphicsQueueFamily);
+		barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+		barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+		
+
+
+		VkBufferMemoryBarrier barrier2 = vkinit::buffer_barrier(pass.drawIndirectBuffer._buffer, _graphicsQueueFamily);	
+		barrier2.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+		barrier2.dstAccessMask = VK_ACCESS_INDIRECT_COMMAND_READ_BIT;
+		
+
+
+		VkBufferMemoryBarrier barriers[] = { barrier,barrier2 };
+
+		vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT, 0, 0, nullptr, 2, barriers, 0, nullptr);
+	}
+}
+
+void VulkanEngine::ready_mesh_draw(VkCommandBuffer cmd)
+{
+	ZoneScopedNC("Draw Upload", tracy::Color::Blue);
+
+	//upload object data to gpu
+	
+	if (_renderScene.dirtyObjects.size() > 0)
+	{
+		ZoneScopedNC("Refresh Instancing Buffer", tracy::Color::Red);
+
+		AllocatedBuffer<GPUObjectData> newBuffer = create_buffer(sizeof(GPUObjectData) * _renderScene.renderables.size(), VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+
+		GPUObjectData* objectSSBO = map_buffer(newBuffer);
+		_renderScene.fill_objectData(objectSSBO);
+		unmap_buffer(newBuffer);
+
+		get_current_frame()._frameDeletionQueue.push_function([=]() {
+
+			vmaDestroyBuffer(_allocator, newBuffer._buffer, newBuffer._allocation);
+		});
+
+		//copy from the uploaded cpu side instance buffer to the gpu one
+		VkBufferCopy indirectCopy;
+		indirectCopy.dstOffset = 0;
+		indirectCopy.size = _renderScene.renderables.size() * sizeof(GPUObjectData);
+		indirectCopy.srcOffset = 0;
+		vkCmdCopyBuffer(cmd, newBuffer._buffer, _renderScene.objectDataBuffer._buffer, 1, &indirectCopy);
+
+
+		VkBufferMemoryBarrier barrier = vkinit::buffer_barrier(_renderScene.objectDataBuffer._buffer, _graphicsQueueFamily);
+		barrier.dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_SHADER_READ_BIT;
+		barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+			
+
+		//vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr, 1, &barrier, 0, nullptr);
+		uploadBarriers.push_back(barrier);
+		_renderScene.clear_dirty_objects();
+	}
+
+	auto& pass = _renderScene._forwardPass;
 
 	//if the pass has changed the batches, need to reupload them
 	if (pass.needsIndirectRefresh)
@@ -101,7 +189,7 @@ void VulkanEngine::execute_compute_cull(VkCommandBuffer cmd, RenderScene::MeshPa
 		pass.needsIndirectRefresh = false;
 	}
 
-	std::vector<VkBufferMemoryBarrier> initialBarriers;
+
 	if (pass.needsInstanceRefresh)
 	{
 		ZoneScopedNC("Refresh Instancing Buffer", tracy::Color::Red);
@@ -124,129 +212,17 @@ void VulkanEngine::execute_compute_cull(VkCommandBuffer cmd, RenderScene::MeshPa
 		indirectCopy.srcOffset = 0;
 		vkCmdCopyBuffer(cmd, newBuffer._buffer, pass.instanceBuffer._buffer, 1, &indirectCopy);
 
-
-		VkBufferMemoryBarrier barrier{};
-		barrier.buffer = pass.instanceBuffer._buffer;
-		barrier.size = VK_WHOLE_SIZE;
+		VkBufferMemoryBarrier barrier = vkinit::buffer_barrier(pass.instanceBuffer._buffer, _graphicsQueueFamily);
 		barrier.dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_SHADER_READ_BIT;
-		barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-		barrier.srcQueueFamilyIndex = _graphicsQueueFamily;
-		barrier.dstQueueFamilyIndex = _graphicsQueueFamily;
-		barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
-		barrier.pNext = nullptr;
+		barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;		
 
-		initialBarriers.push_back(barrier);
+		uploadBarriers.push_back(barrier);
 
 		pass.needsInstanceRefresh = false;
 	}
 
-
-	//copy from the cleared indirect buffer into the one we will use on rendering
-	VkBufferCopy indirectCopy;
-	indirectCopy.dstOffset = 0;
-	indirectCopy.size = pass.flat_batches.size() * sizeof(GPUIndirectObject);
-	indirectCopy.srcOffset = 0;
-	vkCmdCopyBuffer(cmd, pass.clearIndirectBuffer._buffer, pass.drawIndirectBuffer._buffer, 1, &indirectCopy);
-
-	{
-		VkBufferMemoryBarrier barrier{};
-		barrier.buffer = pass.drawIndirectBuffer._buffer;
-		barrier.size = VK_WHOLE_SIZE;
-		barrier.dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_SHADER_READ_BIT;
-		barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-		barrier.srcQueueFamilyIndex = _graphicsQueueFamily;
-		barrier.dstQueueFamilyIndex = _graphicsQueueFamily;
-		barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
-		barrier.pNext = nullptr;
-		initialBarriers.push_back(barrier);
-		//VkImageMemoryBarrier readBarrier = imageBarrier(_depthPyramid._image, 0, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_ASPECT_COLOR_BIT);
-
-		vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr, initialBarriers.size(), initialBarriers.data(), 0, nullptr);//1, &readBarrier);
-	}
-
-
-	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, _cullPipeline);
-
-	vkCmdPushConstants(cmd, _cullLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(DrawCullData), &cullData);
-
-	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, _cullLayout, 0, 1, &COMPObjectDataSet, 0, nullptr);
-
-	TracyVkZone(_graphicsQueueContext, cmd, "Cull Dispatch");
-	vkCmdDispatch(cmd, pass.flat_batches.size() / 256, 1, 1);
-
-
-	//barrier the 2 buffers we just wrote for culling, the indirect draw one, and the instances one, so that they can be read well when rendering the pass
-	{
-		VkBufferMemoryBarrier barrier{};
-		barrier.buffer = pass.compactedInstanceBuffer._buffer;
-		barrier.size = VK_WHOLE_SIZE;
-		barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-		barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-		barrier.srcQueueFamilyIndex = _graphicsQueueFamily;
-		barrier.dstQueueFamilyIndex = _graphicsQueueFamily;
-		barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
-		barrier.pNext = nullptr;
-
-		VkBufferMemoryBarrier barrier2{};
-		barrier2.buffer = pass.drawIndirectBuffer._buffer;
-		barrier2.size = VK_WHOLE_SIZE;
-		barrier2.dstAccessMask = VK_ACCESS_INDIRECT_COMMAND_READ_BIT;
-		barrier2.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-		barrier2.srcQueueFamilyIndex = _graphicsQueueFamily;
-		barrier2.dstQueueFamilyIndex = _graphicsQueueFamily;
-		barrier2.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
-		barrier2.pNext = nullptr;
-
-		VkBufferMemoryBarrier barriers[] = { barrier,barrier2 };
-
-		vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT, 0, 0, nullptr, 2, barriers, 0, nullptr);
-	}
-}
-
-void VulkanEngine::ready_mesh_draw(VkCommandBuffer cmd)
-{
-	ZoneScopedNC("Draw Upload", tracy::Color::Blue);
-
-	//upload object data to gpu
-
-	std::vector<VkBufferMemoryBarrier> initialBarriers;
-	if (_renderScene.dirtyObjects.size() > 0)
-	{
-		ZoneScopedNC("Refresh Instancing Buffer", tracy::Color::Red);
-
-		AllocatedBuffer<GPUObjectData> newBuffer = create_buffer(sizeof(GPUObjectData) * _renderScene.renderables.size(), VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
-
-		GPUObjectData* objectSSBO = map_buffer(newBuffer);
-		_renderScene.fill_objectData(objectSSBO);
-		unmap_buffer(newBuffer);
-
-		get_current_frame()._frameDeletionQueue.push_function([=]() {
-
-			vmaDestroyBuffer(_allocator, newBuffer._buffer, newBuffer._allocation);
-			});
-
-		//copy from the uploaded cpu side instance buffer to the gpu one
-		VkBufferCopy indirectCopy;
-		indirectCopy.dstOffset = 0;
-		indirectCopy.size = _renderScene.renderables.size() * sizeof(GPUObjectData);
-		indirectCopy.srcOffset = 0;
-		vkCmdCopyBuffer(cmd, newBuffer._buffer, _renderScene.objectDataBuffer._buffer, 1, &indirectCopy);
-
-
-		VkBufferMemoryBarrier barrier{};
-		barrier.buffer = _renderScene.objectDataBuffer._buffer;
-		barrier.size = VK_WHOLE_SIZE;
-		barrier.dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_SHADER_READ_BIT;
-		barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-		barrier.srcQueueFamilyIndex = _graphicsQueueFamily;
-		barrier.dstQueueFamilyIndex = _graphicsQueueFamily;
-		barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
-		barrier.pNext = nullptr;
-
-		vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr, 1, &barrier, 0, nullptr);
-
-		_renderScene.clear_dirty_objects();
-	}
+	vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr, uploadBarriers.size(), uploadBarriers.data(), 0, nullptr);//1, &readBarrier);
+	uploadBarriers.clear();
 }
 
 void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderScene::MeshPass& pass)
@@ -384,17 +360,9 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderScene::MeshPass& pass
 				vkCmdDraw(cmd, drawMesh->_vertices.size(), instanceDraw.count, 0, instanceDraw.first);
 			}
 			else {
-				stats.triangles += (drawMesh->_indices.size() / 3) * instanceDraw.count;
-
-				//vkCmdDrawIndexedIndirectCount(cmd, get_current_frame().indirectBuffer._buffer, instanceDraw.first * sizeof(GPUIndirectObject), get_current_frame().batchBuffer._buffer, i * sizeof(GPUBatch), instanceDraw.count, sizeof(GPUIndirectObject));
-
-				//vkCmdDrawIndexedIndirectCount(cmd, get_current_frame().compactIndirectBuffer._buffer, 
-				//	instanceDraw.first * sizeof(VkDrawIndexedIndirectCommand), 
-				//	get_current_frame().batchBuffer._buffer, i * sizeof(GPUBatch), 
-				//	instanceDraw.count, sizeof(VkDrawIndexedIndirectCommand));
+				stats.triangles += (drawMesh->_indices.size() / 3) * instanceDraw.count;				
 
 				vkCmdDrawIndexedIndirect(cmd, pass.drawIndirectBuffer._buffer, i * sizeof(GPUIndirectObject), 1, sizeof(GPUIndirectObject));
-
 
 				stats.draws++;
 				stats.drawcalls += instanceDraw.count;
@@ -412,30 +380,14 @@ inline uint32_t getGroupCount(uint32_t threadCount, uint32_t localSize)
 	return (threadCount + localSize - 1) / localSize;
 }
 
-VkImageMemoryBarrier imageBarrier(VkImage image, VkAccessFlags srcAccessMask, VkAccessFlags dstAccessMask, VkImageLayout oldLayout, VkImageLayout newLayout, VkImageAspectFlags aspectMask)
-{
-	VkImageMemoryBarrier result = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
 
-	result.srcAccessMask = srcAccessMask;
-	result.dstAccessMask = dstAccessMask;
-	result.oldLayout = oldLayout;
-	result.newLayout = newLayout;
-	result.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-	result.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-	result.image = image;
-	result.subresourceRange.aspectMask = aspectMask;
-	result.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
-	result.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
-
-	return result;
-}
 
 
 void VulkanEngine::reduce_depth(VkCommandBuffer cmd)
 {
 	VkImageMemoryBarrier depthReadBarriers[] =
 	{
-		imageBarrier(_depthImage._image, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_ASPECT_DEPTH_BIT),
+		vkinit::image_barrier(_depthImage._image, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_ASPECT_DEPTH_BIT),
 	};
 
 	vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, 0, 0, 0, 1, depthReadBarriers);
@@ -484,12 +436,12 @@ void VulkanEngine::reduce_depth(VkCommandBuffer cmd)
 		vkCmdDispatch(cmd, getGroupCount(levelWidth, 32), getGroupCount(levelHeight, 32), 1);
 
 
-		VkImageMemoryBarrier reduceBarrier = imageBarrier(_depthPyramid._image, VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_ASPECT_COLOR_BIT);
+		VkImageMemoryBarrier reduceBarrier = vkinit::image_barrier(_depthPyramid._image, VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_ASPECT_COLOR_BIT);
 
 		vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, 0, 0, 0, 1, &reduceBarrier);
 	}
 
-	VkImageMemoryBarrier depthWriteBarrier = imageBarrier(_depthImage._image, VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_DEPTH_BIT);
+	VkImageMemoryBarrier depthWriteBarrier = vkinit::image_barrier(_depthImage._image, VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_DEPTH_BIT);
 
 	vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, 0, 0, 0, 1, &depthWriteBarrier);
 

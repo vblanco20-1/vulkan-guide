@@ -265,6 +265,8 @@ public:
 
 	GPUSceneData _sceneParameters;
 
+	std::vector<VkBufferMemoryBarrier> uploadBarriers;
+
 	UploadContext _uploadContext;
 
 	PlayerCamera _camera;
