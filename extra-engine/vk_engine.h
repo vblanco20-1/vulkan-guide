@@ -277,6 +277,9 @@ public:
 	VkPipeline _depthReducePipeline;
 	VkPipelineLayout _depthReduceLayout;
 
+	VkPipeline _sparseUploadPipeline;
+	VkPipelineLayout _sparseUploadLayout;
+
 	VkSampler _depthSampler;
 	VkImageView depthPyramidMips[16] = {};
 
@@ -349,6 +352,8 @@ public:
 	T* map_buffer(AllocatedBuffer<T> &buffer);
 	
 	void unmap_buffer(AllocatedBufferUntyped& buffer);
+
+	bool load_compute_shader(const char* shaderPath, VkPipeline& pipeline, VkPipelineLayout& layout);
 private:
 	EngineStats stats;
 	void process_input_event(SDL_Event* ev);

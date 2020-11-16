@@ -50,19 +50,34 @@ void RenderScene::update_object(Handle<RenderObject> objectID)
 	}
 }
 
+void RenderScene::write_object(GPUObjectData* target, Handle<RenderObject> objectID)
+{
+	RenderObject* renderable = get_object(objectID);
+	GPUObjectData object;
+
+	object.modelMatrix = renderable->transformMatrix;
+	object.origin_rad = glm::vec4(renderable->bounds.origin, renderable->bounds.radius);
+	object.extents = glm::vec4(renderable->bounds.extents, renderable->bounds.valid ? 1.f : 0.f);
+
+	memcpy(target, &object, sizeof(GPUObjectData));
+}
+
 void RenderScene::fill_objectData(GPUObjectData* data)
 {
 	
 	for(int i = 0; i < renderables.size(); i++)
 	{
-		GPUObjectData object;
-		const RenderObject &renderable = renderables[i];
-
-		object.modelMatrix = renderable.transformMatrix;
-		object.origin_rad = glm::vec4(renderable.bounds.origin, renderable.bounds.radius);
-		object.extents = glm::vec4(renderable.bounds.extents, renderable.bounds.valid? 1.f : 0.f);
-
-		memcpy(data + i, &object, sizeof(GPUObjectData));
+		Handle<RenderObject> h;
+		h.handle = i;
+		write_object(data + i, h);
+		//GPUObjectData object;
+		//const RenderObject &renderable = renderables[i];
+		//
+		//object.modelMatrix = renderable.transformMatrix;
+		//object.origin_rad = glm::vec4(renderable.bounds.origin, renderable.bounds.radius);
+		//object.extents = glm::vec4(renderable.bounds.extents, renderable.bounds.valid? 1.f : 0.f);
+		//
+		//memcpy(data + i, &object, sizeof(GPUObjectData));
 	}
 }
 

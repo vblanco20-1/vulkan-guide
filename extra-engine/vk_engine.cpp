@@ -163,7 +163,7 @@ void VulkanEngine::draw()
 		VK_CHECK(vkAcquireNextImageKHR(_device, _swapchain, 0, get_current_frame()._presentSemaphore, nullptr, &swapchainImageIndex));
 
 	}
-	
+
 	//naming it cmd for shorter writing
 	VkCommandBuffer cmd = get_current_frame()._mainCommandBuffer;
 
@@ -192,13 +192,15 @@ void VulkanEngine::draw()
 
 	rpInfo.pClearValues = &clearValues[0];
 
-	
+	{
+		TracyVkZone(_graphicsQueueContext, get_current_frame()._mainCommandBuffer, "All Frame");
+
 	ready_mesh_draw(cmd);
 
-	
+
 	execute_compute_cull(cmd, _renderScene._forwardPass);
 
-	
+
 	vkCmdBeginRenderPass(cmd, &rpInfo, VK_SUBPASS_CONTENTS_INLINE);
 
 	stats.drawcalls = 0;
@@ -207,11 +209,11 @@ void VulkanEngine::draw()
 	stats.triangles = 0;
 
 	{
-		TracyVkZone(_graphicsQueueContext, get_current_frame()._mainCommandBuffer, "All Frame");
+		TracyVkZone(_graphicsQueueContext, get_current_frame()._mainCommandBuffer, "Forward Pass");
 		draw_objects(cmd, _renderScene._forwardPass);
 	}
 
-	
+
 	{
 		TracyVkZone(_graphicsQueueContext, get_current_frame()._mainCommandBuffer, "Imgui Draw");
 		ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmd);
@@ -221,6 +223,7 @@ void VulkanEngine::draw()
 	vkCmdEndRenderPass(cmd);
 
 	reduce_depth(cmd);
+	}
 
 	TracyVkCollect(_graphicsQueueContext, get_current_frame()._mainCommandBuffer);
 
@@ -286,6 +289,7 @@ void VulkanEngine::run()
 	//main loop
 	while (!bQuit)
 	{
+		ZoneScopedN("Main Loop");
 		end = std::chrono::system_clock::now();
 		std::chrono::duration<double> elapsed_seconds = end - start;
 		stats.frametime = elapsed_seconds.count() * 1000.f;
@@ -293,13 +297,15 @@ void VulkanEngine::run()
 		start = std::chrono::system_clock::now();
 		//Handle events on queue
 		SDL_Event e;
+		{
+			ZoneScopedNC("Event Loop", tracy::Color::White);
 		while (SDL_PollEvent(&e) != 0)
 		{
-			
+
 			ImGui_ImplSDL2_ProcessEvent(&e);
 			process_input_event(&e);
 
-		
+
 			//close the window when user alt-f4s or clicks the X button			
 			if (e.type == SDL_QUIT)
 			{
@@ -317,27 +323,45 @@ void VulkanEngine::run()
 				}
 			}
 		}
+		}
+		{
+			ZoneScopedNC("Imgui Logic", tracy::Color::Grey);
 
+			//imgui new frame 
+			ImGui_ImplVulkan_NewFrame();
+			ImGui_ImplSDL2_NewFrame(_window);
 
-		//imgui new frame 
-		ImGui_ImplVulkan_NewFrame();
-		ImGui_ImplSDL2_NewFrame(_window);
+			ImGui::NewFrame();
 
-		ImGui::NewFrame();
+			ImGui::Begin("engine");
 
-		ImGui::Begin("engine");
+			ImGui::Text("Frametimes: %f", stats.frametime);
+			ImGui::Text("Objects: %d", stats.objects);
+			ImGui::Text("Drawcalls: %d", stats.drawcalls);
+			ImGui::Text("Draws: %d", stats.draws);
+			ImGui::Text("Triangles: %d", stats.triangles);
 
-		ImGui::Text("Frametimes: %f", stats.frametime);
-		ImGui::Text("Objects: %d", stats.objects);
-		ImGui::Text("Drawcalls: %d", stats.drawcalls);
-		ImGui::Text("Draws: %d", stats.draws);
-		ImGui::Text("Triangles: %d", stats.triangles);
+			ImGui::InputFloat("Draw Distance", &_config.drawDistance);
 
-		ImGui::InputFloat("Draw Distance", &_config.drawDistance);
+			ImGui::End();
+		}
 
-		ImGui::End();
+		{
+			ZoneScopedNC("Flag Objects", tracy::Color::Blue);
+			//test flagging some objects for changes
 
-		update_camera(1.0 / 60.f);
+			int N_changes = 100;
+			for (int i = 0; i < N_changes; i++)
+			{
+				int rng = rand() % _renderScene.renderables.size();
+
+				Handle<RenderObject> h;
+				h.handle = rng;
+				_renderScene.update_object(h);
+			}
+
+			update_camera(1.0 / 60.f);
+		}
 	
 		draw();
 	}
@@ -954,44 +978,11 @@ void VulkanEngine::init_pipelines()
 	VkPipeline texPipeline = pipelineBuilder.build_pipeline(_device, _renderPass);
 	create_material(texPipeline, texturedEffect, "texturedmesh");
 
-	ShaderModule cullModule;
+	load_compute_shader("../../shaders/indirect_cull.comp.spv", _cullPipeline, _cullLayout);
 
-	if (!vkutil::load_shader_module(_device, "../../shaders/indirect_cull.comp.spv", &cullModule))
+	load_compute_shader("../../shaders/depthReduce.comp.spv", _depthReducePipeline, _depthReduceLayout);
 
-	{
-		std::cout << "Error when building the cull compute shader shader module" << std::endl;
-	}
-
-	ShaderModule reduceModule;
-	if (!vkutil::load_shader_module(_device, "../../shaders/depthReduce.comp.spv", &reduceModule))
-
-	{
-		std::cout << "Error when building the cull compute shader shader module" << std::endl;
-	}
-
-
-	ShaderEffect* cullEffect = new ShaderEffect();;
-	cullEffect->add_stage(&cullModule, VK_SHADER_STAGE_COMPUTE_BIT);
-
-	cullEffect->reflect_layout(this, nullptr, 0);
-
-	ShaderEffect* reduceEffect = new ShaderEffect();;
-	reduceEffect->add_stage(&reduceModule, VK_SHADER_STAGE_COMPUTE_BIT);
-
-	reduceEffect->reflect_layout(this, nullptr, 0);
-
-	ComputePipelineBuilder computeBuilder;
-	computeBuilder._pipelineLayout = cullEffect->builtLayout;
-	computeBuilder._shaderStage = vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_COMPUTE_BIT, cullModule.module);
-
-	_cullLayout = cullEffect->builtLayout;
-	_cullPipeline = computeBuilder.build_pipeline(_device);
-
-	computeBuilder._pipelineLayout = reduceEffect->builtLayout;
-	computeBuilder._shaderStage = vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_COMPUTE_BIT, reduceModule.module);
-
-	_depthReduceLayout = reduceEffect->builtLayout;
-	_depthReducePipeline = computeBuilder.build_pipeline(_device);
+	load_compute_shader("../../shaders/sparse_upload.comp.spv", _sparseUploadPipeline, _sparseUploadLayout);
 
 	vkDestroyShaderModule(_device, meshVertShader, nullptr);
 	vkDestroyShaderModule(_device, colorMeshShader, nullptr);
@@ -1000,8 +991,43 @@ void VulkanEngine::init_pipelines()
 		vkDestroyPipeline(_device, meshPipeline, nullptr);
 
 		vkDestroyPipelineLayout(_device, meshPipLayout, nullptr);
-		});
+	});
 }
+
+bool VulkanEngine::load_compute_shader(const char* shaderPath, VkPipeline& pipeline, VkPipelineLayout& layout)
+{
+	ShaderModule computeModule;
+	if (!vkutil::load_shader_module(_device, shaderPath, &computeModule))
+
+	{
+		std::cout << "Error when building compute shader shader module" << std::endl;
+		return false;
+	}
+
+	ShaderEffect* computeEffect = new ShaderEffect();;
+	computeEffect->add_stage(&computeModule, VK_SHADER_STAGE_COMPUTE_BIT);
+
+	computeEffect->reflect_layout(this, nullptr, 0);
+
+	ComputePipelineBuilder computeBuilder;
+	computeBuilder._pipelineLayout = computeEffect->builtLayout;
+	computeBuilder._shaderStage = vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_COMPUTE_BIT, computeModule.module);
+
+
+	layout = computeEffect->builtLayout;
+	pipeline = computeBuilder.build_pipeline(_device);
+
+	vkDestroyShaderModule(_device, computeModule.module, nullptr);
+
+	_mainDeletionQueue.push_function([=]() {
+		vkDestroyPipeline(_device, pipeline, nullptr);
+
+		vkDestroyPipelineLayout(_device, layout, nullptr);
+	});
+
+	return true;
+}
+
 
 VkPipeline ComputePipelineBuilder::build_pipeline(VkDevice device)
 {
@@ -1750,6 +1776,8 @@ void VulkanEngine::unmap_buffer(AllocatedBufferUntyped& buffer)
 {
 	vmaUnmapMemory(_allocator, buffer._allocation);
 }
+
+
 
 void VulkanEngine::init_descriptors()
 {

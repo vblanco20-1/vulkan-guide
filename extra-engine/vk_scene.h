@@ -107,6 +107,7 @@ public:
 	void fill_indirectArray(GPUIndirectObject* data);
 	void fill_instancesArray(GPUInstance* data);
 
+	void write_object(GPUObjectData* target, Handle<RenderObject> objectID);
 	
 	void clear_dirty_objects();
 

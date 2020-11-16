@@ -20,7 +20,7 @@ if (${CMAKE_HOST_SYSTEM_PROCESSOR} STREQUAL "AMD64")
 else()
   set(GLSL_VALIDATOR "$ENV{VULKAN_SDK}/Bin32/glslangValidator.exe")
 endif() 
-
+ 
 
 file(GLOB_RECURSE GLSL_SOURCE_FILES
     "${PROJECT_SOURCE_DIR}/shaders/*.frag" 
