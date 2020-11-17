@@ -28,7 +28,7 @@
 #include "Tracy.hpp"
 #include "TracyVulkan.hpp"
 
-constexpr bool bUseValidationLayers = false;
+constexpr bool bUseValidationLayers = true;
 
 //we want to immediately abort when there is an error. In normal engines this would give an error message to the user, or perform a dump of state.
 using namespace std;
@@ -222,6 +222,61 @@ void VulkanEngine::draw()
 	//finalize the render pass
 	vkCmdEndRenderPass(cmd);
 
+	VkImageCopy copy{};
+	copy.extent.width = _windowExtent.width;
+	copy.extent.height = _windowExtent.height;
+	copy.srcSubresource.layerCount = 1;
+	copy.srcSubresource.mipLevel = 0;
+	copy.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	copy.dstSubresource.layerCount = 1;
+	copy.dstSubresource.mipLevel = 0;
+	copy.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	
+
+	VkImageMemoryBarrier barrier = vkinit::image_barrier(_swapchainImages[swapchainImageIndex],
+		0,
+		VK_ACCESS_TRANSFER_WRITE_BIT,
+		VK_IMAGE_LAYOUT_UNDEFINED,
+		VK_IMAGE_LAYOUT_GENERAL,
+		VK_IMAGE_ASPECT_COLOR_BIT);
+
+	vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, 0, 0, 0, 1, &barrier);
+
+
+	VkOffset3D src{};
+	
+	VkOffset3D dst{};
+	dst.x = _windowExtent.width;
+	dst.y = _windowExtent.height;
+	dst.z = 1;
+
+	VkOffset3D offsets[] = { src,dst };
+
+	VkImageBlit blit{};
+	//blit.srcOffsets = 
+	blit.srcOffsets[0] = src;
+	blit.srcOffsets[1] = dst;
+	blit.dstOffsets[0] = src;
+	blit.dstOffsets[1] = dst;
+	blit.srcSubresource.layerCount = 1;
+	blit.srcSubresource.mipLevel = 0;
+	blit.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	blit.dstSubresource.layerCount = 1;
+	blit.dstSubresource.mipLevel = 0;
+	blit.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	
+	vkCmdBlitImage(cmd, _rawRenderImage._image, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, _swapchainImages[swapchainImageIndex], VK_IMAGE_LAYOUT_GENERAL, 1, &blit, VK_FILTER_LINEAR);
+
+	VkImageMemoryBarrier barrier2 = vkinit::image_barrier(_swapchainImages[swapchainImageIndex],
+		VK_ACCESS_TRANSFER_WRITE_BIT,
+		VK_ACCESS_COLOR_ATTACHMENT_READ_BIT,
+		VK_IMAGE_LAYOUT_GENERAL,
+		VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+		VK_IMAGE_ASPECT_COLOR_BIT);
+
+	vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, 0, 0, 0, 0, 1, &barrier2);
+
+	
 	reduce_depth(cmd);
 	}
 
@@ -565,6 +620,32 @@ void VulkanEngine::init_swapchain()
 
 	_swachainImageFormat = vkbSwapchain.image_format;
 
+	//render image
+	{
+		//depth image size will match the window
+		VkExtent3D renderImageExtent = {
+			_windowExtent.width,
+			_windowExtent.height,
+			1
+		};
+		_renderFormat = VK_FORMAT_R32G32B32A32_SFLOAT;
+		VkImageCreateInfo ri_info = vkinit::image_create_info(_renderFormat, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, renderImageExtent);
+
+		//for the depth image, we want to allocate it from gpu local memory
+		VmaAllocationCreateInfo dimg_allocinfo = {};
+		dimg_allocinfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+		dimg_allocinfo.requiredFlags = VkMemoryPropertyFlags(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+		//allocate and create the image
+		vmaCreateImage(_allocator, &ri_info, &dimg_allocinfo, &_rawRenderImage._image, &_rawRenderImage._allocation, nullptr);
+
+		//build a image-view for the depth image to use for rendering
+		VkImageViewCreateInfo dview_info = vkinit::imageview_create_info(_renderFormat, _rawRenderImage._image, VK_IMAGE_ASPECT_COLOR_BIT);
+
+		VK_CHECK(vkCreateImageView(_device, &dview_info, nullptr, &_rawRenderImage._defaultView));
+	}
+
+
 	_mainDeletionQueue.push_function([=]() {
 		vkDestroySwapchainKHR(_device, _swapchain, nullptr);
 		});
@@ -593,7 +674,7 @@ void VulkanEngine::init_swapchain()
 	//build a image-view for the depth image to use for rendering
 	VkImageViewCreateInfo dview_info = vkinit::imageview_create_info(_depthFormat, _depthImage._image, VK_IMAGE_ASPECT_DEPTH_BIT);;
 
-	VK_CHECK(vkCreateImageView(_device, &dview_info, nullptr, &_depthImageView));
+	VK_CHECK(vkCreateImageView(_device, &dview_info, nullptr, &_depthImage._defaultView));
 
 	// Note: previousPow2 makes sure all reductions are at most by 2x2 which makes sure they are conservative
 	depthPyramidWidth = previousPow2(_windowExtent.width);
@@ -618,7 +699,7 @@ void VulkanEngine::init_swapchain()
 	priview_info.subresourceRange.levelCount = depthPyramidLevels;
 
 
-	VK_CHECK(vkCreateImageView(_device, &priview_info, nullptr, &_depthPyramidView));
+	VK_CHECK(vkCreateImageView(_device, &priview_info, nullptr, &_depthPyramid._defaultView));
 
 
 	for (uint32_t i = 0; i < depthPyramidLevels; ++i)
@@ -666,7 +747,7 @@ void VulkanEngine::init_swapchain()
 
 	//add to deletion queues
 	_mainDeletionQueue.push_function([=]() {
-		vkDestroyImageView(_device, _depthImageView, nullptr);
+		vkDestroyImageView(_device, _depthImage._defaultView, nullptr);
 		vmaDestroyImage(_allocator, _depthImage._image, _depthImage._allocation);
 		});
 }
@@ -680,14 +761,14 @@ void VulkanEngine::init_default_renderpass()
 	//we dont care about stencil, and dont use multisampling
 
 	VkAttachmentDescription color_attachment = {};
-	color_attachment.format = _swachainImageFormat;
+	color_attachment.format = _renderFormat;//_swachainImageFormat;
 	color_attachment.samples = VK_SAMPLE_COUNT_1_BIT;
 	color_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 	color_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 	color_attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 	color_attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 	color_attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-	color_attachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+	color_attachment.finalLayout = VK_IMAGE_LAYOUT_GENERAL; //VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;//PRESENT_SRC_KHR;
 
 	VkAttachmentReference color_attachment_ref = {};
 	color_attachment_ref.attachment = 0;
@@ -758,8 +839,8 @@ void VulkanEngine::init_framebuffers()
 	for (int i = 0; i < swapchain_imagecount; i++) {
 
 		VkImageView attachments[2];
-		attachments[0] = _swapchainImageViews[i];
-		attachments[1] = _depthImageView;
+		attachments[0] = _rawRenderImage._defaultView;//_swapchainImageViews[i];
+		attachments[1] = _depthImage._defaultView;
 
 		fb_info.pAttachments = attachments;
 		fb_info.attachmentCount = 2;
@@ -1149,9 +1230,10 @@ bool VulkanEngine::load_image_to_cache(const char* name, const char* path)
 		std::cout << "Error when loading texture: " << path << endl;
 		return false;
 	}
-	VkImageViewCreateInfo imageinfo = vkinit::imageview_create_info(VK_FORMAT_R8G8B8A8_UNORM, newtex.image._image, VK_IMAGE_ASPECT_COLOR_BIT);
-	imageinfo.subresourceRange.levelCount = newtex.image.mipLevels;
-	vkCreateImageView(_device, &imageinfo, nullptr, &newtex.imageView);
+	newtex.imageView = newtex.image._defaultView;
+	//VkImageViewCreateInfo imageinfo = vkinit::imageview_create_info(VK_FORMAT_R8G8B8A8_UNORM, newtex.image._image, VK_IMAGE_ASPECT_COLOR_BIT);
+	//imageinfo.subresourceRange.levelCount = newtex.image.mipLevels;
+	//vkCreateImageView(_device, &imageinfo, nullptr, &newtex.imageView);
 
 	_loadedTextures[name] = newtex;
 	return true;

@@ -203,7 +203,9 @@ struct /*alignas(16)*/DrawCullData
 };
 
 struct EngineConfig {
-	float drawDistance{500};
+	float drawDistance{5000};
+	bool occlusionCullGPU{ true };
+	bool frustrumCullCPU { true };
 };
 
 constexpr unsigned int FRAME_OVERLAP = 2;
@@ -238,6 +240,9 @@ public:
 	VkSwapchainKHR _swapchain;
 	VkFormat _swachainImageFormat;
 
+	VkFormat _renderFormat;
+	AllocatedImage _rawRenderImage;
+
 	std::vector<VkFramebuffer> _framebuffers;
 	std::vector<VkImage> _swapchainImages;
 	std::vector<VkImageView> _swapchainImageViews;	
@@ -247,10 +252,10 @@ public:
 	VmaAllocator _allocator; //vma lib allocator
 
 	//depth resources
-	VkImageView _depthImageView;
+	
 	AllocatedImage _depthImage;
 	AllocatedImage _depthPyramid;
-	VkImageView _depthPyramidView;
+
 	int depthPyramidWidth ;
 	int depthPyramidHeight;
 	int depthPyramidLevels;

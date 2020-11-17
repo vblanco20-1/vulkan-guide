@@ -171,13 +171,18 @@ AllocatedImage vkutil::upload_image(int texWidth, int texHeight, VkFormat image_
 		});
 
 
+	//build a default imageview
+	VkImageViewCreateInfo view_info = vkinit::imageview_create_info(image_format, newImage._image, VK_IMAGE_ASPECT_COLOR_BIT);
+
+	vkCreateImageView(engine._device, &view_info, nullptr, &newImage._defaultView);
+
+
 	engine._mainDeletionQueue.push_function([=, &engine]() {
 
 		vmaDestroyImage(engine._allocator, newImage._image, newImage._allocation);
 	});
 
-
-
+	
 
 	newImage.mipLevels = 1;// mips.size();
 	return newImage;
@@ -258,7 +263,16 @@ AllocatedImage vkutil::upload_image_mipmapped(int texWidth, int texHeight, VkFor
 		vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier_toReadable);
 		});
 
+
+
 	newImage.mipLevels =  mips.size();
+
+
+	//build a default imageview
+	VkImageViewCreateInfo view_info = vkinit::imageview_create_info(image_format, newImage._image, VK_IMAGE_ASPECT_COLOR_BIT);
+	view_info.subresourceRange.levelCount = newImage.mipLevels;
+	vkCreateImageView(engine._device, &view_info, nullptr, &newImage._defaultView);
+
 	engine._mainDeletionQueue.push_function([=, &engine]() {
 
 		vmaDestroyImage(engine._allocator, newImage._image, newImage._allocation);

@@ -36,7 +36,7 @@ void VulkanEngine::execute_compute_cull(VkCommandBuffer cmd, RenderScene::MeshPa
 
 	VkDescriptorImageInfo depthPyramid;
 	depthPyramid.sampler = _depthSampler;
-	depthPyramid.imageView = _depthPyramidView;
+	depthPyramid.imageView = _depthPyramid._defaultView;
 	depthPyramid.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 
 
@@ -354,6 +354,7 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderScene::MeshPass& pass
 	VkDescriptorBufferInfo objectBufferInfo = _renderScene.objectDataBuffer.get_info();//get_current_frame().objectBuffer.get_info();
 
 	VkDescriptorBufferInfo dynamicInfo = get_current_frame().dynamicDataBuffer.get_info();
+	dynamicInfo.range = sizeof(GPUSceneData);
 
 	VkDescriptorBufferInfo instanceInfo = pass.compactedInstanceBuffer.get_info();
 
@@ -473,7 +474,7 @@ void VulkanEngine::reduce_depth(VkCommandBuffer cmd)
 		sourceTarget.sampler = _depthSampler;
 		if (i == 0)
 		{
-			sourceTarget.imageView = _depthImageView;
+			sourceTarget.imageView = _depthImage._defaultView;
 			sourceTarget.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 		}
 		else {
