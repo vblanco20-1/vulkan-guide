@@ -431,14 +431,14 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderScene::MeshPass& pass
 			}
 			else if (lastMesh != drawMesh) {
 				
-					//bind the mesh vertex buffer with offset 0
-					VkDeviceSize offset = 0;
-					vkCmdBindVertexBuffers(cmd, 0, 1, &drawMesh->_vertexBuffer._buffer, &offset);
+				//bind the mesh vertex buffer with offset 0
+				VkDeviceSize offset = 0;
+				vkCmdBindVertexBuffers(cmd, 0, 1, &drawMesh->_vertexBuffer._buffer, &offset);
 
-					if (drawMesh->_indexBuffer._buffer != VK_NULL_HANDLE) {
-						vkCmdBindIndexBuffer(cmd, drawMesh->_indexBuffer._buffer, 0, VK_INDEX_TYPE_UINT32);
-					}
-					lastMesh = drawMesh;
+				if (drawMesh->_indexBuffer._buffer != VK_NULL_HANDLE) {
+					vkCmdBindIndexBuffer(cmd, drawMesh->_indexBuffer._buffer, 0, VK_INDEX_TYPE_UINT32);
+				}
+				lastMesh = drawMesh;
 			}
 
 			bool bHasIndices = drawMesh->_indices.size() > 0;

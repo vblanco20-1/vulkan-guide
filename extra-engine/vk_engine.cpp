@@ -1249,14 +1249,22 @@ void VulkanEngine::upload_mesh(Mesh& mesh)
 	const size_t index_buffer_size = mesh._indices.size() * sizeof(uint32_t);
 	const size_t bufferSize = vertex_buffer_size + index_buffer_size;
 	//allocate vertex buffer
-	VkBufferCreateInfo stagingBufferInfo = {};
-	stagingBufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-	stagingBufferInfo.pNext = nullptr;
+	VkBufferCreateInfo vertexBufferInfo = {};
+	vertexBufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+	vertexBufferInfo.pNext = nullptr;
 	//this is the total size, in bytes, of the buffer we are allocating
-	stagingBufferInfo.size = bufferSize;
+	vertexBufferInfo.size = vertex_buffer_size;
 	//this buffer is going to be used as a Vertex Buffer
-	stagingBufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+	vertexBufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 
+	//allocate vertex buffer
+	VkBufferCreateInfo indexBufferInfo = {};
+	indexBufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+	indexBufferInfo.pNext = nullptr;
+	//this is the total size, in bytes, of the buffer we are allocating
+	indexBufferInfo.size = index_buffer_size;
+	//this buffer is going to be used as a Vertex Buffer
+	indexBufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 
 	//let the VMA library know that this data should be writeable by CPU, but also readable by GPU
 	VmaAllocationCreateInfo vmaallocInfo = {};
@@ -1265,83 +1273,31 @@ void VulkanEngine::upload_mesh(Mesh& mesh)
 	AllocatedBufferUntyped stagingBuffer;
 
 	//allocate the buffer
-	VK_CHECK(vmaCreateBuffer(_allocator, &stagingBufferInfo, &vmaallocInfo,
-		&stagingBuffer._buffer,
-		&stagingBuffer._allocation,
-		nullptr));
-
-	//copy vertex data
-	char* data;
-	vmaMapMemory(_allocator, stagingBuffer._allocation, (void**)&data);
-
-	memcpy(data, mesh._vertices.data(), vertex_buffer_size);
-	memcpy(data + vertex_buffer_size, mesh._indices.data(), index_buffer_size);
-
-	vmaUnmapMemory(_allocator, stagingBuffer._allocation);
-
-
-	//allocate vertex buffer
-	VkBufferCreateInfo vertexBufferInfo = {};
-	vertexBufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-	vertexBufferInfo.pNext = nullptr;
-	//this is the total size, in bytes, of the buffer we are allocating
-	vertexBufferInfo.size = vertex_buffer_size;
-	//this buffer is going to be used as a Vertex Buffer
-	vertexBufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-
-	//let the VMA library know that this data should be gpu native	
-	vmaallocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
-
-	//allocate the buffer
 	VK_CHECK(vmaCreateBuffer(_allocator, &vertexBufferInfo, &vmaallocInfo,
 		&mesh._vertexBuffer._buffer,
 		&mesh._vertexBuffer._allocation,
 		nullptr));
+	//copy vertex data
+	char* data;
+	vmaMapMemory(_allocator, mesh._vertexBuffer._allocation, (void**)&data);
 
-	if (index_buffer_size > 0) {
-		//allocate index buffer
-		VkBufferCreateInfo indexBufferInfo = {};
-		indexBufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-		indexBufferInfo.pNext = nullptr;
-		//this is the total size, in bytes, of the buffer we are allocating
-		indexBufferInfo.size = index_buffer_size;
-		//this buffer is going to be used as a index Buffer
-		indexBufferInfo.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+	memcpy(data, mesh._vertices.data(), vertex_buffer_size);
 
+	vmaUnmapMemory(_allocator, mesh._vertexBuffer._allocation);
+
+	if (index_buffer_size != 0)
+	{
 		//allocate the buffer
 		VK_CHECK(vmaCreateBuffer(_allocator, &indexBufferInfo, &vmaallocInfo,
 			&mesh._indexBuffer._buffer,
 			&mesh._indexBuffer._allocation,
 			nullptr));
+		vmaMapMemory(_allocator, mesh._indexBuffer._allocation, (void**)&data);
+
+		memcpy(data, mesh._indices.data(), index_buffer_size);
+
+		vmaUnmapMemory(_allocator, mesh._indexBuffer._allocation);
 	}
-
-
-
-	//add the destruction of triangle mesh buffer to the deletion queue
-	_mainDeletionQueue.push_function([=]() {
-
-		vmaDestroyBuffer(_allocator, mesh._vertexBuffer._buffer, mesh._vertexBuffer._allocation);
-		if (index_buffer_size > 0) {
-			vmaDestroyBuffer(_allocator, mesh._indexBuffer._buffer, mesh._indexBuffer._allocation);
-		}
-		});
-
-	immediate_submit([=](VkCommandBuffer cmd) {
-		VkBufferCopy copy;
-		copy.dstOffset = 0;
-		copy.srcOffset = 0;
-		copy.size = vertex_buffer_size;
-		vkCmdCopyBuffer(cmd, stagingBuffer._buffer, mesh._vertexBuffer._buffer, 1, &copy);
-
-		if (index_buffer_size > 0) {
-			copy.dstOffset = 0;
-			copy.srcOffset = vertex_buffer_size;
-			copy.size = index_buffer_size;
-			vkCmdCopyBuffer(cmd, stagingBuffer._buffer, mesh._indexBuffer._buffer, 1, &copy);
-		}
-		});
-
-	vmaDestroyBuffer(_allocator, stagingBuffer._buffer, stagingBuffer._allocation);
 }
 
 
