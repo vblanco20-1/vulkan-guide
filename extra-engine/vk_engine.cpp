@@ -99,7 +99,7 @@ void VulkanEngine::init()
 	
 	_renderScene.build_batches();
 
-	
+	_renderScene.merge_meshes(this);
 	//everything went fine
 	_isInitialized = true;
 
@@ -237,7 +237,7 @@ void VulkanEngine::draw()
 		0,
 		VK_ACCESS_TRANSFER_WRITE_BIT,
 		VK_IMAGE_LAYOUT_UNDEFINED,
-		VK_IMAGE_LAYOUT_GENERAL,
+		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 		VK_IMAGE_ASPECT_COLOR_BIT);
 
 	vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, 0, 0, 0, 1, &barrier);
@@ -265,12 +265,12 @@ void VulkanEngine::draw()
 	blit.dstSubresource.mipLevel = 0;
 	blit.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 	
-	vkCmdBlitImage(cmd, _rawRenderImage._image, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, _swapchainImages[swapchainImageIndex], VK_IMAGE_LAYOUT_GENERAL, 1, &blit, VK_FILTER_LINEAR);
+	vkCmdBlitImage(cmd, _rawRenderImage._image, VK_IMAGE_LAYOUT_GENERAL, _swapchainImages[swapchainImageIndex], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blit, VK_FILTER_LINEAR);
 
 	VkImageMemoryBarrier barrier2 = vkinit::image_barrier(_swapchainImages[swapchainImageIndex],
 		VK_ACCESS_TRANSFER_WRITE_BIT,
 		VK_ACCESS_COLOR_ATTACHMENT_READ_BIT,
-		VK_IMAGE_LAYOUT_GENERAL,
+		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 		VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
 		VK_IMAGE_ASPECT_COLOR_BIT);
 
@@ -610,6 +610,7 @@ void VulkanEngine::init_swapchain()
 		//use vsync present mode
 		.set_desired_present_mode(VK_PRESENT_MODE_MAILBOX_KHR)
 		.set_desired_extent(_windowExtent.width, _windowExtent.height)
+		
 		.build()
 		.value();
 
@@ -629,7 +630,7 @@ void VulkanEngine::init_swapchain()
 			1
 		};
 		_renderFormat = VK_FORMAT_R32G32B32A32_SFLOAT;
-		VkImageCreateInfo ri_info = vkinit::image_create_info(_renderFormat, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, renderImageExtent);
+		VkImageCreateInfo ri_info = vkinit::image_create_info(_renderFormat, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT| VK_IMAGE_USAGE_SAMPLED_BIT, renderImageExtent);
 
 		//for the depth image, we want to allocate it from gpu local memory
 		VmaAllocationCreateInfo dimg_allocinfo = {};
@@ -1286,7 +1287,7 @@ void VulkanEngine::upload_mesh(Mesh& mesh)
 	//this is the total size, in bytes, of the buffer we are allocating
 	vertexBufferInfo.size = vertex_buffer_size;
 	//this buffer is going to be used as a Vertex Buffer
-	vertexBufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+	vertexBufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 
 	//let the VMA library know that this data should be gpu native	
 	vmaallocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
@@ -1305,7 +1306,7 @@ void VulkanEngine::upload_mesh(Mesh& mesh)
 		//this is the total size, in bytes, of the buffer we are allocating
 		indexBufferInfo.size = index_buffer_size;
 		//this buffer is going to be used as a index Buffer
-		indexBufferInfo.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+		indexBufferInfo.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 
 		//allocate the buffer
 		VK_CHECK(vmaCreateBuffer(_allocator, &indexBufferInfo, &vmaallocInfo,

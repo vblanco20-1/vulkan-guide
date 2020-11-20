@@ -96,6 +96,16 @@ public:
 		bool needsInstanceRefresh = true;
 	};
 
+	struct DrawMesh {
+		uint32_t firstVertex;
+		uint32_t firstIndex;
+		uint32_t indexCount;
+		uint32_t vertexCount;
+		bool isMerged;
+
+		Mesh* original;
+	};
+
 	Handle<RenderObject> register_object(MeshObject* object, PassTypeFlags passes);
 
 	void register_object_batch(MeshObject* first, uint32_t count, PassTypeFlags passes);
@@ -113,15 +123,17 @@ public:
 
 	void build_batches();
 
+	void merge_meshes(class VulkanEngine* engine);
+
 	void refresh_pass(MeshPass* pass);
 
 	RenderObject* get_object(Handle<RenderObject> objectID);
-	Mesh* get_mesh(Handle<Mesh> objectID);
+	DrawMesh get_mesh(Handle<Mesh> objectID);
 	Material* get_material(Handle<Material> objectID);
 
 	std::vector<RenderObject> renderables;
 	std::vector<Material*> materials;
-	std::vector<Mesh*> meshes;
+	std::vector<DrawMesh> meshes;
 
 	std::vector<Handle<RenderObject>> dirtyObjects;
 
@@ -134,6 +146,9 @@ public:
 	Handle<Mesh> getMeshHandle(Mesh* m);
 
 	AllocatedBufferUntyped uploadBuffer[2];
+
+	AllocatedBuffer<Vertex> mergedVertexBuffer;
+	AllocatedBuffer<uint32_t> mergedIndexBuffer;
 
 	AllocatedBuffer<GPUObjectData> objectDataBuffer;	
 };

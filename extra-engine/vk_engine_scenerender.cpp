@@ -377,6 +377,10 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderScene::MeshPass& pass
 		Material* lastMaterial = nullptr;
 		Mesh* lastMesh = nullptr;
 
+		VkDeviceSize offset = 0;
+		vkCmdBindVertexBuffers(cmd, 0, 1, &_renderScene.mergedVertexBuffer._buffer, &offset);
+
+		vkCmdBindIndexBuffer(cmd, _renderScene.mergedIndexBuffer._buffer, 0, VK_INDEX_TYPE_UINT32);
 
 		stats.objects = pass.flat_batches.size();
 		for (int i = 0; i < pass.batches.size(); i++)//)
@@ -386,7 +390,8 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderScene::MeshPass& pass
 			if (!view_frustrum.IsBoxVisible(instanceDraw.AABBMin, instanceDraw.AABBMax)) continue;
 
 			Material* drawMat = _renderScene.get_material(instanceDraw.material);
-			Mesh* drawMesh = _renderScene.get_mesh(instanceDraw.meshID);
+			Mesh* drawMesh = _renderScene.get_mesh(instanceDraw.meshID).original;
+			bool merged = _renderScene.get_mesh(instanceDraw.meshID).isMerged;
 
 			if (lastMaterial != drawMat) {
 
@@ -413,16 +418,27 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderScene::MeshPass& pass
 				lastMaterial = drawMat;
 			}
 
-			if (lastMesh == nullptr || lastMesh != drawMesh) {
+			if (merged)
+			{
+				if (lastMesh != nullptr)
+				{
+					VkDeviceSize offset = 0;
+					vkCmdBindVertexBuffers(cmd, 0, 1, &_renderScene.mergedVertexBuffer._buffer, &offset);
 
-				//bind the mesh vertex buffer with offset 0
-				VkDeviceSize offset = 0;
-				vkCmdBindVertexBuffers(cmd, 0, 1, &drawMesh->_vertexBuffer._buffer, &offset);
-
-				if (drawMesh->_indexBuffer._buffer != VK_NULL_HANDLE) {
-					vkCmdBindIndexBuffer(cmd, drawMesh->_indexBuffer._buffer, 0, VK_INDEX_TYPE_UINT32);
+					vkCmdBindIndexBuffer(cmd, _renderScene.mergedIndexBuffer._buffer, 0, VK_INDEX_TYPE_UINT32);
+					lastMesh = nullptr;
 				}
-				lastMesh = drawMesh;
+			}
+			else if (lastMesh != drawMesh) {
+				
+					//bind the mesh vertex buffer with offset 0
+					VkDeviceSize offset = 0;
+					vkCmdBindVertexBuffers(cmd, 0, 1, &drawMesh->_vertexBuffer._buffer, &offset);
+
+					if (drawMesh->_indexBuffer._buffer != VK_NULL_HANDLE) {
+						vkCmdBindIndexBuffer(cmd, drawMesh->_indexBuffer._buffer, 0, VK_INDEX_TYPE_UINT32);
+					}
+					lastMesh = drawMesh;
 			}
 
 			bool bHasIndices = drawMesh->_indices.size() > 0;
@@ -432,7 +448,7 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderScene::MeshPass& pass
 				vkCmdDraw(cmd, drawMesh->_vertices.size(), instanceDraw.count, 0, instanceDraw.first);
 			}
 			else {
-				stats.triangles += (drawMesh->_indices.size() / 3) * instanceDraw.count;				
+				stats.triangles += (drawMesh->_indices.size() / 3) * instanceDraw.count;
 
 				vkCmdDrawIndexedIndirect(cmd, pass.drawIndirectBuffer._buffer, i * sizeof(GPUIndirectObject), 1, sizeof(GPUIndirectObject));
 

@@ -70,47 +70,22 @@ void RenderScene::fill_objectData(GPUObjectData* data)
 		Handle<RenderObject> h;
 		h.handle = i;
 		write_object(data + i, h);
-		//GPUObjectData object;
-		//const RenderObject &renderable = renderables[i];
-		//
-		//object.modelMatrix = renderable.transformMatrix;
-		//object.origin_rad = glm::vec4(renderable.bounds.origin, renderable.bounds.radius);
-		//object.extents = glm::vec4(renderable.bounds.extents, renderable.bounds.valid? 1.f : 0.f);
-		//
-		//memcpy(data + i, &object, sizeof(GPUObjectData));
 	}
 }
 
 
 void RenderScene::fill_indirectArray(GPUIndirectObject* data)
-{
-	
+{	
 	int dataIndex = 0;
 	for (int i = 0; i < _forwardPass.batches.size(); i++) {
 
 		auto batch = _forwardPass.batches[i];
 
-#if 0
-		for (auto objID : batch.objects)
-		{
-			RenderObject2* obj = get_object(objID);
-
-			data[dataIndex].command.firstInstance = objID.handle;//i;
-			data[dataIndex].command.instanceCount = 1;
-			data[dataIndex].command.firstIndex = 0;
-			data[dataIndex].command.vertexOffset = 0;
-			data[dataIndex].command.indexCount = get_mesh(obj->meshID)->_indices.size();
-			data[dataIndex].objectID = objID.handle;
-			data[dataIndex].batchID = i;
-
-			dataIndex++;
-		}
-#endif
 		data[dataIndex].command.firstInstance = batch.first;//i;
 		data[dataIndex].command.instanceCount = 0;
-		data[dataIndex].command.firstIndex = 0;
-		data[dataIndex].command.vertexOffset = 0;
-		data[dataIndex].command.indexCount = get_mesh(batch.meshID)->_indices.size();
+		data[dataIndex].command.firstIndex = get_mesh(batch.meshID).firstIndex;
+		data[dataIndex].command.vertexOffset = get_mesh(batch.meshID).firstVertex;
+		data[dataIndex].command.indexCount = get_mesh(batch.meshID).indexCount;
 		data[dataIndex].objectID = 0;
 		data[dataIndex].batchID = i;
 
@@ -148,6 +123,51 @@ void RenderScene::build_batches()
 {
 	refresh_pass(&_forwardPass);
 }
+
+void RenderScene::merge_meshes(VulkanEngine* engine)
+{
+	ZoneScopedNC("Mesh Merge", tracy::Color::Magenta)
+	size_t total_vertices = 0;
+	size_t total_indices = 0;
+
+	for (auto& m : meshes)
+	{
+		m.firstIndex = total_indices;
+		m.firstVertex = total_vertices;
+
+		total_vertices += m.vertexCount;
+		total_indices += m.indexCount;
+
+		m.isMerged = true;
+	}
+
+	mergedVertexBuffer = engine->create_buffer(total_vertices * sizeof(Vertex), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, 
+		VMA_MEMORY_USAGE_GPU_ONLY);
+
+	mergedIndexBuffer = engine->create_buffer(total_indices * sizeof(uint32_t), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+		VMA_MEMORY_USAGE_GPU_ONLY);
+
+	engine->immediate_submit([&](VkCommandBuffer cmd)
+	{
+		for (auto& m : meshes)
+		{
+			VkBufferCopy vertexCopy;
+			vertexCopy.dstOffset = m.firstVertex * sizeof(Vertex);
+			vertexCopy.size = m.vertexCount * sizeof(Vertex);
+			vertexCopy.srcOffset = 0;
+
+			vkCmdCopyBuffer(cmd, m.original->_vertexBuffer._buffer, mergedVertexBuffer._buffer, 1, &vertexCopy);
+
+			VkBufferCopy indexCopy;
+			indexCopy.dstOffset = m.firstIndex * sizeof(uint32_t);
+			indexCopy.size = m.indexCount * sizeof(uint32_t);
+			indexCopy.srcOffset = 0;
+
+			vkCmdCopyBuffer(cmd, m.original->_indexBuffer._buffer, mergedIndexBuffer._buffer, 1, &indexCopy);
+		}
+	});
+}
+
 
 void RenderScene::refresh_pass(MeshPass* pass)
 {
@@ -231,7 +251,7 @@ RenderObject* RenderScene::get_object(Handle<RenderObject> objectID)
 	return &renderables[objectID.handle];
 }
 
-Mesh* RenderScene::get_mesh(Handle<Mesh> objectID)
+RenderScene::DrawMesh RenderScene::get_mesh(Handle<Mesh> objectID)
 {
 	return meshes[objectID.handle];
 }
@@ -266,7 +286,15 @@ Handle<Mesh> RenderScene::getMeshHandle(Mesh* m)
 	if (it == meshConvert.end())
 	{
 		uint32_t index = meshes.size();
-		meshes.push_back(m);
+
+		DrawMesh newMesh;
+		newMesh.original = m;
+		newMesh.firstIndex = 0;
+		newMesh.firstVertex = 0;
+		newMesh.vertexCount = m->_vertices.size();
+		newMesh.indexCount = m->_indices.size();
+
+		meshes.push_back(newMesh);
 
 		handle.handle = index;
 		meshConvert[m] = handle;
