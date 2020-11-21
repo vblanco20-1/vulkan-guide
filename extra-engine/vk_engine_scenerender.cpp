@@ -79,7 +79,7 @@ void VulkanEngine::execute_compute_cull(VkCommandBuffer cmd, RenderScene::MeshPa
 	//copy from the cleared indirect buffer into the one we will use on rendering. This one happens every frame
 	VkBufferCopy indirectCopy;
 	indirectCopy.dstOffset = 0;
-	indirectCopy.size = pass.flat_batches.size() * sizeof(GPUIndirectObject);
+	indirectCopy.size = pass.batches.size() * sizeof(GPUIndirectObject);
 	indirectCopy.srcOffset = 0;
 	vkCmdCopyBuffer(cmd, pass.clearIndirectBuffer._buffer, pass.drawIndirectBuffer._buffer, 1, &indirectCopy);
 
@@ -108,7 +108,7 @@ void VulkanEngine::execute_compute_cull(VkCommandBuffer cmd, RenderScene::MeshPa
 	{
 		VkBufferMemoryBarrier barrier = vkinit::buffer_barrier(pass.compactedInstanceBuffer._buffer, _graphicsQueueFamily);
 		barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-		barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+		barrier.dstAccessMask = VK_ACCESS_INDIRECT_COMMAND_READ_BIT;
 		
 
 

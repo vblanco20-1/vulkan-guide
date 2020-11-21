@@ -75,7 +75,8 @@ void VulkanEngine::init()
 	init_swapchain();
 
 
-	init_default_renderpass();
+	init_forward_renderpass();
+	init_copy_renderpass();
 
 	init_framebuffers();
 
@@ -105,8 +106,6 @@ void VulkanEngine::init()
 
 	_camera = {};
 	_camera.position = { 0.f,6.f,5.f };
-
-	
 }
 void VulkanEngine::cleanup()
 {
@@ -177,107 +176,21 @@ void VulkanEngine::draw()
 	float flash = abs(sin(_frameNumber / 120.f));
 	clearValue.color = { { 0.1f, 0.1f, 0.1f, 1.0f } };
 
-	//clear depth at 0
-	VkClearValue depthClear;
-	depthClear.depthStencil.depth = 0.f;
-
-	//start the main renderpass. 
-	//We will use the clear color from above, and the framebuffer of the index the swapchain gave us
-	VkRenderPassBeginInfo rpInfo = vkinit::renderpass_begin_info(_renderPass, _windowExtent, _framebuffers[swapchainImageIndex]);
-
-	//connect clear values
-	rpInfo.clearValueCount = 2;
-
-	VkClearValue clearValues[] = { clearValue, depthClear };
-
-	rpInfo.pClearValues = &clearValues[0];
+	
 
 	{
 		TracyVkZone(_graphicsQueueContext, get_current_frame()._mainCommandBuffer, "All Frame");
 
-	ready_mesh_draw(cmd);
+		ready_mesh_draw(cmd);
+
+		execute_compute_cull(cmd, _renderScene._forwardPass);
+
+		forward_pass(clearValue, cmd);
 
 
-	execute_compute_cull(cmd, _renderScene._forwardPass);
+		reduce_depth(cmd);
 
-
-	vkCmdBeginRenderPass(cmd, &rpInfo, VK_SUBPASS_CONTENTS_INLINE);
-
-	stats.drawcalls = 0;
-	stats.draws = 0;
-	stats.objects = 0;
-	stats.triangles = 0;
-
-	{
-		TracyVkZone(_graphicsQueueContext, get_current_frame()._mainCommandBuffer, "Forward Pass");
-		draw_objects(cmd, _renderScene._forwardPass);
-	}
-
-
-	{
-		TracyVkZone(_graphicsQueueContext, get_current_frame()._mainCommandBuffer, "Imgui Draw");
-		ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmd);
-	}
-
-	//finalize the render pass
-	vkCmdEndRenderPass(cmd);
-
-	VkImageCopy copy{};
-	copy.extent.width = _windowExtent.width;
-	copy.extent.height = _windowExtent.height;
-	copy.srcSubresource.layerCount = 1;
-	copy.srcSubresource.mipLevel = 0;
-	copy.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-	copy.dstSubresource.layerCount = 1;
-	copy.dstSubresource.mipLevel = 0;
-	copy.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-	
-
-	VkImageMemoryBarrier barrier = vkinit::image_barrier(_swapchainImages[swapchainImageIndex],
-		0,
-		VK_ACCESS_TRANSFER_WRITE_BIT,
-		VK_IMAGE_LAYOUT_UNDEFINED,
-		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-		VK_IMAGE_ASPECT_COLOR_BIT);
-
-	vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, 0, 0, 0, 1, &barrier);
-
-
-	VkOffset3D src{};
-	
-	VkOffset3D dst{};
-	dst.x = _windowExtent.width;
-	dst.y = _windowExtent.height;
-	dst.z = 1;
-
-	VkOffset3D offsets[] = { src,dst };
-
-	VkImageBlit blit{};
-	//blit.srcOffsets = 
-	blit.srcOffsets[0] = src;
-	blit.srcOffsets[1] = dst;
-	blit.dstOffsets[0] = src;
-	blit.dstOffsets[1] = dst;
-	blit.srcSubresource.layerCount = 1;
-	blit.srcSubresource.mipLevel = 0;
-	blit.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-	blit.dstSubresource.layerCount = 1;
-	blit.dstSubresource.mipLevel = 0;
-	blit.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-	
-	vkCmdBlitImage(cmd, _rawRenderImage._image, VK_IMAGE_LAYOUT_GENERAL, _swapchainImages[swapchainImageIndex], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blit, VK_FILTER_LINEAR);
-
-	VkImageMemoryBarrier barrier2 = vkinit::image_barrier(_swapchainImages[swapchainImageIndex],
-		VK_ACCESS_TRANSFER_WRITE_BIT,
-		VK_ACCESS_COLOR_ATTACHMENT_READ_BIT,
-		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-		VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-		VK_IMAGE_ASPECT_COLOR_BIT);
-
-	vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, 0, 0, 0, 0, 1, &barrier2);
-
-	
-	reduce_depth(cmd);
+		copy_render_to_swapchain(swapchainImageIndex, cmd);
 	}
 
 	TracyVkCollect(_graphicsQueueContext, get_current_frame()._mainCommandBuffer);
@@ -327,6 +240,75 @@ void VulkanEngine::draw()
 	}
 	//increase the number of frames drawn
 	_frameNumber++;
+}
+
+
+void VulkanEngine::forward_pass(VkClearValue clearValue, VkCommandBuffer cmd)
+{
+	//clear depth at 0
+	VkClearValue depthClear;
+	depthClear.depthStencil.depth = 0.f;
+
+	//start the main renderpass. 
+	//We will use the clear color from above, and the framebuffer of the index the swapchain gave us
+	VkRenderPassBeginInfo rpInfo = vkinit::renderpass_begin_info(_renderPass, _windowExtent, _forwardFramebuffer/*_framebuffers[swapchainImageIndex]*/);
+
+	//connect clear values
+	rpInfo.clearValueCount = 2;
+
+	VkClearValue clearValues[] = { clearValue, depthClear };
+
+	rpInfo.pClearValues = &clearValues[0];
+	vkCmdBeginRenderPass(cmd, &rpInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+	stats.drawcalls = 0;
+	stats.draws = 0;
+	stats.objects = 0;
+	stats.triangles = 0;
+
+	{
+		TracyVkZone(_graphicsQueueContext, get_current_frame()._mainCommandBuffer, "Forward Pass");
+		draw_objects(cmd, _renderScene._forwardPass);
+	}
+
+
+	{
+		TracyVkZone(_graphicsQueueContext, get_current_frame()._mainCommandBuffer, "Imgui Draw");
+		ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmd);
+	}
+
+	//finalize the render pass
+	vkCmdEndRenderPass(cmd);
+}
+
+void VulkanEngine::copy_render_to_swapchain(uint32_t swapchainImageIndex, VkCommandBuffer cmd)
+{
+	//start the main renderpass. 
+	//We will use the clear color from above, and the framebuffer of the index the swapchain gave us
+	VkRenderPassBeginInfo copyRP = vkinit::renderpass_begin_info(_copyPass, _windowExtent, _framebuffers[swapchainImageIndex]);
+
+
+	vkCmdBeginRenderPass(cmd, &copyRP, VK_SUBPASS_CONTENTS_INLINE);
+
+	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _blitPipeline);
+
+	VkDescriptorImageInfo sourceImage;
+	sourceImage.sampler = _smoothSampler;
+
+	sourceImage.imageView = _rawRenderImage._defaultView;
+	sourceImage.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+	VkDescriptorSet blitSet;
+	vkutil::DescriptorBuilder::begin(_descriptorLayoutCache, get_current_frame().dynamicDescriptorAllocator)
+		.bind_image(0, &sourceImage, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
+		.build(blitSet);
+
+	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _blitLayout, 0, 1, &blitSet, 0, nullptr);
+
+	vkCmdDraw(cmd, 3, 1, 0, 0);
+
+
+	vkCmdEndRenderPass(cmd);
 }
 
 void VulkanEngine::run()
@@ -745,6 +727,10 @@ void VulkanEngine::init_swapchain()
 	
 	VK_CHECK(vkCreateSampler(_device, &createInfo, 0, &_depthSampler));
 
+	VkSamplerCreateInfo samplerInfo = vkinit::sampler_create_info(VK_FILTER_LINEAR);
+	samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+	
+	vkCreateSampler(_device, &samplerInfo, nullptr, &_smoothSampler);
 
 	//add to deletion queues
 	_mainDeletionQueue.push_function([=]() {
@@ -753,7 +739,7 @@ void VulkanEngine::init_swapchain()
 		});
 }
 
-void VulkanEngine::init_default_renderpass()
+void VulkanEngine::init_forward_renderpass()
 {
 	//we define an attachment description for our main color image
 	//the attachment is loaded as "clear" when renderpass start
@@ -769,7 +755,7 @@ void VulkanEngine::init_default_renderpass()
 	color_attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 	color_attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 	color_attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-	color_attachment.finalLayout = VK_IMAGE_LAYOUT_GENERAL; //VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;//PRESENT_SRC_KHR;
+	color_attachment.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;//PRESENT_SRC_KHR;
 
 	VkAttachmentReference color_attachment_ref = {};
 	color_attachment_ref.attachment = 0;
@@ -829,22 +815,87 @@ void VulkanEngine::init_default_renderpass()
 		});
 }
 
+
+void VulkanEngine::init_copy_renderpass()
+{
+	//we define an attachment description for our main color image
+//the attachment is loaded as "clear" when renderpass start
+//the attachment is stored when renderpass ends
+//the attachment layout starts as "undefined", and transitions to "Present" so its possible to display it
+//we dont care about stencil, and dont use multisampling
+
+	VkAttachmentDescription color_attachment = {};
+	color_attachment.format = _swachainImageFormat;
+	color_attachment.samples = VK_SAMPLE_COUNT_1_BIT;
+	color_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+	color_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+	color_attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+	color_attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+	color_attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	color_attachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+	VkAttachmentReference color_attachment_ref = {};
+	color_attachment_ref.attachment = 0;
+	color_attachment_ref.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+	//we are going to create 1 subpass, which is the minimum you can do
+	VkSubpassDescription subpass = {};
+	subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+	subpass.colorAttachmentCount = 1;
+	subpass.pColorAttachments = &color_attachment_ref;	
+
+	//1 dependency, which is from "outside" into the subpass. And we can read or write color
+	VkSubpassDependency dependency = {};
+	dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+	dependency.dstSubpass = 0;
+	dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+	dependency.srcAccessMask = 0;
+	dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+	dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
+
+	VkRenderPassCreateInfo render_pass_info = {};
+	render_pass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+	//2 attachments from said array
+	render_pass_info.attachmentCount = 1;
+	render_pass_info.pAttachments = &color_attachment;
+	render_pass_info.subpassCount = 1;
+	render_pass_info.pSubpasses = &subpass;
+	//render_pass_info.dependencyCount = 1;
+	//render_pass_info.pDependencies = &dependency;
+
+	VK_CHECK(vkCreateRenderPass(_device, &render_pass_info, nullptr, &_copyPass));
+
+	_mainDeletionQueue.push_function([=]() {
+		vkDestroyRenderPass(_device, _copyPass, nullptr);
+		});
+}
+
 void VulkanEngine::init_framebuffers()
 {
-	//create the framebuffers for the swapchain images. This will connect the render-pass to the images for rendering
-	VkFramebufferCreateInfo fb_info = vkinit::framebuffer_create_info(_renderPass, _windowExtent);
+	
 
 	const uint32_t swapchain_imagecount = _swapchainImages.size();
 	_framebuffers = std::vector<VkFramebuffer>(swapchain_imagecount);
 
+	//create the framebuffers for the swapchain images. This will connect the render-pass to the images for rendering
+	VkFramebufferCreateInfo fwd_info = vkinit::framebuffer_create_info(_renderPass, _windowExtent);
+	VkImageView attachments[2];
+	attachments[0] = _rawRenderImage._defaultView;
+	attachments[1] = _depthImage._defaultView;
+
+	fwd_info.pAttachments = attachments;
+	fwd_info.attachmentCount = 2;
+	VK_CHECK(vkCreateFramebuffer(_device, &fwd_info, nullptr, &_forwardFramebuffer));
+
+
+	
 	for (int i = 0; i < swapchain_imagecount; i++) {
 
-		VkImageView attachments[2];
-		attachments[0] = _rawRenderImage._defaultView;//_swapchainImageViews[i];
-		attachments[1] = _depthImage._defaultView;
-
-		fb_info.pAttachments = attachments;
-		fb_info.attachmentCount = 2;
+		//create the framebuffers for the swapchain images. This will connect the render-pass to the images for rendering
+		VkFramebufferCreateInfo fb_info = vkinit::framebuffer_create_info(_copyPass, _windowExtent);
+		fb_info.pAttachments = &_swapchainImageViews[i];
+		fb_info.attachmentCount = 1;
 		VK_CHECK(vkCreateFramebuffer(_device, &fb_info, nullptr, &_framebuffers[i]));
 
 		_mainDeletionQueue.push_function([=]() {
@@ -1065,6 +1116,50 @@ void VulkanEngine::init_pipelines()
 	load_compute_shader("../../shaders/depthReduce.comp.spv", _depthReducePipeline, _depthReduceLayout);
 
 	load_compute_shader("../../shaders/sparse_upload.comp.spv", _sparseUploadPipeline, _sparseUploadLayout);
+
+
+	
+	ShaderModule fullscreenVertMod;
+
+	if (!vkutil::load_shader_module(_device, "../../shaders/fullscreen.vert.spv", &fullscreenVertMod))
+
+	{
+		std::cout << "Error when building the colored mesh shader" << std::endl;
+	}
+
+	
+	ShaderModule blitMod;
+	if (!vkutil::load_shader_module(_device, "../../shaders/blit.frag.spv", &blitMod))
+
+	{
+		std::cout << "Error when building the mesh vertex shader module" << std::endl;
+	}
+
+	ShaderEffect* blitEffect = new ShaderEffect();
+	blitEffect->add_stage(&fullscreenVertMod, VK_SHADER_STAGE_VERTEX_BIT);
+	blitEffect->add_stage(&blitMod, VK_SHADER_STAGE_FRAGMENT_BIT);
+	blitEffect->reflect_layout(this, nullptr, 0);
+
+	pipelineBuilder._shaderStages.clear();
+	pipelineBuilder._shaderStages.push_back(
+		vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_VERTEX_BIT, fullscreenVertMod.module));
+
+	pipelineBuilder._shaderStages.push_back(
+		vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT, blitMod.module));
+
+	//connect the pipeline builder vertex input info to the one we get from Vertex
+	pipelineBuilder._vertexInputInfo.pVertexAttributeDescriptions = nullptr;
+	pipelineBuilder._vertexInputInfo.vertexAttributeDescriptionCount = 0;
+
+	pipelineBuilder._vertexInputInfo.pVertexBindingDescriptions = nullptr;
+	pipelineBuilder._vertexInputInfo.vertexBindingDescriptionCount = 0;
+	
+	pipelineBuilder._depthStencil = vkinit::depth_stencil_create_info(false, false, VK_COMPARE_OP_ALWAYS);
+
+	pipelineBuilder._pipelineLayout = blitEffect->builtLayout;
+
+	_blitPipeline = pipelineBuilder.build_pipeline(_device, _copyPass);
+	_blitLayout = blitEffect->builtLayout;
 
 	vkDestroyShaderModule(_device, meshVertShader, nullptr);
 	vkDestroyShaderModule(_device, colorMeshShader, nullptr);
@@ -1846,8 +1941,8 @@ void VulkanEngine::init_descriptors()
 
 	_renderScene._forwardPass.drawIndirectBuffer = create_buffer(sizeof(GPUIndirectObject) * MAX_OBJECTS, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
 
-	_renderScene._forwardPass.instanceBuffer = create_buffer(sizeof(GPUInstance) * MAX_OBJECTS, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
-	_renderScene.objectDataBuffer = create_buffer(sizeof(GPUObjectData) * MAX_OBJECTS, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+	_renderScene._forwardPass.instanceBuffer = create_buffer(sizeof(GPUInstance) * MAX_OBJECTS, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+	_renderScene.objectDataBuffer = create_buffer(sizeof(GPUObjectData) * MAX_OBJECTS, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
 
 
 	for (int i = 0; i < FRAME_OVERLAP; i++)
@@ -1855,13 +1950,6 @@ void VulkanEngine::init_descriptors()
 		_frames[i].dynamicDescriptorAllocator = new vkutil::DescriptorAllocator{};
 		_frames[i].dynamicDescriptorAllocator->init(_device);
 
-		
-		//_frames[i].objectBuffer = create_buffer(sizeof(GPUObjectData) * MAX_OBJECTS, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
-
-		//_frames[i].instanceBuffer = create_buffer(sizeof(GPUInstance) * MAX_OBJECTS, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
-		
-		//_frames[i].indirectBuffer = create_buffer(sizeof(GPUIndirectObject) * MAX_OBJECTS,VK_BUFFER_USAGE_TRANSFER_SRC_BIT| VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
-		
 		//1 megabyte of dynamic data buffer
 		_frames[i].dynamicDataBuffer = create_buffer(10000000, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
 	}

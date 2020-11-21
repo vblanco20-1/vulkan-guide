@@ -236,13 +236,16 @@ public:
 
 	VkRenderPass _renderPass;
 
+	VkRenderPass _copyPass;
+
 	VkSurfaceKHR _surface;
 	VkSwapchainKHR _swapchain;
 	VkFormat _swachainImageFormat;
 
 	VkFormat _renderFormat;
 	AllocatedImage _rawRenderImage;
-
+	VkSampler _smoothSampler;
+	VkFramebuffer _forwardFramebuffer;
 	std::vector<VkFramebuffer> _framebuffers;
 	std::vector<VkImage> _swapchainImages;
 	std::vector<VkImageView> _swapchainImageViews;	
@@ -285,6 +288,9 @@ public:
 	VkPipeline _sparseUploadPipeline;
 	VkPipelineLayout _sparseUploadLayout;
 
+	VkPipeline _blitPipeline;
+	VkPipelineLayout _blitLayout;
+
 	VkSampler _depthSampler;
 	VkImageView depthPyramidMips[16] = {};
 
@@ -303,6 +309,10 @@ public:
 
 	//draw loop
 	void draw();
+
+	void forward_pass(VkClearValue clearValue, VkCommandBuffer cmd);
+
+	
 
 	//run main loop
 	void run();
@@ -368,7 +378,9 @@ private:
 
 	void init_swapchain();
 
-	void init_default_renderpass();
+	void init_forward_renderpass();
+
+	void init_copy_renderpass();
 
 	void init_framebuffers();
 
@@ -393,6 +405,8 @@ private:
 	bool load_image_to_cache(const char* name, const char* path);
 
 	void upload_mesh(Mesh& mesh);
+
+	void copy_render_to_swapchain(uint32_t swapchainImageIndex, VkCommandBuffer cmd);
 };
 
 template<typename T>
