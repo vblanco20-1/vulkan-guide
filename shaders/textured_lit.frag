@@ -39,22 +39,44 @@ float textureProj(vec4 shadowCoord, vec2 off)
 	}
 	return shadow;
 }
+// 9 imad (+ 6 iops with final shuffle)
+uvec3 pcg3d(uvec3 v) {
+
+    v = v * 1664525u + 1013904223u;
+
+    v.x += v.y*v.z;
+    v.y += v.z*v.x;
+    v.z += v.x*v.y;
+
+    v ^= v >> 16u;
+
+    v.x += v.y*v.z;
+    v.y += v.z*v.x;
+    v.z += v.x*v.y;
+
+    return v;
+}
 
 float filterPCF(vec4 sc)
 {
 	ivec2 texDim = textureSize(shadowSampler, 0);
-	float scale = 0.3;
+	float scale = 1;
 	float dx = scale * 1.0 / float(texDim.x);
 	float dy = scale * 1.0 / float(texDim.y);
 
 	float shadowFactor = 0.0;
 	int count = 0;
-	int range = 3;
+	int range = 2;
 
-    vec3 rand = vec3(0,1,1);
+	vec2 s = gl_FragCoord.xy;
 	
+	uvec4 u = uvec4(s, uint(s.x) ^ uint(s.y), uint(s.x) + uint(s.y));
+    vec3 rand = pcg3d(u.xyz);
+	rand = normalize(rand);
+
+
 	sc.x += dx * rand.z;
-    sc.y += dx * rand.y;
+    sc.y += dy * rand.y;
 	vec2 dirA = rand.xy;
 	vec2 dirB = vec2(-dirA.y,dirA.x);
 	

@@ -341,7 +341,7 @@ void VulkanEngine::draw_objects_forward(VkCommandBuffer cmd, RenderScene::MeshPa
 	float framed = (_frameNumber / 120.f);
 	_sceneParameters.ambientColor = glm::vec4{ 0.5 };
 	_sceneParameters.sunlightColor = glm::vec4{ 1.f };
-	_sceneParameters.sunlightDirection = glm::vec4(_mainLight.lightDirection * -1.f,1.f);
+	_sceneParameters.sunlightDirection = glm::vec4(_mainLight.lightDirection * 1.f,1.f);
 
 	//push data to dynmem
 	uint32_t camera_data_offsets[3];

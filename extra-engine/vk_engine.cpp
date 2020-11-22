@@ -113,7 +113,7 @@ void VulkanEngine::init()
 
 	_mainLight.lightPosition = { 0,0,0 };
 	_mainLight.lightDirection = glm::vec3(0.3, -1, 0.3);
-	_mainLight.shadowExtent = { 100 ,100 ,40 };
+	_mainLight.shadowExtent = { 100 ,100 ,100 };
 }
 void VulkanEngine::cleanup()
 {
@@ -1706,19 +1706,19 @@ void VulkanEngine::init_scene()
 
 	glm::mat4 sponzaMatrix = glm::scale(glm::mat4{ 1.0 }, glm::vec3(0.01, 0.01, 0.01));;
 
-	load_prefab(asset_path("Sponza/Sponza.pfb").c_str(), sponzaMatrix);
-	//int dimcities = 2;
-	//for (int x = -dimcities; x <= dimcities; x++) {
-	//	for (int y = -dimcities; y <= dimcities; y++) {
-	//
-	//		glm::mat4 translation = glm::translate(glm::mat4{ 1.0 }, glm::vec3(x * 300, y, y * 300));
-	//		glm::mat4 scale = glm::scale(glm::mat4{ 1.0 }, glm::vec3(10));
-	//
-	//		glm::mat4 rotationMat = glm::rotate(glm::radians(-90.f), glm::vec3{ 1,0,0 });
-	//		glm::mat4 cityMatrix = translation * rotationMat * glm::scale(glm::mat4{ 1.0 }, glm::vec3(.01));
-	//		load_prefab(asset_path("PolyCity/PolyCity.pfb").c_str(), cityMatrix);
-	//	}
-	//}
+	//load_prefab(asset_path("Sponza/Sponza.pfb").c_str(), sponzaMatrix);
+	int dimcities = 2;
+	for (int x = -dimcities; x <= dimcities; x++) {
+		for (int y = -dimcities; y <= dimcities; y++) {
+
+			glm::mat4 translation = glm::translate(glm::mat4{ 1.0 }, glm::vec3(x * 300, y, y * 300));
+			glm::mat4 scale = glm::scale(glm::mat4{ 1.0 }, glm::vec3(10));
+
+			glm::mat4 rotationMat = glm::rotate(glm::radians(-90.f), glm::vec3{ 1,0,0 });
+			glm::mat4 cityMatrix = translation * rotationMat * glm::scale(glm::mat4{ 1.0 }, glm::vec3(.01));
+			load_prefab(asset_path("PolyCity/PolyCity.pfb").c_str(), cityMatrix);
+		}
+	}
 	
 
 	//for (int x = -20; x <= 20; x++) {
