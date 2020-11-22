@@ -70,7 +70,10 @@ void VulkanEngine::init()
 	//_renderables.reserve(10000);
 	_materials.reserve(1000);
 	_meshes.reserve(1000);
+	
 	init_vulkan();
+
+	_shaderCache.init(_device);
 
 	init_swapchain();
 
@@ -186,7 +189,6 @@ void VulkanEngine::draw()
 		execute_compute_cull(cmd, _renderScene._forwardPass);
 
 		forward_pass(clearValue, cmd);
-
 
 		reduce_depth(cmd);
 
@@ -981,44 +983,10 @@ void VulkanEngine::init_sync_structures()
 
 
 void VulkanEngine::init_pipelines()
-{
-	VkShaderModule colorMeshShader;
-
-	ShaderModule colorModule;
-
-
-	if (!vkutil::load_shader_module(_device, "../../shaders/default_lit.frag.spv", &colorModule))
-
-	{
-		std::cout << "Error when building the colored mesh shader" << std::endl;
-	}
-	colorMeshShader = colorModule.module;
-
-
-
-	VkShaderModule texturedMeshShader;
-	ShaderModule textureModule;
-
-	if (!vkutil::load_shader_module(_device, "../../shaders/textured_lit.frag.spv", &textureModule))
-
-	{
-		std::cout << "Error when building the colored mesh shader" << std::endl;
-	}
-	texturedMeshShader = textureModule.module;
-	VkShaderModule meshVertShader;
-	ShaderModule meshModule;
-
-
-	if (!vkutil::load_shader_module(_device, "../../shaders/tri_mesh_ssbo_instanced.vert.spv", &meshModule))
-	
-	{
-		std::cout << "Error when building the mesh vertex shader module" << std::endl;
-	}
-	meshVertShader = meshModule.module;
-
+{	
 	ShaderEffect* mainEffect = new ShaderEffect();
-	mainEffect->add_stage(&meshModule, VK_SHADER_STAGE_VERTEX_BIT);
-	mainEffect->add_stage(&colorModule, VK_SHADER_STAGE_FRAGMENT_BIT);
+	mainEffect->add_stage(_shaderCache.get_shader(shader_path("tri_mesh_ssbo_instanced.vert.spv")), VK_SHADER_STAGE_VERTEX_BIT);
+	mainEffect->add_stage(_shaderCache.get_shader(shader_path("default_lit.frag.spv")), VK_SHADER_STAGE_FRAGMENT_BIT);
 
 
 	ShaderEffect::ReflectionOverrides overrides[] = {
@@ -1027,31 +995,72 @@ void VulkanEngine::init_pipelines()
 	};
 	mainEffect->reflect_layout(this, overrides, 2);
 
-	//build the stage-create-info for both vertex and fragment stages. This lets the pipeline know the shader modules per stage
-	PipelineBuilder pipelineBuilder;
-
-	pipelineBuilder._shaderStages.push_back(
-		vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_VERTEX_BIT, meshVertShader));
-
-	pipelineBuilder._shaderStages.push_back(
-		vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT, colorMeshShader));
-
-
-	VkPipelineLayout meshPipLayout = mainEffect->builtLayout;
-
-
 	ShaderEffect* texturedEffect = new ShaderEffect();;
-	texturedEffect->add_stage(&meshModule, VK_SHADER_STAGE_VERTEX_BIT);
-	texturedEffect->add_stage(&textureModule, VK_SHADER_STAGE_FRAGMENT_BIT);
+	texturedEffect->add_stage(_shaderCache.get_shader(shader_path("tri_mesh_ssbo_instanced.vert.spv")), VK_SHADER_STAGE_VERTEX_BIT);
+	texturedEffect->add_stage(_shaderCache.get_shader(shader_path("/textured_lit.frag.spv")), VK_SHADER_STAGE_FRAGMENT_BIT);
 
 	texturedEffect->reflect_layout(this, overrides, 2);
 
-	VkPipelineLayout texturedPipeLayout = texturedEffect->builtLayout;
+	//build the stage-create-info for both vertex and fragment stages. This lets the pipeline know the shader modules per stage
+	PipelineBuilder pipelineBuilder;
+
+	pipelineBuilder.setShaders(mainEffect);
+	
+	fill_forward_pipeline(pipelineBuilder);
+
+	//build the mesh pipeline
+	VertexInputDescription vertexDescription = Vertex::get_vertex_description();
+
+	//connect the pipeline builder vertex input info to the one we get from Vertex
+	pipelineBuilder._vertexInputInfo.pVertexAttributeDescriptions = vertexDescription.attributes.data();
+	pipelineBuilder._vertexInputInfo.vertexAttributeDescriptionCount = vertexDescription.attributes.size();
+
+	pipelineBuilder._vertexInputInfo.pVertexBindingDescriptions = vertexDescription.bindings.data();
+	pipelineBuilder._vertexInputInfo.vertexBindingDescriptionCount = vertexDescription.bindings.size();
 
 
-	//hook the push constants layout
-	pipelineBuilder._pipelineLayout = meshPipLayout;
+	//build the mesh triangle pipeline
+	VkPipeline meshPipeline = pipelineBuilder.build_pipeline(_device, _renderPass);
 
+	create_material(meshPipeline, mainEffect, "defaultmesh");
+
+	pipelineBuilder.setShaders(texturedEffect);
+
+	VkPipeline texPipeline = pipelineBuilder.build_pipeline(_device, _renderPass);
+	create_material(texPipeline, texturedEffect, "texturedmesh");	
+
+	
+	ShaderEffect* blitEffect = new ShaderEffect();
+	blitEffect->add_stage(_shaderCache.get_shader(shader_path("fullscreen.vert.spv")), VK_SHADER_STAGE_VERTEX_BIT);
+	blitEffect->add_stage(_shaderCache.get_shader(shader_path("blit.frag.spv")), VK_SHADER_STAGE_FRAGMENT_BIT);
+	blitEffect->reflect_layout(this, nullptr, 0);
+
+	pipelineBuilder.setShaders(blitEffect);
+
+	pipelineBuilder.clear_vertex_input();	
+
+	pipelineBuilder._depthStencil = vkinit::depth_stencil_create_info(false, false, VK_COMPARE_OP_ALWAYS);
+
+	_blitPipeline = pipelineBuilder.build_pipeline(_device, _copyPass);
+	_blitLayout = blitEffect->builtLayout;
+	
+	_mainDeletionQueue.push_function([=]() {
+		vkDestroyPipeline(_device, meshPipeline, nullptr);
+		vkDestroyPipeline(_device, texPipeline, nullptr);
+		vkDestroyPipeline(_device, _blitPipeline, nullptr);
+	});
+
+
+	load_compute_shader(shader_path("indirect_cull.comp.spv").c_str(), _cullPipeline, _cullLayout);
+
+	load_compute_shader(shader_path("depthReduce.comp.spv").c_str(), _depthReducePipeline, _depthReduceLayout);
+
+	load_compute_shader(shader_path("sparse_upload.comp.spv").c_str(), _sparseUploadPipeline, _sparseUploadLayout);
+}
+
+
+void VulkanEngine::fill_forward_pipeline(PipelineBuilder& pipelineBuilder)
+{
 	//vertex input controls how to read vertices from vertex buffers. We arent using it yet
 	pipelineBuilder._vertexInputInfo = vkinit::vertex_input_state_create_info();
 
@@ -1082,93 +1091,6 @@ void VulkanEngine::init_pipelines()
 
 	//default depthtesting
 	pipelineBuilder._depthStencil = vkinit::depth_stencil_create_info(true, true, VK_COMPARE_OP_GREATER_OR_EQUAL);
-
-	//build the mesh pipeline
-
-	VertexInputDescription vertexDescription = Vertex::get_vertex_description();
-
-	//connect the pipeline builder vertex input info to the one we get from Vertex
-	pipelineBuilder._vertexInputInfo.pVertexAttributeDescriptions = vertexDescription.attributes.data();
-	pipelineBuilder._vertexInputInfo.vertexAttributeDescriptionCount = vertexDescription.attributes.size();
-
-	pipelineBuilder._vertexInputInfo.pVertexBindingDescriptions = vertexDescription.bindings.data();
-	pipelineBuilder._vertexInputInfo.vertexBindingDescriptionCount = vertexDescription.bindings.size();
-
-
-	//build the mesh triangle pipeline
-	VkPipeline meshPipeline = pipelineBuilder.build_pipeline(_device, _renderPass);
-
-	create_material(meshPipeline, mainEffect, "defaultmesh");
-
-	pipelineBuilder._shaderStages.clear();
-	pipelineBuilder._shaderStages.push_back(
-		vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_VERTEX_BIT, meshVertShader));
-
-	pipelineBuilder._shaderStages.push_back(
-		vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT, texturedMeshShader));
-
-	pipelineBuilder._pipelineLayout = texturedPipeLayout;
-	VkPipeline texPipeline = pipelineBuilder.build_pipeline(_device, _renderPass);
-	create_material(texPipeline, texturedEffect, "texturedmesh");
-
-	load_compute_shader("../../shaders/indirect_cull.comp.spv", _cullPipeline, _cullLayout);
-
-	load_compute_shader("../../shaders/depthReduce.comp.spv", _depthReducePipeline, _depthReduceLayout);
-
-	load_compute_shader("../../shaders/sparse_upload.comp.spv", _sparseUploadPipeline, _sparseUploadLayout);
-
-
-	
-	ShaderModule fullscreenVertMod;
-
-	if (!vkutil::load_shader_module(_device, "../../shaders/fullscreen.vert.spv", &fullscreenVertMod))
-
-	{
-		std::cout << "Error when building the colored mesh shader" << std::endl;
-	}
-
-	
-	ShaderModule blitMod;
-	if (!vkutil::load_shader_module(_device, "../../shaders/blit.frag.spv", &blitMod))
-
-	{
-		std::cout << "Error when building the mesh vertex shader module" << std::endl;
-	}
-
-	ShaderEffect* blitEffect = new ShaderEffect();
-	blitEffect->add_stage(&fullscreenVertMod, VK_SHADER_STAGE_VERTEX_BIT);
-	blitEffect->add_stage(&blitMod, VK_SHADER_STAGE_FRAGMENT_BIT);
-	blitEffect->reflect_layout(this, nullptr, 0);
-
-	pipelineBuilder._shaderStages.clear();
-	pipelineBuilder._shaderStages.push_back(
-		vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_VERTEX_BIT, fullscreenVertMod.module));
-
-	pipelineBuilder._shaderStages.push_back(
-		vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT, blitMod.module));
-
-	//connect the pipeline builder vertex input info to the one we get from Vertex
-	pipelineBuilder._vertexInputInfo.pVertexAttributeDescriptions = nullptr;
-	pipelineBuilder._vertexInputInfo.vertexAttributeDescriptionCount = 0;
-
-	pipelineBuilder._vertexInputInfo.pVertexBindingDescriptions = nullptr;
-	pipelineBuilder._vertexInputInfo.vertexBindingDescriptionCount = 0;
-	
-	pipelineBuilder._depthStencil = vkinit::depth_stencil_create_info(false, false, VK_COMPARE_OP_ALWAYS);
-
-	pipelineBuilder._pipelineLayout = blitEffect->builtLayout;
-
-	_blitPipeline = pipelineBuilder.build_pipeline(_device, _copyPass);
-	_blitLayout = blitEffect->builtLayout;
-
-	vkDestroyShaderModule(_device, meshVertShader, nullptr);
-	vkDestroyShaderModule(_device, colorMeshShader, nullptr);
-
-	_mainDeletionQueue.push_function([=]() {
-		vkDestroyPipeline(_device, meshPipeline, nullptr);
-
-		vkDestroyPipelineLayout(_device, meshPipLayout, nullptr);
-	});
 }
 
 bool VulkanEngine::load_compute_shader(const char* shaderPath, VkPipeline& pipeline, VkPipelineLayout& layout)
@@ -1283,6 +1205,25 @@ VkPipeline PipelineBuilder::build_pipeline(VkDevice device, VkRenderPass pass)
 		return newPipeline;
 	}
 }
+
+
+void PipelineBuilder::clear_vertex_input()
+{	
+	_vertexInputInfo.pVertexAttributeDescriptions = nullptr;
+	_vertexInputInfo.vertexAttributeDescriptionCount = 0;
+
+	_vertexInputInfo.pVertexBindingDescriptions = nullptr;
+	_vertexInputInfo.vertexBindingDescriptionCount = 0;
+}
+
+void PipelineBuilder::setShaders(ShaderEffect* effect)
+{	
+	_shaderStages.clear();
+	effect->fill_stages(_shaderStages);
+
+	_pipelineLayout = effect->builtLayout;
+}
+
 
 void VulkanEngine::load_meshes()
 {
@@ -1848,6 +1789,17 @@ std::string VulkanEngine::asset_path(std::string& path)
 	return "../../assets_export/" + (path);
 }
 
+
+std::string VulkanEngine::shader_path(const char* path)
+{
+	return "../../shaders/" + std::string(path);
+}
+
+
+std::string VulkanEngine::shader_path(std::string& path)
+{
+	return "../../shaders/" + (path);
+}
 
 void VulkanEngine::refresh_renderbounds(MeshObject* object)
 {

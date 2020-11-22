@@ -10,6 +10,7 @@
 #include <memory>
 #include <vk_mesh.h>
 #include <vk_scene.h>
+#include <vk_shaders.h>
 #include <unordered_map>
 
 #include <glm/glm.hpp>
@@ -44,6 +45,9 @@ public:
 	VkPipelineLayout _pipelineLayout;
 	VkPipelineDepthStencilStateCreateInfo _depthStencil;
 	VkPipeline build_pipeline(VkDevice device, VkRenderPass pass);
+	void clear_vertex_input();
+
+	void setShaders(struct ShaderEffect* effect);
 };
 
 class ComputePipelineBuilder {
@@ -320,6 +324,7 @@ public:
 	FrameData& get_current_frame();
 	FrameData& get_last_frame();
 
+	ShaderCache _shaderCache;
 	std::unordered_map<std::string, Material> _materials;
 	std::unordered_map<std::string, Mesh> _meshes;
 	std::unordered_map<std::string, Texture> _loadedTextures;
@@ -361,6 +366,9 @@ public:
 	std::string asset_path(const char* path);
 	std::string asset_path(std::string& path);
 
+	std::string shader_path(const char* path);
+	std::string shader_path(std::string& path);
+
 	void refresh_renderbounds(MeshObject* object);
 
 	template<typename T>
@@ -389,6 +397,8 @@ private:
 	void init_sync_structures();
 
 	void init_pipelines();
+
+	void fill_forward_pipeline(PipelineBuilder& pipelineBuilder);
 
 	void init_scene();
 

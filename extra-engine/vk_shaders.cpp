@@ -8,7 +8,7 @@
 #include <vk_engine.h>
 
 #include <sstream>
-
+#include <iostream>
 bool vkutil::load_shader_module(VkDevice device,const char* filePath, ShaderModule* outShaderModule)
 {
 
@@ -87,6 +87,7 @@ void ShaderEffect::add_stage(ShaderModule* shaderModule, VkShaderStageFlagBits s
 	ShaderStage newStage = { shaderModule,stage };
 	stages.push_back(newStage);
 }
+
 struct DescriptorSetLayoutData {
 	uint32_t set_number;
 	VkDescriptorSetLayoutCreateInfo create_info;
@@ -235,6 +236,15 @@ void ShaderEffect::reflect_layout(VulkanEngine* engine, ReflectionOverrides* ove
 	
 	vkCreatePipelineLayout(engine->_device, &mesh_pipeline_layout_info, nullptr, &builtLayout);
 
+}
+
+
+void ShaderEffect::fill_stages(std::vector<VkPipelineShaderStageCreateInfo>& pipelineStages)
+{
+	for (auto& s : stages)
+	{
+		pipelineStages.push_back(vkinit::pipeline_shader_stage_create_info(s.stage, s.shaderModule->module));
+	}
 }
 
 void ShaderDescriptorBinder::bind_buffer(const char* name, const VkDescriptorBufferInfo& bufferInfo)
@@ -389,4 +399,23 @@ void ShaderDescriptorBinder::set_shader(ShaderEffect* newShader)
 	}
 
 	shaders = newShader;
+}
+
+ShaderModule* ShaderCache::get_shader(const std::string& path)
+{
+	auto it = module_cache.find(path);
+	if (it == module_cache.end())
+	{	
+		ShaderModule newShader;
+
+		bool result = vkutil::load_shader_module(_device, path.c_str(), &newShader);
+		if (!result)
+		{
+			std::cout << "Error when compiling shader " << path << std::endl;
+			return nullptr;
+		}
+
+		module_cache[path] = newShader;
+	}
+	return &module_cache[path];
 }

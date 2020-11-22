@@ -34,10 +34,11 @@ struct ShaderEffect {
 		VkDescriptorType overridenType;
 	};
 
-
 	void add_stage(ShaderModule* shaderModule, VkShaderStageFlagBits stage);
 
 	void reflect_layout(VulkanEngine* engine, ReflectionOverrides* overrides, int overrideCount);
+
+	void fill_stages(std::vector<VkPipelineShaderStageCreateInfo>& pipelineStages);
 	VkPipelineLayout builtLayout;
 
 	struct ReflectedBinding {
@@ -89,4 +90,16 @@ private:
 
 	ShaderEffect* shaders{ nullptr };
 	std::vector<BufferWriteDescriptor> bufferWrites;
+};
+
+class ShaderCache {
+
+public:
+
+	ShaderModule* get_shader(const std::string& path);
+
+	void init(VkDevice device) { _device = device; };
+private:
+	VkDevice _device;
+	std::unordered_map<std::string, ShaderModule> module_cache;
 };
