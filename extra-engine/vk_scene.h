@@ -33,6 +33,7 @@ struct GPUIndirectObject {
 
 
 enum class PassTypeFlags : uint8_t {
+	None = 0,
 	Forward = 1 << 0,
 	Prepass = 1 << 1,
 	DirectionalShadow = 1 << 2
@@ -138,6 +139,7 @@ public:
 	std::vector<Handle<RenderObject>> dirtyObjects;
 
 	MeshPass _forwardPass;
+	MeshPass _shadowPass;
 
 	std::unordered_map<Material*, Handle<Material>> materialConvert;
 	std::unordered_map<Mesh*, Handle<Mesh>> meshConvert;
@@ -152,3 +154,18 @@ public:
 
 	AllocatedBuffer<GPUObjectData> objectDataBuffer;	
 };
+
+inline PassTypeFlags operator&(PassTypeFlags A, PassTypeFlags B)
+{
+	uint8_t uA = (uint8_t)A;
+	uint8_t uB = (uint8_t)B;
+
+	return (PassTypeFlags)(uA & uB);
+}
+inline PassTypeFlags operator|(PassTypeFlags A, PassTypeFlags B)
+{
+	uint8_t uA = (uint8_t)A;
+	uint8_t uB = (uint8_t)B;
+
+	return (PassTypeFlags)(uA | uB);
+}

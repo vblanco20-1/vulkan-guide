@@ -16,9 +16,13 @@ Handle<RenderObject> RenderScene::register_object(MeshObject* object, PassTypeFl
 	
 	renderables.push_back(newObj);
 
-	if (passes == PassTypeFlags::Forward)
+	if ((passes & PassTypeFlags::Forward) != PassTypeFlags::None)
 	{
 		_forwardPass.unbatchedObjects.push_back(handle);
+	}
+	if ((passes & PassTypeFlags::DirectionalShadow) != PassTypeFlags::None)
+	{
+		_shadowPass.unbatchedObjects.push_back(handle);
 	}
 
 	update_object(handle);
@@ -122,6 +126,7 @@ void RenderScene::clear_dirty_objects()
 void RenderScene::build_batches()
 {
 	refresh_pass(&_forwardPass);
+	refresh_pass(&_shadowPass);
 }
 
 void RenderScene::merge_meshes(VulkanEngine* engine)

@@ -188,8 +188,10 @@ void VulkanEngine::draw()
 		ready_mesh_draw(cmd);
 
 		execute_compute_cull(cmd, _renderScene._forwardPass);
+		execute_compute_cull(cmd, _renderScene._shadowPass);
 
 		forward_pass(clearValue, cmd);
+		shadow_pass(cmd);
 
 		reduce_depth(cmd);
 
@@ -288,13 +290,62 @@ void VulkanEngine::forward_pass(VkClearValue clearValue, VkCommandBuffer cmd)
 
 	{
 		TracyVkZone(_graphicsQueueContext, get_current_frame()._mainCommandBuffer, "Forward Pass");
-		draw_objects(cmd, _renderScene._forwardPass);
+		draw_objects_forward(cmd, _renderScene._forwardPass);
 	}
 
 
 	{
 		TracyVkZone(_graphicsQueueContext, get_current_frame()._mainCommandBuffer, "Imgui Draw");
 		ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmd);
+	}
+
+	//finalize the render pass
+	vkCmdEndRenderPass(cmd);
+}
+
+
+void VulkanEngine::shadow_pass(VkCommandBuffer cmd)
+{
+
+	//clear depth at 1
+	VkClearValue depthClear;
+	depthClear.depthStencil.depth = 1.f;	
+	VkRenderPassBeginInfo rpInfo = vkinit::renderpass_begin_info(_shadowPass, _shadowExtent, _shadowFramebuffer);
+
+	//connect clear values
+	rpInfo.clearValueCount = 1;
+
+	VkClearValue clearValues[] = { depthClear };
+
+	rpInfo.pClearValues = &clearValues[0];
+	vkCmdBeginRenderPass(cmd, &rpInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+	VkViewport viewport;
+	viewport.x = 0.0f;
+	viewport.y = 0.0f;
+	viewport.width = (float)_shadowExtent.width;
+	viewport.height = (float)_shadowExtent.height;
+	viewport.minDepth = 0.0f;
+	viewport.maxDepth = 1.0f;
+
+	VkRect2D scissor;
+	scissor.offset = { 0, 0 };
+	scissor.extent = _shadowExtent;
+
+	vkCmdSetViewport(cmd, 0, 1, &viewport);
+	vkCmdSetScissor(cmd, 0, 1, &scissor);
+
+
+
+	stats.drawcalls = 0;
+	stats.draws = 0;
+	stats.objects = 0;
+	stats.triangles = 0;
+
+	if(_renderScene._shadowPass.batches.size() > 0)
+	{
+		TracyVkZone(_graphicsQueueContext, get_current_frame()._mainCommandBuffer, "Shadow  Pass");
+		draw_objects_shadow(cmd, _renderScene._shadowPass);
 	}
 
 	//finalize the render pass
@@ -677,24 +728,49 @@ void VulkanEngine::init_swapchain()
 		1
 	};
 
+	VkExtent3D shadowExtent = {
+		_shadowExtent.width,
+		_shadowExtent.height,
+		1
+	};
+
 	//hardcoding the depth format to 32 bit float
 	_depthFormat = VK_FORMAT_D32_SFLOAT;
-
-	//the depth image will be a image with the format we selected and Depth Attachment usage flag
-	VkImageCreateInfo dimg_info = vkinit::image_create_info(_depthFormat, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, depthImageExtent);
 
 	//for the depth image, we want to allocate it from gpu local memory
 	VmaAllocationCreateInfo dimg_allocinfo = {};
 	dimg_allocinfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
 	dimg_allocinfo.requiredFlags = VkMemoryPropertyFlags(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-	//allocate and create the image
-	vmaCreateImage(_allocator, &dimg_info, &dimg_allocinfo, &_depthImage._image, &_depthImage._allocation, nullptr);
+	// depth image ------ 
+	{
+		//the depth image will be a image with the format we selected and Depth Attachment usage flag
+		VkImageCreateInfo dimg_info = vkinit::image_create_info(_depthFormat, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, depthImageExtent);
 
-	//build a image-view for the depth image to use for rendering
-	VkImageViewCreateInfo dview_info = vkinit::imageview_create_info(_depthFormat, _depthImage._image, VK_IMAGE_ASPECT_DEPTH_BIT);;
 
-	VK_CHECK(vkCreateImageView(_device, &dview_info, nullptr, &_depthImage._defaultView));
+		//allocate and create the image
+		vmaCreateImage(_allocator, &dimg_info, &dimg_allocinfo, &_depthImage._image, &_depthImage._allocation, nullptr);
+
+
+		//build a image-view for the depth image to use for rendering
+		VkImageViewCreateInfo dview_info = vkinit::imageview_create_info(_depthFormat, _depthImage._image, VK_IMAGE_ASPECT_DEPTH_BIT);;
+
+		VK_CHECK(vkCreateImageView(_device, &dview_info, nullptr, &_depthImage._defaultView));
+	}
+	//shadow image
+	{
+		//the depth image will be a image with the format we selected and Depth Attachment usage flag
+		VkImageCreateInfo dimg_info = vkinit::image_create_info(_depthFormat, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, shadowExtent);
+
+		//allocate and create the image
+		vmaCreateImage(_allocator, &dimg_info, &dimg_allocinfo, &_shadowImage._image, &_shadowImage._allocation, nullptr);
+
+		//build a image-view for the depth image to use for rendering
+		VkImageViewCreateInfo dview_info = vkinit::imageview_create_info(_depthFormat, _shadowImage._image, VK_IMAGE_ASPECT_DEPTH_BIT);
+
+		VK_CHECK(vkCreateImageView(_device, &dview_info, nullptr, &_shadowImage._defaultView));
+	}
+
 
 	// Note: previousPow2 makes sure all reductions are at most by 2x2 which makes sure they are conservative
 	depthPyramidWidth = previousPow2(_windowExtent.width);
@@ -975,7 +1051,11 @@ void VulkanEngine::init_framebuffers()
 	fwd_info.attachmentCount = 2;
 	VK_CHECK(vkCreateFramebuffer(_device, &fwd_info, nullptr, &_forwardFramebuffer));
 
-
+	//create the framebuffer for shadow pass	
+	VkFramebufferCreateInfo sh_info = vkinit::framebuffer_create_info(_shadowPass, _shadowExtent);
+	sh_info.pAttachments = &_shadowImage._defaultView;
+	sh_info.attachmentCount = 1;
+	VK_CHECK(vkCreateFramebuffer(_device, &sh_info, nullptr, &_shadowFramebuffer));
 	
 	for (int i = 0; i < swapchain_imagecount; i++) {
 
@@ -1515,6 +1595,8 @@ Mesh* VulkanEngine::get_mesh(const std::string& name)
 	}
 }
 
+
+
 glm::mat4 VulkanEngine::get_view_matrix()
 {
 	glm::vec3 camPos = _camera.position;
@@ -1908,7 +1990,7 @@ bool VulkanEngine::load_prefab(const char* path, glm::mat4 root)
 		//_renderables.push_back(loadmesh);
 	}
 
-	_renderScene.register_object_batch(prefab_renderables.data(), prefab_renderables.size(), PassTypeFlags::Forward);
+	_renderScene.register_object_batch(prefab_renderables.data(), prefab_renderables.size(), PassTypeFlags::Forward | PassTypeFlags::DirectionalShadow);
 
 	return true;
 }
@@ -2028,6 +2110,14 @@ void VulkanEngine::init_descriptors()
 	_renderScene._forwardPass.drawIndirectBuffer = create_buffer(sizeof(GPUIndirectObject) * MAX_OBJECTS, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
 
 	_renderScene._forwardPass.instanceBuffer = create_buffer(sizeof(GPUInstance) * MAX_OBJECTS, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+	
+	_renderScene._shadowPass.compactedInstanceBuffer = create_buffer(sizeof(uint32_t) * MAX_OBJECTS, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+
+	_renderScene._shadowPass.drawIndirectBuffer = create_buffer(sizeof(GPUIndirectObject) * MAX_OBJECTS, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+
+	_renderScene._shadowPass.instanceBuffer = create_buffer(sizeof(GPUInstance) * MAX_OBJECTS, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+
+	
 	_renderScene.objectDataBuffer = create_buffer(sizeof(GPUObjectData) * MAX_OBJECTS, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
 
 

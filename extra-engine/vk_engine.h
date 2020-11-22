@@ -246,6 +246,7 @@ public:
 	AllocatedImage _rawRenderImage;
 	VkSampler _smoothSampler;
 	VkFramebuffer _forwardFramebuffer;
+	VkFramebuffer _shadowFramebuffer;
 	std::vector<VkFramebuffer> _framebuffers;
 	std::vector<VkImage> _swapchainImages;
 	std::vector<VkImageView> _swapchainImageViews;	
@@ -259,6 +260,8 @@ public:
 	AllocatedImage _depthImage;
 	AllocatedImage _depthPyramid;
 
+	AllocatedImage _shadowImage;
+	VkExtent2D _shadowExtent{1024,1024};
 	int depthPyramidWidth ;
 	int depthPyramidHeight;
 	int depthPyramidLevels;
@@ -312,6 +315,7 @@ public:
 
 	void forward_pass(VkClearValue clearValue, VkCommandBuffer cmd);
 
+	void shadow_pass(VkCommandBuffer cmd);
 	
 
 	//run main loop
@@ -340,7 +344,8 @@ public:
 	Mesh* get_mesh(const std::string& name);
 
 	//our draw function
-	void draw_objects(VkCommandBuffer cmd, RenderScene::MeshPass& pass);
+	void draw_objects_forward(VkCommandBuffer cmd, RenderScene::MeshPass& pass);
+	void draw_objects_shadow(VkCommandBuffer cmd, RenderScene::MeshPass& pass);
 
 	void reduce_depth(VkCommandBuffer cmd);
 
