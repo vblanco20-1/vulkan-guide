@@ -88,10 +88,13 @@ struct MeshPushConstants {
 
 struct Material {
 	VkDescriptorSet textureSet{VK_NULL_HANDLE};
-	VkPipeline pipeline{ VK_NULL_HANDLE };
+	VkPipeline forwardPipeline{ VK_NULL_HANDLE };
+	VkPipeline shadowPipeline{ VK_NULL_HANDLE };
+
 	std::vector<std::string> textures;
-	//VkPipelineLayout pipelineLayout;
-	struct ShaderEffect* effect{nullptr};
+
+	struct ShaderEffect* forwardEffect{nullptr};
+	struct ShaderEffect* shadowEffect{ nullptr };
 };
 
 struct Texture {
@@ -122,13 +125,6 @@ struct FrameData {
 	VkCommandPool _commandPool;
 	VkCommandBuffer _mainCommandBuffer;
 	
-
-	//AllocatedBuffer<GPUObjectData> objectBuffer;
-
-	//AllocatedBuffer<GPUIndirectObject> indirectBuffer;
-	
-	//AllocatedBuffer<GPUInstance> instanceBuffer;
-
 	AllocatedBufferUntyped dynamicDataBuffer;
 
 	vkutil::DescriptorAllocator* dynamicDescriptorAllocator;
@@ -239,7 +235,7 @@ public:
 	tracy::VkCtx* _graphicsQueueContext;
 
 	VkRenderPass _renderPass;
-
+	VkRenderPass _shadowPass;
 	VkRenderPass _copyPass;
 
 	VkSurfaceKHR _surface;
@@ -390,6 +386,8 @@ private:
 
 	void init_copy_renderpass();
 
+	void init_shadow_renderpass();
+
 	void init_framebuffers();
 
 	void init_commands();
@@ -399,6 +397,7 @@ private:
 	void init_pipelines();
 
 	void fill_forward_pipeline(PipelineBuilder& pipelineBuilder);
+	void fill_shadow_pipeline(PipelineBuilder& pipelineBuilder);
 
 	void init_scene();
 

@@ -395,10 +395,10 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderScene::MeshPass& pass
 
 			if (lastMaterial != drawMat) {
 
-				ShaderEffect* newEffect = drawMat->effect;
-				if (lastMaterial == nullptr || lastMaterial->pipeline != drawMat->pipeline) {
+				ShaderEffect* newEffect = drawMat->forwardEffect;
+				if (lastMaterial == nullptr || lastMaterial->forwardPipeline != drawMat->forwardPipeline) {
 
-					vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, drawMat->pipeline);
+					vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, drawMat->forwardPipeline);
 
 					vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, newEffect->builtLayout, 1, 1, &ObjectDataSet, 0, nullptr);
 

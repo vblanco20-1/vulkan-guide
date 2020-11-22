@@ -80,6 +80,7 @@ void VulkanEngine::init()
 
 	init_forward_renderpass();
 	init_copy_renderpass();
+	init_shadow_renderpass();
 
 	init_framebuffers();
 
@@ -263,6 +264,23 @@ void VulkanEngine::forward_pass(VkClearValue clearValue, VkCommandBuffer cmd)
 	rpInfo.pClearValues = &clearValues[0];
 	vkCmdBeginRenderPass(cmd, &rpInfo, VK_SUBPASS_CONTENTS_INLINE);
 
+	VkViewport viewport;
+	viewport.x = 0.0f;
+	viewport.y = 0.0f;
+	viewport.width = (float)_windowExtent.width;
+	viewport.height = (float)_windowExtent.height;
+	viewport.minDepth = 0.0f;
+	viewport.maxDepth = 1.0f;
+
+	VkRect2D scissor;
+	scissor.offset = { 0, 0 };
+	scissor.extent = _windowExtent;
+
+	vkCmdSetViewport(cmd, 0, 1, &viewport);
+	vkCmdSetScissor(cmd, 0, 1, &scissor);
+
+
+
 	stats.drawcalls = 0;
 	stats.draws = 0;
 	stats.objects = 0;
@@ -291,6 +309,23 @@ void VulkanEngine::copy_render_to_swapchain(uint32_t swapchainImageIndex, VkComm
 
 
 	vkCmdBeginRenderPass(cmd, &copyRP, VK_SUBPASS_CONTENTS_INLINE);
+
+	VkViewport viewport;
+	viewport.x = 0.0f;
+	viewport.y = 0.0f;
+	viewport.width = (float)_windowExtent.width;
+	viewport.height = (float)_windowExtent.height;
+	viewport.minDepth = 0.0f;
+	viewport.maxDepth = 1.0f;
+
+	VkRect2D scissor;
+	scissor.offset = { 0, 0 };
+	scissor.extent = _windowExtent;
+
+	vkCmdSetViewport(cmd, 0, 1, &viewport);
+	vkCmdSetScissor(cmd, 0, 1, &scissor);
+
+
 
 	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _blitPipeline);
 
@@ -873,6 +908,56 @@ void VulkanEngine::init_copy_renderpass()
 		});
 }
 
+
+void VulkanEngine::init_shadow_renderpass()
+{
+	VkAttachmentDescription depth_attachment = {};
+	// Depth attachment
+	depth_attachment.flags = 0;
+	depth_attachment.format = _depthFormat;
+	depth_attachment.samples = VK_SAMPLE_COUNT_1_BIT;
+	depth_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+	depth_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+	depth_attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+	depth_attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+	depth_attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	depth_attachment.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+	VkAttachmentReference depth_attachment_ref = {};
+	depth_attachment_ref.attachment =0;
+	depth_attachment_ref.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+	//we are going to create 1 subpass, which is the minimum you can do
+	VkSubpassDescription subpass = {};
+	subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+
+	//hook the depth attachment into the subpass
+	subpass.pDepthStencilAttachment = &depth_attachment_ref;
+
+	//1 dependency, which is from "outside" into the subpass. And we can read or write color
+	VkSubpassDependency dependency = {};
+	dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+	dependency.dstSubpass = 0;
+	dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+	dependency.srcAccessMask = 0;
+	dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+	dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
+	VkRenderPassCreateInfo render_pass_info = {};
+	render_pass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+	//2 attachments from said array
+	render_pass_info.attachmentCount = 1;
+	render_pass_info.pAttachments = &depth_attachment;
+	render_pass_info.subpassCount = 1;
+	render_pass_info.pSubpasses = &subpass;	
+
+	VK_CHECK(vkCreateRenderPass(_device, &render_pass_info, nullptr, &_shadowPass));
+
+	_mainDeletionQueue.push_function([=]() {
+		vkDestroyRenderPass(_device, _shadowPass, nullptr);
+	});
+}
+
 void VulkanEngine::init_framebuffers()
 {
 	
@@ -984,6 +1069,7 @@ void VulkanEngine::init_sync_structures()
 
 void VulkanEngine::init_pipelines()
 {	
+	//untextured defaultlit shader
 	ShaderEffect* mainEffect = new ShaderEffect();
 	mainEffect->add_stage(_shaderCache.get_shader(shader_path("tri_mesh_ssbo_instanced.vert.spv")), VK_SHADER_STAGE_VERTEX_BIT);
 	mainEffect->add_stage(_shaderCache.get_shader(shader_path("default_lit.frag.spv")), VK_SHADER_STAGE_FRAGMENT_BIT);
@@ -995,49 +1081,70 @@ void VulkanEngine::init_pipelines()
 	};
 	mainEffect->reflect_layout(this, overrides, 2);
 
+	//textured defaultlit shader
 	ShaderEffect* texturedEffect = new ShaderEffect();;
 	texturedEffect->add_stage(_shaderCache.get_shader(shader_path("tri_mesh_ssbo_instanced.vert.spv")), VK_SHADER_STAGE_VERTEX_BIT);
-	texturedEffect->add_stage(_shaderCache.get_shader(shader_path("/textured_lit.frag.spv")), VK_SHADER_STAGE_FRAGMENT_BIT);
+	texturedEffect->add_stage(_shaderCache.get_shader(shader_path("textured_lit.frag.spv")), VK_SHADER_STAGE_FRAGMENT_BIT);
 
 	texturedEffect->reflect_layout(this, overrides, 2);
 
-	//build the stage-create-info for both vertex and fragment stages. This lets the pipeline know the shader modules per stage
+	//shadow effect is same as triangle but without pixel shader
+	ShaderEffect* shadowEffect = new ShaderEffect();
+	shadowEffect->add_stage(_shaderCache.get_shader(shader_path("tri_mesh_ssbo_instanced.vert.spv")), VK_SHADER_STAGE_VERTEX_BIT);
+
+	shadowEffect->reflect_layout(this, overrides, 2);
+
+	
+	//fullscreen triangle pipeline for blits
+	ShaderEffect* blitEffect = new ShaderEffect();
+	blitEffect->add_stage(_shaderCache.get_shader(shader_path("fullscreen.vert.spv")), VK_SHADER_STAGE_VERTEX_BIT);
+	blitEffect->add_stage(_shaderCache.get_shader(shader_path("blit.frag.spv")), VK_SHADER_STAGE_FRAGMENT_BIT);
+	blitEffect->reflect_layout(this, nullptr, 0);
+
+
 	PipelineBuilder pipelineBuilder;
 
-	pipelineBuilder.setShaders(mainEffect);
-	
-	fill_forward_pipeline(pipelineBuilder);
-
-	//build the mesh pipeline
+	//set vertex format
 	VertexInputDescription vertexDescription = Vertex::get_vertex_description();
 
+	pipelineBuilder._vertexInputInfo = vkinit::vertex_input_state_create_info();
 	//connect the pipeline builder vertex input info to the one we get from Vertex
 	pipelineBuilder._vertexInputInfo.pVertexAttributeDescriptions = vertexDescription.attributes.data();
 	pipelineBuilder._vertexInputInfo.vertexAttributeDescriptionCount = vertexDescription.attributes.size();
 
 	pipelineBuilder._vertexInputInfo.pVertexBindingDescriptions = vertexDescription.bindings.data();
 	pipelineBuilder._vertexInputInfo.vertexBindingDescriptionCount = vertexDescription.bindings.size();
+	
+	fill_shadow_pipeline(pipelineBuilder);
+	pipelineBuilder.setShaders(shadowEffect);
+	VkPipeline shadowPipeline = pipelineBuilder.build_pipeline(_device, _shadowPass);
 
+	//default forwardpass parameters
+	fill_forward_pipeline(pipelineBuilder);
 
-	//build the mesh triangle pipeline
+	//build the untextured triangle pipeline
+	pipelineBuilder.setShaders(mainEffect);
+	
 	VkPipeline meshPipeline = pipelineBuilder.build_pipeline(_device, _renderPass);
+	Material* meshmat = create_material(meshPipeline, mainEffect, "defaultmesh");
+	meshmat->shadowEffect = shadowEffect;
+	meshmat->shadowPipeline = shadowPipeline;
 
-	create_material(meshPipeline, mainEffect, "defaultmesh");
-
+	
+	//build textured pipeline
 	pipelineBuilder.setShaders(texturedEffect);
 
 	VkPipeline texPipeline = pipelineBuilder.build_pipeline(_device, _renderPass);
-	create_material(texPipeline, texturedEffect, "texturedmesh");	
-
+	Material* texmat = create_material(texPipeline, texturedEffect, "texturedmesh");
+	texmat->shadowEffect = shadowEffect;
+	texmat->shadowPipeline = shadowPipeline;
 	
-	ShaderEffect* blitEffect = new ShaderEffect();
-	blitEffect->add_stage(_shaderCache.get_shader(shader_path("fullscreen.vert.spv")), VK_SHADER_STAGE_VERTEX_BIT);
-	blitEffect->add_stage(_shaderCache.get_shader(shader_path("blit.frag.spv")), VK_SHADER_STAGE_FRAGMENT_BIT);
-	blitEffect->reflect_layout(this, nullptr, 0);
 
+	//build blit pipeline
 	pipelineBuilder.setShaders(blitEffect);
 
-	pipelineBuilder.clear_vertex_input();	
+	//blit pipeline uses hardcoded triangle so no need for vertex input
+	pipelineBuilder.clear_vertex_input();
 
 	pipelineBuilder._depthStencil = vkinit::depth_stencil_create_info(false, false, VK_COMPARE_OP_ALWAYS);
 
@@ -1051,6 +1158,7 @@ void VulkanEngine::init_pipelines()
 	});
 
 
+	//load the compute shaders
 	load_compute_shader(shader_path("indirect_cull.comp.spv").c_str(), _cullPipeline, _cullLayout);
 
 	load_compute_shader(shader_path("depthReduce.comp.spv").c_str(), _depthReducePipeline, _depthReduceLayout);
@@ -1061,23 +1169,11 @@ void VulkanEngine::init_pipelines()
 
 void VulkanEngine::fill_forward_pipeline(PipelineBuilder& pipelineBuilder)
 {
-	//vertex input controls how to read vertices from vertex buffers. We arent using it yet
-	pipelineBuilder._vertexInputInfo = vkinit::vertex_input_state_create_info();
+	
 
 	//input assembly is the configuration for drawing triangle lists, strips, or individual points.
 	//we are just going to draw triangle list
 	pipelineBuilder._inputAssembly = vkinit::input_assembly_create_info(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
-
-	//build viewport and scissor from the swapchain extents
-	pipelineBuilder._viewport.x = 0.0f;
-	pipelineBuilder._viewport.y = 0.0f;
-	pipelineBuilder._viewport.width = (float)_windowExtent.width;
-	pipelineBuilder._viewport.height = (float)_windowExtent.height;
-	pipelineBuilder._viewport.minDepth = 0.0f;
-	pipelineBuilder._viewport.maxDepth = 1.0f;
-
-	pipelineBuilder._scissor.offset = { 0, 0 };
-	pipelineBuilder._scissor.extent = _windowExtent;
 
 	//configure the rasterizer to draw filled triangles
 	pipelineBuilder._rasterizer = vkinit::rasterization_state_create_info(VK_POLYGON_MODE_FILL);
@@ -1088,6 +1184,27 @@ void VulkanEngine::fill_forward_pipeline(PipelineBuilder& pipelineBuilder)
 	//a single blend attachment with no blending and writing to RGBA
 	pipelineBuilder._colorBlendAttachment = vkinit::color_blend_attachment_state();
 
+
+	//default depthtesting
+	pipelineBuilder._depthStencil = vkinit::depth_stencil_create_info(true, true, VK_COMPARE_OP_GREATER_OR_EQUAL);
+}
+
+
+void VulkanEngine::fill_shadow_pipeline(PipelineBuilder& pipelineBuilder)
+{
+	
+	//input assembly is the configuration for drawing triangle lists, strips, or individual points.
+	//we are just going to draw triangle list
+	pipelineBuilder._inputAssembly = vkinit::input_assembly_create_info(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
+
+	//configure the rasterizer to draw filled triangles
+	pipelineBuilder._rasterizer = vkinit::rasterization_state_create_info(VK_POLYGON_MODE_FILL);
+
+	//we dont use multisampling, so just run the default one
+	pipelineBuilder._multisampling = vkinit::multisampling_state_create_info();
+
+	//a single blend attachment with no blending and writing to RGBA
+	pipelineBuilder._colorBlendAttachment = vkinit::color_blend_attachment_state();
 
 	//default depthtesting
 	pipelineBuilder._depthStencil = vkinit::depth_stencil_create_info(true, true, VK_COMPARE_OP_GREATER_OR_EQUAL);
@@ -1192,6 +1309,19 @@ VkPipeline PipelineBuilder::build_pipeline(VkDevice device, VkRenderPass pass)
 	pipelineInfo.renderPass = pass;
 	pipelineInfo.subpass = 0;
 	pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
+
+	VkPipelineDynamicStateCreateInfo dynamicState{};
+	dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+
+	
+	std::vector<VkDynamicState> dynamicStates;
+	dynamicStates.push_back(VK_DYNAMIC_STATE_VIEWPORT);
+	dynamicStates.push_back(VK_DYNAMIC_STATE_SCISSOR);
+		
+	dynamicState.pDynamicStates = dynamicStates.data();
+	dynamicState.dynamicStateCount = dynamicStates.size();
+
+	pipelineInfo.pDynamicState = &dynamicState;
 
 	//its easy to error out on create graphics pipeline, so we handle it a bit better than the common VK_CHECK case
 	VkPipeline newPipeline;
@@ -1340,8 +1470,8 @@ void VulkanEngine::upload_mesh(Mesh& mesh)
 Material* VulkanEngine::create_material(VkPipeline pipeline, ShaderEffect* effect, const std::string& name)
 {
 	Material mat;
-	mat.pipeline = pipeline;
-	mat.effect = effect;
+	mat.forwardPipeline = pipeline;
+	mat.forwardEffect = effect;
 	_materials[name] =mat;
 	return &_materials[name];
 }
@@ -1351,8 +1481,12 @@ Material* VulkanEngine::clone_material(const std::string& originalname, const st
 	Material* m = get_material(originalname);
 
 	Material mat;
-	mat.pipeline = m->pipeline;
-	mat.effect = m->effect;
+	mat.forwardPipeline = m->forwardPipeline;
+	mat.forwardEffect = m->forwardEffect;
+
+	mat.shadowPipeline = m->shadowPipeline;
+	mat.shadowEffect = m->shadowEffect;
+
 	_materials[copyname] = mat;
 	return &_materials[copyname];
 }
@@ -1712,8 +1846,8 @@ bool VulkanEngine::load_prefab(const char* path, glm::mat4 root)
 					Material* cached = nullptr;
 					for (auto &[k, v] : _materials)
 					{
-						if ((v.effect == texturedMat->effect)
-							&& (v.pipeline == texturedMat->pipeline)
+						if ((v.forwardEffect == texturedMat->forwardEffect)
+							&& (v.forwardPipeline == texturedMat->forwardPipeline)
 							&& (v.textures.size() == 1)
 							&& (v.textures[0].compare(texture) == 0)
 							)
