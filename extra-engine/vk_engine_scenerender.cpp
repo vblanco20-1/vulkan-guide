@@ -334,7 +334,7 @@ void VulkanEngine::draw_objects_forward(VkCommandBuffer cmd, RenderScene::MeshPa
 	
 	
 
-	_sceneParameters.sunlightShadowMatrix = biasMat * _mainLight.get_projection() * _mainLight.get_view();
+	_sceneParameters.sunlightShadowMatrix =/* biasMat **/_mainLight.get_projection() * _mainLight.get_view();
 
 	Frustum view_frustrum{ cullpro * view };
 

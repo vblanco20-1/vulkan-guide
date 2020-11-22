@@ -22,20 +22,21 @@ layout(set = 0, binding = 1) uniform  SceneData{
 
 
 
-layout(set = 0, binding = 2) uniform sampler2D shadowSampler;
+layout(set = 0, binding = 2) uniform sampler2DShadow  shadowSampler;
 
 layout(set = 2, binding = 0) uniform sampler2D tex1;
-#define ambientshadow 0.1
-float textureProj(vec4 shadowCoord, vec2 off)
+#define SHADOW_FACTOR 0.1
+
+float textureProj(vec4 P, vec2 offset)
 {
 	float shadow = 1.0;
-	if ( shadowCoord.z > -1.0 && shadowCoord.z < 1.0 ) 
+	vec4 shadowCoord = P / P.w;
+	shadowCoord.st = shadowCoord.st * 0.5 + 0.5;
+	
+	if (shadowCoord.z > -1.0 && shadowCoord.z < 1.0) 
 	{
-		float dist = texture( shadowSampler, shadowCoord.st + off ).r;
-		if ( shadowCoord.w > 0.0 && dist < shadowCoord.z ) 
-		{
-			shadow = ambientshadow;
-		}
+		vec3 sc = vec3(vec2(shadowCoord.st + offset),shadowCoord.z);
+		shadow =  texture(shadowSampler, sc);		
 	}
 	return shadow;
 }
@@ -60,7 +61,7 @@ uvec3 pcg3d(uvec3 v) {
 float filterPCF(vec4 sc)
 {
 	ivec2 texDim = textureSize(shadowSampler, 0);
-	float scale = 1;
+	float scale = 2;
 	float dx = scale * 1.0 / float(texDim.x);
 	float dy = scale * 1.0 / float(texDim.y);
 
@@ -71,14 +72,14 @@ float filterPCF(vec4 sc)
 	vec2 s = gl_FragCoord.xy;
 	
 	uvec4 u = uvec4(s, uint(s.x) ^ uint(s.y), uint(s.x) + uint(s.y));
-    vec3 rand = pcg3d(u.xyz);
+    vec3 rand = pcg3d(u.xyz);//vec3(1,0,0);//
 	rand = normalize(rand);
 
 
-	sc.x += dx * rand.z;
-    sc.y += dy * rand.y;
-	vec2 dirA = rand.xy;
-	vec2 dirB = vec2(-dirA.y,dirA.x);
+	//sc.x += dx * rand.z;
+    //sc.y += dy * rand.y;
+	vec2 dirA = normalize(rand.xy);
+	vec2 dirB = normalize(vec2(-dirA.y,dirA.x));
 	
 	dirA *= dx;
 	dirB *= dy;
@@ -86,11 +87,12 @@ float filterPCF(vec4 sc)
 	{
 		for (int y = -range; y <= range; y++)
 		{
-			shadowFactor += textureProj(sc, vec2(dx*x, dy*y));
+			shadowFactor += textureProj(sc,dirA*x + dirB*y);
 			count++;
 		}	
 	}
 	return shadowFactor / count;
+
 }
 
 void main() 

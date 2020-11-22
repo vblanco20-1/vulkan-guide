@@ -113,7 +113,7 @@ void VulkanEngine::init()
 
 	_mainLight.lightPosition = { 0,0,0 };
 	_mainLight.lightDirection = glm::vec3(0.3, -1, 0.3);
-	_mainLight.shadowExtent = { 100 ,100 ,100 };
+	_mainLight.shadowExtent = { 30 ,30 ,100 };
 }
 void VulkanEngine::cleanup()
 {
@@ -872,8 +872,10 @@ void VulkanEngine::init_swapchain()
 	
 	vkCreateSampler(_device, &samplerInfo, nullptr, &_smoothSampler);
 
-	VkSamplerCreateInfo shadsamplerInfo = vkinit::sampler_create_info(VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER);
+	VkSamplerCreateInfo shadsamplerInfo = vkinit::sampler_create_info(VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER);
 	shadsamplerInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+	shadsamplerInfo.compareEnable = true;
+	shadsamplerInfo.compareOp = VK_COMPARE_OP_LESS;
 	vkCreateSampler(_device, &shadsamplerInfo, nullptr, &_shadowSampler);
 
 
