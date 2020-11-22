@@ -149,6 +149,7 @@ struct GPUSceneData {
 	glm::vec4 ambientColor;
 	glm::vec4 sunlightDirection; //w for sun power
 	glm::vec4 sunlightColor;
+	glm::mat4 sunlightShadowMatrix;
 };
 
 struct GPUObjectData {
@@ -200,14 +201,32 @@ struct /*alignas(16)*/DrawCullData
 	int cullingEnabled;
 	int lodEnabled;
 	int occlusionEnabled;
+	int distanceCheck;
 };
 
 struct EngineConfig {
 	float drawDistance{5000};
+	float shadowBias{ 1.25f };
+	float shadowBiasslope{ 2.75f };
 	bool occlusionCullGPU{ true };
-	bool frustrumCullCPU { true };
+	bool frustrumCullCPU{ true };
 };
 
+struct DirectionalLight {
+	glm::vec3 lightPosition;
+	glm::vec3 lightDirection;
+	glm::vec3 shadowExtent;
+	glm::mat4 get_projection();
+
+	glm::mat4 get_view();
+};
+struct CullParams {
+	glm::mat4 viewmat;
+	glm::mat4 projmat;
+	bool occlusionCull;
+	bool frustrumCull;
+	float drawDist;
+};
 constexpr unsigned int FRAME_OVERLAP = 2;
 const int MAX_OBJECTS = 150000;
 class VulkanEngine {
@@ -259,9 +278,10 @@ public:
 	
 	AllocatedImage _depthImage;
 	AllocatedImage _depthPyramid;
-
+	VkSampler _shadowSampler;
 	AllocatedImage _shadowImage;
-	VkExtent2D _shadowExtent{1024,1024};
+	//VkExtent2D _shadowExtent{1024,1024};
+	VkExtent2D _shadowExtent{ 1024*4,1024*4 };
 	int depthPyramidWidth ;
 	int depthPyramidHeight;
 	int depthPyramidLevels;
@@ -281,6 +301,7 @@ public:
 	UploadContext _uploadContext;
 
 	PlayerCamera _camera;
+	DirectionalLight _mainLight;
 
 	VkPipeline _cullPipeline;
 	VkPipelineLayout _cullLayout;
@@ -354,7 +375,7 @@ public:
 
 	glm::mat4 get_projection_matrix(bool bReverse = true);
 
-	void execute_compute_cull(VkCommandBuffer cmd, RenderScene::MeshPass& pass);
+	void execute_compute_cull(VkCommandBuffer cmd, RenderScene::MeshPass& pass,CullParams& params);
 
 	AllocatedBufferUntyped create_buffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage, VkMemoryPropertyFlags required_flags = 0);
 

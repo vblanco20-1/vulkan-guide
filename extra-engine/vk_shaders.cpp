@@ -185,13 +185,28 @@ void ShaderEffect::reflect_layout(VulkanEngine* engine, ReflectionOverrides* ove
 
 		ly.create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
 
+		std::unordered_map<int,VkDescriptorSetLayoutBinding> binds;
 		for (auto& s : set_layouts) {
 			if (s.set_number == i) {
 				for (auto& b : s.bindings)
 				{
-					ly.bindings.push_back(b);
+					auto it = binds.find(b.binding);
+					if (it == binds.end())
+					{
+						binds[b.binding] = b;
+						//ly.bindings.push_back(b);
+					}
+					else {
+						//merge flags
+						binds[b.binding].stageFlags |= b.stageFlags;
+					}
+					
 				}
 			}
+		}
+		for (auto [k, v] : binds)
+		{
+			ly.bindings.push_back(v);
 		}
 		//sort the bindings, for hash purposes
 		std::sort(ly.bindings.begin(), ly.bindings.end(), [](VkDescriptorSetLayoutBinding& a, VkDescriptorSetLayoutBinding& b) {			

@@ -20,20 +20,20 @@ glm::vec4 normalizePlane(glm::vec4 p)
 }
 
 
-void VulkanEngine::execute_compute_cull(VkCommandBuffer cmd, RenderScene::MeshPass& pass)
+void VulkanEngine::execute_compute_cull(VkCommandBuffer cmd, RenderScene::MeshPass& pass,CullParams& params )
 {
 	if (pass.batches.size() == 0) return;
 	TracyVkZone(_graphicsQueueContext, cmd, "Cull Dispatch");
-	VkDescriptorBufferInfo objectBufferInfo = _renderScene.objectDataBuffer.get_info();//get_current_frame().objectBuffer.get_info();	
+	VkDescriptorBufferInfo objectBufferInfo = _renderScene.objectDataBuffer.get_info();
 
 	VkDescriptorBufferInfo dynamicInfo = get_current_frame().dynamicDataBuffer.get_info();
 	dynamicInfo.range = sizeof(GPUCameraData);
 
-	VkDescriptorBufferInfo instanceInfo = pass.instanceBuffer.get_info(); //get_current_frame().instanceBuffer.get_info();
+	VkDescriptorBufferInfo instanceInfo = pass.instanceBuffer.get_info();
 
 	VkDescriptorBufferInfo finalInfo = pass.compactedInstanceBuffer.get_info();
 
-	VkDescriptorBufferInfo indirectInfo = pass.drawIndirectBuffer.get_info();//get_current_frame().indirectBuffer.get_info();	
+	VkDescriptorBufferInfo indirectInfo = pass.drawIndirectBuffer.get_info();
 
 	VkDescriptorImageInfo depthPyramid;
 	depthPyramid.sampler = _depthSampler;
@@ -52,7 +52,7 @@ void VulkanEngine::execute_compute_cull(VkCommandBuffer cmd, RenderScene::MeshPa
 		.build(COMPObjectDataSet);
 
 
-	glm::mat4 projection = get_projection_matrix(true);
+	glm::mat4 projection = params.projmat;//get_projection_matrix(true);
 	glm::mat4 projectionT = transpose(projection);
 
 	glm::vec4 frustumX = normalizePlane(projectionT[3] + projectionT[0]); // x + w < 0
@@ -62,20 +62,25 @@ void VulkanEngine::execute_compute_cull(VkCommandBuffer cmd, RenderScene::MeshPa
 	cullData.P00 = projection[0][0];
 	cullData.P11 = projection[1][1];
 	cullData.znear = 0.1f;
-	cullData.zfar = _config.drawDistance;
+	cullData.zfar = params.drawDist;
 	cullData.frustum[0] = frustumX.x;
 	cullData.frustum[1] = frustumX.z;
 	cullData.frustum[2] = frustumY.y;
 	cullData.frustum[3] = frustumY.z;
 	cullData.drawCount = pass.flat_batches.size();
-	cullData.cullingEnabled = true;
+	cullData.cullingEnabled = params.frustrumCull;
 	cullData.lodEnabled = false;
-	cullData.occlusionEnabled = true;
+	cullData.occlusionEnabled = params.occlusionCull;
 	cullData.lodBase = 10.f;
 	cullData.lodStep = 1.5f;
 	cullData.pyramidWidth = depthPyramidWidth;
 	cullData.pyramidHeight = depthPyramidHeight;
-	cullData.viewMat = get_view_matrix();
+	cullData.viewMat = params.viewmat;//get_view_matrix();
+	if (params.drawDist > 10000)
+	{cullData.distanceCheck = false; }
+	else{
+		cullData.distanceCheck = true;
+	}
 
 	//copy from the cleared indirect buffer into the one we will use on rendering. This one happens every frame
 	VkBufferCopy indirectCopy;
@@ -102,7 +107,7 @@ void VulkanEngine::execute_compute_cull(VkCommandBuffer cmd, RenderScene::MeshPa
 	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, _cullLayout, 0, 1, &COMPObjectDataSet, 0, nullptr);
 
 	
-	vkCmdDispatch(cmd, pass.flat_batches.size() / 256, 1, 1);
+	vkCmdDispatch(cmd, (pass.flat_batches.size() / 256)+1, 1, 1);
 
 
 	//barrier the 2 buffers we just wrote for culling, the indirect draw one, and the instances one, so that they can be read well when rendering the pass
@@ -318,17 +323,25 @@ void VulkanEngine::draw_objects_forward(VkCommandBuffer cmd, RenderScene::MeshPa
 	camData.view = view;
 	camData.viewproj = projection * view;
 
+	const glm::mat4 biasMat = glm::mat4(
+		0.5, 0.0, 0.0, 0.0,
+		0.0, 0.5, 0.0, 0.0,
+		0.0, 0.0, 1.0, 0.0,
+		0.5, 0.5, 0.0, 1.0);
 
 	glm::mat4 cullpro = glm::perspective(glm::radians(70.f), 1700.f / 900.f, 0.1f, _config.drawDistance);
 	cullpro[1][1] *= -1;
+	
+	
 
+	_sceneParameters.sunlightShadowMatrix = biasMat * _mainLight.get_projection() * _mainLight.get_view();
 
 	Frustum view_frustrum{ cullpro * view };
 
 	float framed = (_frameNumber / 120.f);
 	_sceneParameters.ambientColor = glm::vec4{ 0.5 };
 	_sceneParameters.sunlightColor = glm::vec4{ 1.f };
-	_sceneParameters.sunlightDirection = glm::vec4{ 0.5f, -1.f, 0.2f,1.f };
+	_sceneParameters.sunlightDirection = glm::vec4(_mainLight.lightDirection * -1.f,1.f);
 
 	//push data to dynmem
 	uint32_t camera_data_offsets[3];
@@ -364,10 +377,17 @@ void VulkanEngine::draw_objects_forward(VkCommandBuffer cmd, RenderScene::MeshPa
 	VkDescriptorBufferInfo instanceInfo = pass.compactedInstanceBuffer.get_info();
 
 
+	VkDescriptorImageInfo shadowImage;
+	shadowImage.sampler = _shadowSampler;
+
+	shadowImage.imageView = _shadowImage._defaultView;
+	shadowImage.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
 	VkDescriptorSet GlobalSet;
 	vkutil::DescriptorBuilder::begin(_descriptorLayoutCache, get_current_frame().dynamicDescriptorAllocator)
 		.bind_buffer(0, &dynamicInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_VERTEX_BIT)
-		.bind_buffer(1, &dynamicInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_FRAGMENT_BIT)
+		.bind_buffer(1, &dynamicInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_VERTEX_BIT| VK_SHADER_STAGE_FRAGMENT_BIT)
+		.bind_image(2, &shadowImage, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
 		.build(GlobalSet);
 
 	VkDescriptorSet ObjectDataSet;
@@ -467,23 +487,17 @@ void VulkanEngine::draw_objects_forward(VkCommandBuffer cmd, RenderScene::MeshPa
 void VulkanEngine::draw_objects_shadow(VkCommandBuffer cmd, RenderScene::MeshPass& pass)
 {
 	ZoneScopedNC("DrawObjects", tracy::Color::Blue);
-	//make a model view matrix for rendering the object
-	//camera view
-	glm::mat4 view = get_view_matrix();
+	
+	glm::mat4 view = _mainLight.get_view();
 
-	//camera projection
-	glm::mat4 projection = get_projection_matrix();
+	glm::mat4 projection = _mainLight.get_projection();
 
 	GPUCameraData camData;
 	camData.proj = projection;
 	camData.view = view;
 	camData.viewproj = projection * view;
-
-	glm::mat4 cullpro = glm::perspective(glm::radians(70.f), 1700.f / 900.f, 0.1f, _config.drawDistance);
-	cullpro[1][1] *= -1;
-
-
-	Frustum view_frustrum{ cullpro * view };
+	
+	//Frustum view_frustrum{ cullpro * view };
 
 	//push data to dynmem
 	uint32_t camera_data_offsets[3];
@@ -547,7 +561,7 @@ void VulkanEngine::draw_objects_shadow(VkCommandBuffer cmd, RenderScene::MeshPas
 		{
 			auto& instanceDraw = pass.batches[i];
 			//cull the whole batch
-			if (!view_frustrum.IsBoxVisible(instanceDraw.AABBMin, instanceDraw.AABBMax)) continue;
+			//if (!view_frustrum.IsBoxVisible(instanceDraw.AABBMin, instanceDraw.AABBMax)) continue;
 
 			Material* drawMat = _renderScene.get_material(instanceDraw.material);
 			Mesh* drawMesh = _renderScene.get_mesh(instanceDraw.meshID).original;
@@ -559,12 +573,13 @@ void VulkanEngine::draw_objects_shadow(VkCommandBuffer cmd, RenderScene::MeshPas
 				if (lastMaterial == nullptr || lastMaterial->shadowPipeline != drawMat->shadowPipeline) {
 
 					vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, drawMat->shadowPipeline);
-
+					
+					vkCmdSetDepthBias(cmd, _config.shadowBias, 0, _config.shadowBiasslope);
 					vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, newEffect->builtLayout, 1, 1, &ObjectDataSet, 0, nullptr);
 
 					//update dynamic binds
 					uint32_t dynamicBinds[] = { camera_data_offsets[0],scene_data_offset };
-					vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, newEffect->builtLayout, 0, 1, &GlobalSet, 2, dynamicBinds);
+					vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, newEffect->builtLayout, 0, 1, &GlobalSet, 1, dynamicBinds);
 				}
 
 				lastMaterial = drawMat;

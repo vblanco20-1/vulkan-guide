@@ -28,7 +28,7 @@
 #include "Tracy.hpp"
 #include "TracyVulkan.hpp"
 
-constexpr bool bUseValidationLayers = true;
+constexpr bool bUseValidationLayers = false;
 
 //we want to immediately abort when there is an error. In normal engines this would give an error message to the user, or perform a dump of state.
 using namespace std;
@@ -110,6 +110,10 @@ void VulkanEngine::init()
 
 	_camera = {};
 	_camera.position = { 0.f,6.f,5.f };
+
+	_mainLight.lightPosition = { 0,0,0 };
+	_mainLight.lightDirection = glm::vec3(0.3, -1, 0.3);
+	_mainLight.shadowExtent = { 100 ,100 ,40 };
 }
 void VulkanEngine::cleanup()
 {
@@ -186,12 +190,28 @@ void VulkanEngine::draw()
 		TracyVkZone(_graphicsQueueContext, get_current_frame()._mainCommandBuffer, "All Frame");
 
 		ready_mesh_draw(cmd);
+		CullParams forwardCull;
+		forwardCull.projmat = get_projection_matrix(true);
+		forwardCull.viewmat = get_view_matrix();
+		forwardCull.frustrumCull = true;
+		forwardCull.occlusionCull = true;
+		forwardCull.drawDist = _config.drawDistance;
+		execute_compute_cull(cmd, _renderScene._forwardPass, forwardCull);
 
-		execute_compute_cull(cmd, _renderScene._forwardPass);
-		execute_compute_cull(cmd, _renderScene._shadowPass);
+		glm::vec3 extent = _mainLight.shadowExtent * 10.f;
+		glm::mat4 projection = glm::orthoLH_ZO(-extent.x, extent.x, -extent.y, extent.y, -extent.z, extent.z);
+		
+		CullParams shadowCull;
+		shadowCull.projmat = _mainLight.get_projection();
+		shadowCull.viewmat = _mainLight.get_view();
+		shadowCull.frustrumCull = false;
+		shadowCull.occlusionCull = false;
+		shadowCull.drawDist = 9999999;
+		execute_compute_cull(cmd, _renderScene._shadowPass, shadowCull);
 
-		forward_pass(clearValue, cmd);
 		shadow_pass(cmd);
+		forward_pass(clearValue, cmd);
+		
 
 		reduce_depth(cmd);
 
@@ -280,7 +300,7 @@ void VulkanEngine::forward_pass(VkClearValue clearValue, VkCommandBuffer cmd)
 
 	vkCmdSetViewport(cmd, 0, 1, &viewport);
 	vkCmdSetScissor(cmd, 0, 1, &scissor);
-
+	vkCmdSetDepthBias(cmd, 0, 0, 0);
 
 
 	stats.drawcalls = 0;
@@ -334,7 +354,7 @@ void VulkanEngine::shadow_pass(VkCommandBuffer cmd)
 
 	vkCmdSetViewport(cmd, 0, 1, &viewport);
 	vkCmdSetScissor(cmd, 0, 1, &scissor);
-
+	
 
 
 	stats.drawcalls = 0;
@@ -376,7 +396,7 @@ void VulkanEngine::copy_render_to_swapchain(uint32_t swapchainImageIndex, VkComm
 	vkCmdSetViewport(cmd, 0, 1, &viewport);
 	vkCmdSetScissor(cmd, 0, 1, &scissor);
 
-
+	vkCmdSetDepthBias(cmd, 0, 0, 0);
 
 	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _blitPipeline);
 
@@ -467,6 +487,9 @@ void VulkanEngine::run()
 			ImGui::Text("Triangles: %d", stats.triangles);
 
 			ImGui::InputFloat("Draw Distance", &_config.drawDistance);
+
+			ImGui::InputFloat("Shadow Bias", &_config.shadowBias);
+			ImGui::InputFloat("Shadow Bias slope", &_config.shadowBiasslope);
 
 			ImGui::End();
 		}
@@ -576,6 +599,10 @@ void VulkanEngine::update_camera(float deltaSeconds)
 	_camera.velocity *= 10 * deltaSeconds;
 
 	_camera.position += _camera.velocity;
+
+	
+
+	_mainLight.lightPosition = _camera.position;
 }
 
 void VulkanEngine::init_vulkan()
@@ -844,6 +871,11 @@ void VulkanEngine::init_swapchain()
 	samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
 	
 	vkCreateSampler(_device, &samplerInfo, nullptr, &_smoothSampler);
+
+	VkSamplerCreateInfo shadsamplerInfo = vkinit::sampler_create_info(VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER);
+	shadsamplerInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+	vkCreateSampler(_device, &shadsamplerInfo, nullptr, &_shadowSampler);
+
 
 	//add to deletion queues
 	_mainDeletionQueue.push_function([=]() {
@@ -1170,7 +1202,7 @@ void VulkanEngine::init_pipelines()
 
 	//shadow effect is same as triangle but without pixel shader
 	ShaderEffect* shadowEffect = new ShaderEffect();
-	shadowEffect->add_stage(_shaderCache.get_shader(shader_path("tri_mesh_ssbo_instanced.vert.spv")), VK_SHADER_STAGE_VERTEX_BIT);
+	shadowEffect->add_stage(_shaderCache.get_shader(shader_path("tri_mesh_ssbo_instanced_shadowcast.vert.spv")), VK_SHADER_STAGE_VERTEX_BIT);
 
 	shadowEffect->reflect_layout(this, overrides, 2);
 
@@ -1279,7 +1311,8 @@ void VulkanEngine::fill_shadow_pipeline(PipelineBuilder& pipelineBuilder)
 
 	//configure the rasterizer to draw filled triangles
 	pipelineBuilder._rasterizer = vkinit::rasterization_state_create_info(VK_POLYGON_MODE_FILL);
-
+	pipelineBuilder._rasterizer.cullMode = VK_CULL_MODE_FRONT_BIT;
+	pipelineBuilder._rasterizer.depthBiasEnable = VK_TRUE;
 	//we dont use multisampling, so just run the default one
 	pipelineBuilder._multisampling = vkinit::multisampling_state_create_info();
 
@@ -1287,7 +1320,7 @@ void VulkanEngine::fill_shadow_pipeline(PipelineBuilder& pipelineBuilder)
 	pipelineBuilder._colorBlendAttachment = vkinit::color_blend_attachment_state();
 
 	//default depthtesting
-	pipelineBuilder._depthStencil = vkinit::depth_stencil_create_info(true, true, VK_COMPARE_OP_GREATER_OR_EQUAL);
+	pipelineBuilder._depthStencil = vkinit::depth_stencil_create_info(true, true, VK_COMPARE_OP_LESS);
 }
 
 bool VulkanEngine::load_compute_shader(const char* shaderPath, VkPipeline& pipeline, VkPipelineLayout& layout)
@@ -1397,7 +1430,7 @@ VkPipeline PipelineBuilder::build_pipeline(VkDevice device, VkRenderPass pass)
 	std::vector<VkDynamicState> dynamicStates;
 	dynamicStates.push_back(VK_DYNAMIC_STATE_VIEWPORT);
 	dynamicStates.push_back(VK_DYNAMIC_STATE_SCISSOR);
-		
+	dynamicStates.push_back(VK_DYNAMIC_STATE_DEPTH_BIAS);
 	dynamicState.pDynamicStates = dynamicStates.data();
 	dynamicState.dynamicStateCount = dynamicStates.size();
 
@@ -1671,21 +1704,21 @@ void VulkanEngine::init_scene()
 		}
 	}
 
-	glm::mat4 sponzaMatrix = glm::scale(glm::mat4{ 1.0 }, glm::vec3(0.1, 0.1, 0.1));;
+	glm::mat4 sponzaMatrix = glm::scale(glm::mat4{ 1.0 }, glm::vec3(0.01, 0.01, 0.01));;
 
-	//load_prefab(asset_path("Sponza/Sponza.pfb").c_str(), sponzaMatrix);
-	int dimcities = 2;
-	for (int x = -dimcities; x <= dimcities; x++) {
-		for (int y = -dimcities; y <= dimcities; y++) {
-
-			glm::mat4 translation = glm::translate(glm::mat4{ 1.0 }, glm::vec3(x * 300, y, y * 300));
-			glm::mat4 scale = glm::scale(glm::mat4{ 1.0 }, glm::vec3(10));
-
-			glm::mat4 rotationMat = glm::rotate(glm::radians(-90.f), glm::vec3{ 1,0,0 });
-			glm::mat4 cityMatrix = translation * rotationMat * glm::scale(glm::mat4{ 1.0 }, glm::vec3(.01));
-			load_prefab(asset_path("PolyCity/PolyCity.pfb").c_str(), cityMatrix);
-		}
-	}
+	load_prefab(asset_path("Sponza/Sponza.pfb").c_str(), sponzaMatrix);
+	//int dimcities = 2;
+	//for (int x = -dimcities; x <= dimcities; x++) {
+	//	for (int y = -dimcities; y <= dimcities; y++) {
+	//
+	//		glm::mat4 translation = glm::translate(glm::mat4{ 1.0 }, glm::vec3(x * 300, y, y * 300));
+	//		glm::mat4 scale = glm::scale(glm::mat4{ 1.0 }, glm::vec3(10));
+	//
+	//		glm::mat4 rotationMat = glm::rotate(glm::radians(-90.f), glm::vec3{ 1,0,0 });
+	//		glm::mat4 cityMatrix = translation * rotationMat * glm::scale(glm::mat4{ 1.0 }, glm::vec3(.01));
+	//		load_prefab(asset_path("PolyCity/PolyCity.pfb").c_str(), cityMatrix);
+	//	}
+	//}
 	
 
 	//for (int x = -20; x <= 20; x++) {
@@ -2207,3 +2240,18 @@ glm::mat4 PlayerCamera::get_rotation_matrix()
 }
 
 
+glm::mat4 DirectionalLight::get_projection()
+{
+	glm::mat4 projection = glm::orthoLH_ZO(-shadowExtent.x, shadowExtent.x, -shadowExtent.y, shadowExtent.y, -shadowExtent.z, shadowExtent.z);
+	return projection;
+}
+
+glm::mat4 DirectionalLight::get_view()
+{
+	glm::vec3 camPos = lightPosition;
+
+	glm::vec3 camFwd = lightDirection;
+
+	glm::mat4 view = glm::lookAt(camPos, camPos + camFwd, glm::vec3(1, 0, 0));
+	return view;
+}
