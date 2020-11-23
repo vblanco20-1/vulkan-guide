@@ -202,6 +202,14 @@ struct /*alignas(16)*/DrawCullData
 	int lodEnabled;
 	int occlusionEnabled;
 	int distanceCheck;
+	int AABBcheck;
+	float aabbmin_x;
+	float aabbmin_y;
+	float aabbmin_z;
+	float aabbmax_x;
+	float aabbmax_y;
+	float aabbmax_z;
+	
 };
 
 struct EngineConfig {
@@ -226,6 +234,9 @@ struct CullParams {
 	bool occlusionCull;
 	bool frustrumCull;
 	float drawDist;
+	bool aabb;
+	glm::vec3 aabbmin;
+	glm::vec3 aabbmax;
 };
 constexpr unsigned int FRAME_OVERLAP = 2;
 const int MAX_OBJECTS = 150000;

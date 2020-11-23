@@ -22,8 +22,14 @@ struct DrawCullData
 	int cullingEnabled;
 	int lodEnabled;
 	int occlusionEnabled;
-int distCull;
-
+	int distCull;
+	int AABBcheck;
+	float aabbmin_x;
+	float aabbmin_y;
+	float aabbmin_z;
+	float aabbmax_x;
+	float aabbmax_y;
+	float aabbmax_z;
 
 };
 
@@ -151,18 +157,46 @@ bool IsVisible(uint objectIndex)
 
 	return visible;
 }
+bool IsVisibleAABB(uint objectIndex)
+{
+	uint index = objectIndex;
 
+	vec4 sphereBounds = objectBuffer.objects[index].spherebounds;
+
+	vec3 center = sphereBounds.xyz;
+	//center = (cullData.view * vec4(center,1.f)).xyz;
+	float radius = sphereBounds.w;
+	
+	bool visible = true;
+
+	vec3 aabbmin = vec3(cullData.aabbmin_x,cullData.aabbmin_y,cullData.aabbmin_z) + vec3(radius);
+	vec3 aabbmax = vec3(cullData.aabbmax_x,cullData.aabbmax_y,cullData.aabbmax_z) - vec3(radius);
+
+	visible =visible&& (center.x > aabbmin.x) && (center.x < aabbmax.x);
+	visible =visible&& (center.y > aabbmin.y) && (center.y < aabbmax.y);
+	visible =visible&& (center.z > aabbmin.z) && (center.z < aabbmax.z);
+
+	return visible;
+}
 void main() 
 {		
 	uint gID = gl_GlobalInvocationID.x;
 	if(gID < cullData.drawCount)
 	{
 		uint objectID = compactInstanceBuffer.Instances[gID].objectID;
-		uint batchIndex = compactInstanceBuffer.Instances[gID].batchID;
-
-		bool visible = IsVisible(objectID);
+		bool visible = false;
+		if(cullData.AABBcheck == 0)
+		{
+			visible = IsVisible(objectID);
+		}
+		else{
+			visible = IsVisibleAABB(objectID);
+		}
+		
+		
 		if(visible)
 		{
+			uint batchIndex = compactInstanceBuffer.Instances[gID].batchID;
 			uint countIndex = atomicAdd(drawBuffer.Draws[batchIndex].instanceCount,1);
 
 			uint instanceIndex = drawBuffer.Draws[batchIndex].firstInstance + countIndex;

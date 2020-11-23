@@ -52,7 +52,7 @@ void VulkanEngine::execute_compute_cull(VkCommandBuffer cmd, RenderScene::MeshPa
 		.build(COMPObjectDataSet);
 
 
-	glm::mat4 projection = params.projmat;//get_projection_matrix(true);
+	glm::mat4 projection = params.projmat;
 	glm::mat4 projectionT = transpose(projection);
 
 	glm::vec4 frustumX = normalizePlane(projectionT[3] + projectionT[0]); // x + w < 0
@@ -76,6 +76,16 @@ void VulkanEngine::execute_compute_cull(VkCommandBuffer cmd, RenderScene::MeshPa
 	cullData.pyramidWidth = depthPyramidWidth;
 	cullData.pyramidHeight = depthPyramidHeight;
 	cullData.viewMat = params.viewmat;//get_view_matrix();
+
+	cullData.AABBcheck = params.aabb;
+	cullData.aabbmin_x = params.aabbmin.x;
+	cullData.aabbmin_y = params.aabbmin.y;
+	cullData.aabbmin_z = params.aabbmin.z;
+
+	cullData.aabbmax_x = params.aabbmax.x;
+	cullData.aabbmax_y = params.aabbmax.y;
+	cullData.aabbmax_z = params.aabbmax.z;
+
 	if (params.drawDist > 10000)
 	{cullData.distanceCheck = false; }
 	else{

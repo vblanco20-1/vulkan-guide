@@ -196,6 +196,7 @@ void VulkanEngine::draw()
 		forwardCull.frustrumCull = true;
 		forwardCull.occlusionCull = true;
 		forwardCull.drawDist = _config.drawDistance;
+		forwardCull.aabb = false;
 		execute_compute_cull(cmd, _renderScene._forwardPass, forwardCull);
 
 		glm::vec3 extent = _mainLight.shadowExtent * 10.f;
@@ -204,9 +205,16 @@ void VulkanEngine::draw()
 		CullParams shadowCull;
 		shadowCull.projmat = _mainLight.get_projection();
 		shadowCull.viewmat = _mainLight.get_view();
-		shadowCull.frustrumCull = false;
+		shadowCull.frustrumCull = true;
 		shadowCull.occlusionCull = false;
 		shadowCull.drawDist = 9999999;
+		shadowCull.aabb = true;
+
+		glm::vec3 aabbcenter = _mainLight.lightDirection;
+		glm::vec3 aabbextent = _mainLight.shadowExtent * 1.5f;
+		shadowCull.aabbmax = aabbcenter + aabbextent;
+		shadowCull.aabbmin = aabbcenter - aabbextent;
+
 		execute_compute_cull(cmd, _renderScene._shadowPass, shadowCull);
 
 		shadow_pass(cmd);

@@ -43,4 +43,5 @@ endforeach(GLSL)
 add_custom_target(
     Shaders 
     DEPENDS ${SPIRV_BINARY_FILES}
+	SOURCES ${GLSL_SOURCE_FILES}
     )
