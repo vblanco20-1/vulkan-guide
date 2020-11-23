@@ -210,7 +210,7 @@ void VulkanEngine::draw()
 		shadowCull.drawDist = 9999999;
 		shadowCull.aabb = true;
 
-		glm::vec3 aabbcenter = _mainLight.lightDirection;
+		glm::vec3 aabbcenter = _mainLight.lightPosition;
 		glm::vec3 aabbextent = _mainLight.shadowExtent * 1.5f;
 		shadowCull.aabbmax = aabbcenter + aabbextent;
 		shadowCull.aabbmin = aabbcenter - aabbextent;

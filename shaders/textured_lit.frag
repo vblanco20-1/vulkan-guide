@@ -98,10 +98,18 @@ float filterPCF(vec4 sc)
 void main() 
 {
 	vec3 color = texture(tex1,texCoord).xyz;
-	float shadow = mix(0.f,1.f , filterPCF(inShadowCoord / inShadowCoord.w));
-
-
+	
 	float lightAngle = clamp(dot(inNormal, sceneData.sunlightDirection.xyz),0.f,1.f);
+
+	float shadow = 0;
+	//only attempt shadowsample in normals that point towards light
+	if(lightAngle > 0.01)
+	{
+		shadow = mix(0.f,1.f , filterPCF(inShadowCoord / inShadowCoord.w));
+	}
+
+
+	
 	vec3 lightColor = sceneData.sunlightColor.xyz * lightAngle;
 	vec3 ambient = color * sceneData.ambientColor.xyz;
 	vec3 diffuse = lightColor * color * shadow;
