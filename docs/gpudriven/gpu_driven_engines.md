@@ -1,6 +1,7 @@
 ---
 layout: default
 title: Gpu Driven Rendering DRAFT
+parent: Gpu Driven Rendering
 nav_order: 1
 ---
 
