@@ -5,6 +5,11 @@ parent: Gpu Driven Rendering
 nav_order: 1
 ---
 
+![city]({{site.baseurl}}/diagrams/cityrender.png)
+Tutorial codebase, 125.000 objects processed and culled on main view and shadow view, 290 FPS.
+
+
+
 ## GPU Driven Rendering
 
 Over the last few years, the bleeding edge render engines have been moving more and more towards having the rendering itself calculated in gpu compute shaders.
@@ -14,11 +19,15 @@ Thanks to the apperance of MultiDrawIndirect and similar features, its now possi
 * With the GPU deciding its own work, latencies are minimized as there is no roundtrip from cpu to gpu and back.
 * Frees the CPU from a lot of work, that can now be used on other things.
 
-The result is an order of magnitude or more scene complexity and object counts. In the code that we will walk through in later chapters, based on the engine at the end of chapter 5 tutorial, we can run 250.000 "drawcalls", on Nintendo Switch, at more than 60 fps. On PC it reaches 1000 fps. We essentially have a nearly unlimited object count, with the bottleneck moved into just how many triangles are we trying to make the gpu draw.
+The result is an order of magnitude or more scene complexity and object counts. In the code that we will walk through in later chapters, based on the engine at the end of chapter 5 tutorial, we can run 250.000 "drawcalls", on Nintendo Switch, at more than 60 fps. On PC it reaches 500 fps. We essentially have a nearly unlimited object count, with the bottleneck moved into just how many triangles are we trying to make the gpu draw.
+
+![perf]({{site.baseurl}}/diagrams/indirectperf.png)
+CPU processing takes less than 0.5 miliseconds. Same view as above
+
 
 Techniques based on compute-shader-rendering have been becoming more popular in the last 5 years. Before that, they were used more on CAD type scenes.  Famously, Assassins Creed Unity and sequels use these techniques to achieve an order of magnitude more complex scenes, with Paris having an inmense amount of objects as its also rendering interiors for a lot of buildings. Frostbite engine from EA also uses these techniques to have very high geometry detail on Dragon Age Inquisition. These techniques are also the reason Rainbow Six Siege can have  thousands of dynamic rubble objects created from its destruction systems. The techniques have become very popular on the PS4 and Xbox One generation of consoles as they can get easily bottlenecked on triangle throughput, so having very accurate culling gives very great performance gains. Unreal Engine 4 and Unity do NOT use these techniques, but it looks like Unreal Engine 5 will use them.
 
-The core of the idea revolves around the use of Draw Indirect support in the graphics APIs. These techniques work on all graphics APIs, but they work best on Vulkan or DX12 because they allow better control over low level memory management and compute barriers. They also work great on the Ps4 and Xbox One consoles, and the next generation has features that leans even more into it, with features such as Mesh Shaders and raytracing.
+The core of the idea revolves around the use of Draw Indirect support in the graphics APIs. These techniques work on all graphics APIs, but they work best on Vulkan or DX12 because they allow better control over low level memory management and compute barriers. They also work great on the Ps4 and Xbox One consoles, and the next generation has features that leans even more into it, such as Mesh Shaders and raytracing.
 
 ## Draw Indirect
 
