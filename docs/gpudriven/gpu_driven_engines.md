@@ -6,7 +6,7 @@ nav_order: 1
 ---
 
 ![city]({{site.baseurl}}/diagrams/cityrender.png)
-Tutorial codebase, 125.000 objects processed and culled on main view and shadow view, 290 FPS.
+Tutorial codebase, 125.000 objects processed and culled on main view and shadow view, 290 FPS. This view renders more than 40 million triangles due to the 2 mesh passes.
 
 
 
