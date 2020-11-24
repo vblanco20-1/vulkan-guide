@@ -33,6 +33,31 @@ The core of the idea revolves around the use of Draw Indirect support in the gra
 
 Draw indirect is a drawcall that takes its parameters from a GPU buffer instead of from the call itself. When using draw indirect, you just start the draw based on a position on a gpu buffer, and then the GPU will execute the draw command in that buffer. 
 
+Pseudocode:
+
+```cpp
+
+//normal drawing ---------------
+vkCmdDrawIndexed(cmd, object.indexCount, 1 /* instance count */,object.firstIndex, object.vertexOffset, object.ID /* firstInstance */ );
+
+//indirect drawing ---------------
+
+Buffer* drawBuffer = create_buffer(sizeof(VkDrawIndexedIndirectCommand));
+
+//we can inmediately enqueue the draw indirect
+vkCmdDrawIndexedIndirect(cmd, drawBuffer.buffer, 0 /* offset */, 1 /* drawCount */, sizeof(VkDrawIndexedIndirectCommand));
+
+
+//we can write the actual draw command at any time we want before VkQueueSubmit(), or from a different thread, or from a compute shader
+VkDrawIndexedIndirectCommand* command = map_buffer(drawBuffer);
+
+command->indexCount = object.indexCount;
+command->instanceCount = 1;
+command->firstIndex = object.firstIndex ;
+command->vertexOffset = object.vertexOffset;
+command->firstInstance = object.ID;
+```
+
 Because it takes its parameters from a buffer, its possible to use compute shaders to write into these buffers, and do culling or LOD selection in compute shaders. Doing culling this way is one of the simplest and most performant ways of doing culling. Due to the power of the GPU you can easily expect to cull more than a million objects in less than half a milisecond. Normal scenes dont tend to go as far. In more advanced pipelines like the one in Dragon Age or Rainbow Six, they go one step further and also cull individual triangles from the meshes. They do that by writing an output Index Buffer with the surviving triangles and using indirect to draw that.
 
 When you design a gpu-driven renderer, the main idea is that all of the scene should be on the GPU. In chapter 4, we saw how to store the matrices for all loaded objects into a big SSBO. On GPU driven pipelines, we also want to store more data, such as material ID and cull bounds. Once we have a renderer where everything is stored in big GPU buffers, and we dont use PushConstants or descriptor sets per object, we are ready to go with a gpu-driven-renderer. The design of the tutorial engine is one that maps well into refactoring for a extreme performance compute based engine.

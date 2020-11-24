@@ -46,7 +46,7 @@ We start with something simple, main.cpp. We do nothing here except immediately 
 
 In the future, this could be a good place to set some configuration parameters brought from the command line arguments at argc/argv or a settings file.
 
-vk_initializers.h holds this
+vk_types.h holds this
 
 ```cpp
 #pragma once
@@ -56,7 +56,7 @@ vk_initializers.h holds this
 We include the main header for Vulkan, which is the `<vulkan/vulkan.h>` you can see. That will include all the Vulkan function definitions and types that we will need for everything.
 `#pragma once` is a preprocessor directive that tells the compiler to never include this twice into the same file. It's equivalent to include guards, but cleaner.
 
-vk_initializers.h looks like this
+vk_init.h looks like this
 
 ```cpp
 #pragma once
