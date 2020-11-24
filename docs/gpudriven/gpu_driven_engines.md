@@ -82,11 +82,11 @@ The general workflow is to put stuff into buffers, and big buffers so you dont n
 
 
 ## Links 
-* Assassins Creed Unity Engine + others: https://www.advances.realtimerendering.com/s2015/aaltonenhaar_siggraph2015_combined_final_footer_220dpi.pdf 
-* Dragon Age Inquisition mesh culling: https://www.gdcvault.com/play/1023109/Optimizing-the-Graphics-Pipeline-With
-* Rainbow Six Siege engine: https://www.gdcvault.com/play/1022990/Rendering-Rainbow-Six-Siege
-* Doom Eternal engine: https://advances.realtimerendering.com/s2020/RenderingDoomEternal.pdf
-* Nvidia Advanced Scenegraph: https://on-demand.gputechconf.com/gtc/2013/presentations/S3032-Advanced-Scenegraph-Rendering-Pipeline.pdf
+* Assassins Creed Unity Engine + others: [PDF Link](https://www.advances.realtimerendering.com/s2015/aaltonenhaar_siggraph2015_combined_final_footer_220dpi.pdf ) 
+* Dragon Age Inquisition mesh culling: [GDC Link](https://www.gdcvault.com/play/1023109/Optimizing-the-Graphics-Pipeline-With)
+* Rainbow Six Siege engine: [GDC Link](https://www.gdcvault.com/play/1022990/Rendering-Rainbow-Six-Siege)
+* Doom Eternal engine: [Siggraph Link](https://advances.realtimerendering.com/s2020/RenderingDoomEternal.pdf)
+* Nvidia Advanced Scenegraph:  [PDF Link](https://on-demand.gputechconf.com/gtc/2013/presentations/S3032-Advanced-Scenegraph-Rendering-Pipeline.pdf)
 
 
 ## Overview of Vkguide engine architecture for compute rendering.
