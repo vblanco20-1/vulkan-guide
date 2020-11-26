@@ -12,7 +12,7 @@ Tutorial codebase, 125.000 objects processed and culled on main view and shadow 
 
 ## GPU Driven Rendering
 
-Over the last few years, bleeding edge render engines have been moving more and more towards calculated the rendering itself on the gpu in compute shaders.
+Over the last few years, bleeding edge render engines have been moving more and more towards calculating the rendering itself on the gpu in compute shaders.
 Thanks to the introduction of MultiDrawIndirect and similar features, it's now possible to do a very big amount of the work for the rendering inside compute shaders. The benefits are clear:
 
 * GPUs have orders of magnitude higher performance than CPU on data-parallel algorithms. Rendering is almost all data parallel algorithms.
