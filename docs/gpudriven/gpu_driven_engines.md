@@ -66,6 +66,9 @@ Due to the fact that you want to have as much things on the GPU as possible, thi
 
 ## Bindless Design
 
+![perf]({{site.baseurl}}/diagrams/novus.png)
+NovusCore Wow emulation research project. An entire continent from world of warcraft rendered in less than 10 drawcalls at 100+ FPS.
+
 GPU driven pipelines work best when the amount of binds is as limited as possible. Best case scenario is to do a extremelly minimal amount of BindVertexBuffer, BindIndexBuffer, BindPipeline, and BindDescriptorSet calls. Bindless design makes cpu side work a lot faster due to the CPU having to do much less work, and the GPU can also go faster due to it being better utilized as each drawcall is "bigger". The less drawcalls you use to render your scene, the better, as modern GPUs are really big and have a big ramp up/ramp down time. Big modern GPUs love when you give them massive amounts of work on each drawcall, as that way they can ramp up to 100% usage.
 
 To move vertex buffers/index buffers to bindless, generally you do it by merging the meshes into really big buffers. Instead of having 1 buffer per vertex buffer and index buffer pair, you have 1 buffer for all vertex buffers in a scene. When rendering, then you use BaseVertex offsets in the drawcalls.
