@@ -16,12 +16,10 @@ namespace vkutil {
 		uint32_t endTimestamp;
 		std::string name;
 	};
-	enum class StatType {
-		ClippingTriangles
-	};
+	
 	struct StatRecorder {
 		uint32_t query;
-		StatType stat;
+		
 		std::string name;
 	};
 
@@ -37,7 +35,7 @@ namespace vkutil {
 
 	class VulkanPipelineStatRecorder {
 	public:
-		VulkanPipelineStatRecorder(VkCommandBuffer commands, VulkanProfiler* pf, const char* name, StatType stat);
+		VulkanPipelineStatRecorder(VkCommandBuffer commands, VulkanProfiler* pf, const char* name);
 		~VulkanPipelineStatRecorder();
 	private:
 		VulkanProfiler* profiler;

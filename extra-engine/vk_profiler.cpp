@@ -24,7 +24,7 @@ namespace vkutil {
 		queryPoolInfo.queryType = VK_QUERY_TYPE_PIPELINE_STATISTICS;
 		for (int i = 0; i < QUERY_FRAME_OVERLAP; i++)
 		{
-			queryPoolInfo.pipelineStatistics = VK_QUERY_PIPELINE_STATISTIC_CLIPPING_PRIMITIVES_BIT;
+			queryPoolInfo.pipelineStatistics = VK_QUERY_PIPELINE_STATISTIC_CLIPPING_INVOCATIONS_BIT;
 			vkCreateQueryPool(device, &queryPoolInfo, NULL, &queryFrames[i].statPool);
 			queryFrames[i].statLast = 0;
 		}
@@ -179,11 +179,11 @@ namespace vkutil {
 		profiler->add_timer(timer);
 	}
 
-	VulkanPipelineStatRecorder::VulkanPipelineStatRecorder(VkCommandBuffer commands, VulkanProfiler* pf, const char* name, StatType stat)
+	VulkanPipelineStatRecorder::VulkanPipelineStatRecorder(VkCommandBuffer commands, VulkanProfiler* pf, const char* name)
 	{
 		cmd = commands;
 		timer.name = name;
-		timer.stat = stat;
+		
 		profiler = pf;
 		timer.query = profiler->get_stat_id();
 

@@ -419,11 +419,10 @@ void VulkanEngine::draw_objects_forward(VkCommandBuffer cmd, RenderScene::MeshPa
 		vkCmdBindIndexBuffer(cmd, _renderScene.mergedIndexBuffer._buffer, 0, VK_INDEX_TYPE_UINT32);
 
 		stats.objects = pass.flat_batches.size();
-		for (int i = 0; i < pass.batches.size(); i++)//)
+		for (int i = 0; i < pass.multibatches.size(); i++)
 		{
-			auto& instanceDraw = pass.batches[i];
-			//cull the whole batch
-			if (!view_frustrum.IsBoxVisible(instanceDraw.AABBMin, instanceDraw.AABBMax)) continue;
+			auto& multibatch = pass.multibatches[i];
+			auto& instanceDraw = pass.batches[multibatch.first];
 
 			Material* drawMat = _renderScene.get_material(instanceDraw.material);
 			Mesh* drawMesh = _renderScene.get_mesh(instanceDraw.meshID).original;
@@ -486,7 +485,7 @@ void VulkanEngine::draw_objects_forward(VkCommandBuffer cmd, RenderScene::MeshPa
 			else {
 				stats.triangles += (drawMesh->_indices.size() / 3) * instanceDraw.count;
 
-				vkCmdDrawIndexedIndirect(cmd, pass.drawIndirectBuffer._buffer, i * sizeof(GPUIndirectObject), 1, sizeof(GPUIndirectObject));
+				vkCmdDrawIndexedIndirect(cmd, pass.drawIndirectBuffer._buffer, multibatch.first * sizeof(GPUIndirectObject), multibatch.count, sizeof(GPUIndirectObject));
 
 				stats.draws++;
 				stats.drawcalls += instanceDraw.count;
@@ -568,11 +567,10 @@ void VulkanEngine::draw_objects_shadow(VkCommandBuffer cmd, RenderScene::MeshPas
 		vkCmdBindIndexBuffer(cmd, _renderScene.mergedIndexBuffer._buffer, 0, VK_INDEX_TYPE_UINT32);
 
 		stats.objects = pass.flat_batches.size();
-		for (int i = 0; i < pass.batches.size(); i++)//)
+		for (int i = 0; i < pass.multibatches.size(); i++)//)
 		{
-			auto& instanceDraw = pass.batches[i];
-			//cull the whole batch
-			//if (!view_frustrum.IsBoxVisible(instanceDraw.AABBMin, instanceDraw.AABBMax)) continue;
+			auto& multibatch = pass.multibatches[i];
+			auto& instanceDraw = pass.batches[multibatch.first];
 
 			Material* drawMat = _renderScene.get_material(instanceDraw.material);
 			Mesh* drawMesh = _renderScene.get_mesh(instanceDraw.meshID).original;
@@ -628,7 +626,7 @@ void VulkanEngine::draw_objects_shadow(VkCommandBuffer cmd, RenderScene::MeshPas
 			else {
 				stats.triangles += (drawMesh->_indices.size() / 3) * instanceDraw.count;
 
-				vkCmdDrawIndexedIndirect(cmd, pass.drawIndirectBuffer._buffer, i * sizeof(GPUIndirectObject), 1, sizeof(GPUIndirectObject));
+				vkCmdDrawIndexedIndirect(cmd, pass.drawIndirectBuffer._buffer, multibatch.first * sizeof(GPUIndirectObject), multibatch.count, sizeof(GPUIndirectObject));
 
 				stats.draws++;
 				stats.drawcalls += instanceDraw.count;

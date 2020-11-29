@@ -31,6 +31,15 @@ struct GPUIndirectObject {
 	uint32_t batchID;
 };
 
+struct DrawMesh {
+	uint32_t firstVertex;
+	uint32_t firstIndex;
+	uint32_t indexCount;
+	uint32_t vertexCount;
+	bool isMerged;
+
+	Mesh* original;
+};
 
 enum class PassTypeFlags : uint8_t {
 	None = 0,
@@ -41,7 +50,7 @@ enum class PassTypeFlags : uint8_t {
 
 struct RenderObject {
 
-	Handle<Mesh> meshID;
+	Handle<DrawMesh> meshID;
 	Handle<Material> material;
 
 	uint32_t updateIndex;
@@ -61,7 +70,7 @@ struct GPUInstance {
 class RenderScene {
 public:
 	struct IndirectBatch {
-		Handle<Mesh> meshID;
+		Handle<DrawMesh> meshID;
 		Handle<Material> material;
 
 		uint32_t first;
@@ -76,8 +85,14 @@ public:
 		Handle<RenderObject> object;
 		uint64_t sortKey;
 	};
-
+	struct Multibatch {
+		uint32_t first;
+		uint32_t count;
+	};
 	struct MeshPass {
+
+		std::vector<RenderScene::Multibatch> multibatches;
+
 		std::vector<RenderScene::IndirectBatch> batches;
 
 		std::vector<Handle<RenderObject>> unbatchedObjects;
@@ -97,15 +112,7 @@ public:
 		bool needsInstanceRefresh = true;
 	};
 
-	struct DrawMesh {
-		uint32_t firstVertex;
-		uint32_t firstIndex;
-		uint32_t indexCount;
-		uint32_t vertexCount;
-		bool isMerged;
-
-		Mesh* original;
-	};
+	
 
 	Handle<RenderObject> register_object(MeshObject* object, PassTypeFlags passes);
 
@@ -129,7 +136,7 @@ public:
 	void refresh_pass(MeshPass* pass);
 
 	RenderObject* get_object(Handle<RenderObject> objectID);
-	DrawMesh get_mesh(Handle<Mesh> objectID);
+	DrawMesh get_mesh(Handle<DrawMesh> objectID);
 	Material* get_material(Handle<Material> objectID);
 
 	std::vector<RenderObject> renderables;
@@ -142,10 +149,10 @@ public:
 	MeshPass _shadowPass;
 
 	std::unordered_map<Material*, Handle<Material>> materialConvert;
-	std::unordered_map<Mesh*, Handle<Mesh>> meshConvert;
+	std::unordered_map<Mesh*, Handle<DrawMesh>> meshConvert;
 
 	Handle<Material> getMaterialHandle(Material* m);
-	Handle<Mesh> getMeshHandle(Mesh* m);
+	Handle<DrawMesh> getMeshHandle(Mesh* m);
 
 	AllocatedBufferUntyped uploadBuffer[2];
 

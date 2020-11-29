@@ -298,7 +298,7 @@ void VulkanEngine::draw()
 void VulkanEngine::forward_pass(VkClearValue clearValue, VkCommandBuffer cmd)
 {
 	vkutil::VulkanScopeTimer timer(cmd, _profiler, "Forward Pass");
-	vkutil::VulkanPipelineStatRecorder timer2(cmd, _profiler, "Forward Primitives",vkutil::StatType::ClippingTriangles);
+	vkutil::VulkanPipelineStatRecorder timer2(cmd, _profiler, "Forward Primitives");
 	//clear depth at 0
 	VkClearValue depthClear;
 	depthClear.depthStencil.depth = 0.f;
@@ -356,7 +356,7 @@ void VulkanEngine::forward_pass(VkClearValue clearValue, VkCommandBuffer cmd)
 void VulkanEngine::shadow_pass(VkCommandBuffer cmd)
 {
 	vkutil::VulkanScopeTimer timer(cmd, _profiler, "Shadow Pass");
-	vkutil::VulkanPipelineStatRecorder timer2(cmd, _profiler, "Shadow Primitives", vkutil::StatType::ClippingTriangles);
+	vkutil::VulkanPipelineStatRecorder timer2(cmd, _profiler, "Shadow Primitives");
 	//clear depth at 1
 	VkClearValue depthClear;
 	depthClear.depthStencil.depth = 1.f;	

@@ -244,10 +244,38 @@ void RenderScene::refresh_pass(MeshPass* pass)
 
 				pass->batches.push_back(newBatch);
 			}
-			pass->batches.back().objects.push_back(pass->flat_batches[i].object);
-			//obj->batchIndex = pass->batches.size() - 1;
+			pass->batches.back().objects.push_back(pass->flat_batches[i].object);			
 		}
+
 		
+
+		//flatten batches into multibatch
+		Multibatch newbatch;
+		pass->multibatches.clear();
+
+		
+		newbatch.count = 1;
+		newbatch.first = 0;
+
+		for (int i = 1; i < pass->batches.size(); i++)
+		{
+			IndirectBatch* joinbatch = &pass->batches[newbatch.first];
+			IndirectBatch* batch = &pass->batches[i];
+
+			bool bSameMat = joinbatch->material.handle == batch->material.handle;
+			bool bCompatibleMesh = get_mesh(joinbatch->meshID).isMerged;
+
+			if (!bSameMat || !bCompatibleMesh)
+			{
+				pass->multibatches.push_back(newbatch);
+				newbatch.count = 1;
+				newbatch.first = i;
+			}
+			else {
+				newbatch.count++;
+			}
+		}
+		pass->multibatches.push_back(newbatch);
 	}
 }
 
@@ -256,7 +284,7 @@ RenderObject* RenderScene::get_object(Handle<RenderObject> objectID)
 	return &renderables[objectID.handle];
 }
 
-RenderScene::DrawMesh RenderScene::get_mesh(Handle<Mesh> objectID)
+DrawMesh RenderScene::get_mesh(Handle<DrawMesh> objectID)
 {
 	return meshes[objectID.handle];
 }
@@ -284,9 +312,9 @@ Handle<Material> RenderScene::getMaterialHandle(Material* m)
 	return handle;
 }
 
-Handle<Mesh> RenderScene::getMeshHandle(Mesh* m)
+Handle<DrawMesh> RenderScene::getMeshHandle(Mesh* m)
 {
-	Handle<Mesh> handle;
+	Handle<DrawMesh> handle;
 	auto it = meshConvert.find(m);
 	if (it == meshConvert.end())
 	{
