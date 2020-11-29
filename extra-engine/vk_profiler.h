@@ -16,6 +16,14 @@ namespace vkutil {
 		uint32_t endTimestamp;
 		std::string name;
 	};
+	enum class StatType {
+		ClippingTriangles
+	};
+	struct StatRecorder {
+		uint32_t query;
+		StatType stat;
+		std::string name;
+	};
 
 	class VulkanScopeTimer {
 	public:
@@ -25,6 +33,16 @@ namespace vkutil {
 		VulkanProfiler* profiler;
 		VkCommandBuffer cmd;
 		ScopeTimer timer;
+	};
+
+	class VulkanPipelineStatRecorder {
+	public:
+		VulkanPipelineStatRecorder(VkCommandBuffer commands, VulkanProfiler* pf, const char* name, StatType stat);
+		~VulkanPipelineStatRecorder();
+	private:
+		VulkanProfiler* profiler;
+		VkCommandBuffer cmd;
+		StatRecorder timer;
 	};
 
 	class VulkanProfiler {
@@ -39,12 +57,16 @@ namespace vkutil {
 
 		double get_stat(const std::string& name);
 		VkQueryPool get_timer_pool();
+		VkQueryPool get_stat_pool();
 
 		void add_timer(ScopeTimer& timer);
 
+		void add_stat(StatRecorder& timer);
 		uint32_t get_timestamp_id();
+		uint32_t get_stat_id();
 
-		std::unordered_map<std::string, double> stats;
+		std::unordered_map<std::string, double> timing;
+		std::unordered_map<std::string, int> stats;
 	private:
 
 		
@@ -53,6 +75,10 @@ namespace vkutil {
 			std::vector<ScopeTimer> frameTimers;
 			VkQueryPool timerPool;
 			uint32_t timerLast;
+
+			std::vector<StatRecorder> statRecorders;
+			VkQueryPool statPool;
+			uint32_t statLast;
 		};
 
 		static constexpr int QUERY_FRAME_OVERLAP = 3;

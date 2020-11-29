@@ -21,6 +21,13 @@ namespace vkutil {
 			vkCreateQueryPool(device, &queryPoolInfo, NULL, &queryFrames[i].timerPool);
 			queryFrames[i].timerLast = 0;
 		}
+		queryPoolInfo.queryType = VK_QUERY_TYPE_PIPELINE_STATISTICS;
+		for (int i = 0; i < QUERY_FRAME_OVERLAP; i++)
+		{
+			queryPoolInfo.pipelineStatistics = VK_QUERY_PIPELINE_STATISTIC_CLIPPING_PRIMITIVES_BIT;
+			vkCreateQueryPool(device, &queryPoolInfo, NULL, &queryFrames[i].statPool);
+			queryFrames[i].statLast = 0;
+		}
 	}
 
 
@@ -33,22 +40,47 @@ namespace vkutil {
 		queryFrames[currentFrame].timerLast = 0;
 		queryFrames[currentFrame].frameTimers.clear();
 
+		vkCmdResetQueryPool(cmd, queryFrames[currentFrame].statPool, 0, queryFrames[currentFrame].statLast);
+		queryFrames[currentFrame].statLast = 0;
+		queryFrames[currentFrame].statRecorders.clear();
+
 		QueryFrameState& state = queryFrames[frame];
 		std::vector<uint64_t> querystate;
 		querystate.resize(state.timerLast);
-		// We use vkGetQueryResults to copy the results into a host visible buffer
-		vkGetQueryPoolResults(
-			device,
-			state.timerPool,
-			0,
-			state.timerLast,
-			querystate.size() * sizeof(uint64_t),
-			querystate.data(),
-			sizeof(uint64_t),
-			// Store results a 64 bit values and wait until the results have been finished
-			// If you don't want to wait, you can use VK_QUERY_RESULT_WITH_AVAILABILITY_BIT
-			// which also returns the state of the result (ready) in the result
-			VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WAIT_BIT);
+		if (state.timerLast != 0)
+		{
+			// We use vkGetQueryResults to copy the results into a host visible buffer
+			vkGetQueryPoolResults(
+				device,
+				state.timerPool,
+				0,
+				state.timerLast,
+				querystate.size() * sizeof(uint64_t),
+				querystate.data(),
+				sizeof(uint64_t),
+				// Store results a 64 bit values and wait until the results have been finished
+				// If you don't want to wait, you can use VK_QUERY_RESULT_WITH_AVAILABILITY_BIT
+				// which also returns the state of the result (ready) in the result
+				VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WAIT_BIT);
+		}
+		std::vector<uint64_t> statresults;
+		statresults.resize(state.statLast);
+		if (state.statLast != 0)
+		{
+			// We use vkGetQueryResults to copy the results into a host visible buffer
+			vkGetQueryPoolResults(
+				device,
+				state.statPool,
+				0,
+				state.statLast,
+				statresults.size() * sizeof(uint64_t),
+				statresults.data(),
+				sizeof(uint64_t),
+				// Store results a 64 bit values and wait until the results have been finished
+				// If you don't want to wait, you can use VK_QUERY_RESULT_WITH_AVAILABILITY_BIT
+				// which also returns the state of the result (ready) in the result
+				VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WAIT_BIT);
+		}
 
 		for (auto& timer : state.frameTimers) {
 			uint64_t begin = querystate[timer.startTimestamp];
@@ -56,7 +88,13 @@ namespace vkutil {
 
 			uint64_t timestamp = end - begin;
 			//store timing queries as miliseconds
-			stats[timer.name] = (double(timestamp) * period) / 1000000.0;
+			timing[timer.name] = (double(timestamp) * period) / 1000000.0;
+		}
+		for (auto& st : state.statRecorders)
+		{
+			uint64_t result = statresults[st.query];
+
+			stats[st.name] = result;
 		}
 	}
 
@@ -71,8 +109,8 @@ namespace vkutil {
 
 	double VulkanProfiler::get_stat(const std::string& name)
 	{
-		auto it = stats.find(name);
-		if (it != stats.end())
+		auto it = timing.find(name);
+		if (it != timing.end())
 		{
 			return (*it).second;
 		}
@@ -88,15 +126,35 @@ namespace vkutil {
 		return queryFrames[currentFrame].timerPool;
 	}
 
+
+	VkQueryPool VulkanProfiler::get_stat_pool()
+	{
+		return queryFrames[currentFrame].statPool;
+	}
+
 	void VulkanProfiler::add_timer(ScopeTimer& timer)
 	{
 		queryFrames[currentFrame].frameTimers.push_back(timer);
+	}
+
+
+	void VulkanProfiler::add_stat(StatRecorder& timer)
+	{
+		queryFrames[currentFrame].statRecorders.push_back(timer);
 	}
 
 	uint32_t VulkanProfiler::get_timestamp_id()
 	{
 		uint32_t q = queryFrames[currentFrame].timerLast;
 		queryFrames[currentFrame].timerLast++;
+		return q;
+	}
+
+
+	uint32_t VulkanProfiler::get_stat_id()
+	{
+		uint32_t q = queryFrames[currentFrame].statLast;
+		queryFrames[currentFrame].statLast++;
 		return q;
 	}
 
@@ -120,4 +178,25 @@ namespace vkutil {
 
 		profiler->add_timer(timer);
 	}
+
+	VulkanPipelineStatRecorder::VulkanPipelineStatRecorder(VkCommandBuffer commands, VulkanProfiler* pf, const char* name, StatType stat)
+	{
+		cmd = commands;
+		timer.name = name;
+		timer.stat = stat;
+		profiler = pf;
+		timer.query = profiler->get_stat_id();
+
+		vkCmdBeginQuery(cmd, profiler->get_stat_pool(), timer.query,0);
+	}
+
+
+	VulkanPipelineStatRecorder::~VulkanPipelineStatRecorder()
+	{
+		VkQueryPool pool = profiler->get_stat_pool();
+		vkCmdEndQuery(cmd, pool, timer.query);
+
+		profiler->add_stat(timer);
+	}
+
 }

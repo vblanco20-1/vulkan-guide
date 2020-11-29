@@ -198,6 +198,7 @@ void VulkanEngine::draw()
 		ZoneScopedNC("Render Frame", tracy::Color::White);
 
 		vkutil::VulkanScopeTimer timer(cmd,_profiler,"All Frame");
+		
 		ready_mesh_draw(cmd);
 		CullParams forwardCull;
 		forwardCull.projmat = get_projection_matrix(true);
@@ -297,6 +298,7 @@ void VulkanEngine::draw()
 void VulkanEngine::forward_pass(VkClearValue clearValue, VkCommandBuffer cmd)
 {
 	vkutil::VulkanScopeTimer timer(cmd, _profiler, "Forward Pass");
+	vkutil::VulkanPipelineStatRecorder timer2(cmd, _profiler, "Forward Primitives",vkutil::StatType::ClippingTriangles);
 	//clear depth at 0
 	VkClearValue depthClear;
 	depthClear.depthStencil.depth = 0.f;
@@ -354,6 +356,7 @@ void VulkanEngine::forward_pass(VkClearValue clearValue, VkCommandBuffer cmd)
 void VulkanEngine::shadow_pass(VkCommandBuffer cmd)
 {
 	vkutil::VulkanScopeTimer timer(cmd, _profiler, "Shadow Pass");
+	vkutil::VulkanPipelineStatRecorder timer2(cmd, _profiler, "Shadow Primitives", vkutil::StatType::ClippingTriangles);
 	//clear depth at 1
 	VkClearValue depthClear;
 	depthClear.depthStencil.depth = 1.f;	
@@ -520,11 +523,14 @@ void VulkanEngine::run()
 
 			ImGui::Separator();
 
+			for (auto& [k, v] : _profiler->timing)
+			{
+				ImGui::Text("TIME %s %f ms",k.c_str(), v);
+			}
 			for (auto& [k, v] : _profiler->stats)
 			{
-				ImGui::Text("STAT %s %f ms",k.c_str(), v);
+				ImGui::Text("STAT %s %d", k.c_str(), v);
 			}
-
 
 
 			ImGui::End();
@@ -667,6 +673,7 @@ void VulkanEngine::init_vulkan()
 	vkb::PhysicalDeviceSelector selector{ vkb_inst };
 	VkPhysicalDeviceFeatures feats{};
 
+	feats.pipelineStatisticsQuery = true;
 	feats.multiDrawIndirect = true;
 	feats.drawIndirectFirstInstance = true;
 	feats.samplerAnisotropy = true;
@@ -676,6 +683,7 @@ void VulkanEngine::init_vulkan()
 		.set_minimum_version(1, 1)
 		.set_surface(_surface)
 		.add_required_extension(VK_EXT_SAMPLER_FILTER_MINMAX_EXTENSION_NAME)
+		
 		.select()
 		.value();
 	std::cout << "selector" << std::endl;
