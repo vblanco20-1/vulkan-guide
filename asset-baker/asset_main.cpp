@@ -595,7 +595,7 @@ void extract_gltf_nodes(tinygltf::Model& model, const fs::path& input, const fs:
 
 			if (node.rotation.size() > 0)
 			{
-				glm::quat rot( node.rotation[0],node.rotation[1],node.rotation[2],node.rotation[3] );
+				glm::quat rot( node.rotation[3],  node.rotation[0],node.rotation[1],node.rotation[2]);
 				rotation = glm::mat4{rot};
 			}
 
@@ -1009,23 +1009,24 @@ int main(int argc, char* argv[])
 				fs::create_directory(export_path.parent_path());
 			}
 
-			//if (/*p.path().extension() == ".png" || p.path().extension() == ".jpg" || */p.path().extension() == ".TGA") {
-			//	std::cout << "found a texture" << std::endl;
-			//
-			//	auto newpath = p.path();
-			//
-			//
-			//	export_path.replace_extension(".tx");
-			//
-			//	convert_image(p.path(), export_path);
-			//}
+			if (p.path().extension() == ".png" || p.path().extension() == ".jpg" || p.path().extension() == ".TGA")
+			{
+				std::cout << "found a texture" << std::endl;
+
+				auto newpath = p.path();
+
+
+				export_path.replace_extension(".tx");
+
+				convert_image(p.path(), export_path);
+			}
 			//if (p.path().extension() == ".obj") {
 			//	std::cout << "found a mesh" << std::endl;
 			//
 			//	export_path.replace_extension(".mesh");
 			//	convert_mesh(p.path(), export_path);
 			//}
-			if (false && p.path().extension() == ".gltf")
+			if (p.path().extension() == ".gltf")
 			{
 				using namespace tinygltf;
 				Model model;
@@ -1058,7 +1059,7 @@ int main(int argc, char* argv[])
 					extract_gltf_nodes(model, p.path(), folder, convstate);
 				}
 			}
-			if (p.path().extension() == ".fbx") {
+			if (false&&p.path().extension() == ".fbx") {
 				const aiScene* scene;
 				{
 					Assimp::Importer importer;
@@ -1071,9 +1072,9 @@ int main(int argc, char* argv[])
 					std::cout << "Assimp load time " << elapsed.count() << '\n';
 					auto folder = export_path.parent_path() / (p.path().stem().string() + "_GLTF");
 					fs::create_directory(folder);
-					extract_assimp_materials(scene, p.path(), folder, convstate);
-					extract_assimp_meshes(scene, p.path(), folder, convstate);
-					extract_assimp_nodes(scene, p.path(), folder, convstate);
+					//extract_assimp_materials(scene, p.path(), folder, convstate);
+					//extract_assimp_meshes(scene, p.path(), folder, convstate);
+					//extract_assimp_nodes(scene, p.path(), folder, convstate);
 
 					std::vector<aiMaterial*> materials;
 					std::vector<std::string> materialNames;

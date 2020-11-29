@@ -113,7 +113,7 @@ void VulkanEngine::init()
 
 	_mainLight.lightPosition = { 0,0,0 };
 	_mainLight.lightDirection = glm::vec3(0.3, -1, 0.3);
-	_mainLight.shadowExtent = { 30 ,30 ,100 };
+	_mainLight.shadowExtent = { 100 ,100 ,100 };
 }
 void VulkanEngine::cleanup()
 {
@@ -188,6 +188,8 @@ void VulkanEngine::draw()
 
 	{
 		TracyVkZone(_graphicsQueueContext, get_current_frame()._mainCommandBuffer, "All Frame");
+		ZoneScopedNC("Render Frame", tracy::Color::White);
+
 
 		ready_mesh_draw(cmd);
 		CullParams forwardCull;
@@ -311,10 +313,10 @@ void VulkanEngine::forward_pass(VkClearValue clearValue, VkCommandBuffer cmd)
 	vkCmdSetDepthBias(cmd, 0, 0, 0);
 
 
-	stats.drawcalls = 0;
-	stats.draws = 0;
-	stats.objects = 0;
-	stats.triangles = 0;
+	//stats.drawcalls = 0;
+	//stats.draws = 0;
+	//stats.objects = 0;
+	//stats.triangles = 0;
 
 	{
 		TracyVkZone(_graphicsQueueContext, get_current_frame()._mainCommandBuffer, "Forward Pass");
@@ -490,9 +492,9 @@ void VulkanEngine::run()
 
 			ImGui::Text("Frametimes: %f", stats.frametime);
 			ImGui::Text("Objects: %d", stats.objects);
-			ImGui::Text("Drawcalls: %d", stats.drawcalls);
-			ImGui::Text("Draws: %d", stats.draws);
-			ImGui::Text("Triangles: %d", stats.triangles);
+			//ImGui::Text("Drawcalls: %d", stats.drawcalls);
+			ImGui::Text("Batches: %d", stats.draws);
+			//ImGui::Text("Triangles: %d", stats.triangles);
 
 			ImGui::InputFloat("Draw Distance", &_config.drawDistance);
 
@@ -1299,7 +1301,7 @@ void VulkanEngine::fill_forward_pipeline(PipelineBuilder& pipelineBuilder)
 
 	//configure the rasterizer to draw filled triangles
 	pipelineBuilder._rasterizer = vkinit::rasterization_state_create_info(VK_POLYGON_MODE_FILL);
-
+	pipelineBuilder._rasterizer.cullMode = VK_CULL_MODE_NONE;
 	//we dont use multisampling, so just run the default one
 	pipelineBuilder._multisampling = vkinit::multisampling_state_create_info();
 
@@ -1714,21 +1716,26 @@ void VulkanEngine::init_scene()
 		}
 	}
 
-	glm::mat4 sponzaMatrix = glm::scale(glm::mat4{ 1.0 }, glm::vec3(0.01, 0.01, 0.01));;
+	glm::mat4 sponzaMatrix = glm::scale(glm::mat4{ 1.0 }, glm::vec3(1));;
 
-	//load_prefab(asset_path("Sponza/Sponza.pfb").c_str(), sponzaMatrix);
-	int dimcities = 2;
-	for (int x = -dimcities; x <= dimcities; x++) {
-		for (int y = -dimcities; y <= dimcities; y++) {
+	glm::mat4 unrealFixRotation = glm::rotate(glm::radians(-90.f), glm::vec3{ 1,0,0 });
 
-			glm::mat4 translation = glm::translate(glm::mat4{ 1.0 }, glm::vec3(x * 300, y, y * 300));
-			glm::mat4 scale = glm::scale(glm::mat4{ 1.0 }, glm::vec3(10));
-
-			glm::mat4 rotationMat = glm::rotate(glm::radians(-90.f), glm::vec3{ 1,0,0 });
-			glm::mat4 cityMatrix = translation * rotationMat * glm::scale(glm::mat4{ 1.0 }, glm::vec3(.01));
-			load_prefab(asset_path("PolyCity/PolyCity.pfb").c_str(), cityMatrix);
-		}
-	}
+	//load_prefab(asset_path("Sponza2.pfb").c_str(), sponzaMatrix);
+	load_prefab(asset_path("scifi/TopDownScifi.pfb").c_str(), glm::scale(glm::mat4{ 1.0 }, glm::vec3(1)));
+	//int dimcities = 0;
+	//for (int x = -dimcities; x <= dimcities; x++) {
+	//	for (int y = -dimcities; y <= dimcities; y++) {
+	//
+	//		glm::mat4 translation = glm::translate(glm::mat4{ 1.0 }, glm::vec3(x * 300, y, y * 300));
+	//		glm::mat4 scale = glm::scale(glm::mat4{ 1.0 }, glm::vec3(10));
+	//
+	//		
+	//		glm::mat4 cityMatrix = translation * unrealFixRotation * glm::scale(glm::mat4{ 1.0 }, glm::vec3(.01));
+	//		//load_prefab(asset_path("scifi/TopDownScifi.pfb").c_str(), unrealFixRotation * glm::scale(glm::mat4{ 1.0 }, glm::vec3(.01)));
+	//	//	load_prefab(asset_path("PolyCity/PolyCity.pfb").c_str(), cityMatrix);
+	//		load_prefab(asset_path("scifi/TopDownScifi.pfb").c_str(), cityMatrix);
+	//	}
+	//}
 	
 
 	//for (int x = -20; x <= 20; x++) {
