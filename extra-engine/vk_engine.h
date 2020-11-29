@@ -19,6 +19,7 @@
 #include <SDL_events.h>
 #include <frustum_cull.h>
 
+
 namespace tracy { class VkCtx; }
 
 
@@ -29,6 +30,7 @@ namespace assets { struct PrefabInfo; }
 namespace vkutil {
 	class DescriptorLayoutCache;
 	class DescriptorAllocator;
+	class VulkanProfiler;
 }
 
 class PipelineBuilder {
@@ -302,6 +304,7 @@ public:
 	
 	vkutil::DescriptorAllocator* _descriptorAllocator;
 	vkutil::DescriptorLayoutCache* _descriptorLayoutCache;
+	vkutil::VulkanProfiler* _profiler;
 
 	VkDescriptorSetLayout _singleTextureSetLayout;
 

@@ -12,6 +12,7 @@
 
 #include "Tracy.hpp"
 #include "TracyVulkan.hpp"
+#include "vk_profiler.h"
 
 
 glm::vec4 normalizePlane(glm::vec4 p)
@@ -649,6 +650,8 @@ inline uint32_t getGroupCount(uint32_t threadCount, uint32_t localSize)
 
 void VulkanEngine::reduce_depth(VkCommandBuffer cmd)
 {
+	vkutil::VulkanScopeTimer timer(cmd, _profiler, "Depth Reduce");
+
 	VkImageMemoryBarrier depthReadBarriers[] =
 	{
 		vkinit::image_barrier(_depthImage._image, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_ASPECT_DEPTH_BIT),

@@ -18,7 +18,10 @@ add_executable (extra
 "vk_shaders.cpp"
  "vk_shaders.h"
  "vk_initializers.cpp" 
- "vk_initializers.h")
+ "vk_initializers.h"
+  "vk_profiler.cpp" 
+  "vk_profiler.h"
+ )
 
 
 set_property(TARGET extra PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "$<TARGET_FILE_DIR:extra>")

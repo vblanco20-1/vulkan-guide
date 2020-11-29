@@ -27,6 +27,7 @@
 
 #include "Tracy.hpp"
 #include "TracyVulkan.hpp"
+#include "vk_profiler.h"
 
 constexpr bool bUseValidationLayers = false;
 
@@ -72,6 +73,10 @@ void VulkanEngine::init()
 	_meshes.reserve(1000);
 	
 	init_vulkan();
+
+	_profiler = new vkutil::VulkanProfiler();
+
+	_profiler->init(_device, _gpuProperties.limits.timestampPeriod);
 
 	_shaderCache.init(_device);
 
@@ -156,6 +161,8 @@ void VulkanEngine::draw()
 		VK_CHECK(vkWaitForFences(_device, 1, &get_current_frame()._renderFence, true, 1000000000));
 		VK_CHECK(vkResetFences(_device, 1, &get_current_frame()._renderFence));
 
+		
+
 	}
 	get_current_frame()._frameDeletionQueue.flush();
 	get_current_frame().dynamicDescriptorAllocator->reset_pools();
@@ -184,13 +191,13 @@ void VulkanEngine::draw()
 	float flash = abs(sin(_frameNumber / 120.f));
 	clearValue.color = { { 0.1f, 0.1f, 0.1f, 1.0f } };
 
-	
+	_profiler->grab_queries(cmd);
 
 	{
 		TracyVkZone(_graphicsQueueContext, get_current_frame()._mainCommandBuffer, "All Frame");
 		ZoneScopedNC("Render Frame", tracy::Color::White);
 
-
+		vkutil::VulkanScopeTimer timer(cmd,_profiler,"All Frame");
 		ready_mesh_draw(cmd);
 		CullParams forwardCull;
 		forwardCull.projmat = get_projection_matrix(true);
@@ -199,7 +206,11 @@ void VulkanEngine::draw()
 		forwardCull.occlusionCull = true;
 		forwardCull.drawDist = _config.drawDistance;
 		forwardCull.aabb = false;
-		execute_compute_cull(cmd, _renderScene._forwardPass, forwardCull);
+		{
+			vkutil::VulkanScopeTimer timer2(cmd, _profiler, "Forward Cull");
+			execute_compute_cull(cmd, _renderScene._forwardPass, forwardCull);
+		}
+		
 
 		glm::vec3 extent = _mainLight.shadowExtent * 10.f;
 		glm::mat4 projection = glm::orthoLH_ZO(-extent.x, extent.x, -extent.y, extent.y, -extent.z, extent.z);
@@ -217,9 +228,14 @@ void VulkanEngine::draw()
 		shadowCull.aabbmax = aabbcenter + aabbextent;
 		shadowCull.aabbmin = aabbcenter - aabbextent;
 
-		execute_compute_cull(cmd, _renderScene._shadowPass, shadowCull);
-
+		{
+			vkutil::VulkanScopeTimer timer2(cmd, _profiler, "Shadow Cull");
+			execute_compute_cull(cmd, _renderScene._shadowPass, shadowCull);
+		}
+		
+			
 		shadow_pass(cmd);
+		
 		forward_pass(clearValue, cmd);
 		
 
@@ -280,6 +296,7 @@ void VulkanEngine::draw()
 
 void VulkanEngine::forward_pass(VkClearValue clearValue, VkCommandBuffer cmd)
 {
+	vkutil::VulkanScopeTimer timer(cmd, _profiler, "Forward Pass");
 	//clear depth at 0
 	VkClearValue depthClear;
 	depthClear.depthStencil.depth = 0.f;
@@ -336,7 +353,7 @@ void VulkanEngine::forward_pass(VkClearValue clearValue, VkCommandBuffer cmd)
 
 void VulkanEngine::shadow_pass(VkCommandBuffer cmd)
 {
-
+	vkutil::VulkanScopeTimer timer(cmd, _profiler, "Shadow Pass");
 	//clear depth at 1
 	VkClearValue depthClear;
 	depthClear.depthStencil.depth = 1.f;	
@@ -500,6 +517,15 @@ void VulkanEngine::run()
 
 			ImGui::InputFloat("Shadow Bias", &_config.shadowBias);
 			ImGui::InputFloat("Shadow Bias slope", &_config.shadowBiasslope);
+
+			ImGui::Separator();
+
+			for (auto& [k, v] : _profiler->stats)
+			{
+				ImGui::Text("STAT %s %f ms",k.c_str(), v);
+			}
+
+
 
 			ImGui::End();
 		}
@@ -1721,21 +1747,21 @@ void VulkanEngine::init_scene()
 	glm::mat4 unrealFixRotation = glm::rotate(glm::radians(-90.f), glm::vec3{ 1,0,0 });
 
 	//load_prefab(asset_path("Sponza2.pfb").c_str(), sponzaMatrix);
-	load_prefab(asset_path("scifi/TopDownScifi.pfb").c_str(), glm::scale(glm::mat4{ 1.0 }, glm::vec3(1)));
-	//int dimcities = 0;
-	//for (int x = -dimcities; x <= dimcities; x++) {
-	//	for (int y = -dimcities; y <= dimcities; y++) {
-	//
-	//		glm::mat4 translation = glm::translate(glm::mat4{ 1.0 }, glm::vec3(x * 300, y, y * 300));
-	//		glm::mat4 scale = glm::scale(glm::mat4{ 1.0 }, glm::vec3(10));
-	//
-	//		
-	//		glm::mat4 cityMatrix = translation * unrealFixRotation * glm::scale(glm::mat4{ 1.0 }, glm::vec3(.01));
-	//		//load_prefab(asset_path("scifi/TopDownScifi.pfb").c_str(), unrealFixRotation * glm::scale(glm::mat4{ 1.0 }, glm::vec3(.01)));
-	//	//	load_prefab(asset_path("PolyCity/PolyCity.pfb").c_str(), cityMatrix);
-	//		load_prefab(asset_path("scifi/TopDownScifi.pfb").c_str(), cityMatrix);
-	//	}
-	//}
+	//load_prefab(asset_path("scifi/TopDownScifi.pfb").c_str(), glm::scale(glm::mat4{ 1.0 }, glm::vec3(1)));
+	int dimcities = 2;
+	for (int x = -dimcities; x <= dimcities; x++) {
+		for (int y = -dimcities; y <= dimcities; y++) {
+
+			glm::mat4 translation = glm::translate(glm::mat4{ 1.0 }, glm::vec3(x * 300, y, y * 300));
+			glm::mat4 scale = glm::scale(glm::mat4{ 1.0 }, glm::vec3(10));
+
+
+			glm::mat4 cityMatrix = translation * unrealFixRotation * glm::scale(glm::mat4{ 1.0 }, glm::vec3(.01));
+			//load_prefab(asset_path("scifi/TopDownScifi.pfb").c_str(), unrealFixRotation * glm::scale(glm::mat4{ 1.0 }, glm::vec3(.01)));
+			load_prefab(asset_path("PolyCity/PolyCity.pfb").c_str(), cityMatrix);
+		//	load_prefab(asset_path("scifi/TopDownScifi.pfb").c_str(), cityMatrix);
+		}
+	}
 	
 
 	//for (int x = -20; x <= 20; x++) {
