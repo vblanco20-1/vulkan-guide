@@ -319,7 +319,8 @@ We need to send the offset to the `vkCmdBindDescriptorSets()` call. The offsets 
 
 If we had a descriptor set that had binding 0, 2 and 3 using static uniform buffer, and bindings 1,4,5 using dynamic descriptors, we would need to send 3 uint32_t to the bind function.
 
-Dynamic uniform buffer bindings can be slightly slower than hardcoded ones, but in general is such a low difference that its hard to measure.
+Dynamic uniform buffer bindings can be slightly slower in the GPU than hardcoded ones, but in general is such a low difference that its hard to measure. On the CPU side they are a considerable gain as they remove the need to constantly reallocate descriptor sets, as you can just keep reusing the same dynamic descriptors at different offsets. If you have data that is bound once per frame, like a camera matrix, a normal descriptor is probably best, but if you have per-object data, consider using dynamic descriptors.
+
 Due to their dynamic and not hardcoded nature, they are very popular to use in game engines. Some game engines don't even use the normal uniform buffer descriptors, and prefer to use strictly only dynamic ones.
 
 One of the things dynamic uniform buffer bindings let you do, is that you can allocate and write into a buffer at runtime while rendering, and bind exactly the offsets you write into. 
