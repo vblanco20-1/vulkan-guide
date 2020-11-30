@@ -139,6 +139,17 @@ void VulkanEngine::execute_compute_cull(VkCommandBuffer cmd, RenderScene::MeshPa
 
 		vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT, 0, 0, nullptr, 2, barriers, 0, nullptr);
 	}
+	if (_config.outputIndirectBufferToFile)
+	{
+		uint32_t offset = get_current_frame().debugDataOffsets.back();
+		VkBufferCopy debugCopy;
+		debugCopy.dstOffset = offset;
+		debugCopy.size = pass.batches.size() * sizeof(GPUIndirectObject);
+		debugCopy.srcOffset = 0;
+		vkCmdCopyBuffer(cmd, pass.drawIndirectBuffer._buffer, get_current_frame().debugOutputBuffer._buffer, 1, &debugCopy);
+		get_current_frame().debugDataOffsets.push_back(offset + debugCopy.size);
+		get_current_frame().debugDataNames.push_back("Cull Indirect Output");
+	}
 }
 
 void VulkanEngine::ready_mesh_draw(VkCommandBuffer cmd)

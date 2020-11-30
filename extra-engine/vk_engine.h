@@ -129,7 +129,12 @@ struct FrameData {
 	
 	AllocatedBufferUntyped dynamicDataBuffer;
 
+	AllocatedBufferUntyped debugOutputBuffer;
+
 	vkutil::DescriptorAllocator* dynamicDescriptorAllocator;
+
+	std::vector<uint32_t> debugDataOffsets;
+	std::vector<std::string> debugDataNames;
 };
 
 
@@ -220,6 +225,7 @@ struct EngineConfig {
 	float shadowBiasslope{ 2.75f };
 	bool occlusionCullGPU{ true };
 	bool frustrumCullCPU{ true };
+	bool outputIndirectBufferToFile{false};
 };
 
 struct DirectionalLight {

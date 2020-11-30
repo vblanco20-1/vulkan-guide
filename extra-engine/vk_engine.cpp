@@ -13,6 +13,7 @@
 #include <iostream>
 #include <fstream>
 #include <chrono>
+#include <sstream>
 #include "vk_textures.h"
 #include "vk_shaders.h"
 
@@ -162,7 +163,47 @@ void VulkanEngine::draw()
 		VK_CHECK(vkResetFences(_device, 1, &get_current_frame()._renderFence));
 
 		
+		//check the debug data
+		void* data;		
+		vmaMapMemory(_allocator, get_current_frame().debugOutputBuffer._allocation, &data);
+		for (int i =1 ; i <   get_current_frame().debugDataNames.size();i++)
+		{
+			uint32_t begin = get_current_frame().debugDataOffsets[i-1];
+			uint32_t end = get_current_frame().debugDataOffsets[i];
 
+			auto name = get_current_frame().debugDataNames[i];
+			if (name.compare("Cull Indirect Output") == 0)
+			{
+				void* buffer = malloc(end - begin);
+				memcpy(buffer, (uint8_t*)data + begin, end - begin);
+
+				GPUIndirectObject* objects = (GPUIndirectObject*)buffer;
+				int objectCount = (end - begin) / sizeof(GPUIndirectObject);
+
+				std::ofstream file;
+				std::stringstream namestream;
+				namestream << _frameNumber << "_CULLDATA_" << i << ".txt";
+				file.open(namestream.str(),std::ios::trunc);
+
+				for (int o = 0; o < objectCount; o++)
+				{
+					file << "DRAW:" << o << "-------------\n";
+					file << "  OG Count " << _renderScene._forwardPass.batches[o].count << "\n";
+					file << "  Visible Count " << objects[o].command.instanceCount << "\n";
+					file << "  First " << objects[o].command.firstInstance << "\n";
+					file << "  Indices " << objects[o].command.indexCount << "\n";
+				}
+				file.close();
+				free(buffer);
+			}
+		}
+
+		vmaUnmapMemory(_allocator, get_current_frame().debugOutputBuffer._allocation);
+		get_current_frame().debugDataNames.clear();
+		get_current_frame().debugDataOffsets.clear();
+
+		get_current_frame().debugDataNames.push_back("");
+		get_current_frame().debugDataOffsets.push_back(0);
 	}
 	get_current_frame()._frameDeletionQueue.flush();
 	get_current_frame().dynamicDescriptorAllocator->reset_pools();
@@ -520,6 +561,12 @@ void VulkanEngine::run()
 
 			ImGui::InputFloat("Shadow Bias", &_config.shadowBias);
 			ImGui::InputFloat("Shadow Bias slope", &_config.shadowBiasslope);
+			_config.outputIndirectBufferToFile = false;
+			if (ImGui::Button("Output Indirect"))
+			{
+				_config.outputIndirectBufferToFile = true;
+			}
+
 
 			ImGui::Separator();
 
@@ -2212,6 +2259,10 @@ void VulkanEngine::init_descriptors()
 
 		//1 megabyte of dynamic data buffer
 		_frames[i].dynamicDataBuffer = create_buffer(10000000, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+
+		//20 megabyte of dynamic data buffer
+		_frames[i].debugOutputBuffer = create_buffer(200000000, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_TO_CPU);
+		
 	}
 }
 
