@@ -387,7 +387,7 @@ void VulkanEngine::draw_objects_forward(VkCommandBuffer cmd, RenderScene::MeshPa
 	vmaUnmapMemory(_allocator, get_current_frame().dynamicDataBuffer._allocation);
 
 	Mesh* lastMesh = nullptr;
-	Material* lastMaterial = nullptr;
+	OldMaterial* lastMaterial = nullptr;
 	VkPipeline lastPipeline = VK_NULL_HANDLE;
 	ShaderDescriptorBinder binder{};
 
@@ -421,7 +421,7 @@ void VulkanEngine::draw_objects_forward(VkCommandBuffer cmd, RenderScene::MeshPa
 
 	{
 		ZoneScopedNC("Draw Commit", tracy::Color::Blue4);
-		Material* lastMaterial = nullptr;
+		OldMaterial* lastMaterial = nullptr;
 		Mesh* lastMesh = nullptr;
 
 		VkDeviceSize offset = 0;
@@ -435,7 +435,7 @@ void VulkanEngine::draw_objects_forward(VkCommandBuffer cmd, RenderScene::MeshPa
 			auto& multibatch = pass.multibatches[i];
 			auto& instanceDraw = pass.batches[multibatch.first];
 
-			Material* drawMat = _renderScene.get_material(instanceDraw.material);
+			OldMaterial* drawMat = _renderScene.get_material(instanceDraw.material);
 			Mesh* drawMesh = _renderScene.get_mesh(instanceDraw.meshID).original;
 			bool merged = _renderScene.get_mesh(instanceDraw.meshID).isMerged;
 
@@ -543,7 +543,7 @@ void VulkanEngine::draw_objects_shadow(VkCommandBuffer cmd, RenderScene::MeshPas
 	vmaUnmapMemory(_allocator, get_current_frame().dynamicDataBuffer._allocation);
 
 	Mesh* lastMesh = nullptr;
-	Material* lastMaterial = nullptr;
+	OldMaterial* lastMaterial = nullptr;
 	VkPipeline lastPipeline = VK_NULL_HANDLE;
 	ShaderDescriptorBinder binder{};
 
@@ -569,7 +569,7 @@ void VulkanEngine::draw_objects_shadow(VkCommandBuffer cmd, RenderScene::MeshPas
 
 	{
 		ZoneScopedNC("Draw Commit", tracy::Color::Blue4);
-		Material* lastMaterial = nullptr;
+		OldMaterial* lastMaterial = nullptr;
 		Mesh* lastMesh = nullptr;
 
 		VkDeviceSize offset = 0;
@@ -583,7 +583,7 @@ void VulkanEngine::draw_objects_shadow(VkCommandBuffer cmd, RenderScene::MeshPas
 			auto& multibatch = pass.multibatches[i];
 			auto& instanceDraw = pass.batches[multibatch.first];
 
-			Material* drawMat = _renderScene.get_material(instanceDraw.material);
+			OldMaterial* drawMat = _renderScene.get_material(instanceDraw.material);
 			Mesh* drawMesh = _renderScene.get_mesh(instanceDraw.meshID).original;
 			bool merged = _renderScene.get_mesh(instanceDraw.meshID).isMerged;
 

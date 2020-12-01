@@ -5,6 +5,7 @@
 #include <mesh_asset.h>
 #include "glm/common.hpp"
 #include "glm/detail/func_geometric.inl"
+#include "logger.h"
 
 VertexInputDescription Vertex::get_vertex_description()
 {
@@ -205,6 +206,9 @@ bool Mesh::load_from_meshasset(const char* filename)
 		std::cout << "Error when loading mesh " << filename << std::endl;;
 		return false;
 	}
+	
+		
+	
 
 	assets::MeshInfo meshinfo = assets::read_mesh_info(&file);
 
@@ -284,5 +288,12 @@ bool Mesh::load_from_meshasset(const char* filename)
 			_vertices[i].uv.y = unpackedVertices[i].uv[1];
 		}
 	}
+
+	
+	if (logMeshUpload)
+	{
+		LOG_SUCCESS("Loaded mesh {} : Verts={}, Tris={}", filename, _vertices.size(), _indices.size() / 3);
+	}
+
 	return true;
 }

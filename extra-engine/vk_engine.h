@@ -12,6 +12,7 @@
 #include <vk_scene.h>
 #include <vk_shaders.h>
 #include <unordered_map>
+#include <material_system.h>
 
 #include <glm/glm.hpp>
 #include <glm/gtx/transform.hpp>
@@ -32,35 +33,6 @@ namespace vkutil {
 	class DescriptorAllocator;
 	class VulkanProfiler;
 }
-
-class PipelineBuilder {
-public:
-
-	std::vector<VkPipelineShaderStageCreateInfo> _shaderStages;
-	VkPipelineVertexInputStateCreateInfo _vertexInputInfo;
-	VkPipelineInputAssemblyStateCreateInfo _inputAssembly;
-	VkViewport _viewport;
-	VkRect2D _scissor;
-	VkPipelineRasterizationStateCreateInfo _rasterizer;
-	VkPipelineColorBlendAttachmentState _colorBlendAttachment;
-	VkPipelineMultisampleStateCreateInfo _multisampling;
-	VkPipelineLayout _pipelineLayout;
-	VkPipelineDepthStencilStateCreateInfo _depthStencil;
-	VkPipeline build_pipeline(VkDevice device, VkRenderPass pass);
-	void clear_vertex_input();
-
-	void setShaders(struct ShaderEffect* effect);
-};
-
-class ComputePipelineBuilder {
-public:
-
-	VkPipelineShaderStageCreateInfo  _shaderStage;
-	VkPipelineLayout _pipelineLayout;
-	VkPipeline build_pipeline(VkDevice device);
-};
-
-
 
 struct DeletionQueue
 {
@@ -87,11 +59,16 @@ struct MeshPushConstants {
 	glm::mat4 render_matrix;
 };
 
+namespace assets {
 
-struct Material {
+	enum class TransparencyMode :uint8_t;
+}
+struct OldMaterial {
 	VkDescriptorSet textureSet{VK_NULL_HANDLE};
 	VkPipeline forwardPipeline{ VK_NULL_HANDLE };
 	VkPipeline shadowPipeline{ VK_NULL_HANDLE };
+	
+	assets::TransparencyMode transparency;
 
 	std::vector<std::string> textures;
 
@@ -109,12 +86,15 @@ struct Texture {
 struct MeshObject {
 	Mesh* mesh{ nullptr };
 
-	Material* material{nullptr};
+	OldMaterial* material{nullptr};
 
 	uint32_t customSortKey;
 	glm::mat4 transformMatrix;
 
 	RenderBounds bounds;
+
+	uint32_t bDrawForwardPass : 1;
+	uint32_t bDrawShadowPass : 1;
 };
 
 
@@ -311,6 +291,7 @@ public:
 	vkutil::DescriptorAllocator* _descriptorAllocator;
 	vkutil::DescriptorLayoutCache* _descriptorLayoutCache;
 	vkutil::VulkanProfiler* _profiler;
+	vkutil::MaterialSystem* _materialSystem;
 
 	VkDescriptorSetLayout _singleTextureSetLayout;
 
@@ -366,7 +347,7 @@ public:
 	FrameData& get_last_frame();
 
 	ShaderCache _shaderCache;
-	std::unordered_map<std::string, Material> _materials;
+	std::unordered_map<std::string, OldMaterial> _materials;
 	std::unordered_map<std::string, Mesh> _meshes;
 	std::unordered_map<std::string, Texture> _loadedTextures;
 	std::unordered_map<std::string, assets::PrefabInfo*> _prefabCache;
@@ -374,12 +355,12 @@ public:
 
 	//create material and add it to the map
 
-	Material* create_material(VkPipeline pipeline, ShaderEffect* effect, const std::string& name);
+	OldMaterial* create_material(VkPipeline pipeline, ShaderEffect* effect, const std::string& name);
 
-	Material* clone_material(const std::string& originalname, const std::string& copyname);
+	OldMaterial* clone_material(const std::string& originalname, const std::string& copyname);
 
 	//returns nullptr if it cant be found
-	Material* get_material(const std::string& name);
+	OldMaterial* get_material(const std::string& name);
 
 	//returns nullptr if it cant be found
 	Mesh* get_mesh(const std::string& name);
@@ -405,12 +386,12 @@ public:
 
 	bool load_prefab(const char* path, glm::mat4 root);
 
-	std::string asset_path(const char* path);
-	std::string asset_path(std::string& path);
-
-	std::string shader_path(const char* path);
-	std::string shader_path(std::string& path);
-
+	static std::string asset_path(const char* path);
+	static std::string asset_path(std::string& path);
+	
+	//static std::string shader_path(const char* path);
+	//static std::string shader_path(std::string& path);
+	static std::string shader_path(std::string_view path);
 	void refresh_renderbounds(MeshObject* object);
 
 	template<typename T>
@@ -447,7 +428,7 @@ private:
 
 	void init_scene();
 
-	void build_texture_set(VkSampler blockySampler, Material* texturedMat, const char* textureName);
+	void build_texture_set(VkSampler blockySampler, OldMaterial* texturedMat, const char* textureName);
 
 	void init_descriptors();
 

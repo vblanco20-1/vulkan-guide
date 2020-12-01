@@ -2,7 +2,7 @@
 #include <vk_engine.h>
 #include "Tracy.hpp"
 
-Handle<RenderObject> RenderScene::register_object(MeshObject* object, PassTypeFlags passes)
+Handle<RenderObject> RenderScene::register_object(MeshObject* object)
 {
 	RenderObject newObj;
 	newObj.bounds = object->bounds;
@@ -16,25 +16,31 @@ Handle<RenderObject> RenderScene::register_object(MeshObject* object, PassTypeFl
 	
 	renderables.push_back(newObj);
 
-	if ((passes & PassTypeFlags::Forward) != PassTypeFlags::None)
+	if (object->bDrawForwardPass)
 	{
-		_forwardPass.unbatchedObjects.push_back(handle);
+		if (object->material->forwardEffect)
+		{
+			_forwardPass.unbatchedObjects.push_back(handle);
+		}
 	}
-	if ((passes & PassTypeFlags::DirectionalShadow) != PassTypeFlags::None)
+	if (object->bDrawShadowPass)
 	{
-		_shadowPass.unbatchedObjects.push_back(handle);
+		if (object->material->shadowEffect)
+		{
+			_shadowPass.unbatchedObjects.push_back(handle);
+		}
 	}
 
 	update_object(handle);
 	return handle;
 }
 
-void RenderScene::register_object_batch(MeshObject* first, uint32_t count, PassTypeFlags passes)
+void RenderScene::register_object_batch(MeshObject* first, uint32_t count)
 {
 	renderables.reserve(count);
 
 	for (uint32_t i = 0; i < count; i++) {
-		register_object(&(first[i]), passes);
+		register_object(&(first[i]));
 	}
 }
 
@@ -289,14 +295,14 @@ DrawMesh RenderScene::get_mesh(Handle<DrawMesh> objectID)
 	return meshes[objectID.handle];
 }
 
-Material* RenderScene::get_material(Handle<Material> objectID)
+OldMaterial* RenderScene::get_material(Handle<OldMaterial> objectID)
 {
 	return materials[objectID.handle];
 }
 
-Handle<Material> RenderScene::getMaterialHandle(Material* m)
+Handle<OldMaterial> RenderScene::getMaterialHandle(OldMaterial* m)
 {
-	Handle<Material> handle;
+	Handle<OldMaterial> handle;
 	auto it = materialConvert.find(m);
 	if (it == materialConvert.end())
 	{

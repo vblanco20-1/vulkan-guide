@@ -725,6 +725,39 @@ void extract_assimp_materials(const aiScene* scene, const fs::path& input, const
 		newMaterial.baseEffect = "defaultPBR";
 
 		aiMaterial* material = scene->mMaterials[m];
+		newMaterial.transparency = TransparencyMode::Transparent;
+		for (int p = 0; p < material->mNumProperties; p++)
+		{
+			aiMaterialProperty* pt = material->mProperties[p];
+			switch (pt->mType )
+			{
+			case aiPTI_String:
+			{
+				const char* data = pt->mData;
+				newMaterial.customProperties[pt->mKey.C_Str()] = data;
+			}
+			break;
+			case aiPTI_Float:
+			{		
+				std::stringstream ss;
+				ss << *(float*)pt->mData;
+				newMaterial.customProperties[pt->mKey.C_Str()] = ss.str();
+
+				if (strcmp(pt->mKey.C_Str(), "$mat.opacity") == 0)
+				{
+					float num = *(float*)pt->mData;
+					if (num != 1.0)
+					{
+						newMaterial.transparency = TransparencyMode::Transparent;
+					}
+				}
+			}
+				break;
+			}
+		}
+
+		//check opacity
+	
 
 		std::string texPath = "";
 		if (material->GetTextureCount(aiTextureType_DIFFUSE))
@@ -1009,7 +1042,7 @@ int main(int argc, char* argv[])
 				fs::create_directory(export_path.parent_path());
 			}
 
-			if (p.path().extension() == ".png" || p.path().extension() == ".jpg" || p.path().extension() == ".TGA")
+			if (false)//if (p.path().extension() == ".png" || p.path().extension() == ".jpg" || p.path().extension() == ".TGA")
 			{
 				std::cout << "found a texture" << std::endl;
 
@@ -1026,7 +1059,7 @@ int main(int argc, char* argv[])
 			//	export_path.replace_extension(".mesh");
 			//	convert_mesh(p.path(), export_path);
 			//}
-			if (p.path().extension() == ".gltf")
+			if (false)//p.path().extension() == ".gltf")
 			{
 				using namespace tinygltf;
 				Model model;
@@ -1059,7 +1092,7 @@ int main(int argc, char* argv[])
 					extract_gltf_nodes(model, p.path(), folder, convstate);
 				}
 			}
-			if (false&&p.path().extension() == ".fbx") {
+			if (p.path().extension() == ".fbx") {
 				const aiScene* scene;
 				{
 					Assimp::Importer importer;
@@ -1072,7 +1105,7 @@ int main(int argc, char* argv[])
 					std::cout << "Assimp load time " << elapsed.count() << '\n';
 					auto folder = export_path.parent_path() / (p.path().stem().string() + "_GLTF");
 					fs::create_directory(folder);
-					//extract_assimp_materials(scene, p.path(), folder, convstate);
+					extract_assimp_materials(scene, p.path(), folder, convstate);
 					//extract_assimp_meshes(scene, p.path(), folder, convstate);
 					//extract_assimp_nodes(scene, p.path(), folder, convstate);
 

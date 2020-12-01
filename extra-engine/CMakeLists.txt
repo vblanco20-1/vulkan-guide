@@ -2,12 +2,15 @@ set(CMAKE_CXX_STANDARD 17)
 # Add source to this project's executable.
 add_executable (extra
 "main.cpp"
+"logger.h"
  "vk_engine.cpp"
 "vk_engine_scenerender.cpp"
  "vk_engine.h" 
  "vk_types.h" 
  "vk_mesh.cpp"
  "vk_mesh.h"
+ "material_system.cpp"
+ "material_system.h"
   "vk_scene.cpp"
  "vk_scene.h"
 "frustum_cull.h"

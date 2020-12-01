@@ -4,6 +4,10 @@
 #include <vector>
 #include <glm/vec3.hpp>
 #include <glm/vec2.hpp>
+
+constexpr bool logMeshUpload = false;
+
+
 struct VertexInputDescription {
 	std::vector<VkVertexInputBindingDescription> bindings;
 	std::vector<VkVertexInputAttributeDescription> attributes;

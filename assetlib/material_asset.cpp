@@ -16,6 +16,26 @@ assets::MaterialInfo assets::read_material_info(AssetFile* file)
 		info.textures[key] = value;
 	}
 
+	for (auto& [key, value] : texture_metadata["customProperties"].items())
+	{
+
+		info.customProperties[key] = value;
+	}
+
+	info.transparency = TransparencyMode::Opaque;
+
+	auto it = texture_metadata.find("transparency");
+	if (it != texture_metadata.end())
+	{
+		std::string val = (*it);
+		if (val.compare("transparent") == 0) {
+			info.transparency == TransparencyMode::Transparent;
+		}
+		if (val.compare("masked") == 0) {
+			info.transparency == TransparencyMode::Masked;
+		}
+	}
+
 	return info;
 }
 
@@ -24,6 +44,18 @@ assets::AssetFile assets::pack_material(MaterialInfo* info)
 	nlohmann::json texture_metadata;
 	texture_metadata["baseEffect"] = info->baseEffect;
 	texture_metadata["textures"] = info->textures;
+	texture_metadata["customProperties"] = info->customProperties;
+
+	switch (info->transparency)
+	{	
+	case TransparencyMode::Transparent:
+		texture_metadata["transparency"] = "transparent";
+		break;
+	case TransparencyMode::Masked:
+		texture_metadata["transparency"] = "masked";
+		break;
+	}
+
 	
 
 	//core file header

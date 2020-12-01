@@ -20,7 +20,7 @@ struct Handle {
 	uint32_t handle;
 };
 
-struct Material;
+struct OldMaterial;
 struct MeshObject;
 struct Mesh;
 struct GPUObjectData;
@@ -51,7 +51,7 @@ enum class PassTypeFlags : uint8_t {
 struct RenderObject {
 
 	Handle<DrawMesh> meshID;
-	Handle<Material> material;
+	Handle<OldMaterial> material;
 
 	uint32_t updateIndex;
 	uint32_t customSortKey{0};
@@ -71,7 +71,7 @@ class RenderScene {
 public:
 	struct IndirectBatch {
 		Handle<DrawMesh> meshID;
-		Handle<Material> material;
+		Handle<OldMaterial> material;
 
 		uint32_t first;
 		uint32_t count;
@@ -114,9 +114,9 @@ public:
 
 	
 
-	Handle<RenderObject> register_object(MeshObject* object, PassTypeFlags passes);
+	Handle<RenderObject> register_object(MeshObject* object);
 
-	void register_object_batch(MeshObject* first, uint32_t count, PassTypeFlags passes);
+	void register_object_batch(MeshObject* first, uint32_t count);
 
 	void update_transform(Handle<RenderObject> objectID,const glm::mat4 &localToWorld);
 	void update_object(Handle<RenderObject> objectID);
@@ -137,10 +137,10 @@ public:
 
 	RenderObject* get_object(Handle<RenderObject> objectID);
 	DrawMesh get_mesh(Handle<DrawMesh> objectID);
-	Material* get_material(Handle<Material> objectID);
+	OldMaterial* get_material(Handle<OldMaterial> objectID);
 
 	std::vector<RenderObject> renderables;
-	std::vector<Material*> materials;
+	std::vector<OldMaterial*> materials;
 	std::vector<DrawMesh> meshes;
 
 	std::vector<Handle<RenderObject>> dirtyObjects;
@@ -148,10 +148,10 @@ public:
 	MeshPass _forwardPass;
 	MeshPass _shadowPass;
 
-	std::unordered_map<Material*, Handle<Material>> materialConvert;
+	std::unordered_map<OldMaterial*, Handle<OldMaterial>> materialConvert;
 	std::unordered_map<Mesh*, Handle<DrawMesh>> meshConvert;
 
-	Handle<Material> getMaterialHandle(Material* m);
+	Handle<OldMaterial> getMaterialHandle(OldMaterial* m);
 	Handle<DrawMesh> getMeshHandle(Mesh* m);
 
 	AllocatedBufferUntyped uploadBuffer[2];

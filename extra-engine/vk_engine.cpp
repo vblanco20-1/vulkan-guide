@@ -32,8 +32,10 @@
 
 #include "fmt/core.h"
 #include "fmt/os.h"
+#include "fmt/color.h"
 
-constexpr bool bUseValidationLayers = false;
+#include "logger.h"
+constexpr bool bUseValidationLayers = true;
 
 //we want to immediately abort when there is an error. In normal engines this would give an error message to the user, or perform a dump of state.
 using namespace std;
@@ -53,14 +55,15 @@ using namespace std;
 
 void VulkanEngine::init()
 {
-	ZoneScopedN("Engine Init");
-	std::cout << "init" << std::endl;
+	ZoneScopedN("Engine Init");	
+	
+	LogHandler::Get().set_time();	
 
-
+	LOG_INFO("Engine Init");
 
 	// We initialize SDL and create a window with it. 
 	SDL_Init(SDL_INIT_VIDEO);
-	std::cout << "SDL inited" << std::endl;
+	LOG_SUCCESS("SDL inited");
 	SDL_WindowFlags window_flags = (SDL_WINDOW_VULKAN);
 
 	_window = SDL_CreateWindow(
@@ -99,9 +102,10 @@ void VulkanEngine::init()
 
 	init_descriptors();
 
-	std::cout << "timetoload" << std::endl;
-
 	init_pipelines();
+
+	LOG_INFO("Engine Initialized, starting Load");
+	
 
 	load_images();
 
@@ -495,7 +499,7 @@ void VulkanEngine::copy_render_to_swapchain(uint32_t swapchainImageIndex, VkComm
 void VulkanEngine::run()
 {
 
-	std::cout << "Run -- " << std::endl;
+	LOG_INFO("Starting Main Loop ");
 	
 	bool bQuit = false;
 
@@ -698,9 +702,8 @@ void VulkanEngine::update_camera(float deltaSeconds)
 
 void VulkanEngine::init_vulkan()
 {
-	std::cout << "vkinit1" << std::endl;
+	
 	vkb::InstanceBuilder builder;
-	std::cout << "vkinit" << std::endl;
 	//make the vulkan instance, with basic debug features
 	auto inst_ret = builder.set_app_name("Example Vulkan Application")
 
@@ -708,7 +711,8 @@ void VulkanEngine::init_vulkan()
 		.use_default_debug_messenger()
 		.build();
 
-	std::cout << "instance" << std::endl;
+
+	LOG_SUCCESS("Vulkan Instance initialized");
 
 	vkb::Instance vkb_inst = inst_ret.value();
 
@@ -716,7 +720,9 @@ void VulkanEngine::init_vulkan()
 	_instance = vkb_inst.instance;
 
 	SDL_Vulkan_CreateSurface(_window, _instance, &_surface);
-	std::cout << "surface" << std::endl;
+
+	LOG_SUCCESS("SDL Surface initialized");
+
 	//use vkbootstrap to select a gpu. 
 	//We want a gpu that can write to the SDL surface and supports vulkan 1.2
 	vkb::PhysicalDeviceSelector selector{ vkb_inst };
@@ -735,7 +741,9 @@ void VulkanEngine::init_vulkan()
 		
 		.select()
 		.value();
-	std::cout << "selector" << std::endl;
+
+	LOG_SUCCESS("GPU found");
+
 	//create the final vulkan device
 
 	vkb::DeviceBuilder deviceBuilder{ physicalDevice };
@@ -744,7 +752,7 @@ void VulkanEngine::init_vulkan()
 	
 
 	vkb::Device vkbDevice = deviceBuilder.build().value();
-	std::cout << "builder" << std::endl;
+	
 	// Get the VkDevice handle used in the rest of a vulkan application
 	_device = vkbDevice.device;
 	_chosenGPU = physicalDevice.physical_device;
@@ -765,8 +773,7 @@ void VulkanEngine::init_vulkan()
 	
 	vkGetPhysicalDeviceProperties(_chosenGPU, &_gpuProperties);
 
-	std::cout << "The gpu has a minimum buffer alignement of " << _gpuProperties.limits.minUniformBufferOffsetAlignment << std::endl;
-
+	LOG_INFO("The gpu has a minimum buffer alignement of {}", _gpuProperties.limits.minUniformBufferOffsetAlignment);
 }
 uint32_t previousPow2(uint32_t v)
 {
@@ -1276,6 +1283,10 @@ void VulkanEngine::init_sync_structures()
 
 void VulkanEngine::init_pipelines()
 {	
+	_materialSystem = new vkutil::MaterialSystem();
+	_materialSystem->init(this);
+	_materialSystem->build_default_templates();
+
 	//untextured defaultlit shader
 	ShaderEffect* mainEffect = new ShaderEffect();
 	mainEffect->add_stage(_shaderCache.get_shader(shader_path("tri_mesh_ssbo_instanced.vert.spv")), VK_SHADER_STAGE_VERTEX_BIT);
@@ -1311,16 +1322,9 @@ void VulkanEngine::init_pipelines()
 
 	PipelineBuilder pipelineBuilder;
 
-	//set vertex format
-	VertexInputDescription vertexDescription = Vertex::get_vertex_description();
-
-	pipelineBuilder._vertexInputInfo = vkinit::vertex_input_state_create_info();
-	//connect the pipeline builder vertex input info to the one we get from Vertex
-	pipelineBuilder._vertexInputInfo.pVertexAttributeDescriptions = vertexDescription.attributes.data();
-	pipelineBuilder._vertexInputInfo.vertexAttributeDescriptionCount = vertexDescription.attributes.size();
-
-	pipelineBuilder._vertexInputInfo.pVertexBindingDescriptions = vertexDescription.bindings.data();
-	pipelineBuilder._vertexInputInfo.vertexBindingDescriptionCount = vertexDescription.bindings.size();
+	
+	pipelineBuilder.vertexDescription = Vertex::get_vertex_description();
+	
 	
 	fill_shadow_pipeline(pipelineBuilder);
 	pipelineBuilder.setShaders(shadowEffect);
@@ -1332,19 +1336,19 @@ void VulkanEngine::init_pipelines()
 	//build the untextured triangle pipeline
 	pipelineBuilder.setShaders(mainEffect);
 	
-	VkPipeline meshPipeline = pipelineBuilder.build_pipeline(_device, _renderPass);
-	Material* meshmat = create_material(meshPipeline, mainEffect, "defaultmesh");
-	meshmat->shadowEffect = shadowEffect;
-	meshmat->shadowPipeline = shadowPipeline;
+	//VkPipeline meshPipeline = pipelineBuilder.build_pipeline(_device, _renderPass);
+	//OldMaterial* meshmat = create_material(meshPipeline, mainEffect, "defaultmesh");
+	//meshmat->shadowEffect = shadowEffect;
+	//meshmat->shadowPipeline = shadowPipeline;
 
 	
 	//build textured pipeline
 	pipelineBuilder.setShaders(texturedEffect);
 
-	VkPipeline texPipeline = pipelineBuilder.build_pipeline(_device, _renderPass);
-	Material* texmat = create_material(texPipeline, texturedEffect, "texturedmesh");
-	texmat->shadowEffect = shadowEffect;
-	texmat->shadowPipeline = shadowPipeline;
+	//VkPipeline texPipeline = pipelineBuilder.build_pipeline(_device, _renderPass);
+	//OldMaterial* texmat = create_material(texPipeline, texturedEffect, "texturedmesh");
+	//texmat->shadowEffect = shadowEffect;
+	//texmat->shadowPipeline = shadowPipeline;
 	
 
 	//build blit pipeline
@@ -1359,8 +1363,7 @@ void VulkanEngine::init_pipelines()
 	_blitLayout = blitEffect->builtLayout;
 	
 	_mainDeletionQueue.push_function([=]() {
-		vkDestroyPipeline(_device, meshPipeline, nullptr);
-		vkDestroyPipeline(_device, texPipeline, nullptr);
+		//vkDestroyPipeline(_device, meshPipeline, nullptr);
 		vkDestroyPipeline(_device, _blitPipeline, nullptr);
 	});
 
@@ -1453,114 +1456,6 @@ bool VulkanEngine::load_compute_shader(const char* shaderPath, VkPipeline& pipel
 }
 
 
-VkPipeline ComputePipelineBuilder::build_pipeline(VkDevice device)
-{
-	VkComputePipelineCreateInfo pipelineInfo{};
-	pipelineInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
-	pipelineInfo.pNext = nullptr;
-
-	pipelineInfo.stage = _shaderStage;
-	pipelineInfo.layout = _pipelineLayout;
-
-
-	VkPipeline newPipeline;
-	if (vkCreateComputePipelines(
-		device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &newPipeline) != VK_SUCCESS) {
-		std::cout << "failed to create pipline\n";
-		return VK_NULL_HANDLE; // failed to create graphics pipeline
-	}
-	else
-	{
-		return newPipeline;
-	}
-}
-VkPipeline PipelineBuilder::build_pipeline(VkDevice device, VkRenderPass pass)
-{
-	//make viewport state from our stored viewport and scissor.
-		//at the moment we wont support multiple viewports or scissors
-	VkPipelineViewportStateCreateInfo viewportState = {};
-	viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-	viewportState.pNext = nullptr;
-
-	viewportState.viewportCount = 1;
-	viewportState.pViewports = &_viewport;
-	viewportState.scissorCount = 1;
-	viewportState.pScissors = &_scissor;
-
-	//setup dummy color blending. We arent using transparent objects yet
-	//the blending is just "no blend", but we do write to the color attachment
-	VkPipelineColorBlendStateCreateInfo colorBlending = {};
-	colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-	colorBlending.pNext = nullptr;
-
-	colorBlending.logicOpEnable = VK_FALSE;
-	colorBlending.logicOp = VK_LOGIC_OP_COPY;
-	colorBlending.attachmentCount = 1;
-	colorBlending.pAttachments = &_colorBlendAttachment;
-
-	//build the actual pipeline
-	//we now use all of the info structs we have been writing into into this one to create the pipeline
-	VkGraphicsPipelineCreateInfo pipelineInfo = {};
-	pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-	pipelineInfo.pNext = nullptr;
-
-	pipelineInfo.stageCount = _shaderStages.size();
-	pipelineInfo.pStages = _shaderStages.data();
-	pipelineInfo.pVertexInputState = &_vertexInputInfo;
-	pipelineInfo.pInputAssemblyState = &_inputAssembly;
-	pipelineInfo.pViewportState = &viewportState;
-	pipelineInfo.pRasterizationState = &_rasterizer;
-	pipelineInfo.pMultisampleState = &_multisampling;
-	pipelineInfo.pColorBlendState = &colorBlending;
-	pipelineInfo.pDepthStencilState = &_depthStencil;
-	pipelineInfo.layout = _pipelineLayout;
-	pipelineInfo.renderPass = pass;
-	pipelineInfo.subpass = 0;
-	pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
-
-	VkPipelineDynamicStateCreateInfo dynamicState{};
-	dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-
-	
-	std::vector<VkDynamicState> dynamicStates;
-	dynamicStates.push_back(VK_DYNAMIC_STATE_VIEWPORT);
-	dynamicStates.push_back(VK_DYNAMIC_STATE_SCISSOR);
-	dynamicStates.push_back(VK_DYNAMIC_STATE_DEPTH_BIAS);
-	dynamicState.pDynamicStates = dynamicStates.data();
-	dynamicState.dynamicStateCount = dynamicStates.size();
-
-	pipelineInfo.pDynamicState = &dynamicState;
-
-	//its easy to error out on create graphics pipeline, so we handle it a bit better than the common VK_CHECK case
-	VkPipeline newPipeline;
-	if (vkCreateGraphicsPipelines(
-		device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &newPipeline) != VK_SUCCESS) {
-		std::cout << "failed to create pipline\n";
-		return VK_NULL_HANDLE; // failed to create graphics pipeline
-	}
-	else
-	{
-		return newPipeline;
-	}
-}
-
-
-void PipelineBuilder::clear_vertex_input()
-{	
-	_vertexInputInfo.pVertexAttributeDescriptions = nullptr;
-	_vertexInputInfo.vertexAttributeDescriptionCount = 0;
-
-	_vertexInputInfo.pVertexBindingDescriptions = nullptr;
-	_vertexInputInfo.vertexBindingDescriptionCount = 0;
-}
-
-void PipelineBuilder::setShaders(ShaderEffect* effect)
-{	
-	_shaderStages.clear();
-	effect->fill_stages(_shaderStages);
-
-	_pipelineLayout = effect->builtLayout;
-}
 
 
 void VulkanEngine::load_meshes()
@@ -1602,8 +1497,11 @@ bool VulkanEngine::load_image_to_cache(const char* name, const char* path)
 
 	if (!result)
 	{
-		std::cout << "Error when loading texture: " << path << endl;
+		LOG_ERROR("Error When texture {} at path {}", name, path);
 		return false;
+	}
+	else {
+		LOG_SUCCESS("Loaded texture {} at path {}", name, path);
 	}
 	newtex.imageView = newtex.image._defaultView;
 	//VkImageViewCreateInfo imageinfo = vkinit::imageview_create_info(VK_FORMAT_R8G8B8A8_UNORM, newtex.image._image, VK_IMAGE_ASPECT_COLOR_BIT);
@@ -1675,20 +1573,20 @@ void VulkanEngine::upload_mesh(Mesh& mesh)
 }
 
 
-Material* VulkanEngine::create_material(VkPipeline pipeline, ShaderEffect* effect, const std::string& name)
+OldMaterial* VulkanEngine::create_material(VkPipeline pipeline, ShaderEffect* effect, const std::string& name)
 {
-	Material mat;
+	OldMaterial mat;
 	mat.forwardPipeline = pipeline;
 	mat.forwardEffect = effect;
 	_materials[name] =mat;
 	return &_materials[name];
 }
 
-Material* VulkanEngine::clone_material(const std::string& originalname, const std::string& copyname)
+OldMaterial* VulkanEngine::clone_material(const std::string& originalname, const std::string& copyname)
 {
-	Material* m = get_material(originalname);
+	OldMaterial* m = get_material(originalname);
 
-	Material mat;
+	OldMaterial mat;
 	mat.forwardPipeline = m->forwardPipeline;
 	mat.forwardEffect = m->forwardEffect;
 
@@ -1699,7 +1597,7 @@ Material* VulkanEngine::clone_material(const std::string& originalname, const st
 	return &_materials[copyname];
 }
 
-Material* VulkanEngine::get_material(const std::string& name)
+OldMaterial* VulkanEngine::get_material(const std::string& name)
 {
 	//search for the object, and return nullpointer if not found
 	auto it = _materials.find(name);
@@ -1783,11 +1681,45 @@ void VulkanEngine::init_scene()
 
 	vkCreateSampler(_device, &samplerInfo, nullptr, &smoothSampler);
 
-	auto whitemat = clone_material("texturedmesh", "default");
+	
 
-	build_texture_set(smoothSampler, whitemat, "white");
-	build_texture_set(smoothSampler, get_material("texturedmesh"), "white");
-	build_texture_set(smoothSampler, get_material("default"), "white");
+	//build_texture_set(smoothSampler, whitemat, "white");
+	//
+	//build_texture_set(smoothSampler, get_material("default"), "white");
+
+	{
+		vkutil::MaterialInfo texturedInfo;
+		texturedInfo.baseTemplate = "texturedPBR_opaque";
+		texturedInfo.parameters = nullptr;
+
+		vkutil::SampledTexture whiteTex;
+		whiteTex.sampler = smoothSampler;
+		whiteTex.view = _loadedTextures["white"].imageView;
+
+		texturedInfo.textures.push_back(whiteTex);
+
+		vkutil::Material* newmat = _materialSystem->build_material("textured", texturedInfo);
+
+		_materialSystem->convert_to_old(newmat, "texturedmesh");
+	}
+	{
+		vkutil::MaterialInfo matinfo;
+		matinfo.baseTemplate = "texturedPBR_opaque";
+		matinfo.parameters = nullptr;
+	
+		vkutil::SampledTexture whiteTex;
+		whiteTex.sampler = smoothSampler;
+		whiteTex.view = _loadedTextures["white"].imageView;
+
+		matinfo.textures.push_back(whiteTex);
+
+		vkutil::Material* newmat = _materialSystem->build_material("default", matinfo);
+
+		_materialSystem->convert_to_old(newmat, "default");
+	}
+
+	//auto whitemat = clone_material("texturedmesh", "default");
+
 	int dimHelmets =1;
 	for (int x = -dimHelmets; x <= dimHelmets; x++) {
 		for (int y = -dimHelmets; y <= dimHelmets; y++) {
@@ -1838,7 +1770,7 @@ void VulkanEngine::init_scene()
 }
 
 
-void VulkanEngine::build_texture_set(VkSampler blockySampler, Material* texturedMat, const char* textureName)
+void VulkanEngine::build_texture_set(VkSampler blockySampler, OldMaterial* texturedMat, const char* textureName)
 {
 	VkDescriptorImageInfo imageBufferInfo;
 	imageBufferInfo.sampler = blockySampler;
@@ -1940,8 +1872,11 @@ bool VulkanEngine::load_prefab(const char* path, glm::mat4 root)
 		bool loaded = assets::load_binaryfile(path, file);
 
 		if (!loaded) {
-			std::cout << "Error when loading prefab ";
+			LOG_FATAL("Error When loading prefab file at path {}",path);
 			return false;
+		}
+		else {
+			LOG_SUCCESS("Prefab {} loaded to cache", path);
 		}
 
 		_prefabCache[path] = new assets::PrefabInfo;
@@ -1952,13 +1887,8 @@ bool VulkanEngine::load_prefab(const char* path, glm::mat4 root)
 	assets::PrefabInfo* prefab = _prefabCache[path];
 
 	VkSamplerCreateInfo samplerInfo = vkinit::sampler_create_info(VK_FILTER_LINEAR);
-
-
 	samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-	//info.anisotropyEnable = true;
-	//samplerInfo.mipLodBias = 2;
-	samplerInfo.maxLod = 30.f;
-	//samplerInfo.minLod = 3;
+
 
 	VkSampler smoothSampler;
 	vkCreateSampler(_device, &samplerInfo, nullptr, &smoothSampler);
@@ -2035,9 +1965,11 @@ bool VulkanEngine::load_prefab(const char* path, glm::mat4 root)
 			_meshes[v.mesh_path.c_str()] = mesh;
 		}
 
+		
+		
 		//load material
-		Material* mat = get_material("default");
-		Material* texturedMat = mat;//get_material("texturedmesh");
+		OldMaterial* mat = get_material("default");
+		
 		if (!get_material(v.material_path.c_str()))
 		{
 			assets::AssetFile materialFile;
@@ -2057,39 +1989,43 @@ bool VulkanEngine::load_prefab(const char* path, glm::mat4 root)
 				
 				if (loaded)
 				{
-					//search for a material that is the same
-					Material* cached = nullptr;
-					for (auto &[k, v] : _materials)
-					{
-						if ((v.forwardEffect == texturedMat->forwardEffect)
-							&& (v.forwardPipeline == texturedMat->forwardPipeline)
-							&& (v.textures.size() == 1)
-							&& (v.textures[0].compare(texture) == 0)
-							)
-						{
-							cached = get_material(k);
-							break;
-						}
-					}
-					if (cached)
-					{
-						mat = cached;
-					}
-					else {
-						mat = clone_material("texturedmesh", v.material_path.c_str());
-				
-						build_texture_set(smoothSampler, mat, texture.c_str());
-					}
-					assert(mat->textureSet != VK_NULL_HANDLE);
+					vkutil::SampledTexture tex;
+					tex.view = _loadedTextures[texture].imageView;
+					tex.sampler = smoothSampler;
+
+					vkutil::MaterialInfo info;
+					info.parameters = nullptr;
+					info.baseTemplate = "texturedPBR_opaque";
+					info.textures.push_back(tex);
+
+
+					vkutil::Material* newMat = _materialSystem->build_material(v.material_path.c_str(), info);
+
+					mat = _materialSystem->convert_to_old(newMat, v.material_path.c_str());
+				}
+				else
+				{
+					LOG_ERROR("Error When loading image at {}", v.material_path);
 				}
 			}
 			else
 			{
-				std::cout << "Error when loading material: " << v.material_path << std::endl;;
+				LOG_ERROR("Error When loading material at path {}", v.material_path);
 			}
 		}
 		else {
 			mat = get_material(v.material_path.c_str());
+		}
+		MeshObject loadmesh;
+		//transparent objects will be invisible
+		if (mat->transparency != assets::TransparencyMode::Opaque)
+		{
+			loadmesh.bDrawForwardPass = false;
+			loadmesh.bDrawShadowPass = false;
+		}
+		else {
+			loadmesh.bDrawForwardPass = true;
+			loadmesh.bDrawShadowPass = true;
 		}
 
 		glm::mat4 nodematrix{ 1.f };
@@ -2101,11 +2037,14 @@ bool VulkanEngine::load_prefab(const char* path, glm::mat4 root)
 		}
 
 		
-		MeshObject loadmesh;
+		
 		loadmesh.mesh = get_mesh(v.mesh_path.c_str());
 		loadmesh.transformMatrix = nodematrix;
 		loadmesh.material = mat;
+		loadmesh.bDrawForwardPass = true;
+		loadmesh.bDrawShadowPass = true;
 		
+
 		refresh_renderbounds(&loadmesh);
 
 		//sort key from location
@@ -2123,7 +2062,9 @@ bool VulkanEngine::load_prefab(const char* path, glm::mat4 root)
 		//_renderables.push_back(loadmesh);
 	}
 
-	_renderScene.register_object_batch(prefab_renderables.data(), prefab_renderables.size(), PassTypeFlags::Forward | PassTypeFlags::DirectionalShadow);
+	_renderScene.register_object_batch(prefab_renderables.data(), prefab_renderables.size());
+
+
 
 	return true;
 }
@@ -2139,15 +2080,21 @@ std::string VulkanEngine::asset_path(std::string& path)
 }
 
 
-std::string VulkanEngine::shader_path(const char* path)
+//std::string VulkanEngine::shader_path(const char* path)
+//{
+//	return "../../shaders/" + std::string(path);
+//}
+//
+//
+//std::string VulkanEngine::shader_path(std::string& path)
+//{
+//	return "../../shaders/" + (path);
+//}
+
+
+std::string VulkanEngine::shader_path(std::string_view path)
 {
 	return "../../shaders/" + std::string(path);
-}
-
-
-std::string VulkanEngine::shader_path(std::string& path)
-{
-	return "../../shaders/" + (path);
 }
 
 void VulkanEngine::refresh_renderbounds(MeshObject* object)
