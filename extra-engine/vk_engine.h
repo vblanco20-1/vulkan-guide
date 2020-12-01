@@ -369,6 +369,9 @@ public:
 
 	//our draw function
 	void draw_objects_forward(VkCommandBuffer cmd, RenderScene::MeshPass& pass);
+
+	void execute_draw_commands(VkCommandBuffer cmd, RenderScene::MeshPass& pass, VkDescriptorSet ObjectDataSet, uint32_t* camera_data_offsets, uint32_t scene_data_offset, VkDescriptorSet GlobalSet);
+
 	void draw_objects_shadow(VkCommandBuffer cmd, RenderScene::MeshPass& pass);
 
 	void reduce_depth(VkCommandBuffer cmd);

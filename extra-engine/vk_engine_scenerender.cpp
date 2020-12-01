@@ -386,9 +386,6 @@ void VulkanEngine::draw_objects_forward(VkCommandBuffer cmd, RenderScene::MeshPa
 
 	vmaUnmapMemory(_allocator, get_current_frame().dynamicDataBuffer._allocation);
 
-	Mesh* lastMesh = nullptr;
-	OldMaterial* lastMaterial = nullptr;
-	VkPipeline lastPipeline = VK_NULL_HANDLE;
 	ShaderDescriptorBinder binder{};
 
 	VkDescriptorBufferInfo objectBufferInfo = _renderScene.objectDataBuffer.get_info();
@@ -419,10 +416,18 @@ void VulkanEngine::draw_objects_forward(VkCommandBuffer cmd, RenderScene::MeshPa
 		.build(ObjectDataSet);
 
 
+	execute_draw_commands(cmd, pass, ObjectDataSet, camera_data_offsets, scene_data_offset, GlobalSet);
+}
+
+
+void VulkanEngine::execute_draw_commands(VkCommandBuffer cmd, RenderScene::MeshPass& pass, VkDescriptorSet ObjectDataSet, uint32_t* camera_data_offsets, uint32_t scene_data_offset, VkDescriptorSet GlobalSet)
+{
 	{
 		ZoneScopedNC("Draw Commit", tracy::Color::Blue4);
-		OldMaterial* lastMaterial = nullptr;
 		Mesh* lastMesh = nullptr;
+		VkPipeline lastPipeline{ VK_NULL_HANDLE };
+		VkPipelineLayout lastLayout{ VK_NULL_HANDLE };
+		VkDescriptorSet lastMaterialSet{ VK_NULL_HANDLE };
 
 		VkDeviceSize offset = 0;
 		vkCmdBindVertexBuffers(cmd, 0, 1, &_renderScene.mergedVertexBuffer._buffer, &offset);
@@ -435,35 +440,29 @@ void VulkanEngine::draw_objects_forward(VkCommandBuffer cmd, RenderScene::MeshPa
 			auto& multibatch = pass.multibatches[i];
 			auto& instanceDraw = pass.batches[multibatch.first];
 
-			OldMaterial* drawMat = _renderScene.get_material(instanceDraw.material);
+			VkPipeline newPipeline = instanceDraw.material.shaderPass->pipeline;
+			VkPipelineLayout newLayout = instanceDraw.material.shaderPass->layout;
+			VkDescriptorSet newMaterialSet = instanceDraw.material.materialSet;
+
 			Mesh* drawMesh = _renderScene.get_mesh(instanceDraw.meshID).original;
-			bool merged = _renderScene.get_mesh(instanceDraw.meshID).isMerged;
 
-			if (lastMaterial != drawMat) {
+			if (newPipeline != lastPipeline)
+			{
+				lastPipeline = newPipeline;
+				vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, newPipeline);
+				vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, newLayout, 1, 1, &ObjectDataSet, 0, nullptr);
 
-				ShaderEffect* newEffect = drawMat->forwardEffect;
-				if (lastMaterial == nullptr || lastMaterial->forwardPipeline != drawMat->forwardPipeline) {
-
-					vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, drawMat->forwardPipeline);
-
-					vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, newEffect->builtLayout, 1, 1, &ObjectDataSet, 0, nullptr);
-
-					//update dynamic binds
-					uint32_t dynamicBinds[] = { camera_data_offsets[0],scene_data_offset };
-					vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, newEffect->builtLayout, 0, 1, &GlobalSet, 2, dynamicBinds);
-				}
-
-				if (lastMaterial == nullptr || drawMat->textureSet != lastMaterial->textureSet) {
-					if (drawMat->textureSet != VK_NULL_HANDLE)
-					{
-						//texture descriptor
-						vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, newEffect->builtLayout, 2, 1, &drawMat->textureSet, 0, nullptr);
-
-					}
-				}
-				lastMaterial = drawMat;
+				//update dynamic binds
+				uint32_t dynamicBinds[] = { camera_data_offsets[0],scene_data_offset };
+				vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, newLayout, 0, 1, &GlobalSet, 2, dynamicBinds);
+			}
+			if (newMaterialSet != lastMaterialSet)
+			{
+				lastMaterialSet = newMaterialSet;
+				vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, newLayout, 2, 1, &newMaterialSet, 0, nullptr);
 			}
 
+			bool merged = _renderScene.get_mesh(instanceDraw.meshID).isMerged;
 			if (merged)
 			{
 				if (lastMesh != nullptr)
@@ -476,7 +475,7 @@ void VulkanEngine::draw_objects_forward(VkCommandBuffer cmd, RenderScene::MeshPa
 				}
 			}
 			else if (lastMesh != drawMesh) {
-				
+
 				//bind the mesh vertex buffer with offset 0
 				VkDeviceSize offset = 0;
 				vkCmdBindVertexBuffers(cmd, 0, 1, &drawMesh->_vertexBuffer._buffer, &offset);
@@ -504,7 +503,6 @@ void VulkanEngine::draw_objects_forward(VkCommandBuffer cmd, RenderScene::MeshPa
 		}
 	}
 }
-
 void VulkanEngine::draw_objects_shadow(VkCommandBuffer cmd, RenderScene::MeshPass& pass)
 {
 	ZoneScopedNC("DrawObjects", tracy::Color::Blue);
@@ -566,84 +564,7 @@ void VulkanEngine::draw_objects_shadow(VkCommandBuffer cmd, RenderScene::MeshPas
 		.bind_buffer(1, &instanceInfo, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
 		.build(ObjectDataSet);
 
-
-	{
-		ZoneScopedNC("Draw Commit", tracy::Color::Blue4);
-		OldMaterial* lastMaterial = nullptr;
-		Mesh* lastMesh = nullptr;
-
-		VkDeviceSize offset = 0;
-		vkCmdBindVertexBuffers(cmd, 0, 1, &_renderScene.mergedVertexBuffer._buffer, &offset);
-
-		vkCmdBindIndexBuffer(cmd, _renderScene.mergedIndexBuffer._buffer, 0, VK_INDEX_TYPE_UINT32);
-
-		stats.objects = pass.flat_batches.size();
-		for (int i = 0; i < pass.multibatches.size(); i++)//)
-		{
-			auto& multibatch = pass.multibatches[i];
-			auto& instanceDraw = pass.batches[multibatch.first];
-
-			OldMaterial* drawMat = _renderScene.get_material(instanceDraw.material);
-			Mesh* drawMesh = _renderScene.get_mesh(instanceDraw.meshID).original;
-			bool merged = _renderScene.get_mesh(instanceDraw.meshID).isMerged;
-
-			if (lastMaterial != drawMat) {
-
-				ShaderEffect* newEffect = drawMat->shadowEffect;
-				if (lastMaterial == nullptr || lastMaterial->shadowPipeline != drawMat->shadowPipeline) {
-
-					vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, drawMat->shadowPipeline);
-					
-					vkCmdSetDepthBias(cmd, _config.shadowBias, 0, _config.shadowBiasslope);
-					vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, newEffect->builtLayout, 1, 1, &ObjectDataSet, 0, nullptr);
-
-					//update dynamic binds
-					uint32_t dynamicBinds[] = { camera_data_offsets[0],scene_data_offset };
-					vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, newEffect->builtLayout, 0, 1, &GlobalSet, 1, dynamicBinds);
-				}
-
-				lastMaterial = drawMat;
-			}
-
-			if (merged)
-			{
-				if (lastMesh != nullptr)
-				{
-					VkDeviceSize offset = 0;
-					vkCmdBindVertexBuffers(cmd, 0, 1, &_renderScene.mergedVertexBuffer._buffer, &offset);
-
-					vkCmdBindIndexBuffer(cmd, _renderScene.mergedIndexBuffer._buffer, 0, VK_INDEX_TYPE_UINT32);
-					lastMesh = nullptr;
-				}
-			}
-			else if (lastMesh != drawMesh) {
-
-				//bind the mesh vertex buffer with offset 0
-				VkDeviceSize offset = 0;
-				vkCmdBindVertexBuffers(cmd, 0, 1, &drawMesh->_vertexBuffer._buffer, &offset);
-
-				if (drawMesh->_indexBuffer._buffer != VK_NULL_HANDLE) {
-					vkCmdBindIndexBuffer(cmd, drawMesh->_indexBuffer._buffer, 0, VK_INDEX_TYPE_UINT32);
-				}
-				lastMesh = drawMesh;
-			}
-
-			bool bHasIndices = drawMesh->_indices.size() > 0;
-			if (!bHasIndices) {
-				stats.draws++;
-				stats.triangles += (drawMesh->_vertices.size() / 3) * instanceDraw.count;
-				vkCmdDraw(cmd, drawMesh->_vertices.size(), instanceDraw.count, 0, instanceDraw.first);
-			}
-			else {
-				stats.triangles += (drawMesh->_indices.size() / 3) * instanceDraw.count;
-
-				vkCmdDrawIndexedIndirect(cmd, pass.drawIndirectBuffer._buffer, multibatch.first * sizeof(GPUIndirectObject), multibatch.count, sizeof(GPUIndirectObject));
-
-				stats.draws++;
-				stats.drawcalls += instanceDraw.count;
-			}
-		}
-	}
+	execute_draw_commands(cmd, pass, ObjectDataSet, camera_data_offsets, scene_data_offset, GlobalSet);
 }
 
 

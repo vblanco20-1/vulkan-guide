@@ -235,17 +235,17 @@ void RenderScene::refresh_pass(MeshPass* pass, bool forward)
 		RenderScene::IndirectBatch newBatch;
 		newBatch.first = 0;
 		newBatch.count = 0;
-		newBatch.material = get_object(pass->flat_batches[0].object)->material;
+		//newBatch.material = get_object(pass->flat_batches[0].object)->material;
 
 		vkutil::Material* mt = get_material2(get_object(pass->flat_batches[0].object)->material2);
 		if (forward)
 		{
-			newBatch.material2.materialSet = mt->forwardSet;
-			newBatch.material2.shaderPass = mt->original->forwardEffect;
+			newBatch.material.materialSet = mt->forwardSet;
+			newBatch.material.shaderPass = mt->original->forwardEffect;
 		}
 		else {
-			newBatch.material2.materialSet = mt->shadowSet;
-			newBatch.material2.shaderPass = mt->original->shadowEffect;
+			newBatch.material.materialSet = mt->shadowSet;
+			newBatch.material.shaderPass = mt->original->shadowEffect;
 		}
 		newBatch.meshID = get_object(pass->flat_batches[0].object)->meshID;
 
@@ -255,27 +255,31 @@ void RenderScene::refresh_pass(MeshPass* pass, bool forward)
 			RenderObject* obj = get_object(pass->flat_batches[i].object);
 			RenderScene::IndirectBatch* back = &pass->batches.back();
 
+			vkutil::Material* mt = get_material2(obj->material2);
+			if (forward)
+			{
+				newBatch.material.materialSet = mt->forwardSet;
+				newBatch.material.shaderPass = mt->original->forwardEffect;
+			}
+			else {
+				newBatch.material.materialSet = mt->shadowSet;
+				newBatch.material.shaderPass = mt->original->shadowEffect;
+			}
+
 			if (obj->meshID.handle == back->meshID.handle
-				&& obj->material.handle == back->material.handle)
+				&& newBatch.material.materialSet == back->material.materialSet
+				&& newBatch.material.shaderPass == back->material.shaderPass
+				)
 			{
 				back->count++;
 				back->AABBMax = glm::max(back->AABBMax, obj->bounds.origin + obj->bounds.extents);
 				back->AABBMin = glm::min(back->AABBMin, obj->bounds.origin - obj->bounds.extents);
 			}
 			else {
-				vkutil::Material* mt = get_material2(obj->material2);
-				if (forward)
-				{
-					newBatch.material2.materialSet = mt->forwardSet;
-					newBatch.material2.shaderPass = mt->original->forwardEffect;
-				}
-				else {
-					newBatch.material2.materialSet = mt->shadowSet;
-					newBatch.material2.shaderPass = mt->original->shadowEffect;
-				}
+				
 				newBatch.first = i;
 				newBatch.count = 1;
-				newBatch.material = obj->material;
+				//newBatch.material = obj->material;
 				newBatch.meshID = obj->meshID;
 				newBatch.AABBMax = obj->bounds.origin + obj->bounds.extents;
 				newBatch.AABBMin = obj->bounds.origin - obj->bounds.extents;
@@ -309,8 +313,8 @@ void RenderScene::refresh_pass(MeshPass* pass, bool forward)
 					
 			bool bSameMat = false;
 			
-			if (joinbatch->material2.materialSet == batch->material2.materialSet &&
-				joinbatch->material2.shaderPass == batch->material2.shaderPass
+			if (joinbatch->material.materialSet == batch->material.materialSet &&
+				joinbatch->material.shaderPass == batch->material.shaderPass
 				)
 			{
 				bSameMat = true;

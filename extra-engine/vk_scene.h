@@ -77,9 +77,8 @@ public:
 	};
 	struct IndirectBatch {
 		Handle<DrawMesh> meshID;
-		Handle<OldMaterial> material;
 
-		PassMaterial material2;
+		PassMaterial material;
 		uint32_t first;
 		uint32_t count;
 
