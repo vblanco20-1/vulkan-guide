@@ -256,7 +256,7 @@ OldMaterial* vkutil::MaterialSystem::convert_to_old(Material* mat, const std::st
 	texmat->shadowEffect = mat->original->shadowEffect->effect;
 	texmat->shadowPipeline = mat->original->shadowEffect->pipeline;
 	texmat->textureSet = mat->forwardSet;
-	
+	texmat->newMat = mat;
 	return texmat;
 }
 

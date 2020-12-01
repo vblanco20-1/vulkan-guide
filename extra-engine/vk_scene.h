@@ -24,6 +24,8 @@ struct OldMaterial;
 struct MeshObject;
 struct Mesh;
 struct GPUObjectData;
+namespace vkutil { struct Material; }
+namespace vkutil { struct ShaderPass; }
 
 struct GPUIndirectObject {
 	VkDrawIndexedIndirectCommand command;
@@ -52,8 +54,8 @@ struct RenderObject {
 
 	Handle<DrawMesh> meshID;
 	Handle<OldMaterial> material;
-
-	uint32_t updateIndex;
+	Handle<vkutil::Material> material2;
+		uint32_t updateIndex;
 	uint32_t customSortKey{0};
 
 	glm::mat4 transformMatrix;
@@ -69,10 +71,15 @@ struct GPUInstance {
 
 class RenderScene {
 public:
+	struct PassMaterial {
+		VkDescriptorSet materialSet;
+		vkutil::ShaderPass* shaderPass;
+	};
 	struct IndirectBatch {
 		Handle<DrawMesh> meshID;
 		Handle<OldMaterial> material;
 
+		PassMaterial material2;
 		uint32_t first;
 		uint32_t count;
 
@@ -133,24 +140,29 @@ public:
 
 	void merge_meshes(class VulkanEngine* engine);
 
-	void refresh_pass(MeshPass* pass);
+	void refresh_pass(MeshPass* pass, bool forward = true);
 
 	RenderObject* get_object(Handle<RenderObject> objectID);
 	DrawMesh get_mesh(Handle<DrawMesh> objectID);
 	OldMaterial* get_material(Handle<OldMaterial> objectID);
 
+	vkutil::Material *get_material2(Handle<vkutil::Material> objectID);
+
 	std::vector<RenderObject> renderables;
 	std::vector<OldMaterial*> materials;
 	std::vector<DrawMesh> meshes;
+	std::vector<vkutil::Material*> materials2;
 
 	std::vector<Handle<RenderObject>> dirtyObjects;
 
 	MeshPass _forwardPass;
 	MeshPass _shadowPass;
 
+	std::unordered_map<vkutil::Material*, Handle<vkutil::Material>> materialConvert2;
 	std::unordered_map<OldMaterial*, Handle<OldMaterial>> materialConvert;
 	std::unordered_map<Mesh*, Handle<DrawMesh>> meshConvert;
 
+	Handle<vkutil::Material> getMaterialHandle2(vkutil::Material* m);
 	Handle<OldMaterial> getMaterialHandle(OldMaterial* m);
 	Handle<DrawMesh> getMeshHandle(Mesh* m);
 

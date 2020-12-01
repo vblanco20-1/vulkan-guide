@@ -1,13 +1,15 @@
 ﻿#include <vk_scene.h>
 #include <vk_engine.h>
 #include "Tracy.hpp"
+#include "logger.h"
 
 Handle<RenderObject> RenderScene::register_object(MeshObject* object)
 {
 	RenderObject newObj;
 	newObj.bounds = object->bounds;
 	newObj.transformMatrix = object->transformMatrix;
-	newObj.material = getMaterialHandle(object->material);
+	newObj.material = getMaterialHandle(object->material);	
+	newObj.material2 = getMaterialHandle2(object->material->newMat);
 	newObj.meshID = getMeshHandle(object->mesh);
 	newObj.updateIndex = (uint32_t)-1;
 	newObj.customSortKey = object->customSortKey;
@@ -131,8 +133,8 @@ void RenderScene::clear_dirty_objects()
 
 void RenderScene::build_batches()
 {
-	refresh_pass(&_forwardPass);
-	refresh_pass(&_shadowPass);
+	refresh_pass(&_forwardPass, true);
+	refresh_pass(&_shadowPass, false);
 }
 
 void RenderScene::merge_meshes(VulkanEngine* engine)
@@ -180,7 +182,7 @@ void RenderScene::merge_meshes(VulkanEngine* engine)
 }
 
 
-void RenderScene::refresh_pass(MeshPass* pass)
+void RenderScene::refresh_pass(MeshPass* pass, bool forward)
 {
 	pass->needsIndirectRefresh = true;
 	pass->needsInstanceRefresh = true;
@@ -196,9 +198,16 @@ void RenderScene::refresh_pass(MeshPass* pass)
 				newCommand.object = pass->unbatchedObjects[i];
 
 				//pack mesh id and material into 32 bits
-				//uint32_t meshmat = (uint64_t(object->material.handle) << 10) | uint64_t(object->meshID.handle);
-				uint32_t mathash = uint64_t(object->material.handle)^ std::hash<uint64_t>()((uint64_t)get_material(object->material)->textureSet);
-				uint32_t meshmat = (uint64_t(object->material.handle) << 10) | uint64_t(object->meshID.handle);
+				vkutil::Material* mt = get_material2(object->material2);
+				uint32_t mathash;
+				
+				if (forward) {
+					mathash = std::hash<uint64_t>()(uint64_t(mt->original->forwardEffect->pipeline)) ^ std::hash<uint64_t>()((uint64_t)mt->forwardSet);
+				}
+				else {
+					mathash	= std::hash<uint64_t>()( uint64_t(mt->original->shadowEffect->pipeline)) ^ std::hash<uint64_t>()((uint64_t)mt->shadowSet);
+				}
+				uint32_t meshmat = (uint64_t(object->material2.handle) << 10) | uint64_t(object->meshID.handle);
 				//pack mesh id and material into 64 bits
 				//uint64_t meshmat = uint64_t(meshmat) | object->customSortKey << 32;//object->material.handle << 32 | object->meshID.handle;
 
@@ -219,12 +228,25 @@ void RenderScene::refresh_pass(MeshPass* pass)
 	{
 		ZoneScopedNC("Draw Merge", tracy::Color::Blue);
 
+
+
 		pass->batches.clear();
 
 		RenderScene::IndirectBatch newBatch;
 		newBatch.first = 0;
 		newBatch.count = 0;
 		newBatch.material = get_object(pass->flat_batches[0].object)->material;
+
+		vkutil::Material* mt = get_material2(get_object(pass->flat_batches[0].object)->material2);
+		if (forward)
+		{
+			newBatch.material2.materialSet = mt->forwardSet;
+			newBatch.material2.shaderPass = mt->original->forwardEffect;
+		}
+		else {
+			newBatch.material2.materialSet = mt->shadowSet;
+			newBatch.material2.shaderPass = mt->original->shadowEffect;
+		}
 		newBatch.meshID = get_object(pass->flat_batches[0].object)->meshID;
 
 		pass->batches.push_back(newBatch);
@@ -241,7 +263,16 @@ void RenderScene::refresh_pass(MeshPass* pass)
 				back->AABBMin = glm::min(back->AABBMin, obj->bounds.origin - obj->bounds.extents);
 			}
 			else {
-
+				vkutil::Material* mt = get_material2(obj->material2);
+				if (forward)
+				{
+					newBatch.material2.materialSet = mt->forwardSet;
+					newBatch.material2.shaderPass = mt->original->forwardEffect;
+				}
+				else {
+					newBatch.material2.materialSet = mt->shadowSet;
+					newBatch.material2.shaderPass = mt->original->shadowEffect;
+				}
 				newBatch.first = i;
 				newBatch.count = 1;
 				newBatch.material = obj->material;
@@ -254,7 +285,10 @@ void RenderScene::refresh_pass(MeshPass* pass)
 			pass->batches.back().objects.push_back(pass->flat_batches[i].object);			
 		}
 
-		
+		//for (int i = 0; i < pass->batches.size(); i++)
+		//{
+		//	pass->batches[i].material2.materialSet = 
+		//}
 
 		//flatten batches into multibatch
 		Multibatch newbatch;
@@ -272,13 +306,11 @@ void RenderScene::refresh_pass(MeshPass* pass)
 			
 			bool bCompatibleMesh = get_mesh(joinbatch->meshID).isMerged;
 			
-			OldMaterial* oldmat = get_material(joinbatch->material);
-			OldMaterial* newmat = get_material(batch->material);
-
-			
+					
 			bool bSameMat = false;
-			if (oldmat->forwardEffect == newmat->forwardEffect &&
-				oldmat->textureSet == newmat->textureSet
+			
+			if (joinbatch->material2.materialSet == batch->material2.materialSet &&
+				joinbatch->material2.shaderPass == batch->material2.shaderPass
 				)
 			{
 				bSameMat = true;
@@ -312,6 +344,29 @@ DrawMesh RenderScene::get_mesh(Handle<DrawMesh> objectID)
 OldMaterial* RenderScene::get_material(Handle<OldMaterial> objectID)
 {
 	return materials[objectID.handle];
+}
+
+vkutil::Material* RenderScene::get_material2(Handle<vkutil::Material> objectID)
+{
+	return materials2[objectID.handle];
+}
+
+Handle<vkutil::Material> RenderScene::getMaterialHandle2(vkutil::Material* m)
+{	
+	Handle<vkutil::Material> handle;
+	auto it = materialConvert2.find(m);
+	if (it == materialConvert2.end())
+	{
+		uint32_t index = materials2.size();
+		materials2.push_back(m);
+
+		handle.handle = index;
+		materialConvert2[m] = handle;
+	}
+	else {
+		handle = (*it).second;
+	}
+	return handle;
 }
 
 Handle<OldMaterial> RenderScene::getMaterialHandle(OldMaterial* m)

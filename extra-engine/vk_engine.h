@@ -20,6 +20,8 @@
 #include <SDL_events.h>
 #include <frustum_cull.h>
 
+namespace vkutil { struct Material; }
+
 
 namespace tracy { class VkCtx; }
 
@@ -67,7 +69,7 @@ struct OldMaterial {
 	VkDescriptorSet textureSet{VK_NULL_HANDLE};
 	VkPipeline forwardPipeline{ VK_NULL_HANDLE };
 	VkPipeline shadowPipeline{ VK_NULL_HANDLE };
-	
+	vkutil::Material* newMat{ nullptr };
 	assets::TransparencyMode transparency;
 
 	std::vector<std::string> textures;
