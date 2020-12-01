@@ -134,7 +134,7 @@ target_include_directories(fmt_lib PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/fmt_lib")
 
 file(GLOB FMT_FILES "${CMAKE_CURRENT_SOURCE_DIR}/fmt_lib/fmt/*")
 
-target_sources(fmt_lib PUBLIC ${FMT_FILES})
+target_sources(fmt_lib PRIVATE ${FMT_FILES})
 
 
 
