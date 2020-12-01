@@ -196,8 +196,9 @@ void RenderScene::refresh_pass(MeshPass* pass)
 				newCommand.object = pass->unbatchedObjects[i];
 
 				//pack mesh id and material into 32 bits
+				//uint32_t meshmat = (uint64_t(object->material.handle) << 10) | uint64_t(object->meshID.handle);
+				uint32_t mathash = uint64_t(object->material.handle)^ std::hash<uint64_t>()((uint64_t)get_material(object->material)->textureSet);
 				uint32_t meshmat = (uint64_t(object->material.handle) << 10) | uint64_t(object->meshID.handle);
-
 				//pack mesh id and material into 64 bits
 				//uint64_t meshmat = uint64_t(meshmat) | object->customSortKey << 32;//object->material.handle << 32 | object->meshID.handle;
 
@@ -268,8 +269,21 @@ void RenderScene::refresh_pass(MeshPass* pass)
 			IndirectBatch* joinbatch = &pass->batches[newbatch.first];
 			IndirectBatch* batch = &pass->batches[i];
 
-			bool bSameMat = joinbatch->material.handle == batch->material.handle;
+			
 			bool bCompatibleMesh = get_mesh(joinbatch->meshID).isMerged;
+			
+			OldMaterial* oldmat = get_material(joinbatch->material);
+			OldMaterial* newmat = get_material(batch->material);
+
+			
+			bool bSameMat = false;
+			if (oldmat->forwardEffect == newmat->forwardEffect &&
+				oldmat->textureSet == newmat->textureSet
+				)
+			{
+				bSameMat = true;
+			}
+
 
 			if (!bSameMat || !bCompatibleMesh)
 			{
