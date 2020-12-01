@@ -33,4 +33,4 @@ target_compile_definitions(extra PUBLIC TRACY_ENABLE)
 target_compile_definitions(extra PUBLIC GLM_FORCE_DEPTH_ZERO_TO_ONE GLM_FORCE_LEFT_HANDED)
 target_link_libraries(extra vkbootstrap vma glm tinyobjloader imgui stb_image spirv_reflect)
 
-target_link_libraries(extra Vulkan::Vulkan sdl2 assetlib tracy)
+target_link_libraries(extra Vulkan::Vulkan sdl2 assetlib tracy fmt_lib)

@@ -10,6 +10,8 @@ add_library(json INTERFACE)
 add_library(tinyobjloader STATIC)
 add_library(spirv_reflect STATIC)
 
+add_library(fmt_lib STATIC)
+
 add_library(lz4 STATIC)
 
 
@@ -125,5 +127,14 @@ set(assimp_lib "${CMAKE_CURRENT_SOURCE_DIR}/assimp_build/code/Release/assimp-vc1
 
 target_include_directories(assimp INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/assimp/include")
 target_link_libraries(assimp INTERFACE "${assimp_lib}" )
+
+
+## FMT LIB
+target_include_directories(fmt_lib PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/fmt_lib")
+
+file(GLOB FMT_FILES "${CMAKE_CURRENT_SOURCE_DIR}/fmt_lib/fmt/*")
+
+target_sources(fmt_lib PUBLIC ${FMT_FILES})
+
 
 

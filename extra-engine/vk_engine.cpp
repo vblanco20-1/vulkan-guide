@@ -30,6 +30,9 @@
 #include "TracyVulkan.hpp"
 #include "vk_profiler.h"
 
+#include "fmt/core.h"
+#include "fmt/os.h"
+
 constexpr bool bUseValidationLayers = false;
 
 //we want to immediately abort when there is an error. In normal engines this would give an error message to the user, or perform a dump of state.
@@ -180,20 +183,19 @@ void VulkanEngine::draw()
 				GPUIndirectObject* objects = (GPUIndirectObject*)buffer;
 				int objectCount = (end - begin) / sizeof(GPUIndirectObject);
 
-				std::ofstream file;
-				std::stringstream namestream;
-				namestream << _frameNumber << "_CULLDATA_" << i << ".txt";
-				file.open(namestream.str(),std::ios::trunc);
+				std::string filename = fmt::format("{}_CULLDATA_{}.txt", _frameNumber,i);
+
+				auto out = fmt::output_file(filename);
 
 				for (int o = 0; o < objectCount; o++)
 				{
-					file << "DRAW:" << o << "-------------\n";
-					file << "  OG Count " << _renderScene._forwardPass.batches[o].count << "\n";
-					file << "  Visible Count " << objects[o].command.instanceCount << "\n";
-					file << "  First " << objects[o].command.firstInstance << "\n";
-					file << "  Indices " << objects[o].command.indexCount << "\n";
+					out.print("DRAW: {} ------------ \n", o);
+					out.print("	OG Count: {} \n", _renderScene._forwardPass.batches[o].count);
+					out.print("	Visible Count: {} \n", objects[o].command.instanceCount);
+					out.print("	First: {} \n", objects[o].command.firstInstance);
+					out.print("	Indices: {} \n", objects[o].command.indexCount);
 				}
-				file.close();
+				
 				free(buffer);
 			}
 		}
