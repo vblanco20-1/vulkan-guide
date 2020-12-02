@@ -68,7 +68,7 @@ uint32_t vkutil::hash_descriptor_layout_info(VkDescriptorSetLayoutCreateInfo* in
 	ss << info->flags;
 	ss << info->bindingCount;
 
-	for (int i = 0; i < info->bindingCount; i++) {
+	for (auto i = 0u; i < info->bindingCount; i++) {
 		const VkDescriptorSetLayoutBinding &binding = info->pBindings[i];
 
 		ss << binding.binding;
@@ -155,11 +155,11 @@ void ShaderEffect::reflect_layout(VkDevice device, ReflectionOverrides* override
 
 		//pushconstants	
 
-		result = spvReflectEnumeratePushConstants(&spvmodule, &count, NULL);
+		result = spvReflectEnumeratePushConstantBlocks(&spvmodule, &count, NULL);
 		assert(result == SPV_REFLECT_RESULT_SUCCESS);
 
 		std::vector<SpvReflectBlockVariable*> pconstants(count);
-		result = spvReflectEnumeratePushConstants(&spvmodule, &count, pconstants.data());
+		result = spvReflectEnumeratePushConstantBlocks(&spvmodule, &count, pconstants.data());
 		assert(result == SPV_REFLECT_RESULT_SUCCESS);
 
 		if (count > 0) {
@@ -214,7 +214,7 @@ void ShaderEffect::reflect_layout(VkDevice device, ReflectionOverrides* override
 		});
 
 
-		ly.create_info.bindingCount = ly.bindings.size();
+		ly.create_info.bindingCount = (uint32_t)ly.bindings.size();
 		ly.create_info.pBindings = ly.bindings.data();
 		ly.create_info.flags = 0;
 		ly.create_info.pNext = 0;
@@ -234,7 +234,7 @@ void ShaderEffect::reflect_layout(VkDevice device, ReflectionOverrides* override
 	VkPipelineLayoutCreateInfo mesh_pipeline_layout_info = vkinit::pipeline_layout_create_info();
 
 	mesh_pipeline_layout_info.pPushConstantRanges = constant_ranges.data();
-	mesh_pipeline_layout_info.pushConstantRangeCount = constant_ranges.size();
+	mesh_pipeline_layout_info.pushConstantRangeCount = (uint32_t)constant_ranges.size();
 
 	std::array<VkDescriptorSetLayout,4> compactedLayouts;
 	int s = 0;
@@ -364,23 +364,13 @@ void ShaderDescriptorBinder::build_sets(VkDevice device, vkutil::DescriptorAlloc
 				//alloc
 				auto layout = shaders->setLayouts[i];
 
-				//VkDescriptorSetAllocateInfo allocInfo = {};
-				//allocInfo.pNext = nullptr;
-				//allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-				//allocInfo.descriptorPool = allocator;
-				//allocInfo.descriptorSetCount = 1;
-				//allocInfo.pSetLayouts = &layout;
-				//
-				//VkDescriptorSet newDescriptor;
-				//vkAllocateDescriptorSets(device, &allocInfo, &newDescriptor);
-
 				VkDescriptorSet newDescriptor;
 				allocator.allocate(&newDescriptor, layout);
 
 				for (auto& w : writes[i]) {
 					w.dstSet = newDescriptor;
 				}
-				vkUpdateDescriptorSets(device, writes[i].size(), writes[i].data(), 0, nullptr);
+				vkUpdateDescriptorSets(device, (uint32_t)writes[i].size(), writes[i].data(), 0, nullptr);
 
 				cachedDescriptorSets[i] = newDescriptor;
 			}

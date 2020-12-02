@@ -49,11 +49,11 @@ void assets::unpack_texture(TextureInfo* info, const char* sourcebuffer, size_t 
 {
 	if (info->compressionMode == CompressionMode::LZ4) {
 	
-		char* source;
+		
 		for (auto& page : info->pages)
 		{
-			LZ4_decompress_safe(source, destination, page.compressedSize, page.originalSize);
-			source += page.compressedSize;
+			LZ4_decompress_safe(sourcebuffer, destination, page.compressedSize, page.originalSize);
+			sourcebuffer += page.compressedSize;
 			destination += page.originalSize;
 		}
 		

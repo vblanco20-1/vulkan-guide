@@ -18,11 +18,11 @@ bool assets::save_binaryfile(const  char* path, const AssetFile& file)
 	outfile.write((const char*)&version, sizeof(uint32_t));
 
 	//json lenght
-	uint32_t lenght = file.json.size();
+	uint32_t lenght = static_cast<uint32_t>(file.json.size());
 	outfile.write((const char*)&lenght, sizeof(uint32_t));
 
 	//blob lenght
-	uint32_t bloblenght = file.binaryBlob.size();
+	uint32_t bloblenght = static_cast<uint32_t>(file.binaryBlob.size());
 	outfile.write((const char*)&bloblenght, sizeof(uint32_t));
 
 	//json stream
@@ -46,7 +46,7 @@ bool assets::load_binaryfile(const  char* path, AssetFile& outputFile)
 
 
 	infile.read(outputFile.type, 4);
-	uint32_t vers;
+	
 	infile.read((char*)&outputFile.version, sizeof(uint32_t));
 
 	uint32_t jsonlen = 0;

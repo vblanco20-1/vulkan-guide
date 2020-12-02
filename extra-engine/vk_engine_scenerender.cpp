@@ -69,14 +69,14 @@ void VulkanEngine::execute_compute_cull(VkCommandBuffer cmd, RenderScene::MeshPa
 	cullData.frustum[1] = frustumX.z;
 	cullData.frustum[2] = frustumY.y;
 	cullData.frustum[3] = frustumY.z;
-	cullData.drawCount = pass.flat_batches.size();
+	cullData.drawCount = static_cast<uint32_t>(pass.flat_batches.size());
 	cullData.cullingEnabled = params.frustrumCull;
 	cullData.lodEnabled = false;
 	cullData.occlusionEnabled = params.occlusionCull;
 	cullData.lodBase = 10.f;
 	cullData.lodStep = 1.5f;
-	cullData.pyramidWidth = depthPyramidWidth;
-	cullData.pyramidHeight = depthPyramidHeight;
+	cullData.pyramidWidth = static_cast<float>(depthPyramidWidth);
+	cullData.pyramidHeight = static_cast<float>(depthPyramidHeight);
 	cullData.viewMat = params.viewmat;//get_view_matrix();
 
 	cullData.AABBcheck = params.aabb;
@@ -119,7 +119,7 @@ void VulkanEngine::execute_compute_cull(VkCommandBuffer cmd, RenderScene::MeshPa
 	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, _cullLayout, 0, 1, &COMPObjectDataSet, 0, nullptr);
 
 	
-	vkCmdDispatch(cmd, (pass.flat_batches.size() / 256)+1, 1, 1);
+	vkCmdDispatch(cmd, static_cast<uint32_t>((pass.flat_batches.size() / 256)+1), 1, 1);
 
 
 	//barrier the 2 buffers we just wrote for culling, the indirect draw one, and the instances one, so that they can be read well when rendering the pass
@@ -148,7 +148,7 @@ void VulkanEngine::execute_compute_cull(VkCommandBuffer cmd, RenderScene::MeshPa
 		debugCopy.size = pass.batches.size() * sizeof(GPUIndirectObject);
 		debugCopy.srcOffset = 0;
 		vkCmdCopyBuffer(cmd, pass.drawIndirectBuffer._buffer, get_current_frame().debugOutputBuffer._buffer, 1, &debugCopy);
-		get_current_frame().debugDataOffsets.push_back(offset + debugCopy.size);
+		get_current_frame().debugDataOffsets.push_back(offset + static_cast<uint32_t>(debugCopy.size));
 		get_current_frame().debugDataNames.push_back("Cull Indirect Output");
 	}
 }
@@ -192,11 +192,11 @@ void VulkanEngine::ready_mesh_draw(VkCommandBuffer cmd)
 			std::vector<VkBufferCopy> copies;
 			copies.reserve(_renderScene.dirtyObjects.size());
 
-			uint32_t buffersize = sizeof(GPUObjectData) * _renderScene.dirtyObjects.size();
-			uint32_t vec4size = sizeof(glm::vec4);
-			uint32_t intsize = sizeof(uint32_t);
-			uint32_t wordsize = sizeof(GPUObjectData) / sizeof(uint32_t);
-			uint32_t uploadSize = _renderScene.dirtyObjects.size() * wordsize * intsize;
+			uint64_t buffersize = sizeof(GPUObjectData) * _renderScene.dirtyObjects.size();
+			uint64_t vec4size = sizeof(glm::vec4);
+			uint64_t intsize = sizeof(uint32_t);
+			uint64_t wordsize = sizeof(GPUObjectData) / sizeof(uint32_t);
+			uint64_t uploadSize = _renderScene.dirtyObjects.size() * wordsize * intsize;
 			AllocatedBuffer<GPUObjectData> newBuffer = create_buffer(buffersize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
 			AllocatedBuffer<uint32_t> targetBuffer = create_buffer(uploadSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
 
@@ -208,7 +208,7 @@ void VulkanEngine::ready_mesh_draw(VkCommandBuffer cmd)
 
 			uint32_t* targetData = map_buffer(targetBuffer);
 			GPUObjectData* objectSSBO = map_buffer(newBuffer);
-			uint32_t launchcount = _renderScene.dirtyObjects.size() * wordsize;
+			uint32_t launchcount = static_cast<uint32_t>(_renderScene.dirtyObjects.size() * wordsize);
 			{
 				ZoneScopedNC("Write dirty objects", tracy::Color::Red);
 				uint32_t sidx = 0;
@@ -217,7 +217,7 @@ void VulkanEngine::ready_mesh_draw(VkCommandBuffer cmd)
 					_renderScene.write_object(objectSSBO + i, _renderScene.dirtyObjects[i]);
 
 
-					uint32_t dstOffset = wordsize * _renderScene.dirtyObjects[i].handle;
+					uint32_t dstOffset = static_cast<uint32_t>(wordsize * _renderScene.dirtyObjects[i].handle);
 
 					for (int b = 0; b < wordsize; b++ )
 					{
@@ -325,7 +325,7 @@ void VulkanEngine::ready_mesh_draw(VkCommandBuffer cmd)
 		}
 	}
 
-	vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr, uploadBarriers.size(), uploadBarriers.data(), 0, nullptr);//1, &readBarrier);
+	vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr, static_cast<uint32_t>(uploadBarriers.size()), uploadBarriers.data(), 0, nullptr);//1, &readBarrier);
 	uploadBarriers.clear();
 }
 
@@ -364,7 +364,7 @@ void VulkanEngine::draw_objects_forward(VkCommandBuffer cmd, RenderScene::MeshPa
 	camera_data_offsets[0] = dyn_offset;
 	memcpy(dynData, &camData, sizeof(GPUCameraData));
 	dyn_offset += sizeof(GPUCameraData);
-	dyn_offset = pad_uniform_buffer_size(dyn_offset);
+	dyn_offset = static_cast<uint32_t>(pad_uniform_buffer_size(dyn_offset));
 
 	dynData += dyn_offset;
 
@@ -418,7 +418,7 @@ void VulkanEngine::execute_draw_commands(VkCommandBuffer cmd, RenderScene::MeshP
 
 		vkCmdBindIndexBuffer(cmd, _renderScene.mergedIndexBuffer._buffer, 0, VK_INDEX_TYPE_UINT32);
 
-		stats.objects = pass.flat_batches.size();
+		stats.objects = static_cast<uint32_t>(pass.flat_batches.size());
 		for (int i = 0; i < pass.multibatches.size(); i++)
 		{
 			auto& multibatch = pass.multibatches[i];
@@ -473,11 +473,11 @@ void VulkanEngine::execute_draw_commands(VkCommandBuffer cmd, RenderScene::MeshP
 			bool bHasIndices = drawMesh->_indices.size() > 0;
 			if (!bHasIndices) {
 				stats.draws++;
-				stats.triangles += (drawMesh->_vertices.size() / 3) * instanceDraw.count;
-				vkCmdDraw(cmd, drawMesh->_vertices.size(), instanceDraw.count, 0, instanceDraw.first);
+				stats.triangles += static_cast<int32_t>(drawMesh->_vertices.size() / 3) * instanceDraw.count;
+				vkCmdDraw(cmd, static_cast<uint32_t>(drawMesh->_vertices.size()), instanceDraw.count, 0, instanceDraw.first);
 			}
 			else {
-				stats.triangles += (drawMesh->_indices.size() / 3) * instanceDraw.count;
+				stats.triangles += static_cast<int32_t>(drawMesh->_indices.size() / 3) * instanceDraw.count;
 
 				vkCmdDrawIndexedIndirect(cmd, pass.drawIndirectBuffer._buffer, multibatch.first * sizeof(GPUIndirectObject), multibatch.count, sizeof(GPUIndirectObject));
 
@@ -513,7 +513,7 @@ void VulkanEngine::draw_objects_shadow(VkCommandBuffer cmd, RenderScene::MeshPas
 	camera_data_offsets[0] = dyn_offset;
 	memcpy(dynData, &camData, sizeof(GPUCameraData));
 	dyn_offset += sizeof(GPUCameraData);
-	dyn_offset = pad_uniform_buffer_size(dyn_offset);
+	dyn_offset = static_cast<uint32_t>(pad_uniform_buffer_size(dyn_offset));
 
 	dynData += dyn_offset;
 
@@ -569,7 +569,7 @@ void VulkanEngine::reduce_depth(VkCommandBuffer cmd)
 
 	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, _depthReducePipeline);
 
-	for (uint32_t i = 0; i < depthPyramidLevels; ++i)
+	for (int32_t i = 0; i < depthPyramidLevels; ++i)
 	{
 		VkDescriptorImageInfo destTarget;
 		destTarget.sampler = _depthSampler;

@@ -30,10 +30,10 @@ VkPipeline PipelineBuilder::build_pipeline(VkDevice device, VkRenderPass pass)
 	_vertexInputInfo = vkinit::vertex_input_state_create_info();
 //connect the pipeline builder vertex input info to the one we get from Vertex
 	_vertexInputInfo.pVertexAttributeDescriptions = vertexDescription.attributes.data();
-	_vertexInputInfo.vertexAttributeDescriptionCount = vertexDescription.attributes.size();
+	_vertexInputInfo.vertexAttributeDescriptionCount = (uint32_t)vertexDescription.attributes.size();
 
 	_vertexInputInfo.pVertexBindingDescriptions = vertexDescription.bindings.data();
-	_vertexInputInfo.vertexBindingDescriptionCount = vertexDescription.bindings.size();
+	_vertexInputInfo.vertexBindingDescriptionCount = (uint32_t)vertexDescription.bindings.size();
 
 
 	//make viewport state from our stored viewport and scissor.
@@ -64,7 +64,7 @@ VkPipeline PipelineBuilder::build_pipeline(VkDevice device, VkRenderPass pass)
 	pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
 	pipelineInfo.pNext = nullptr;
 
-	pipelineInfo.stageCount = _shaderStages.size();
+	pipelineInfo.stageCount = (uint32_t)_shaderStages.size();
 	pipelineInfo.pStages = _shaderStages.data();
 	pipelineInfo.pVertexInputState = &_vertexInputInfo;
 	pipelineInfo.pInputAssemblyState = &_inputAssembly;
@@ -87,7 +87,7 @@ VkPipeline PipelineBuilder::build_pipeline(VkDevice device, VkRenderPass pass)
 	dynamicStates.push_back(VK_DYNAMIC_STATE_SCISSOR);
 	dynamicStates.push_back(VK_DYNAMIC_STATE_DEPTH_BIAS);
 	dynamicState.pDynamicStates = dynamicStates.data();
-	dynamicState.dynamicStateCount = dynamicStates.size();
+	dynamicState.dynamicStateCount = (uint32_t)dynamicStates.size();
 
 	pipelineInfo.pDynamicState = &dynamicState;
 
@@ -150,7 +150,7 @@ ShaderEffect* build_effect(VulkanEngine* eng,std::string_view vertexShader, std:
 
 	effect->reflect_layout(eng->_device, overrides, 2);
 
-	return effect;
+	return effect; 
 }
 
 void vkutil::MaterialSystem::build_default_templates()

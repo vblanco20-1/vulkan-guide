@@ -64,7 +64,7 @@ namespace vkutil {
 		uint32_t get_stat_id();
 
 		std::unordered_map<std::string, double> timing;
-		std::unordered_map<std::string, int> stats;
+		std::unordered_map<std::string, int32_t> stats;
 	private:
 
 		

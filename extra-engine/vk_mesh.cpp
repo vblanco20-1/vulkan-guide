@@ -105,9 +105,9 @@ void Vertex::pack_normal(glm::vec3 n)
 
 void Vertex::pack_color(glm::vec3 c)
 {
-	color.r = (c.x * 255);
-	color.g = (c.y * 255);
-	color.b = (c.z * 255);
+	color.r = static_cast<uint8_t>(c.x * 255);
+	color.g = static_cast<uint8_t>(c.y * 255);
+	color.b = static_cast<uint8_t>(c.z * 255);
 }
 
 bool Mesh::load_from_obj(const char* filename)

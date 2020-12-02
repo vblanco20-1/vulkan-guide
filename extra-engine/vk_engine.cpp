@@ -513,7 +513,7 @@ void VulkanEngine::run()
 	{
 		ZoneScopedN("Main Loop");
 		end = std::chrono::system_clock::now();
-		std::chrono::duration<double> elapsed_seconds = end - start;
+		std::chrono::duration<float> elapsed_seconds = end - start;
 		stats.frametime = elapsed_seconds.count() * 1000.f;
 
 		start = std::chrono::system_clock::now();
@@ -604,7 +604,7 @@ void VulkanEngine::run()
 				_renderScene.update_object(h);
 			}
 
-			update_camera(1.0 / 60.f);
+			update_camera(stats.frametime);
 		}
 	
 		draw();
@@ -682,8 +682,8 @@ void VulkanEngine::process_input_event(SDL_Event* ev)
 	else if (ev->type == SDL_MOUSEMOTION) {
 		if (_config.mouseLook)
 		{
-			_camera.pitch -= ev->motion.yrel * 0.003;
-			_camera.yaw -= ev->motion.xrel * 0.003;
+			_camera.pitch -= ev->motion.yrel * 0.003f;
+			_camera.yaw -= ev->motion.xrel * 0.003f;
 		}
 	}
 
@@ -921,8 +921,8 @@ void VulkanEngine::init_swapchain()
 	depthPyramidLevels = getImageMipLevels(depthPyramidWidth, depthPyramidHeight);
 
 	VkExtent3D pyramidExtent = {
-		depthPyramidWidth,
-		depthPyramidHeight,
+		static_cast<uint32_t>(depthPyramidWidth),
+		static_cast<uint32_t>(depthPyramidHeight),
 		1
 	};
 	//the depth image will be a image with the format we selected and Depth Attachment usage flag
@@ -941,7 +941,7 @@ void VulkanEngine::init_swapchain()
 	VK_CHECK(vkCreateImageView(_device, &priview_info, nullptr, &_depthPyramid._defaultView));
 
 
-	for (uint32_t i = 0; i < depthPyramidLevels; ++i)
+	for (int32_t i = 0; i < depthPyramidLevels; ++i)
 	{
 		VkImageViewCreateInfo level_info = vkinit::imageview_create_info(VK_FORMAT_R32_SFLOAT, _depthPyramid._image, VK_IMAGE_ASPECT_COLOR_BIT);
 		level_info.subresourceRange.levelCount = 1;
@@ -1188,7 +1188,7 @@ void VulkanEngine::init_framebuffers()
 {
 	
 
-	const uint32_t swapchain_imagecount = _swapchainImages.size();
+	const uint32_t swapchain_imagecount = static_cast<uint32_t>(_swapchainImages.size());
 	_framebuffers = std::vector<VkFramebuffer>(swapchain_imagecount);
 
 	//create the framebuffers for the swapchain images. This will connect the render-pass to the images for rendering
@@ -1207,7 +1207,7 @@ void VulkanEngine::init_framebuffers()
 	sh_info.attachmentCount = 1;
 	VK_CHECK(vkCreateFramebuffer(_device, &sh_info, nullptr, &_shadowFramebuffer));
 	
-	for (int i = 0; i < swapchain_imagecount; i++) {
+	for (uint32_t i = 0; i < swapchain_imagecount; i++) {
 
 		//create the framebuffers for the swapchain images. This will connect the render-pass to the images for rendering
 		VkFramebufferCreateInfo fb_info = vkinit::framebuffer_create_info(_copyPass, _windowExtent);
@@ -1661,7 +1661,7 @@ void VulkanEngine::init_scene()
 			glm::mat4 scale = glm::scale(glm::mat4{ 1.0 }, glm::vec3(10));
 
 
-			glm::mat4 cityMatrix = translation * unrealFixRotation * glm::scale(glm::mat4{ 1.0 }, glm::vec3(.01));
+			glm::mat4 cityMatrix = translation * unrealFixRotation * glm::scale(glm::mat4{ 1.0f }, glm::vec3(.01f));
 			//load_prefab(asset_path("scifi/TopDownScifi.pfb").c_str(), unrealFixRotation * glm::scale(glm::mat4{ 1.0 }, glm::vec3(.01)));
 			load_prefab(asset_path("PolyCity/PolyCity.pfb").c_str(), cityMatrix);
 		//	load_prefab(asset_path("scifi/TopDownScifi.pfb").c_str(), cityMatrix);
@@ -1955,7 +1955,7 @@ bool VulkanEngine::load_prefab(const char* path, glm::mat4 root)
 		//_renderables.push_back(loadmesh);
 	}
 
-	_renderScene.register_object_batch(prefab_renderables.data(), prefab_renderables.size());
+	_renderScene.register_object_batch(prefab_renderables.data(), static_cast<uint32_t>(prefab_renderables.size()));
 
 
 
@@ -2029,8 +2029,6 @@ void VulkanEngine::refresh_renderbounds(MeshObject* object)
 
 	glm::vec3 extents = (max - min) / 2.f;
 	glm::vec3 origin = min + extents;
-
-	glm::vec3 scale;	
 
 	float max_scale = 0;
 	max_scale = std::max( glm::length(glm::vec3(m[0][0], m[0][1], m[0][2])),max_scale);

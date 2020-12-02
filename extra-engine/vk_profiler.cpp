@@ -94,7 +94,7 @@ namespace vkutil {
 		{
 			uint64_t result = statresults[st.query];
 
-			stats[st.name] = result;
+			stats[st.name] = static_cast<int32_t>(result);
 		}
 	}
 

@@ -44,7 +44,7 @@ assets::PrefabInfo assets::read_prefab_info(AssetFile* file)
 	}
 
 
-	int nmatrices = file->binaryBlob.size() / (sizeof(float) * 16);
+	size_t nmatrices = file->binaryBlob.size() / (sizeof(float) * 16);
 	info.matrices.resize(nmatrices);
 
 	memcpy(info.matrices.data(),file->binaryBlob.data(), file->binaryBlob.size());
@@ -59,7 +59,7 @@ assets::AssetFile assets::pack_prefab(const PrefabInfo& info)
 	prefab_metadata["node_names"]    = info.node_names;
 	prefab_metadata["node_parents"]  = info.node_parents;
 
-	std::unordered_map<int, nlohmann::json> meshindex;
+	std::unordered_map<uint64_t, nlohmann::json> meshindex;
 	for (auto pair : info.node_meshes)
 	{
 		nlohmann::json meshnode;

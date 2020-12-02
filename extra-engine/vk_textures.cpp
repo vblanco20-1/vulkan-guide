@@ -197,7 +197,7 @@ AllocatedImage vkutil::upload_image_mipmapped(int texWidth, int texHeight, VkFor
 
 	VkImageCreateInfo dimg_info = vkinit::image_create_info(image_format, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, imageExtent);
 
-	dimg_info.mipLevels = mips.size();
+	dimg_info.mipLevels = (uint32_t)mips.size();
 
 	AllocatedImage newImage;
 
@@ -212,7 +212,7 @@ AllocatedImage vkutil::upload_image_mipmapped(int texWidth, int texHeight, VkFor
 		VkImageSubresourceRange range;
 		range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 		range.baseMipLevel = 0;
-		range.levelCount = mips.size();
+		range.levelCount = (uint32_t)mips.size();
 		range.baseArrayLayer = 0;
 		range.layerCount = 1;
 
@@ -261,11 +261,11 @@ AllocatedImage vkutil::upload_image_mipmapped(int texWidth, int texHeight, VkFor
 
 		//barrier the image into the shader readable layout
 		vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier_toReadable);
-		});
+	});
 
 
 
-	newImage.mipLevels =  mips.size();
+	newImage.mipLevels = (uint32_t) mips.size();
 
 
 	//build a default imageview

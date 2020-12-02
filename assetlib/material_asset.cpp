@@ -29,10 +29,10 @@ assets::MaterialInfo assets::read_material_info(AssetFile* file)
 	{
 		std::string val = (*it);
 		if (val.compare("transparent") == 0) {
-			info.transparency == TransparencyMode::Transparent;
+			info.transparency = TransparencyMode::Transparent;
 		}
 		if (val.compare("masked") == 0) {
-			info.transparency == TransparencyMode::Masked;
+			info.transparency = TransparencyMode::Masked;
 		}
 	}
 

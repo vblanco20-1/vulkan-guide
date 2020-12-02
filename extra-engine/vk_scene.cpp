@@ -13,7 +13,7 @@ Handle<RenderObject> RenderScene::register_object(MeshObject* object)
 	newObj.updateIndex = (uint32_t)-1;
 	newObj.customSortKey = object->customSortKey;
 	Handle<RenderObject> handle;
-	handle.handle = renderables.size();
+	handle.handle = static_cast<uint32_t>(renderables.size());
 	
 	renderables.push_back(newObj);
 
@@ -56,7 +56,7 @@ void RenderScene::update_object(Handle<RenderObject> objectID)
 {
 	if (get_object(objectID)->updateIndex == (uint32_t)-1)
 	{
-		get_object(objectID)->updateIndex = dirtyObjects.size();
+		get_object(objectID)->updateIndex = static_cast<uint32_t>(dirtyObjects.size());
 		dirtyObjects.push_back(objectID);
 	}
 }
@@ -144,8 +144,8 @@ void RenderScene::merge_meshes(VulkanEngine* engine)
 
 	for (auto& m : meshes)
 	{
-		m.firstIndex = total_indices;
-		m.firstVertex = total_vertices;
+		m.firstIndex = static_cast<uint32_t>(total_indices);
+		m.firstVertex = static_cast<uint32_t>(total_vertices);
 
 		total_vertices += m.vertexCount;
 		total_indices += m.indexCount;
@@ -201,10 +201,10 @@ void RenderScene::refresh_pass(MeshPass* pass, bool forward)
 				uint32_t mathash;
 				
 				if (forward) {
-					mathash = std::hash<uint64_t>()(uint64_t(mt->original->forwardEffect->pipeline)) ^ std::hash<uint64_t>()((uint64_t)mt->forwardSet);
+					mathash = static_cast<uint32_t>(std::hash<uint64_t>()(uint64_t(mt->original->forwardEffect->pipeline)) ^ std::hash<uint64_t>()((uint64_t)mt->forwardSet));
 				}
 				else {
-					mathash	= std::hash<uint64_t>()( uint64_t(mt->original->shadowEffect->pipeline)) ^ std::hash<uint64_t>()((uint64_t)mt->shadowSet);
+					mathash	= static_cast<uint32_t>(std::hash<uint64_t>()(uint64_t(mt->original->shadowEffect->pipeline)) ^ std::hash<uint64_t>()((uint64_t)mt->shadowSet));
 				}
 				uint32_t meshmat = uint64_t(mathash) ^ uint64_t(object->meshID.handle);
 
@@ -307,7 +307,7 @@ void RenderScene::refresh_pass(MeshPass* pass, bool forward)
 		
 		newbatch.count = 1;
 		newbatch.first = 0;
-
+		 
 #if 1
 		for (int i = 1; i < pass->batches.size(); i++)
 		{
@@ -375,7 +375,7 @@ Handle<vkutil::Material> RenderScene::getMaterialHandle(vkutil::Material* m)
 	auto it = materialConvert.find(m);
 	if (it == materialConvert.end())
 	{
-		uint32_t index = materials.size();
+		uint32_t index = static_cast<uint32_t>(materials.size());
 		materials.push_back(m);
 
 		handle.handle = index;
@@ -393,14 +393,14 @@ Handle<DrawMesh> RenderScene::getMeshHandle(Mesh* m)
 	auto it = meshConvert.find(m);
 	if (it == meshConvert.end())
 	{
-		uint32_t index = meshes.size();
+		uint32_t index = static_cast<uint32_t>(meshes.size());
 
 		DrawMesh newMesh;
 		newMesh.original = m;
 		newMesh.firstIndex = 0;
 		newMesh.firstVertex = 0;
-		newMesh.vertexCount = m->_vertices.size();
-		newMesh.indexCount = m->_indices.size();
+		newMesh.vertexCount = static_cast<uint32_t>(m->_vertices.size());
+		newMesh.indexCount = static_cast<uint32_t>(m->_indices.size());
 
 		meshes.push_back(newMesh);
 

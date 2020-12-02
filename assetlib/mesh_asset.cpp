@@ -59,7 +59,7 @@ void assets::unpack_mesh(MeshInfo* info, const char* sourcebuffer, size_t source
 	std::vector<char> decompressedBuffer;
 	decompressedBuffer.resize(info->vertexBuferSize + info->indexBuferSize);
 
-	LZ4_decompress_safe(sourcebuffer, decompressedBuffer.data(), sourceSize, decompressedBuffer.size());
+	LZ4_decompress_safe(sourcebuffer, decompressedBuffer.data(), static_cast<int>(sourceSize), static_cast<int>(decompressedBuffer.size()));
 
 	//copy vertex buffer
 	memcpy(vertexBufer, decompressedBuffer.data(), info->vertexBuferSize);
@@ -118,11 +118,11 @@ assets::AssetFile assets::pack_mesh(MeshInfo* info, char* vertexData, char* inde
 
 
 	//compress buffer and copy it into the file struct
-	size_t compressStaging = LZ4_compressBound(fullsize);
+	size_t compressStaging = LZ4_compressBound(static_cast<int>(fullsize));
 
 	file.binaryBlob.resize(compressStaging);
 
-	int compressedSize = LZ4_compress_default(merged_buffer.data(), file.binaryBlob.data(), merged_buffer.size(), compressStaging);
+	int compressedSize = LZ4_compress_default(merged_buffer.data(), file.binaryBlob.data(), static_cast<int>(merged_buffer.size()), static_cast<int>(compressStaging));
 	file.binaryBlob.resize(compressedSize);
 
 	metadata["compression"] = "LZ4";
@@ -149,9 +149,9 @@ assets::MeshBounds assets::calculateBounds(Vertex_f32_PNCV* vertices, size_t cou
 		max[2] = std::max(max[2], vertices[i].position[2]);
 	}
 
-	bounds.extents[0] = (max[0] - min[0]) / 2.0;
-	bounds.extents[1] = (max[1] - min[1]) / 2.0;
-	bounds.extents[2] = (max[2] - min[2]) / 2.0;
+	bounds.extents[0] = (max[0] - min[0]) / 2.0f;
+	bounds.extents[1] = (max[1] - min[1]) / 2.0f;
+	bounds.extents[2] = (max[2] - min[2]) / 2.0f;
 
 	bounds.origin[0] = bounds.extents[0] + min[0];
 	bounds.origin[1] = bounds.extents[1] + min[1];

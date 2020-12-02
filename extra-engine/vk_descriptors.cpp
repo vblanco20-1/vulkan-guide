@@ -132,12 +132,12 @@ namespace vkutil {
 		DescriptorLayoutInfo layoutinfo;
 		layoutinfo.bindings.reserve(info->bindingCount);
 		bool isSorted = true;
-		int lastBinding = -1;
-		for (int i = 0; i < info->bindingCount; i++) {
+		int32_t lastBinding = -1;
+		for (uint32_t i = 0; i < info->bindingCount; i++) {
 			layoutinfo.bindings.push_back(info->pBindings[i]);
 
 			//check that the bindings are in strict increasing order
-			if (info->pBindings[i].binding > lastBinding)
+			if (static_cast<int32_t>(info->pBindings[i].binding) > lastBinding)
 			{
 				lastBinding = info->pBindings[i].binding;
 			}
@@ -247,7 +247,7 @@ namespace vkutil {
 		layoutInfo.pNext = nullptr;
 
 		layoutInfo.pBindings = bindings.data();
-		layoutInfo.bindingCount = bindings.size();
+		layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
 
 		layout = cache->create_descriptor_layout(&layoutInfo);
 
@@ -262,7 +262,7 @@ namespace vkutil {
 			w.dstSet = set;
 		}
 
-		vkUpdateDescriptorSets(alloc->device, writes.size(), writes.data(), 0, nullptr);
+		vkUpdateDescriptorSets(alloc->device, static_cast<uint32_t>(writes.size()), writes.data(), 0, nullptr);
 
 		return true;
 	}
