@@ -148,7 +148,7 @@ ShaderEffect* build_effect(VulkanEngine* eng,std::string_view vertexShader, std:
 	}
 	
 
-	effect->reflect_layout(eng, overrides, 2);
+	effect->reflect_layout(eng->_device, overrides, 2);
 
 	return effect;
 }

@@ -1307,7 +1307,7 @@ void VulkanEngine::init_pipelines()
 	ShaderEffect* blitEffect = new ShaderEffect();
 	blitEffect->add_stage(_shaderCache.get_shader(shader_path("fullscreen.vert.spv")), VK_SHADER_STAGE_VERTEX_BIT);
 	blitEffect->add_stage(_shaderCache.get_shader(shader_path("blit.frag.spv")), VK_SHADER_STAGE_FRAGMENT_BIT);
-	blitEffect->reflect_layout(this, nullptr, 0);
+	blitEffect->reflect_layout(_device, nullptr, 0);
 
 
 	PipelineBuilder pipelineBuilder;
@@ -1398,7 +1398,7 @@ bool VulkanEngine::load_compute_shader(const char* shaderPath, VkPipeline& pipel
 	ShaderEffect* computeEffect = new ShaderEffect();;
 	computeEffect->add_stage(&computeModule, VK_SHADER_STAGE_COMPUTE_BIT);
 
-	computeEffect->reflect_layout(this, nullptr, 0);
+	computeEffect->reflect_layout(_device, nullptr, 0);
 
 	ComputePipelineBuilder computeBuilder;
 	computeBuilder._pipelineLayout = computeEffect->builtLayout;

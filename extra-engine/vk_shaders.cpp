@@ -5,7 +5,7 @@
 #include <algorithm>
 
 #include <spirv_reflect.h>
-#include <vk_engine.h>
+#include <assert.h>
 
 #include <sstream>
 #include <iostream>
@@ -93,7 +93,7 @@ struct DescriptorSetLayoutData {
 	VkDescriptorSetLayoutCreateInfo create_info;
 	std::vector<VkDescriptorSetLayoutBinding> bindings;
 };
-void ShaderEffect::reflect_layout(VulkanEngine* engine, ReflectionOverrides* overrides, int overrideCount)
+void ShaderEffect::reflect_layout(VkDevice device, ReflectionOverrides* overrides, int overrideCount)
 {
 	std::vector<DescriptorSetLayoutData> set_layouts;
 
@@ -222,7 +222,7 @@ void ShaderEffect::reflect_layout(VulkanEngine* engine, ReflectionOverrides* ove
 
 		if (ly.create_info.bindingCount > 0) {
 			setHashes[i] = vkutil::hash_descriptor_layout_info(&ly.create_info);
-			vkCreateDescriptorSetLayout(engine->_device, &ly.create_info, nullptr, &setLayouts[i]);
+			vkCreateDescriptorSetLayout(device, &ly.create_info, nullptr, &setLayouts[i]);
 		}
 		else {
 			setHashes[i] = 0;
@@ -249,7 +249,7 @@ void ShaderEffect::reflect_layout(VulkanEngine* engine, ReflectionOverrides* ove
 	mesh_pipeline_layout_info.pSetLayouts = compactedLayouts.data();
 
 	
-	vkCreatePipelineLayout(engine->_device, &mesh_pipeline_layout_info, nullptr, &builtLayout);
+	vkCreatePipelineLayout(device, &mesh_pipeline_layout_info, nullptr, &builtLayout);
 
 }
 
