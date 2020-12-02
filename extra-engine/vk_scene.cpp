@@ -85,12 +85,12 @@ void RenderScene::fill_objectData(GPUObjectData* data)
 }
 
 
-void RenderScene::fill_indirectArray(GPUIndirectObject* data)
+void RenderScene::fill_indirectArray(GPUIndirectObject* data, MeshPass& pass)
 {	
 	int dataIndex = 0;
-	for (int i = 0; i < _forwardPass.batches.size(); i++) {
+	for (int i = 0; i < pass.batches.size(); i++) {
 
-		auto batch = _forwardPass.batches[i];
+		auto batch = pass.batches[i];
 
 		data[dataIndex].command.firstInstance = batch.first;//i;
 		data[dataIndex].command.instanceCount = 0;
@@ -104,13 +104,13 @@ void RenderScene::fill_indirectArray(GPUIndirectObject* data)
 	}
 }
 
-void RenderScene::fill_instancesArray(GPUInstance* data)
+void RenderScene::fill_instancesArray(GPUInstance* data, MeshPass& pass)
 {
 	
 	int dataIndex = 0;
-	for (int i = 0; i < _forwardPass.batches.size(); i++) {
+	for (int i = 0; i < pass.batches.size(); i++) {
 
-		auto batch = _forwardPass.batches[i];
+		auto batch = pass.batches[i];
 
 		for (auto objID : batch.objects)
 		{			
@@ -293,7 +293,6 @@ void RenderScene::refresh_pass(MeshPass* pass, bool forward)
 				newBatch.first = i;
 				newBatch.count = 1;
 				newBatch.meshID = obj->meshID;
-				
 
 				pass->batches.push_back(newBatch);
 				back = &pass->batches.back();
@@ -309,6 +308,7 @@ void RenderScene::refresh_pass(MeshPass* pass, bool forward)
 		newbatch.count = 1;
 		newbatch.first = 0;
 
+#if 0
 		for (int i = 1; i < pass->batches.size(); i++)
 		{
 			IndirectBatch* joinbatch = &pass->batches[newbatch.first];
@@ -339,6 +339,16 @@ void RenderScene::refresh_pass(MeshPass* pass, bool forward)
 			}
 		}
 		pass->multibatches.push_back(newbatch);
+#else 
+		for (int i = 0; i < pass->batches.size(); i++)
+		{
+			Multibatch newbatch;
+			newbatch.count = 1;
+			newbatch.first = i;
+
+			pass->multibatches.push_back(newbatch);
+		}
+#endif
 	}
 }
 

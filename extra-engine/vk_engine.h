@@ -190,11 +190,13 @@ struct /*alignas(16)*/DrawCullData
 
 struct EngineConfig {
 	float drawDistance{5000};
-	float shadowBias{ 1.25f };
-	float shadowBiasslope{ 2.75f };
+	float shadowBias{ 5.25f };
+	float shadowBiasslope{4.75f };
 	bool occlusionCullGPU{ true };
 	bool frustrumCullCPU{ true };
 	bool outputIndirectBufferToFile{false};
+	bool freezeCulling{ false };
+	bool mouseLook{ true };
 };
 
 struct DirectionalLight {

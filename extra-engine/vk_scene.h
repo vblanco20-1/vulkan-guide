@@ -124,8 +124,8 @@ public:
 	void update_object(Handle<RenderObject> objectID);
 	
 	void fill_objectData(GPUObjectData* data);
-	void fill_indirectArray(GPUIndirectObject* data);
-	void fill_instancesArray(GPUInstance* data);
+	void fill_indirectArray(GPUIndirectObject* data, MeshPass& pass);
+	void fill_instancesArray(GPUInstance* data, MeshPass& pass);
 
 	void write_object(GPUObjectData* target, Handle<RenderObject> objectID);
 	

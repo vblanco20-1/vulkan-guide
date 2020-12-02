@@ -37,14 +37,11 @@ layout(push_constant) uniform  constants{
    DrawCullData cullData;
 };
 
-struct Bounds{
-	vec4 sphereBounds;
-}; 
 layout(set = 0,binding = 4) uniform sampler2D depthPyramid;
 struct ObjectData{
 	mat4 model;
-vec4 spherebounds;
-vec4 extents;
+	vec4 spherebounds;
+	vec4 extents;
 }; 
 //all object matrices
 layout(std140,set = 0, binding = 0) readonly buffer ObjectBuffer{   
@@ -192,7 +189,6 @@ void main()
 		else{
 			visible = IsVisibleAABB(objectID);
 		}
-		
 		
 		if(visible)
 		{

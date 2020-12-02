@@ -169,7 +169,7 @@ void VulkanEngine::draw()
 		VK_CHECK(vkWaitForFences(_device, 1, &get_current_frame()._renderFence, true, 1000000000));
 		VK_CHECK(vkResetFences(_device, 1, &get_current_frame()._renderFence));
 
-		_renderScene.build_batches();
+		//_renderScene.build_batches();
 		//check the debug data
 		void* data;		
 		vmaMapMemory(_allocator, get_current_frame().debugOutputBuffer._allocation, &data);
@@ -572,6 +572,7 @@ void VulkanEngine::run()
 			{
 				_config.outputIndirectBufferToFile = true;
 			}
+			ImGui::Checkbox("Freeze Culling", &_config.freezeCulling);
 
 
 			ImGui::Separator();
@@ -644,6 +645,16 @@ void VulkanEngine::process_input_event(SDL_Event* ev)
 		case SDLK_d:
 			_camera.inputAxis.y += 1.f;
 			break;
+		case SDLK_TAB:
+			if (_config.mouseLook)
+			{
+				LOG_INFO("Mouselook disabled");
+				_config.mouseLook = false;
+			}
+			else {
+				LOG_INFO("Mouselook enabled");
+				_config.mouseLook = true;
+			}		
 		}
 	}
 	else if (ev->type == SDL_KEYUP)
@@ -669,8 +680,11 @@ void VulkanEngine::process_input_event(SDL_Event* ev)
 		}
 	}
 	else if (ev->type == SDL_MOUSEMOTION) {
-		_camera.pitch -= ev->motion.yrel * 0.003;
-		_camera.yaw -= ev->motion.xrel * 0.003;
+		if (_config.mouseLook)
+		{
+			_camera.pitch -= ev->motion.yrel * 0.003;
+			_camera.yaw -= ev->motion.xrel * 0.003;
+		}
 	}
 
 	_camera.inputAxis = glm::clamp(_camera.inputAxis, { -1.0,-1.0,-1.0 }, { 1.0,1.0,1.0 });
@@ -678,6 +692,8 @@ void VulkanEngine::process_input_event(SDL_Event* ev)
 
 void VulkanEngine::update_camera(float deltaSeconds)
 {
+	if (!_config.mouseLook) return;
+
 	glm::vec3 forward = { 0,0,1 };
 	glm::vec3 right = { 1,0,0 };
 

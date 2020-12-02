@@ -20,9 +20,10 @@ glm::vec4 normalizePlane(glm::vec4 p)
 	return p / glm::length(glm::vec3(p));
 }
 
-
 void VulkanEngine::execute_compute_cull(VkCommandBuffer cmd, RenderScene::MeshPass& pass,CullParams& params )
 {
+	if (_config.freezeCulling) return;
+	
 	if (pass.batches.size() == 0) return;
 	TracyVkZone(_graphicsQueueContext, cmd, "Cull Dispatch");
 	VkDescriptorBufferInfo objectBufferInfo = _renderScene.objectDataBuffer.get_info();
@@ -274,7 +275,7 @@ void VulkanEngine::ready_mesh_draw(VkCommandBuffer cmd)
 			AllocatedBuffer<GPUIndirectObject> newBuffer = create_buffer(sizeof(GPUIndirectObject) * pass.batches.size(), VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
 
 			GPUIndirectObject* indirect = map_buffer(newBuffer);
-			_renderScene.fill_indirectArray(indirect);
+			_renderScene.fill_indirectArray(indirect,pass);
 			unmap_buffer(newBuffer);
 
 			if (pass.clearIndirectBuffer._buffer != VK_NULL_HANDLE)
@@ -299,7 +300,7 @@ void VulkanEngine::ready_mesh_draw(VkCommandBuffer cmd)
 			AllocatedBuffer<GPUInstance> newBuffer = create_buffer(sizeof(GPUInstance) * pass.flat_batches.size(), VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
 
 			GPUInstance* instanceData = map_buffer(newBuffer);
-			_renderScene.fill_instancesArray(instanceData);
+			_renderScene.fill_instancesArray(instanceData, pass);
 			unmap_buffer(newBuffer);
 
 			get_current_frame()._frameDeletionQueue.push_function([=]() {
@@ -334,8 +335,6 @@ void VulkanEngine::draw_objects_forward(VkCommandBuffer cmd, RenderScene::MeshPa
 	//make a model view matrix for rendering the object
 	//camera view
 	glm::mat4 view = get_view_matrix();
-
-
 	//camera projection
 	glm::mat4 projection = get_projection_matrix();
 
@@ -345,20 +344,8 @@ void VulkanEngine::draw_objects_forward(VkCommandBuffer cmd, RenderScene::MeshPa
 	camData.view = view;
 	camData.viewproj = projection * view;
 
-	const glm::mat4 biasMat = glm::mat4(
-		0.5, 0.0, 0.0, 0.0,
-		0.0, 0.5, 0.0, 0.0,
-		0.0, 0.0, 1.0, 0.0,
-		0.5, 0.5, 0.0, 1.0);
+	_sceneParameters.sunlightShadowMatrix =_mainLight.get_projection() * _mainLight.get_view();
 
-	glm::mat4 cullpro = glm::perspective(glm::radians(70.f), 1700.f / 900.f, 0.1f, _config.drawDistance);
-	cullpro[1][1] *= -1;
-	
-	
-
-	_sceneParameters.sunlightShadowMatrix =/* biasMat **/_mainLight.get_projection() * _mainLight.get_view();
-
-	Frustum view_frustrum{ cullpro * view };
 
 	float framed = (_frameNumber / 120.f);
 	_sceneParameters.ambientColor = glm::vec4{ 0.5 };
@@ -386,8 +373,6 @@ void VulkanEngine::draw_objects_forward(VkCommandBuffer cmd, RenderScene::MeshPa
 
 	vmaUnmapMemory(_allocator, get_current_frame().dynamicDataBuffer._allocation);
 
-	ShaderDescriptorBinder binder{};
-
 	VkDescriptorBufferInfo objectBufferInfo = _renderScene.objectDataBuffer.get_info();
 
 	VkDescriptorBufferInfo dynamicInfo = get_current_frame().dynamicDataBuffer.get_info();
@@ -414,8 +399,7 @@ void VulkanEngine::draw_objects_forward(VkCommandBuffer cmd, RenderScene::MeshPa
 		.bind_buffer(0, &objectBufferInfo, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
 		.bind_buffer(1, &instanceInfo, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
 		.build(ObjectDataSet);
-
-
+	vkCmdSetDepthBias(cmd, 0, 0, 0);
 	execute_draw_commands(cmd, pass, ObjectDataSet, camera_data_offsets, scene_data_offset, GlobalSet);
 }
 
@@ -516,13 +500,11 @@ void VulkanEngine::draw_objects_shadow(VkCommandBuffer cmd, RenderScene::MeshPas
 	camData.view = view;
 	camData.viewproj = projection * view;
 	
-	//Frustum view_frustrum{ cullpro * view };
-
 	//push data to dynmem
 	uint32_t camera_data_offsets[3];
 	uint32_t scene_data_offset;
 
-	uint32_t dyn_offset = 1024;
+	uint32_t dyn_offset = 2048;
 
 	char* dynData;
 	vmaMapMemory(_allocator, get_current_frame().dynamicDataBuffer._allocation, (void**)&dynData);
@@ -539,11 +521,6 @@ void VulkanEngine::draw_objects_shadow(VkCommandBuffer cmd, RenderScene::MeshPas
 	memcpy(dynData, &_sceneParameters, sizeof(GPUSceneData));
 
 	vmaUnmapMemory(_allocator, get_current_frame().dynamicDataBuffer._allocation);
-
-	Mesh* lastMesh = nullptr;
-	
-	VkPipeline lastPipeline = VK_NULL_HANDLE;
-	ShaderDescriptorBinder binder{};
 
 	VkDescriptorBufferInfo objectBufferInfo = _renderScene.objectDataBuffer.get_info();
 
@@ -564,6 +541,7 @@ void VulkanEngine::draw_objects_shadow(VkCommandBuffer cmd, RenderScene::MeshPas
 		.bind_buffer(1, &instanceInfo, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
 		.build(ObjectDataSet);
 
+	vkCmdSetDepthBias(cmd, _config.shadowBias, 0, _config.shadowBiasslope);
 	execute_draw_commands(cmd, pass, ObjectDataSet, camera_data_offsets, scene_data_offset, GlobalSet);
 }
 
