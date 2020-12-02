@@ -250,14 +250,16 @@ vkutil::Material* vkutil::MaterialSystem::build_material(const std::string& mate
 	return mat;
 }
 
-OldMaterial* vkutil::MaterialSystem::convert_to_old(Material* mat, const std::string& materialName)
+vkutil::Material* vkutil::MaterialSystem::get_material(const std::string& materialName)
 {
-	OldMaterial* texmat = engine->create_material(mat->original->forwardEffect->pipeline, mat->original->forwardEffect->effect, materialName);
-	texmat->shadowEffect = mat->original->shadowEffect->effect;
-	texmat->shadowPipeline = mat->original->shadowEffect->pipeline;
-	texmat->textureSet = mat->forwardSet;
-	texmat->newMat = mat;
-	return texmat;
+	auto it = materials.find(materialName);
+	if (it != materials.end())
+	{
+		return(*it).second;
+	}
+	else {
+		return nullptr;
+	}
 }
 
 void vkutil::MaterialSystem::fill_builders()

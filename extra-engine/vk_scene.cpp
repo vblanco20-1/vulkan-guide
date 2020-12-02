@@ -7,9 +7,8 @@ Handle<RenderObject> RenderScene::register_object(MeshObject* object)
 {
 	RenderObject newObj;
 	newObj.bounds = object->bounds;
-	newObj.transformMatrix = object->transformMatrix;
-	newObj.material = getMaterialHandle(object->material);	
-	newObj.material2 = getMaterialHandle2(object->material->newMat);
+	newObj.transformMatrix = object->transformMatrix;	
+	newObj.material2 = getMaterialHandle(object->material);
 	newObj.meshID = getMeshHandle(object->mesh);
 	newObj.updateIndex = (uint32_t)-1;
 	newObj.customSortKey = object->customSortKey;
@@ -20,14 +19,14 @@ Handle<RenderObject> RenderScene::register_object(MeshObject* object)
 
 	if (object->bDrawForwardPass)
 	{
-		if (object->material->forwardEffect)
+		if (object->material->original->forwardEffect)
 		{
 			_forwardPass.unbatchedObjects.push_back(handle);
 		}
 	}
 	if (object->bDrawShadowPass)
 	{
-		if (object->material->shadowEffect)
+		if (object->material->original->shadowEffect)
 		{
 			_shadowPass.unbatchedObjects.push_back(handle);
 		}
@@ -198,7 +197,7 @@ void RenderScene::refresh_pass(MeshPass* pass, bool forward)
 				newCommand.object = pass->unbatchedObjects[i];
 
 				//pack mesh id and material into 32 bits
-				vkutil::Material* mt = get_material2(object->material2);
+				vkutil::Material* mt = get_material(object->material2);
 				uint32_t mathash;
 				
 				if (forward) {
@@ -207,10 +206,9 @@ void RenderScene::refresh_pass(MeshPass* pass, bool forward)
 				else {
 					mathash	= std::hash<uint64_t>()( uint64_t(mt->original->shadowEffect->pipeline)) ^ std::hash<uint64_t>()((uint64_t)mt->shadowSet);
 				}
-				uint32_t meshmat = (uint64_t(object->material2.handle) << 10) | uint64_t(object->meshID.handle);
-				//pack mesh id and material into 64 bits
-				//uint64_t meshmat = uint64_t(meshmat) | object->customSortKey << 32;//object->material.handle << 32 | object->meshID.handle;
+				uint32_t meshmat = uint64_t(mathash) ^ uint64_t(object->meshID.handle);
 
+				//pack mesh id and material into 64 bits				
 				newCommand.sortKey = uint64_t(meshmat) | (uint64_t(object->customSortKey) << 32);
 
 				pass->flat_batches.push_back(newCommand);
@@ -235,9 +233,8 @@ void RenderScene::refresh_pass(MeshPass* pass, bool forward)
 		RenderScene::IndirectBatch newBatch;
 		newBatch.first = 0;
 		newBatch.count = 0;
-		//newBatch.material = get_object(pass->flat_batches[0].object)->material;
 
-		vkutil::Material* mt = get_material2(get_object(pass->flat_batches[0].object)->material2);
+		vkutil::Material* mt = get_material(get_object(pass->flat_batches[0].object)->material2);
 		if (forward)
 		{
 			newBatch.material.materialSet = mt->forwardSet;
@@ -250,49 +247,59 @@ void RenderScene::refresh_pass(MeshPass* pass, bool forward)
 		newBatch.meshID = get_object(pass->flat_batches[0].object)->meshID;
 
 		pass->batches.push_back(newBatch);
+		RenderScene::IndirectBatch* back = &pass->batches.back();
 
+		Handle<vkutil::Material> lastMat= get_object(pass->flat_batches[0].object)->material2;
 		for (int i = 0; i < pass->flat_batches.size(); i++) {
 			RenderObject* obj = get_object(pass->flat_batches[i].object);
-			RenderScene::IndirectBatch* back = &pass->batches.back();
+			
 
-			vkutil::Material* mt = get_material2(obj->material2);
-			if (forward)
+			bool bSameMesh = obj->meshID.handle == back->meshID.handle;
+			bool bSameMaterial = false;
+			if (obj->material2.handle == lastMat.handle)
 			{
-				newBatch.material.materialSet = mt->forwardSet;
-				newBatch.material.shaderPass = mt->original->forwardEffect;
-			}
-			else {
-				newBatch.material.materialSet = mt->shadowSet;
-				newBatch.material.shaderPass = mt->original->shadowEffect;
+				bSameMaterial = true;
 			}
 
-			if (obj->meshID.handle == back->meshID.handle
-				&& newBatch.material.materialSet == back->material.materialSet
-				&& newBatch.material.shaderPass == back->material.shaderPass
-				)
+			if (!bSameMaterial && bSameMesh)
+			{
+				vkutil::Material* mt = get_material(obj->material2);
+				if (forward)
+				{
+					newBatch.material.materialSet = mt->forwardSet;
+					newBatch.material.shaderPass = mt->original->forwardEffect;
+				}
+				else {
+					newBatch.material.materialSet = mt->shadowSet;
+					newBatch.material.shaderPass = mt->original->shadowEffect;
+				}
+
+				if (newBatch.material.materialSet == back->material.materialSet
+					&& newBatch.material.shaderPass == back->material.shaderPass)
+				{
+					bSameMaterial = true;
+				}
+			}
+			
+			
+
+			if (bSameMesh && bSameMaterial)
 			{
 				back->count++;
-				back->AABBMax = glm::max(back->AABBMax, obj->bounds.origin + obj->bounds.extents);
-				back->AABBMin = glm::min(back->AABBMin, obj->bounds.origin - obj->bounds.extents);
+				
 			}
 			else {
 				
 				newBatch.first = i;
 				newBatch.count = 1;
-				//newBatch.material = obj->material;
 				newBatch.meshID = obj->meshID;
-				newBatch.AABBMax = obj->bounds.origin + obj->bounds.extents;
-				newBatch.AABBMin = obj->bounds.origin - obj->bounds.extents;
+				
 
 				pass->batches.push_back(newBatch);
+				back = &pass->batches.back();
 			}
-			pass->batches.back().objects.push_back(pass->flat_batches[i].object);			
+			pass->batches.back().objects.push_back(pass->flat_batches[i].object);
 		}
-
-		//for (int i = 0; i < pass->batches.size(); i++)
-		//{
-		//	pass->batches[i].material2.materialSet = 
-		//}
 
 		//flatten batches into multibatch
 		Multibatch newbatch;
@@ -313,7 +320,7 @@ void RenderScene::refresh_pass(MeshPass* pass, bool forward)
 					
 			bool bSameMat = false;
 			
-			if (joinbatch->material.materialSet == batch->material.materialSet &&
+			if (bCompatibleMesh && joinbatch->material.materialSet == batch->material.materialSet &&
 				joinbatch->material.shaderPass == batch->material.shaderPass
 				)
 			{
@@ -345,45 +352,24 @@ DrawMesh RenderScene::get_mesh(Handle<DrawMesh> objectID)
 	return meshes[objectID.handle];
 }
 
-OldMaterial* RenderScene::get_material(Handle<OldMaterial> objectID)
+
+
+vkutil::Material* RenderScene::get_material(Handle<vkutil::Material> objectID)
 {
 	return materials[objectID.handle];
 }
 
-vkutil::Material* RenderScene::get_material2(Handle<vkutil::Material> objectID)
-{
-	return materials2[objectID.handle];
-}
-
-Handle<vkutil::Material> RenderScene::getMaterialHandle2(vkutil::Material* m)
+Handle<vkutil::Material> RenderScene::getMaterialHandle(vkutil::Material* m)
 {	
 	Handle<vkutil::Material> handle;
-	auto it = materialConvert2.find(m);
-	if (it == materialConvert2.end())
-	{
-		uint32_t index = materials2.size();
-		materials2.push_back(m);
-
-		handle.handle = index;
-		materialConvert2[m] = handle;
-	}
-	else {
-		handle = (*it).second;
-	}
-	return handle;
-}
-
-Handle<OldMaterial> RenderScene::getMaterialHandle(OldMaterial* m)
-{
-	Handle<OldMaterial> handle;
 	auto it = materialConvert.find(m);
 	if (it == materialConvert.end())
 	{
 		uint32_t index = materials.size();
-		 materials.push_back(m);
+		materials.push_back(m);
 
-		 handle.handle = index;
-		 materialConvert[m] = handle;
+		handle.handle = index;
+		materialConvert[m] = handle;
 	}
 	else {
 		handle = (*it).second;

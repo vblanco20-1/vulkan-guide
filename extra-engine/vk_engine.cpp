@@ -76,7 +76,7 @@ void VulkanEngine::init()
 	);
 
 	//_renderables.reserve(10000);
-	_materials.reserve(1000);
+	
 	_meshes.reserve(1000);
 	
 	init_vulkan();
@@ -169,7 +169,7 @@ void VulkanEngine::draw()
 		VK_CHECK(vkWaitForFences(_device, 1, &get_current_frame()._renderFence, true, 1000000000));
 		VK_CHECK(vkResetFences(_device, 1, &get_current_frame()._renderFence));
 
-		
+		_renderScene.build_batches();
 		//check the debug data
 		void* data;		
 		vmaMapMemory(_allocator, get_current_frame().debugOutputBuffer._allocation, &data);
@@ -1286,33 +1286,7 @@ void VulkanEngine::init_pipelines()
 	_materialSystem = new vkutil::MaterialSystem();
 	_materialSystem->init(this);
 	_materialSystem->build_default_templates();
-
-	//untextured defaultlit shader
-	ShaderEffect* mainEffect = new ShaderEffect();
-	mainEffect->add_stage(_shaderCache.get_shader(shader_path("tri_mesh_ssbo_instanced.vert.spv")), VK_SHADER_STAGE_VERTEX_BIT);
-	mainEffect->add_stage(_shaderCache.get_shader(shader_path("default_lit.frag.spv")), VK_SHADER_STAGE_FRAGMENT_BIT);
-
-
-	ShaderEffect::ReflectionOverrides overrides[] = {
-		{"sceneData", VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC},
-		{"cameraData", VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC}
-	};
-	mainEffect->reflect_layout(this, overrides, 2);
-
-	//textured defaultlit shader
-	ShaderEffect* texturedEffect = new ShaderEffect();;
-	texturedEffect->add_stage(_shaderCache.get_shader(shader_path("tri_mesh_ssbo_instanced.vert.spv")), VK_SHADER_STAGE_VERTEX_BIT);
-	texturedEffect->add_stage(_shaderCache.get_shader(shader_path("textured_lit.frag.spv")), VK_SHADER_STAGE_FRAGMENT_BIT);
-
-	texturedEffect->reflect_layout(this, overrides, 2);
-
-	//shadow effect is same as triangle but without pixel shader
-	ShaderEffect* shadowEffect = new ShaderEffect();
-	shadowEffect->add_stage(_shaderCache.get_shader(shader_path("tri_mesh_ssbo_instanced_shadowcast.vert.spv")), VK_SHADER_STAGE_VERTEX_BIT);
-
-	shadowEffect->reflect_layout(this, overrides, 2);
-
-	
+		
 	//fullscreen triangle pipeline for blits
 	ShaderEffect* blitEffect = new ShaderEffect();
 	blitEffect->add_stage(_shaderCache.get_shader(shader_path("fullscreen.vert.spv")), VK_SHADER_STAGE_VERTEX_BIT);
@@ -1322,34 +1296,8 @@ void VulkanEngine::init_pipelines()
 
 	PipelineBuilder pipelineBuilder;
 
-	
-	pipelineBuilder.vertexDescription = Vertex::get_vertex_description();
-	
-	
-	fill_shadow_pipeline(pipelineBuilder);
-	pipelineBuilder.setShaders(shadowEffect);
-	VkPipeline shadowPipeline = pipelineBuilder.build_pipeline(_device, _shadowPass);
-
 	//default forwardpass parameters
 	fill_forward_pipeline(pipelineBuilder);
-
-	//build the untextured triangle pipeline
-	pipelineBuilder.setShaders(mainEffect);
-	
-	//VkPipeline meshPipeline = pipelineBuilder.build_pipeline(_device, _renderPass);
-	//OldMaterial* meshmat = create_material(meshPipeline, mainEffect, "defaultmesh");
-	//meshmat->shadowEffect = shadowEffect;
-	//meshmat->shadowPipeline = shadowPipeline;
-
-	
-	//build textured pipeline
-	pipelineBuilder.setShaders(texturedEffect);
-
-	//VkPipeline texPipeline = pipelineBuilder.build_pipeline(_device, _renderPass);
-	//OldMaterial* texmat = create_material(texPipeline, texturedEffect, "texturedmesh");
-	//texmat->shadowEffect = shadowEffect;
-	//texmat->shadowPipeline = shadowPipeline;
-	
 
 	//build blit pipeline
 	pipelineBuilder.setShaders(blitEffect);
@@ -1572,44 +1520,6 @@ void VulkanEngine::upload_mesh(Mesh& mesh)
 	}
 }
 
-
-OldMaterial* VulkanEngine::create_material(VkPipeline pipeline, ShaderEffect* effect, const std::string& name)
-{
-	OldMaterial mat;
-	mat.forwardPipeline = pipeline;
-	mat.forwardEffect = effect;
-	_materials[name] =mat;
-	return &_materials[name];
-}
-
-OldMaterial* VulkanEngine::clone_material(const std::string& originalname, const std::string& copyname)
-{
-	OldMaterial* m = get_material(originalname);
-
-	OldMaterial mat;
-	mat.forwardPipeline = m->forwardPipeline;
-	mat.forwardEffect = m->forwardEffect;
-
-	mat.shadowPipeline = m->shadowPipeline;
-	mat.shadowEffect = m->shadowEffect;
-
-	_materials[copyname] = mat;
-	return &_materials[copyname];
-}
-
-OldMaterial* VulkanEngine::get_material(const std::string& name)
-{
-	//search for the object, and return nullpointer if not found
-	auto it = _materials.find(name);
-	if (it == _materials.end()) {
-		return nullptr;
-	}
-	else {
-		return &(*it).second;
-	}
-}
-
-
 Mesh* VulkanEngine::get_mesh(const std::string& name)
 {
 	auto it = _meshes.find(name);
@@ -1680,12 +1590,7 @@ void VulkanEngine::init_scene()
 	VkSampler smoothSampler;
 
 	vkCreateSampler(_device, &samplerInfo, nullptr, &smoothSampler);
-
 	
-
-	//build_texture_set(smoothSampler, whitemat, "white");
-	//
-	//build_texture_set(smoothSampler, get_material("default"), "white");
 
 	{
 		vkutil::MaterialInfo texturedInfo;
@@ -1699,8 +1604,6 @@ void VulkanEngine::init_scene()
 		texturedInfo.textures.push_back(whiteTex);
 
 		vkutil::Material* newmat = _materialSystem->build_material("textured", texturedInfo);
-
-		_materialSystem->convert_to_old(newmat, "texturedmesh");
 	}
 	{
 		vkutil::MaterialInfo matinfo;
@@ -1715,10 +1618,7 @@ void VulkanEngine::init_scene()
 
 		vkutil::Material* newmat = _materialSystem->build_material("default", matinfo);
 
-		_materialSystem->convert_to_old(newmat, "default");
 	}
-
-	//auto whitemat = clone_material("texturedmesh", "default");
 
 	int dimHelmets =1;
 	for (int x = -dimHelmets; x <= dimHelmets; x++) {
@@ -1767,22 +1667,6 @@ void VulkanEngine::init_scene()
 	//		_renderScene.register_object(&tri, PassTypeFlags::Forward);
 	//	}
 	//}
-}
-
-
-void VulkanEngine::build_texture_set(VkSampler blockySampler, OldMaterial* texturedMat, const char* textureName)
-{
-	VkDescriptorImageInfo imageBufferInfo;
-	imageBufferInfo.sampler = blockySampler;
-	imageBufferInfo.imageView = _loadedTextures[textureName].imageView;
-	imageBufferInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-
-	texturedMat->textures.resize(1);
-	texturedMat->textures[0] = textureName;
-
-	vkutil::DescriptorBuilder::begin(_descriptorLayoutCache, _descriptorAllocator)
-		.bind_image(0, &imageBufferInfo, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
-		.build(texturedMat->textureSet);
 }
 
 AllocatedBufferUntyped VulkanEngine::create_buffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage, VkMemoryPropertyFlags required_flags)
@@ -1966,14 +1850,14 @@ bool VulkanEngine::load_prefab(const char* path, glm::mat4 root)
 		}
 
 		
-		
+		auto materialName = v.material_path.c_str();
 		//load material
-		OldMaterial* mat = get_material("default");
 		
-		if (!get_material(v.material_path.c_str()))
+		vkutil::Material* objectMaterial = _materialSystem->get_material(materialName);
+		if (!objectMaterial)
 		{
 			assets::AssetFile materialFile;
-			bool loaded = assets::load_binaryfile(asset_path(v.material_path).c_str(), materialFile);
+			bool loaded = assets::load_binaryfile(asset_path(materialName).c_str(), materialFile);
 			
 			if (loaded)
 			{
@@ -1998,10 +1882,12 @@ bool VulkanEngine::load_prefab(const char* path, glm::mat4 root)
 					info.baseTemplate = "texturedPBR_opaque";
 					info.textures.push_back(tex);
 
+					objectMaterial = _materialSystem->build_material(materialName, info);
 
-					vkutil::Material* newMat = _materialSystem->build_material(v.material_path.c_str(), info);
-
-					mat = _materialSystem->convert_to_old(newMat, v.material_path.c_str());
+					if (!objectMaterial)
+					{
+						LOG_ERROR("Error When building material {}", v.material_path);
+					}
 				}
 				else
 				{
@@ -2013,12 +1899,10 @@ bool VulkanEngine::load_prefab(const char* path, glm::mat4 root)
 				LOG_ERROR("Error When loading material at path {}", v.material_path);
 			}
 		}
-		else {
-			mat = get_material(v.material_path.c_str());
-		}
+		
 		MeshObject loadmesh;
 		//transparent objects will be invisible
-		if (mat->transparency != assets::TransparencyMode::Opaque)
+		if (objectMaterial->original->transparency != assets::TransparencyMode::Opaque)
 		{
 			loadmesh.bDrawForwardPass = false;
 			loadmesh.bDrawShadowPass = false;
@@ -2034,16 +1918,11 @@ bool VulkanEngine::load_prefab(const char* path, glm::mat4 root)
 		if (matrixIT != node_worldmats.end()) {
 			auto nm = (*matrixIT).second;
 			memcpy(&nodematrix, &nm, sizeof(glm::mat4));
-		}
-
-		
+		}		
 		
 		loadmesh.mesh = get_mesh(v.mesh_path.c_str());
 		loadmesh.transformMatrix = nodematrix;
-		loadmesh.material = mat;
-		loadmesh.bDrawForwardPass = true;
-		loadmesh.bDrawShadowPass = true;
-		
+		loadmesh.material = objectMaterial;
 
 		refresh_renderbounds(&loadmesh);
 

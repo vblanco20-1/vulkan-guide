@@ -55,7 +55,6 @@ public:
 };
 struct ShaderEffect;
 class VulkanEngine;
-struct OldMaterial;
 namespace vkutil {
 	
 	struct ShaderPass {
@@ -114,7 +113,8 @@ namespace vkutil {
 		ShaderPass* build_shader(VkRenderPass renderPass,PipelineBuilder& builder, ShaderEffect* effect);
 
 		Material* build_material(const std::string& materialName, const MaterialInfo& info);
-		OldMaterial* convert_to_old(Material* mat, const std::string& materialName);
+		Material* get_material(const std::string& materialName);
+		
 		void fill_builders();
 	private:
 

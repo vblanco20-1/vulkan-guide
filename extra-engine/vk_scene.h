@@ -20,7 +20,6 @@ struct Handle {
 	uint32_t handle;
 };
 
-struct OldMaterial;
 struct MeshObject;
 struct Mesh;
 struct GPUObjectData;
@@ -53,9 +52,9 @@ enum class PassTypeFlags : uint8_t {
 struct RenderObject {
 
 	Handle<DrawMesh> meshID;
-	Handle<OldMaterial> material;
 	Handle<vkutil::Material> material2;
-		uint32_t updateIndex;
+
+	uint32_t updateIndex;
 	uint32_t customSortKey{0};
 
 	glm::mat4 transformMatrix;
@@ -81,10 +80,7 @@ public:
 		PassMaterial material;
 		uint32_t first;
 		uint32_t count;
-
-		glm::vec3 AABBMin;
-		glm::vec3 AABBMax;
-
+	
 		std::vector<Handle<RenderObject>> objects;
 	};
 	struct RenderBatch {
@@ -143,26 +139,22 @@ public:
 
 	RenderObject* get_object(Handle<RenderObject> objectID);
 	DrawMesh get_mesh(Handle<DrawMesh> objectID);
-	OldMaterial* get_material(Handle<OldMaterial> objectID);
 
-	vkutil::Material *get_material2(Handle<vkutil::Material> objectID);
+	vkutil::Material *get_material(Handle<vkutil::Material> objectID);
 
 	std::vector<RenderObject> renderables;
-	std::vector<OldMaterial*> materials;
 	std::vector<DrawMesh> meshes;
-	std::vector<vkutil::Material*> materials2;
+	std::vector<vkutil::Material*> materials;
 
 	std::vector<Handle<RenderObject>> dirtyObjects;
 
 	MeshPass _forwardPass;
 	MeshPass _shadowPass;
 
-	std::unordered_map<vkutil::Material*, Handle<vkutil::Material>> materialConvert2;
-	std::unordered_map<OldMaterial*, Handle<OldMaterial>> materialConvert;
+	std::unordered_map<vkutil::Material*, Handle<vkutil::Material>> materialConvert;
 	std::unordered_map<Mesh*, Handle<DrawMesh>> meshConvert;
 
-	Handle<vkutil::Material> getMaterialHandle2(vkutil::Material* m);
-	Handle<OldMaterial> getMaterialHandle(OldMaterial* m);
+	Handle<vkutil::Material> getMaterialHandle(vkutil::Material* m);
 	Handle<DrawMesh> getMeshHandle(Mesh* m);
 
 	AllocatedBufferUntyped uploadBuffer[2];

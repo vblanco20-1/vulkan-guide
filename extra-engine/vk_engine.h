@@ -65,18 +65,6 @@ namespace assets {
 
 	enum class TransparencyMode :uint8_t;
 }
-struct OldMaterial {
-	VkDescriptorSet textureSet{VK_NULL_HANDLE};
-	VkPipeline forwardPipeline{ VK_NULL_HANDLE };
-	VkPipeline shadowPipeline{ VK_NULL_HANDLE };
-	vkutil::Material* newMat{ nullptr };
-	assets::TransparencyMode transparency;
-
-	std::vector<std::string> textures;
-
-	struct ShaderEffect* forwardEffect{nullptr};
-	struct ShaderEffect* shadowEffect{ nullptr };
-};
 
 struct Texture {
 	AllocatedImage image;
@@ -88,8 +76,7 @@ struct Texture {
 struct MeshObject {
 	Mesh* mesh{ nullptr };
 
-	OldMaterial* material{nullptr};
-
+	vkutil::Material* material;
 	uint32_t customSortKey;
 	glm::mat4 transformMatrix;
 
@@ -349,20 +336,11 @@ public:
 	FrameData& get_last_frame();
 
 	ShaderCache _shaderCache;
-	std::unordered_map<std::string, OldMaterial> _materials;
+
 	std::unordered_map<std::string, Mesh> _meshes;
 	std::unordered_map<std::string, Texture> _loadedTextures;
 	std::unordered_map<std::string, assets::PrefabInfo*> _prefabCache;
 	//functions
-
-	//create material and add it to the map
-
-	OldMaterial* create_material(VkPipeline pipeline, ShaderEffect* effect, const std::string& name);
-
-	OldMaterial* clone_material(const std::string& originalname, const std::string& copyname);
-
-	//returns nullptr if it cant be found
-	OldMaterial* get_material(const std::string& name);
 
 	//returns nullptr if it cant be found
 	Mesh* get_mesh(const std::string& name);
@@ -432,8 +410,6 @@ private:
 	void fill_shadow_pipeline(PipelineBuilder& pipelineBuilder);
 
 	void init_scene();
-
-	void build_texture_set(VkSampler blockySampler, OldMaterial* texturedMat, const char* textureName);
 
 	void init_descriptors();
 

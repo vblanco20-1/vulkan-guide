@@ -541,7 +541,7 @@ void VulkanEngine::draw_objects_shadow(VkCommandBuffer cmd, RenderScene::MeshPas
 	vmaUnmapMemory(_allocator, get_current_frame().dynamicDataBuffer._allocation);
 
 	Mesh* lastMesh = nullptr;
-	OldMaterial* lastMaterial = nullptr;
+	
 	VkPipeline lastPipeline = VK_NULL_HANDLE;
 	ShaderDescriptorBinder binder{};
 
