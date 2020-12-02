@@ -1643,7 +1643,7 @@ void VulkanEngine::init_scene()
 			glm::mat4 translation = glm::translate(glm::mat4{ 1.0 }, glm::vec3(x * 5, 10, y * 5));
 			glm::mat4 scale = glm::scale(glm::mat4{ 1.0 }, glm::vec3(10));
 	
-		//load_prefab(asset_path("FlightHelmet/FlightHelmet.pfb").c_str(), translation * scale);
+		load_prefab(asset_path("FlightHelmet/FlightHelmet.pfb").c_str(), translation * scale);
 		}
 	}
 
@@ -1651,8 +1651,8 @@ void VulkanEngine::init_scene()
 
 	glm::mat4 unrealFixRotation = glm::rotate(glm::radians(-90.f), glm::vec3{ 1,0,0 });
 
-	//load_prefab(asset_path("Sponza2.pfb").c_str(), sponzaMatrix);
-	//load_prefab(asset_path("scifi/TopDownScifi.pfb").c_str(), glm::scale(glm::mat4{ 1.0 }, glm::vec3(1)));
+	load_prefab(asset_path("Sponza2.pfb").c_str(), sponzaMatrix);
+	load_prefab(asset_path("scifi/TopDownScifi.pfb").c_str(), glm::scale(glm::mat4{ 1.0 }, glm::vec3(1)));
 	int dimcities = 2;
 	for (int x = -dimcities; x <= dimcities; x++) {
 		for (int y = -dimcities; y <= dimcities; y++) {
@@ -1949,8 +1949,6 @@ bool VulkanEngine::load_prefab(const char* path, glm::mat4 root)
 		uint32_t key =  uint32_t(std::hash<int32_t>()(lx) ^ std::hash<int32_t>()(ly^1337));
 
 		loadmesh.customSortKey = 0;// rng;// key;
-		assert(mat->textures.size() <= 1);
-
 		
 
 		prefab_renderables.push_back(loadmesh);

@@ -261,7 +261,7 @@ void RenderScene::refresh_pass(MeshPass* pass, bool forward)
 				bSameMaterial = true;
 			}
 
-			if (!bSameMaterial && bSameMesh)
+			if (!bSameMaterial || !bSameMesh)
 			{
 				vkutil::Material* mt = get_material(obj->material2);
 				if (forward)
@@ -297,7 +297,7 @@ void RenderScene::refresh_pass(MeshPass* pass, bool forward)
 				pass->batches.push_back(newBatch);
 				back = &pass->batches.back();
 			}
-			pass->batches.back().objects.push_back(pass->flat_batches[i].object);
+			back->objects.push_back(pass->flat_batches[i].object);
 		}
 
 		//flatten batches into multibatch
@@ -308,7 +308,7 @@ void RenderScene::refresh_pass(MeshPass* pass, bool forward)
 		newbatch.count = 1;
 		newbatch.first = 0;
 
-#if 0
+#if 1
 		for (int i = 1; i < pass->batches.size(); i++)
 		{
 			IndirectBatch* joinbatch = &pass->batches[newbatch.first];

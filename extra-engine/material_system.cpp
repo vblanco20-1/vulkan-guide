@@ -239,12 +239,14 @@ vkutil::Material* vkutil::MaterialSystem::build_material(const std::string& mate
 			db.bind_image(i, &imageBufferInfo, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT);
 		}
 
+		
 			
 		db.build(newMat->forwardSet);
-
+		LOG_INFO("Built New Material {}", materialName);
 		//add material to cache
 		materialCache[info] = (newMat);
 		mat = newMat;
+		materials[materialName] = mat;
 	}
 
 	return mat;
