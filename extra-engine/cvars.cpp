@@ -14,8 +14,6 @@ enum class CVarType : char
 	INT,
 	FLOAT,
 	STRING,
-	FLOATVEC,
-	INTVEC
 };
 
 class CVarParameter
@@ -42,13 +40,18 @@ struct CVarStorage
 template<typename T>
 struct CVarArray
 {
-	std::vector<CVarStorage<T>> cvars;
+	CVarStorage<T>* cvars;
 	int32_t lastCVar{ 0 };
 
 	CVarArray(size_t size)
 	{
-		cvars.resize(size);
+		cvars= new CVarStorage<T>[size]();
 	}
+	~CVarArray()
+	{
+		delete cvars;
+	}
+	
 
 	CVarStorage<T>* GetCurrentStorage(int32_t index)
 	{
@@ -57,7 +60,7 @@ struct CVarArray
 
 	T* GetCurrentPtr(int32_t index)
 	{
-		return &((cvars.data() + index)->current);
+		return &cvars[index].current;
 	};
 
 	T GetCurrent(int32_t index)
@@ -108,11 +111,11 @@ class CVarSystemImpl : public CVarSystem
 public:
 	CVarParameter* GetCVar(StringUtils::StringHash hash) override final;
 
-	CVarParameter* CreateFloatCVar(const char* name, const char* description, double defaultValue) override final;
+	
 	CVarParameter* CreateFloatCVar(const char* name, const char* description, double defaultValue, double currentValue) override final;
-	CVarParameter* CreateIntCVar(const char* name, const char* description, int32_t defaultValue) override final;
+	
 	CVarParameter* CreateIntCVar(const char* name, const char* description, int32_t defaultValue, int32_t currentValue) override final;
-	CVarParameter* CreateStringCVar(const char* name, const char* description, const char* defaultValue) override final;
+
 	CVarParameter* CreateStringCVar(const char* name, const char* description, const char* defaultValue, const char* currentValue) override final;
 	
 	double* GetFloatCVar(StringUtils::StringHash hash) override final;
@@ -131,7 +134,6 @@ public:
 	void EditParameter(CVarParameter* p);
 
 	constexpr static int MAX_INT_CVARS = 1000;
-
 	CVarArray<int32_t> intCVars2{ MAX_INT_CVARS };
 
 	constexpr static int MAX_FLOAT_CVARS = 1000;
@@ -169,14 +171,23 @@ public:
 	//templated get-set cvar versions for syntax sugar
 	template<typename T>
 	T* GetCVarCurrent(uint32_t namehash) {
-		auto par = GetCVar(namehash);
-		return GetCVarArray<T>()->GetCurrentPtr(par->arrayIndex);
+		CVarParameter* par = GetCVar(namehash);
+		if (!par) {
+			return nullptr;
+		}
+		else {
+			return GetCVarArray<T>()->GetCurrentPtr(par->arrayIndex);
+		}
 	}
 
 	template<typename T>
 	void SetCVarCurrent(uint32_t namehash, const T& value)
 	{
-		GetCVarArray<T>()->SetCurrent(value, GetCVar(namehash)->arrayIndex);
+		CVarParameter* cvar = GetCVar(namehash);
+		if (cvar)
+		{
+			GetCVarArray<T>()->SetCurrent(value, cvar->arrayIndex);
+		}
 	}
 
 	static CVarSystemImpl* Get()
@@ -244,18 +255,6 @@ void CVarSystemImpl::SetStringCVar(StringUtils::StringHash hash, const char* val
 }
 
 
-CVarParameter* CVarSystemImpl::CreateFloatCVar(const char* name, const char* description, double defaultValue)
-{
-	CVarParameter* param = InitCVar(name, description);
-	if (!param) return nullptr;
-
-	param->type = CVarType::FLOAT;
-
-	GetCVarArray<double>()->Add(defaultValue, param);
-
-	return param;
-}
-
 CVarParameter* CVarSystemImpl::CreateFloatCVar(const char* name, const char* description, double defaultValue, double currentValue)
 {
 	CVarParameter* param = InitCVar(name, description);
@@ -268,17 +267,7 @@ CVarParameter* CVarSystemImpl::CreateFloatCVar(const char* name, const char* des
 	return param;
 }
 
-CVarParameter* CVarSystemImpl::CreateIntCVar(const char* name, const char* description, int32_t defaultValue)
-{
-	CVarParameter* param = InitCVar(name, description);
-	if (!param) return nullptr;
 
-	param->type = CVarType::INT;
-
-	GetCVarArray<int32_t>()->Add(defaultValue, param);
-
-	return param;
-}
 
 CVarParameter* CVarSystemImpl::CreateIntCVar(const char* name, const char* description, int32_t defaultValue, int32_t currentValue)
 {
@@ -292,17 +281,7 @@ CVarParameter* CVarSystemImpl::CreateIntCVar(const char* name, const char* descr
 	return param;
 }
 
-CVarParameter* CVarSystemImpl::CreateStringCVar(const char* name, const char* description, const char* defaultValue)
-{
-	CVarParameter* param = InitCVar(name, description);
-	if (!param) return nullptr;
 
-	param->type = CVarType::STRING;
-
-	GetCVarArray<std::string>()->Add(defaultValue, param);
-
-	return param;
-}
 
 CVarParameter* CVarSystemImpl::CreateStringCVar(const char* name, const char* description, const char* defaultValue, const char* currentValue)
 {
@@ -332,19 +311,35 @@ CVarParameter* CVarSystemImpl::InitCVar(const char* name, const char* descriptio
 
 AutoCVar_Float::AutoCVar_Float(const char* name, const char* description, double defaultValue, CVarFlags flags)
 {
-	CVarParameter* cvar = CVarSystem::Get()->CreateFloatCVar(name, description, defaultValue);
+	CVarParameter* cvar = CVarSystem::Get()->CreateFloatCVar(name, description, defaultValue, defaultValue);
 	cvar->flags = flags;
 	index = cvar->arrayIndex;
 }
 
+template<typename T>
+T GetCVarCurrentByIndex(int32_t index) {
+	return CVarSystemImpl::Get()->GetCVarArray<T>()->GetCurrent(index);
+}
+template<typename T>
+T* PtrGetCVarCurrentByIndex(int32_t index) {
+	return CVarSystemImpl::Get()->GetCVarArray<T>()->GetCurrentPtr(index);
+}
+
+
+template<typename T>
+void SetCVarCurrentByIndex(int32_t index,const T& data) {
+	CVarSystemImpl::Get()->GetCVarArray<T>()->SetCurrent(data, index);
+}
+
+
 double AutoCVar_Float::Get()
 {
-	return CVarSystemImpl::Get()->GetCVarArray<double>()->GetCurrent(index);
+	return GetCVarCurrentByIndex<CVarType>(index);
 }
 
 double* AutoCVar_Float::GetPtr()
 {
-	return CVarSystemImpl::Get()->GetCVarArray<double>()->GetCurrentPtr(index);
+	return PtrGetCVarCurrentByIndex<CVarType>(index);
 }
 
 float AutoCVar_Float::GetFloat()
@@ -360,29 +355,29 @@ float* AutoCVar_Float::GetFloatPtr()
 
 void AutoCVar_Float::Set(double f)
 {
-	CVarSystemImpl::Get()->GetCVarArray<double>()->SetCurrent(f, index);
+	SetCVarCurrentByIndex<CVarType>(index, f);
 }
 
 AutoCVar_Int::AutoCVar_Int(const char* name, const char* description, int32_t defaultValue, CVarFlags flags)
 {
-	CVarParameter* cvar = CVarSystem::Get()->CreateIntCVar(name, description, defaultValue);
+	CVarParameter* cvar = CVarSystem::Get()->CreateIntCVar(name, description, defaultValue, defaultValue);
 	cvar->flags = flags;
 	index = cvar->arrayIndex;
 }
 
 int32_t AutoCVar_Int::Get()
 {
-	return CVarSystemImpl::Get()->GetCVarArray<int32_t>()->GetCurrent(index);
+	return GetCVarCurrentByIndex<CVarType>(index);
 }
 
 int32_t* AutoCVar_Int::GetPtr()
 {
-	return CVarSystemImpl::Get()->GetCVarArray<int32_t>()->GetCurrentPtr(index);
+	return PtrGetCVarCurrentByIndex<CVarType>(index);
 }
 
 void AutoCVar_Int::Set(int32_t val)
 {
-	CVarSystemImpl::Get()->GetCVarArray<int32_t>()->SetCurrent(val, index);
+	SetCVarCurrentByIndex<CVarType>(index, val);
 }
 
 void AutoCVar_Int::Toggle()
@@ -394,19 +389,19 @@ void AutoCVar_Int::Toggle()
 
 AutoCVar_String::AutoCVar_String(const char* name, const char* description, const char* defaultValue, CVarFlags flags)
 {
-	CVarParameter* cvar = CVarSystem::Get()->CreateStringCVar(name, description, defaultValue);
+	CVarParameter* cvar = CVarSystem::Get()->CreateStringCVar(name, description, defaultValue,defaultValue);
 	cvar->flags = flags;
 	index = cvar->arrayIndex;
 }
 
 const char* AutoCVar_String::Get()
 {
-	return CVarSystemImpl::Get()->GetCVarArray<std::string>()->GetCurrentPtr(index)->c_str();
+	return GetCVarCurrentByIndex<CVarType>(index).c_str();
 };
 
 void AutoCVar_String::Set(std::string&& val)
 {
-	CVarSystemImpl::Get()->GetCVarArray<std::string>()->SetCurrent(val, index);
+	SetCVarCurrentByIndex<CVarType>(index,val);
 }
 
 
@@ -552,6 +547,7 @@ void CVarSystemImpl::EditParameter(CVarParameter* p)
 	const bool checkboxFlag = ((uint32_t)p->flags & (uint32_t)CVarFlags::EditCheckbox);
 	const bool dragFlag = ((uint32_t)p->flags & (uint32_t)CVarFlags::EditFloatDrag);
 
+	
 	switch (p->type)
 	{
 	case CVarType::INT:
@@ -568,15 +564,20 @@ void CVarSystemImpl::EditParameter(CVarParameter* p)
 				bool bCheckbox = GetCVarArray<int32_t>()->GetCurrent(p->arrayIndex) != 0;
 				Label(p->name.c_str());
 				
+				ImGui::PushID(p->name.c_str());
+
 				if (ImGui::Checkbox("", &bCheckbox))
+				{
 					GetCVarArray<int32_t>()->SetCurrent(bCheckbox ? 1 : 0, p->arrayIndex);
+				}
+				ImGui::PopID();
 			}
 			else
 			{
 				Label(p->name.c_str());
-
+				ImGui::PushID(p->name.c_str());
 				ImGui::InputInt("", GetCVarArray<int32_t>()->GetCurrentPtr(p->arrayIndex));
-				
+				ImGui::PopID();
 			}
 		}
 		break;
@@ -591,6 +592,7 @@ void CVarSystemImpl::EditParameter(CVarParameter* p)
 		else
 		{
 			Label(p->name.c_str());
+			ImGui::PushID(p->name.c_str());
 			if (dragFlag)
 			{
 				ImGui::InputDouble("", GetCVarArray<double>()->GetCurrentPtr(p->arrayIndex), 0, 0, "%.3f");
@@ -599,6 +601,7 @@ void CVarSystemImpl::EditParameter(CVarParameter* p)
 			{
 				ImGui::InputDouble("", GetCVarArray<double>()->GetCurrentPtr(p->arrayIndex), 0, 0, "%.3f");
 			}
+			ImGui::PopID();
 		}
 		break;
 
@@ -607,12 +610,17 @@ void CVarSystemImpl::EditParameter(CVarParameter* p)
 		if (readonlyFlag)
 		{
 			std::string displayFormat = p->name + "= %s";
+			ImGui::PushID(p->name.c_str());
 			ImGui::Text(displayFormat.c_str(), GetCVarArray<std::string>()->GetCurrent(p->arrayIndex));
+
+			ImGui::PopID();
 		}
 		else
 		{
 			Label(p->name.c_str());
-			ImGui::InputText("", GetCVarArray<std::string>()->GetCurrentPtr(p->arrayIndex));			
+			ImGui::InputText("", GetCVarArray<std::string>()->GetCurrentPtr(p->arrayIndex));
+
+			ImGui::PopID();
 		}
 		break;
 

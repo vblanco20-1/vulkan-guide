@@ -16,7 +16,6 @@ enum class CVarFlags : uint32_t
 	EditCheckbox = 1 << 8,
 	EditFloatDrag = 1 << 9,
 };
-namespace nlohmann { struct json; };
 class CVarSystem
 {
 
@@ -38,23 +37,25 @@ public:
 
 	virtual void SetStringCVar(StringUtils::StringHash hash, const char* value) = 0;
 
-	virtual CVarParameter* CreateFloatCVar(const char* name, const char* description, double defaultValue) = 0;
+	
 	virtual CVarParameter* CreateFloatCVar(const char* name, const char* description, double defaultValue, double currentValue) = 0;
-	virtual CVarParameter* CreateIntCVar(const char* name, const char* description, int32_t defaultValue) = 0;
+	
 	virtual CVarParameter* CreateIntCVar(const char* name, const char* description, int32_t defaultValue, int32_t currentValue) = 0;
-	virtual CVarParameter* CreateStringCVar(const char* name, const char* description, const char* defaultValue) = 0;
+	
 	virtual CVarParameter* CreateStringCVar(const char* name, const char* description, const char* defaultValue, const char* currentValue) = 0;
 	
 	virtual void DrawImguiEditor() = 0;
 };
 
+template<typename T>
 struct AutoCVar
 {
 protected:
 	int index;
+	using CVarType = T;
 };
 
-struct AutoCVar_Float : AutoCVar
+struct AutoCVar_Float : AutoCVar<double>
 {
 	AutoCVar_Float(const char* name, const char* description, double defaultValue, CVarFlags flags = CVarFlags::None);
 
@@ -65,7 +66,7 @@ struct AutoCVar_Float : AutoCVar
 	void Set(double val);
 };
 
-struct AutoCVar_Int : AutoCVar
+struct AutoCVar_Int : AutoCVar<int32_t>
 {
 	AutoCVar_Int(const char* name, const char* description, int32_t defaultValue, CVarFlags flags = CVarFlags::None);
 	int32_t Get();
@@ -75,7 +76,7 @@ struct AutoCVar_Int : AutoCVar
 	void Toggle();
 };
 
-struct AutoCVar_String : AutoCVar
+struct AutoCVar_String : AutoCVar<std::string>
 {
 	AutoCVar_String(const char* name, const char* description, const char* defaultValue, CVarFlags flags = CVarFlags::None);
 
