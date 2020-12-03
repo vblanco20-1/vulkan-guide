@@ -144,13 +144,9 @@ public:
 
 
 	//using templates with specializations to get the cvar arrays for each type.
-	//if you try to use a type that doesnt have specialization, it will trigger the static assert
+	//if you try to use a type that doesnt have specialization, it will trigger a linker error
 	template<typename T>
-	CVarArray<T>* GetCVarArray()
-	{
-		static_assert(false);
-		return nullptr;
-	}
+	CVarArray<T>* GetCVarArray();
 
 	template<>
 	CVarArray<int32_t>* GetCVarArray()
