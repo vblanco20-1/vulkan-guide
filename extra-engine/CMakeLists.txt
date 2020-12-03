@@ -1,30 +1,11 @@
 set(CMAKE_CXX_STANDARD 17)
 # Add source to this project's executable.
-add_executable (extra
-"main.cpp"
-"logger.h"
- "vk_engine.cpp"
-"vk_engine_scenerender.cpp"
- "vk_engine.h" 
- "vk_types.h" 
- "vk_mesh.cpp"
- "vk_mesh.h"
- "material_system.cpp"
- "material_system.h"
-  "vk_scene.cpp"
- "vk_scene.h"
-"frustum_cull.h"
-"vk_textures.cpp"
- "vk_textures.h"
-"vk_descriptors.cpp"
- "vk_descriptors.h"
-"vk_shaders.cpp"
- "vk_shaders.h"
- "vk_initializers.cpp" 
- "vk_initializers.h"
-  "vk_profiler.cpp" 
-  "vk_profiler.h"
- )
+
+
+
+file(GLOB ENGINE_FILES "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/*.h")
+
+add_executable (extra ${ENGINE_FILES})
 
 
 set_property(TARGET extra PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "$<TARGET_FILE_DIR:extra>")

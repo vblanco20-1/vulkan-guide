@@ -35,6 +35,20 @@
 #include "fmt/color.h"
 
 #include "logger.h"
+#include "cvars.h"
+
+
+
+AutoCVar_Int CVAR_OcclusionCullGPU("culling.enableOcclusionGPU", "Perform occlusion culling in gpu", 1, CVarFlags::EditCheckbox);
+
+
+AutoCVar_Int CVAR_CamLock("camera.lock", "Locks the camera", 0, CVarFlags::EditCheckbox);
+AutoCVar_Int CVAR_OutputIndirectToFile("culling.outputIndirectBufferToFile", "output the indirect data to a file. Autoresets", 0, CVarFlags::EditCheckbox);
+
+AutoCVar_Float CVAR_DrawDistance("gpu.drawDistance", "Distance cull", 5000);
+
+
+
 constexpr bool bUseValidationLayers = false;
 
 //we want to immediately abort when there is an error. In normal engines this would give an error message to the user, or perform a dump of state.
@@ -252,7 +266,7 @@ void VulkanEngine::draw()
 		forwardCull.viewmat = get_view_matrix();
 		forwardCull.frustrumCull = true;
 		forwardCull.occlusionCull = true;
-		forwardCull.drawDist = _config.drawDistance;
+		forwardCull.drawDist = CVAR_DrawDistance.Get();
 		forwardCull.aabb = false;
 		{
 			vkutil::VulkanScopeTimer timer2(cmd, _profiler, "Forward Cull");
@@ -555,25 +569,38 @@ void VulkanEngine::run()
 
 			ImGui::NewFrame();
 
+
+			
+			if (ImGui::BeginMainMenuBar())
+			{
+				
+				if (ImGui::BeginMenu("Debug"))
+				{
+					if (ImGui::BeginMenu("CVAR"))
+					{
+						CVarSystem::Get()->DrawImguiEditor();
+						ImGui::EndMenu();
+					}
+					ImGui::EndMenu();
+				}
+				ImGui::EndMainMenuBar();
+			}
+
+
 			ImGui::Begin("engine");
 
 			ImGui::Text("Frametimes: %f", stats.frametime);
 			ImGui::Text("Objects: %d", stats.objects);
 			//ImGui::Text("Drawcalls: %d", stats.drawcalls);
 			ImGui::Text("Batches: %d", stats.draws);
-			//ImGui::Text("Triangles: %d", stats.triangles);
-
-			ImGui::InputFloat("Draw Distance", &_config.drawDistance);
-
-			ImGui::InputFloat("Shadow Bias", &_config.shadowBias);
-			ImGui::InputFloat("Shadow Bias slope", &_config.shadowBiasslope);
-			_config.outputIndirectBufferToFile = false;
+			//ImGui::Text("Triangles: %d", stats.triangles);		
+			
+			CVAR_OutputIndirectToFile.Set(false);
 			if (ImGui::Button("Output Indirect"))
 			{
-				_config.outputIndirectBufferToFile = true;
+				CVAR_OutputIndirectToFile.Set(true);
 			}
-			ImGui::Checkbox("Freeze Culling", &_config.freezeCulling);
-
+		
 
 			ImGui::Separator();
 
@@ -646,14 +673,14 @@ void VulkanEngine::process_input_event(SDL_Event* ev)
 			_camera.inputAxis.y += 1.f;
 			break;
 		case SDLK_TAB:
-			if (_config.mouseLook)
+			if (CVAR_CamLock.Get())
 			{
 				LOG_INFO("Mouselook disabled");
-				_config.mouseLook = false;
+				CVAR_CamLock.Set(false);
 			}
 			else {
 				LOG_INFO("Mouselook enabled");
-				_config.mouseLook = true;
+				CVAR_CamLock.Set(true);
 			}		
 		}
 	}
@@ -680,7 +707,7 @@ void VulkanEngine::process_input_event(SDL_Event* ev)
 		}
 	}
 	else if (ev->type == SDL_MOUSEMOTION) {
-		if (_config.mouseLook)
+		if (CVAR_CamLock.Get())
 		{
 			_camera.pitch -= ev->motion.yrel * 0.003f;
 			_camera.yaw -= ev->motion.xrel * 0.003f;
@@ -692,13 +719,11 @@ void VulkanEngine::process_input_event(SDL_Event* ev)
 
 void VulkanEngine::update_camera(float deltaSeconds)
 {
-	if (!_config.mouseLook) return;
+	if (!CVAR_CamLock.Get()) return;
 
-	glm::vec3 forward = { 0,0,1 };
-	glm::vec3 right = { 1,0,0 };
-
-
-
+	const float cam_vel = 0.001f;
+	glm::vec3 forward = { 0,0,cam_vel };
+	glm::vec3 right = { cam_vel,0,0 };
 
 	glm::mat4 cam_rot = _camera.get_rotation_matrix();
 

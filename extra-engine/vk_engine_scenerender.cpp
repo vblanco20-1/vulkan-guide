@@ -13,6 +13,12 @@
 #include "Tracy.hpp"
 #include "TracyVulkan.hpp"
 #include "vk_profiler.h"
+#include "cvars.h"
+
+AutoCVar_Int CVAR_FreezeCull("culling.freeze", "Locks culling", 0, CVarFlags::EditCheckbox);
+
+AutoCVar_Float CVAR_ShadowBias("gpu.shadowBias", "Distance cull", 5.25f);
+AutoCVar_Float CVAR_SlopeBias("gpu.shadowBiasSlope", "Distance cull", 4.75f);
 
 
 glm::vec4 normalizePlane(glm::vec4 p)
@@ -22,7 +28,7 @@ glm::vec4 normalizePlane(glm::vec4 p)
 
 void VulkanEngine::execute_compute_cull(VkCommandBuffer cmd, RenderScene::MeshPass& pass,CullParams& params )
 {
-	if (_config.freezeCulling) return;
+	if (CVAR_FreezeCull.Get()) return;
 	
 	if (pass.batches.size() == 0) return;
 	TracyVkZone(_graphicsQueueContext, cmd, "Cull Dispatch");
@@ -140,7 +146,7 @@ void VulkanEngine::execute_compute_cull(VkCommandBuffer cmd, RenderScene::MeshPa
 
 		vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT, 0, 0, nullptr, 2, barriers, 0, nullptr);
 	}
-	if (_config.outputIndirectBufferToFile)
+	if (*CVarSystem::Get()->GetIntCVar("culling.outputIndirectBufferToFile"))
 	{
 		uint32_t offset = get_current_frame().debugDataOffsets.back();
 		VkBufferCopy debugCopy;
@@ -541,7 +547,7 @@ void VulkanEngine::draw_objects_shadow(VkCommandBuffer cmd, RenderScene::MeshPas
 		.bind_buffer(1, &instanceInfo, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
 		.build(ObjectDataSet);
 
-	vkCmdSetDepthBias(cmd, _config.shadowBias, 0, _config.shadowBiasslope);
+	vkCmdSetDepthBias(cmd, CVAR_ShadowBias.GetFloat(), 0, CVAR_SlopeBias.GetFloat());
 	execute_draw_commands(cmd, pass, ObjectDataSet, camera_data_offsets, scene_data_offset, GlobalSet);
 }
 

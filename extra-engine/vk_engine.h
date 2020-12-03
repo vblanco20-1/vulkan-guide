@@ -188,16 +188,16 @@ struct /*alignas(16)*/DrawCullData
 	
 };
 
-struct EngineConfig {
-	float drawDistance{5000};
-	float shadowBias{ 5.25f };
-	float shadowBiasslope{4.75f };
-	bool occlusionCullGPU{ true };
-	bool frustrumCullCPU{ true };
-	bool outputIndirectBufferToFile{false};
-	bool freezeCulling{ false };
-	bool mouseLook{ true };
-};
+//struct EngineConfig {
+//	//float drawDistance{5000};
+//	//float shadowBias{ 5.25f };
+//	//float shadowBiasslope{4.75f };
+//	//bool occlusionCullGPU{ true };
+//	//bool frustrumCullCPU{ true };
+//	//bool outputIndirectBufferToFile{false};
+//	//bool freezeCulling{ false };
+//	//bool mouseLook{ true };
+//};
 
 struct DirectionalLight {
 	glm::vec3 lightPosition;
@@ -313,7 +313,7 @@ public:
 	MeshDrawCommands currentCommands;
 	RenderScene _renderScene;
 
-	EngineConfig _config;
+	//EngineConfig _config;
 
 	void ready_mesh_draw(VkCommandBuffer cmd);
 	
