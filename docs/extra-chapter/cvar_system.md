@@ -238,13 +238,9 @@ public:
 	CVarArray<std::string> stringCVars{ MAX_STRING_CVARS };
 
 	//using templates with specializations to get the cvar arrays for each type.
-	//if you try to use a type that doesnt have specialization, it will trigger the static assert
+	//if you try to use a type that doesnt have specialization, it will trigger a linked error
 	template<typename T>
-	CVarArray<T>* GetCVarArray()
-	{
-		static_assert(false);
-		return nullptr;
-	}
+	CVarArray<T>* GetCVarArray();
 
 	template<>
 	CVarArray<int32_t>* GetCVarArray()
@@ -267,7 +263,7 @@ public:
 We are going to hardcode the array sizes for all the cvars. This is done to simplify the system. Generally you dont really have that many cvars, so its not really wasting much space. 1000 float and int cvars is bigger than what UnrealEngine uses, and Quake 3 only had a few dozens.
 
 One thing to note here is the `GetCVarArray` template trick. By doing this, we can allow a very significant code repetition when dealing with the different data arrays.
-We start by declaring the GetCVarArray template function, with a empty implementation that will static assert, in case its not implemented. We then follow with 3 separated specializations of the GetCVarArray template.
+We start by declaring the GetCVarArray template function, with a empty implementation that will error, in case its not implemented. We then follow with 3 separated specializations of the GetCVarArray template.
 The end result of this is that we can then do this.
 
 ```cpp
