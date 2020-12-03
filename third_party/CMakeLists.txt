@@ -104,6 +104,9 @@ target_sources(imgui PRIVATE
 "${CMAKE_CURRENT_SOURCE_DIR}/imgui/imgui.h"
 "${CMAKE_CURRENT_SOURCE_DIR}/imgui/imgui.cpp"
 
+"${CMAKE_CURRENT_SOURCE_DIR}/imgui/imgui_stdlib.h"
+"${CMAKE_CURRENT_SOURCE_DIR}/imgui/imgui_stdlib.cpp"
+
 "${CMAKE_CURRENT_SOURCE_DIR}/imgui/imgui_demo.cpp"
 "${CMAKE_CURRENT_SOURCE_DIR}/imgui/imgui_draw.cpp"
 "${CMAKE_CURRENT_SOURCE_DIR}/imgui/imgui_widgets.cpp"
