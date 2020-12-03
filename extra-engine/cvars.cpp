@@ -7,6 +7,7 @@
 #include <algorithm>
 #include "imgui.h"
 #include "imgui_stdlib.h"
+#include "imgui_internal.h"
 
 enum class CVarType : char
 {
@@ -67,13 +68,6 @@ struct CVarArray
 	void SetCurrent(const T& val, int32_t index)
 	{
 		cvars[index].current = val;
-
-		bool noEdit = ((uint32_t)cvars[index].parameter->flags & (uint32_t)CVarFlags::Noedit) != 0;
-		bool readOnly = ((uint32_t)cvars[index].parameter->flags & (uint32_t)CVarFlags::EditReadOnly) != 0;
-		if (!noEdit && !readOnly)
-		{
-			CVarSystemImpl::Get()->MarkDirty();
-		}
 	}
 
 	int Add(const T& value, CVarParameter* param)
@@ -85,9 +79,7 @@ struct CVarArray
 		cvars[index].parameter = param;
 
 		param->arrayIndex = index;
-		lastCVar++;
-
-		CVarSystemImpl::Get()->MarkDirty();
+		lastCVar++; 
 		return index;
 	}
 
@@ -102,7 +94,6 @@ struct CVarArray
 		param->arrayIndex = index;
 		lastCVar++;
 
-		CVarSystemImpl::Get()->MarkDirty();
 		return index;
 	}
 };
@@ -426,7 +417,7 @@ void CVarSystemImpl::DrawImguiEditor()
 	ImGui::InputText("Filter", &searchText);
 	static bool bShowAdvanced = false;
 	ImGui::Checkbox("Advanced", &bShowAdvanced);
-
+	ImGui::Separator();
 	cachedEditParameters.clear();
 
 	auto addToEditList = [&](auto parameter)
@@ -521,7 +512,40 @@ void CVarSystemImpl::DrawImguiEditor()
 		}
 	}
 }
+void Label(const char* label) {
+	ImGuiWindow* window = ImGui::GetCurrentWindow();
+	const ImVec2 lineStart = ImGui::GetCursorScreenPos();
+	const ImGuiStyle& style = ImGui::GetStyle();
+	float fullWidth = std::min(ImGui::GetContentRegionAvail().x,300.f);
+	float itemWidth = fullWidth * 0.2f;
+	ImVec2 textSize = ImGui::CalcTextSize(label);
+	ImRect textRect;
+	textRect.Min = ImGui::GetCursorScreenPos();
+	textRect.Max = textRect.Min;
+	textRect.Max.x += fullWidth - itemWidth;
+	textRect.Max.y += textSize.y;
 
+	ImGui::SetCursorScreenPos(textRect.Min);
+
+	ImGui::AlignTextToFramePadding();
+	textRect.Min.y += window->DC.CurrLineTextBaseOffset;
+	textRect.Max.y += window->DC.CurrLineTextBaseOffset;
+
+	ImGui::ItemSize(textRect);
+	if (ImGui::ItemAdd(textRect, window->GetID(label)))
+	{
+		ImGui::RenderTextEllipsis(ImGui::GetWindowDrawList(), textRect.Min, textRect.Max, textRect.Max.x,
+			textRect.Max.x, label, nullptr, &textSize);
+
+		if (textRect.GetWidth() < textSize.x && ImGui::IsItemHovered())
+			ImGui::SetTooltip("%s", label);
+	}
+
+	ImVec2 finalPos = { textRect.Max.x, textRect.Max.y - textSize.y + window->DC.CurrLineTextBaseOffset };
+	ImGui::SetCursorScreenPos(finalPos);
+	ImGui::SameLine();
+	ImGui::SetNextItemWidth(itemWidth);
+}
 void CVarSystemImpl::EditParameter(CVarParameter* p)
 {
 	const bool readonlyFlag = ((uint32_t)p->flags & (uint32_t)CVarFlags::EditReadOnly);
@@ -542,15 +566,17 @@ void CVarSystemImpl::EditParameter(CVarParameter* p)
 			if (checkboxFlag)
 			{
 				bool bCheckbox = GetCVarArray<int32_t>()->GetCurrent(p->arrayIndex) != 0;
-				if (ImGui::Checkbox(p->name.c_str(), &bCheckbox))
+				Label(p->name.c_str());
+				
+				if (ImGui::Checkbox("", &bCheckbox))
 					GetCVarArray<int32_t>()->SetCurrent(bCheckbox ? 1 : 0, p->arrayIndex);
-
-				// intCVars[p->arrayIndex].current = bCheckbox ? 1 : 0;
 			}
 			else
 			{
-				if (ImGui::InputInt(p->name.c_str(), GetCVarArray<int32_t>()->GetCurrentPtr(p->arrayIndex)))
-					MarkDirty();
+				Label(p->name.c_str());
+
+				ImGui::InputInt("", GetCVarArray<int32_t>()->GetCurrentPtr(p->arrayIndex));
+				
 			}
 		}
 		break;
@@ -564,15 +590,14 @@ void CVarSystemImpl::EditParameter(CVarParameter* p)
 		}
 		else
 		{
+			Label(p->name.c_str());
 			if (dragFlag)
 			{
-				if (ImGui::InputDouble(p->name.c_str(), GetCVarArray<double>()->GetCurrentPtr(p->arrayIndex)))
-					MarkDirty();
+				ImGui::InputDouble("", GetCVarArray<double>()->GetCurrentPtr(p->arrayIndex), 0, 0, "%.3f");
 			}
 			else
 			{
-				if (ImGui::InputDouble(p->name.c_str(), GetCVarArray<double>()->GetCurrentPtr(p->arrayIndex)))
-					MarkDirty();
+				ImGui::InputDouble("", GetCVarArray<double>()->GetCurrentPtr(p->arrayIndex), 0, 0, "%.3f");
 			}
 		}
 		break;
@@ -586,8 +611,8 @@ void CVarSystemImpl::EditParameter(CVarParameter* p)
 		}
 		else
 		{
-			if (ImGui::InputText(p->name.c_str(), GetCVarArray<std::string>()->GetCurrentPtr(p->arrayIndex)))
-				MarkDirty();
+			Label(p->name.c_str());
+			ImGui::InputText("", GetCVarArray<std::string>()->GetCurrentPtr(p->arrayIndex));			
 		}
 		break;
 
