@@ -34,7 +34,7 @@ Once a cvar is created, you can use it directly.
 
 ```cpp
 // get value
-int var CVAR_TestInt.Get();
+int var = CVAR_TestInt.Get();
 //set value
 CVAR_TestInt.Set(7);
 ```
