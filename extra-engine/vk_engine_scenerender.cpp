@@ -17,6 +17,8 @@
 
 AutoCVar_Int CVAR_FreezeCull("culling.freeze", "Locks culling", 0, CVarFlags::EditCheckbox);
 
+AutoCVar_Int CVAR_Shadowcast("gpu.shadowcast", "Use shadowcasting", 1, CVarFlags::EditCheckbox);
+
 AutoCVar_Float CVAR_ShadowBias("gpu.shadowBias", "Distance cull", 5.25f);
 AutoCVar_Float CVAR_SlopeBias("gpu.shadowBiasSlope", "Distance cull", 4.75f);
 
@@ -357,6 +359,8 @@ void VulkanEngine::draw_objects_forward(VkCommandBuffer cmd, RenderScene::MeshPa
 	_sceneParameters.ambientColor = glm::vec4{ 0.5 };
 	_sceneParameters.sunlightColor = glm::vec4{ 1.f };
 	_sceneParameters.sunlightDirection = glm::vec4(_mainLight.lightDirection * 1.f,1.f);
+
+	_sceneParameters.sunlightColor.w = CVAR_Shadowcast.Get() ? 0 : 1;
 
 	//push data to dynmem
 	uint32_t camera_data_offsets[3];

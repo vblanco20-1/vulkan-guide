@@ -8,6 +8,7 @@
 #include "imgui.h"
 #include "imgui_stdlib.h"
 #include "imgui_internal.h"
+#include <shared_mutex>
 
 enum class CVarType : char
 {
@@ -40,16 +41,12 @@ struct CVarStorage
 template<typename T>
 struct CVarArray
 {
-	CVarStorage<T>* cvars;
+	CVarStorage<T>* cvars{nullptr};
 	int32_t lastCVar{ 0 };
 
 	CVarArray(size_t size)
 	{
 		cvars= new CVarStorage<T>[size]();
-	}
-	~CVarArray()
-	{
-		delete cvars;
 	}
 	
 
@@ -131,7 +128,7 @@ public:
 
 	void DrawImguiEditor() override final;
 
-	void EditParameter(CVarParameter* p);
+	void EditParameter(CVarParameter* p, float textWidth);
 
 	constexpr static int MAX_INT_CVARS = 1000;
 	CVarArray<int32_t> intCVars2{ MAX_INT_CVARS };
@@ -193,6 +190,8 @@ public:
 
 private:
 
+	std::shared_mutex mutex_;
+
 	CVarParameter* InitCVar(const char* name, const char* description);
 
 	std::unordered_map<uint32_t, CVarParameter> savedCVars;
@@ -225,6 +224,7 @@ CVarSystem* CVarSystem::Get()
 
 CVarParameter* CVarSystemImpl::GetCVar(StringUtils::StringHash hash)
 {
+	std::shared_lock lock(mutex_);
 	auto it = savedCVars.find(hash);
 
 	if (it != savedCVars.end())
@@ -253,6 +253,7 @@ void CVarSystemImpl::SetStringCVar(StringUtils::StringHash hash, const char* val
 
 CVarParameter* CVarSystemImpl::CreateFloatCVar(const char* name, const char* description, double defaultValue, double currentValue)
 {
+	std::unique_lock lock(mutex_);
 	CVarParameter* param = InitCVar(name, description);
 	if (!param) return nullptr;
 
@@ -267,6 +268,7 @@ CVarParameter* CVarSystemImpl::CreateFloatCVar(const char* name, const char* des
 
 CVarParameter* CVarSystemImpl::CreateIntCVar(const char* name, const char* description, int32_t defaultValue, int32_t currentValue)
 {
+	std::unique_lock lock(mutex_);
 	CVarParameter* param = InitCVar(name, description);
 	if (!param) return nullptr;
 
@@ -281,6 +283,7 @@ CVarParameter* CVarSystemImpl::CreateIntCVar(const char* name, const char* descr
 
 CVarParameter* CVarSystemImpl::CreateStringCVar(const char* name, const char* description, const char* defaultValue, const char* currentValue)
 {
+	std::unique_lock lock(mutex_);
 	CVarParameter* param = InitCVar(name, description);
 	if (!param) return nullptr;
 
@@ -293,7 +296,7 @@ CVarParameter* CVarSystemImpl::CreateStringCVar(const char* name, const char* de
 
 CVarParameter* CVarSystemImpl::InitCVar(const char* name, const char* description)
 {
-	if (GetCVar(name)) return nullptr; //return null if the cvar already exists
+	
 	uint32_t namehash = StringUtils::StringHash{ name };
 	savedCVars[namehash] = CVarParameter{};
 
@@ -480,9 +483,15 @@ void CVarSystemImpl::DrawImguiEditor()
 
 			if (ImGui::BeginMenu(category.c_str()))
 			{
+				float maxTextWidth = 0;
+
 				for (auto p : parameters)
 				{
-					EditParameter(p);
+					maxTextWidth = std::max(maxTextWidth, ImGui::CalcTextSize(p->name.c_str()).x);
+				}
+				for (auto p : parameters)
+				{
+					EditParameter(p, maxTextWidth);
 				}
 
 				ImGui::EndMenu();
@@ -496,48 +505,41 @@ void CVarSystemImpl::DrawImguiEditor()
 			{
 				return A->name < B->name;
 			});
-
+		float maxTextWidth = 0;
 		for (auto p : cachedEditParameters)
 		{
-			EditParameter(p);
+			maxTextWidth = std::max(maxTextWidth, ImGui::CalcTextSize(p->name.c_str()).x);
+		}
+		for (auto p : cachedEditParameters)
+		{
+			EditParameter(p, maxTextWidth);
 		}
 	}
 }
-void Label(const char* label) {
+void Label(const char* label, float textWidth)
+{
+	constexpr float Slack = 50;
+	constexpr float EditorWidth = 100;
+
 	ImGuiWindow* window = ImGui::GetCurrentWindow();
 	const ImVec2 lineStart = ImGui::GetCursorScreenPos();
 	const ImGuiStyle& style = ImGui::GetStyle();
-	float fullWidth = std::min(ImGui::GetContentRegionAvail().x,300.f);
-	float itemWidth = fullWidth * 0.2f;
+	float fullWidth = textWidth + Slack;
+
 	ImVec2 textSize = ImGui::CalcTextSize(label);
-	ImRect textRect;
-	textRect.Min = ImGui::GetCursorScreenPos();
-	textRect.Max = textRect.Min;
-	textRect.Max.x += fullWidth - itemWidth;
-	textRect.Max.y += textSize.y;
 
-	ImGui::SetCursorScreenPos(textRect.Min);
+	ImVec2 startPos = ImGui::GetCursorScreenPos();
 
-	ImGui::AlignTextToFramePadding();
-	textRect.Min.y += window->DC.CurrLineTextBaseOffset;
-	textRect.Max.y += window->DC.CurrLineTextBaseOffset;
+	ImGui::Text(label);
 
-	ImGui::ItemSize(textRect);
-	if (ImGui::ItemAdd(textRect, window->GetID(label)))
-	{
-		ImGui::RenderTextEllipsis(ImGui::GetWindowDrawList(), textRect.Min, textRect.Max, textRect.Max.x,
-			textRect.Max.x, label, nullptr, &textSize);
+	ImVec2 finalPos = { startPos.x + fullWidth, startPos.y };
 
-		if (textRect.GetWidth() < textSize.x && ImGui::IsItemHovered())
-			ImGui::SetTooltip("%s", label);
-	}
-
-	ImVec2 finalPos = { textRect.Max.x, textRect.Max.y - textSize.y + window->DC.CurrLineTextBaseOffset };
-	ImGui::SetCursorScreenPos(finalPos);
 	ImGui::SameLine();
-	ImGui::SetNextItemWidth(itemWidth);
+	ImGui::SetCursorScreenPos(finalPos);
+
+	ImGui::SetNextItemWidth(EditorWidth);
 }
-void CVarSystemImpl::EditParameter(CVarParameter* p)
+void CVarSystemImpl::EditParameter(CVarParameter* p, float textWidth)
 {
 	const bool readonlyFlag = ((uint32_t)p->flags & (uint32_t)CVarFlags::EditReadOnly);
 	const bool checkboxFlag = ((uint32_t)p->flags & (uint32_t)CVarFlags::EditCheckbox);
@@ -558,7 +560,7 @@ void CVarSystemImpl::EditParameter(CVarParameter* p)
 			if (checkboxFlag)
 			{
 				bool bCheckbox = GetCVarArray<int32_t>()->GetCurrent(p->arrayIndex) != 0;
-				Label(p->name.c_str());
+				Label(p->name.c_str(), textWidth);
 				
 				ImGui::PushID(p->name.c_str());
 
@@ -570,7 +572,7 @@ void CVarSystemImpl::EditParameter(CVarParameter* p)
 			}
 			else
 			{
-				Label(p->name.c_str());
+				Label(p->name.c_str(), textWidth);
 				ImGui::PushID(p->name.c_str());
 				ImGui::InputInt("", GetCVarArray<int32_t>()->GetCurrentPtr(p->arrayIndex));
 				ImGui::PopID();
@@ -587,7 +589,7 @@ void CVarSystemImpl::EditParameter(CVarParameter* p)
 		}
 		else
 		{
-			Label(p->name.c_str());
+			Label(p->name.c_str(), textWidth);
 			ImGui::PushID(p->name.c_str());
 			if (dragFlag)
 			{
@@ -613,7 +615,7 @@ void CVarSystemImpl::EditParameter(CVarParameter* p)
 		}
 		else
 		{
-			Label(p->name.c_str());
+			Label(p->name.c_str(), textWidth);
 			ImGui::InputText("", GetCVarArray<std::string>()->GetCurrentPtr(p->arrayIndex));
 
 			ImGui::PopID();

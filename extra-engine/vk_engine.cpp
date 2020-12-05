@@ -47,6 +47,7 @@ AutoCVar_Int CVAR_OutputIndirectToFile("culling.outputIndirectBufferToFile", "ou
 
 AutoCVar_Float CVAR_DrawDistance("gpu.drawDistance", "Distance cull", 5000);
 
+AutoCVar_Int CVAR_FreezeShadows("gpu.freezeShadows", "Stop the rendering of shadows", 0, CVarFlags::EditCheckbox);
 
 
 constexpr bool bUseValidationLayers = false;
@@ -277,6 +278,7 @@ void VulkanEngine::draw()
 		glm::vec3 extent = _mainLight.shadowExtent * 10.f;
 		glm::mat4 projection = glm::orthoLH_ZO(-extent.x, extent.x, -extent.y, extent.y, -extent.z, extent.z);
 		
+		
 		CullParams shadowCull;
 		shadowCull.projmat = _mainLight.get_projection();
 		shadowCull.viewmat = _mainLight.get_view();
@@ -292,11 +294,16 @@ void VulkanEngine::draw()
 
 		{
 			vkutil::VulkanScopeTimer timer2(cmd, _profiler, "Shadow Cull");
-			execute_compute_cull(cmd, _renderScene._shadowPass, shadowCull);
+
+			if (*CVarSystem::Get()->GetIntCVar("gpu.shadowcast"))
+			{
+				execute_compute_cull(cmd, _renderScene._shadowPass, shadowCull);
+			}
 		}
-		
-			
+
+
 		shadow_pass(cmd);
+		
 		
 		forward_pass(clearValue, cmd);
 		
@@ -416,8 +423,16 @@ void VulkanEngine::forward_pass(VkClearValue clearValue, VkCommandBuffer cmd)
 
 void VulkanEngine::shadow_pass(VkCommandBuffer cmd)
 {
+	
+
 	vkutil::VulkanScopeTimer timer(cmd, _profiler, "Shadow Pass");
 	vkutil::VulkanPipelineStatRecorder timer2(cmd, _profiler, "Shadow Primitives");
+	if (CVAR_FreezeShadows.Get()) return;
+	if (!*CVarSystem::Get()->GetIntCVar("gpu.shadowcast"))
+	{
+		return;
+	}
+
 	//clear depth at 1
 	VkClearValue depthClear;
 	depthClear.depthStencil.depth = 1.f;	
@@ -707,7 +722,7 @@ void VulkanEngine::process_input_event(SDL_Event* ev)
 		}
 	}
 	else if (ev->type == SDL_MOUSEMOTION) {
-		if (CVAR_CamLock.Get())
+		if (!CVAR_CamLock.Get())
 		{
 			_camera.pitch -= ev->motion.yrel * 0.003f;
 			_camera.yaw -= ev->motion.xrel * 0.003f;
@@ -719,8 +734,6 @@ void VulkanEngine::process_input_event(SDL_Event* ev)
 
 void VulkanEngine::update_camera(float deltaSeconds)
 {
-	if (!CVAR_CamLock.Get()) return;
-
 	const float cam_vel = 0.001f;
 	glm::vec3 forward = { 0,0,cam_vel };
 	glm::vec3 right = { cam_vel,0,0 };

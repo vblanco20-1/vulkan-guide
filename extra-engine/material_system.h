@@ -63,10 +63,6 @@ namespace vkutil {
 		VkPipelineLayout layout{ VK_NULL_HANDLE };
 	};
 
-	//struct ShaderPassInfo {
-	//	std::vector<std::string> shaders;
-	//	PipelineBuilder builder;
-	//};
 	struct SampledTexture {
 		VkSampler sampler;
 		VkImageView view;

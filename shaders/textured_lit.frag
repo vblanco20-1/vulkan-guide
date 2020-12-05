@@ -15,7 +15,7 @@ layout(set = 0, binding = 1) uniform  SceneData{
 	vec4 fogDistances; //x for min, y for max, zw unused.
 	vec4 ambientColor;
 	vec4 sunlightDirection; //w for sun power
-	vec4 sunlightColor;
+	vec4 sunlightColor; //alpha for shadow blend, 0 to disable shadows
 	mat4 sunlightShadowMatrix;
 } sceneData;
 
@@ -102,7 +102,12 @@ void main()
 	float lightAngle = clamp(dot(inNormal, sceneData.sunlightDirection.xyz),0.f,1.f);
 
 	float shadow = 0;
-	//only attempt shadowsample in normals that point towards light
+
+	if(sceneData.sunlightColor.w > 0.01)
+	{
+		shadow = 1;
+	}
+	else //only attempt shadowsample in normals that point towards light
 	if(lightAngle > 0.01)
 	{
 		shadow = mix(0.f,1.f , filterPCF(inShadowCoord / inShadowCoord.w));
