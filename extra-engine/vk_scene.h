@@ -149,6 +149,7 @@ public:
 	std::vector<Handle<RenderObject>> dirtyObjects;
 
 	MeshPass _forwardPass;
+	MeshPass _transparentForwardPass;
 	MeshPass _shadowPass;
 
 	std::unordered_map<vkutil::Material*, Handle<vkutil::Material>> materialConvert;

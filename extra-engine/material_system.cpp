@@ -177,6 +177,32 @@ void vkutil::MaterialSystem::build_default_templates()
 
 		templateCache["texturedPBR_opaque"] = defaultTextured;
 	}
+	{
+		PipelineBuilder transparentForward = forwardBuilder;
+
+		transparentForward._colorBlendAttachment.blendEnable = VK_TRUE;
+		transparentForward._colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
+		transparentForward._colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+		transparentForward._colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE;
+
+
+		//transparentForward._colorBlendAttachment.colorBlendOp = VK_BLEND_OP_OVERLAY_EXT;
+		transparentForward._colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT;
+		
+		transparentForward._depthStencil.depthWriteEnable = false;
+
+		transparentForward._rasterizer.cullMode = VK_CULL_MODE_NONE;
+		//passes
+		ShaderPass* transparentLitPass = build_shader(engine->_renderPass, transparentForward, texturedLit);
+
+		EffectTemplate defaultTextured;
+		defaultTextured.forwardEffect = transparentLitPass;
+		defaultTextured.shadowEffect = nullptr;//opaqueShadowcastPass;
+		defaultTextured.defaultParameters = nullptr;
+		defaultTextured.transparency = assets::TransparencyMode::Transparent;
+
+		templateCache["texturedPBR_transparent"] = defaultTextured;
+	}
 
 	{
 		EffectTemplate defaultColored;

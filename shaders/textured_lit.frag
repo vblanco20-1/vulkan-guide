@@ -119,5 +119,5 @@ void main()
 	vec3 ambient = color * sceneData.ambientColor.xyz;
 	vec3 diffuse = lightColor * color * shadow;
 
-	outFragColor = vec4(diffuse+ ambient,1.0f);
+	outFragColor = vec4(diffuse+ ambient,texture(tex1,texCoord).a);
 }

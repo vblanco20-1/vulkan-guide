@@ -270,8 +270,8 @@ void VulkanEngine::ready_mesh_draw(VkCommandBuffer cmd)
 		_renderScene.clear_dirty_objects();
 	}
 
-	RenderScene::MeshPass* passes[2] = { &_renderScene._forwardPass,&_renderScene._shadowPass };
-	for (int p = 0; p < 2; p++)
+	RenderScene::MeshPass* passes[3] = { &_renderScene._forwardPass,&_renderScene._transparentForwardPass,&_renderScene._shadowPass };
+	for (int p = 0; p < 3; p++)
 	{
 		auto& pass = *passes[p];
 
@@ -410,11 +410,15 @@ void VulkanEngine::draw_objects_forward(VkCommandBuffer cmd, RenderScene::MeshPa
 		.bind_buffer(1, &instanceInfo, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
 		.build(ObjectDataSet);
 	vkCmdSetDepthBias(cmd, 0, 0, 0);
-	execute_draw_commands(cmd, pass, ObjectDataSet, camera_data_offsets, scene_data_offset, GlobalSet);
+
+	std::vector<uint32_t> dynamic_offsets;
+	dynamic_offsets.push_back(camera_data_offsets[0]);
+	dynamic_offsets.push_back(scene_data_offset);
+	execute_draw_commands(cmd, pass, ObjectDataSet, dynamic_offsets, GlobalSet);
 }
 
 
-void VulkanEngine::execute_draw_commands(VkCommandBuffer cmd, RenderScene::MeshPass& pass, VkDescriptorSet ObjectDataSet, uint32_t* camera_data_offsets, uint32_t scene_data_offset, VkDescriptorSet GlobalSet)
+void VulkanEngine::execute_draw_commands(VkCommandBuffer cmd, RenderScene::MeshPass& pass, VkDescriptorSet ObjectDataSet, std::vector<uint32_t> dynamic_offsets, VkDescriptorSet GlobalSet)
 {
 	{
 		ZoneScopedNC("Draw Commit", tracy::Color::Blue4);
@@ -447,8 +451,8 @@ void VulkanEngine::execute_draw_commands(VkCommandBuffer cmd, RenderScene::MeshP
 				vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, newLayout, 1, 1, &ObjectDataSet, 0, nullptr);
 
 				//update dynamic binds
-				uint32_t dynamicBinds[] = { camera_data_offsets[0],scene_data_offset };
-				vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, newLayout, 0, 1, &GlobalSet, 2, dynamicBinds);
+				//uint32_t dynamicBinds[] = { camera_data_offsets[0],scene_data_offset };
+				vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, newLayout, 0, 1, &GlobalSet, dynamic_offsets.size(), dynamic_offsets.data());
 			}
 			if (newMaterialSet != lastMaterialSet)
 			{
@@ -552,7 +556,11 @@ void VulkanEngine::draw_objects_shadow(VkCommandBuffer cmd, RenderScene::MeshPas
 		.build(ObjectDataSet);
 
 	vkCmdSetDepthBias(cmd, CVAR_ShadowBias.GetFloat(), 0, CVAR_SlopeBias.GetFloat());
-	execute_draw_commands(cmd, pass, ObjectDataSet, camera_data_offsets, scene_data_offset, GlobalSet);
+
+	std::vector<uint32_t> dynamic_offsets;
+	dynamic_offsets.push_back(camera_data_offsets[0]);
+
+	execute_draw_commands(cmd, pass, ObjectDataSet, dynamic_offsets, GlobalSet);
 }
 
 

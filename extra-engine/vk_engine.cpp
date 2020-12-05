@@ -50,7 +50,7 @@ AutoCVar_Float CVAR_DrawDistance("gpu.drawDistance", "Distance cull", 5000);
 AutoCVar_Int CVAR_FreezeShadows("gpu.freezeShadows", "Stop the rendering of shadows", 0, CVarFlags::EditCheckbox);
 
 
-constexpr bool bUseValidationLayers = false;
+constexpr bool bUseValidationLayers = true;
 
 //we want to immediately abort when there is an error. In normal engines this would give an error message to the user, or perform a dump of state.
 using namespace std;
@@ -272,8 +272,8 @@ void VulkanEngine::draw()
 		{
 			vkutil::VulkanScopeTimer timer2(cmd, _profiler, "Forward Cull");
 			execute_compute_cull(cmd, _renderScene._forwardPass, forwardCull);
+			execute_compute_cull(cmd, _renderScene._transparentForwardPass, forwardCull);
 		}
-		
 
 		glm::vec3 extent = _mainLight.shadowExtent * 10.f;
 		glm::mat4 projection = glm::orthoLH_ZO(-extent.x, extent.x, -extent.y, extent.y, -extent.z, extent.z);
@@ -408,6 +408,7 @@ void VulkanEngine::forward_pass(VkClearValue clearValue, VkCommandBuffer cmd)
 	{
 		TracyVkZone(_graphicsQueueContext, get_current_frame()._mainCommandBuffer, "Forward Pass");
 		draw_objects_forward(cmd, _renderScene._forwardPass);
+		draw_objects_forward(cmd, _renderScene._transparentForwardPass);
 	}
 
 
@@ -1681,30 +1682,30 @@ void VulkanEngine::init_scene()
 			glm::mat4 translation = glm::translate(glm::mat4{ 1.0 }, glm::vec3(x * 5, 10, y * 5));
 			glm::mat4 scale = glm::scale(glm::mat4{ 1.0 }, glm::vec3(10));
 	
-		load_prefab(asset_path("FlightHelmet/FlightHelmet.pfb").c_str(), translation * scale);
+			load_prefab(asset_path("FlightHelmet/FlightHelmet.pfb").c_str(), translation * scale);
 		}
 	}
 
-	glm::mat4 sponzaMatrix = glm::scale(glm::mat4{ 1.0 }, glm::vec3(1));;
-
-	glm::mat4 unrealFixRotation = glm::rotate(glm::radians(-90.f), glm::vec3{ 1,0,0 });
-
-	load_prefab(asset_path("Sponza2.pfb").c_str(), sponzaMatrix);
-	load_prefab(asset_path("scifi/TopDownScifi.pfb").c_str(), glm::scale(glm::mat4{ 1.0 }, glm::vec3(1)));
-	int dimcities = 2;
-	for (int x = -dimcities; x <= dimcities; x++) {
-		for (int y = -dimcities; y <= dimcities; y++) {
-
-			glm::mat4 translation = glm::translate(glm::mat4{ 1.0 }, glm::vec3(x * 300, y, y * 300));
-			glm::mat4 scale = glm::scale(glm::mat4{ 1.0 }, glm::vec3(10));
-
-
-			glm::mat4 cityMatrix = translation * unrealFixRotation * glm::scale(glm::mat4{ 1.0f }, glm::vec3(.01f));
-			//load_prefab(asset_path("scifi/TopDownScifi.pfb").c_str(), unrealFixRotation * glm::scale(glm::mat4{ 1.0 }, glm::vec3(.01)));
-			load_prefab(asset_path("PolyCity/PolyCity.pfb").c_str(), cityMatrix);
-		//	load_prefab(asset_path("scifi/TopDownScifi.pfb").c_str(), cityMatrix);
-		}
-	}
+	//glm::mat4 sponzaMatrix = glm::scale(glm::mat4{ 1.0 }, glm::vec3(1));;
+	//
+	//glm::mat4 unrealFixRotation = glm::rotate(glm::radians(-90.f), glm::vec3{ 1,0,0 });
+	//
+	//load_prefab(asset_path("Sponza2.pfb").c_str(), sponzaMatrix);
+	//load_prefab(asset_path("scifi/TopDownScifi.pfb").c_str(), glm::scale(glm::mat4{ 1.0 }, glm::vec3(1)));
+	//int dimcities = 2;
+	//for (int x = -dimcities; x <= dimcities; x++) {
+	//	for (int y = -dimcities; y <= dimcities; y++) {
+	//
+	//		glm::mat4 translation = glm::translate(glm::mat4{ 1.0 }, glm::vec3(x * 300, y, y * 300));
+	//		glm::mat4 scale = glm::scale(glm::mat4{ 1.0 }, glm::vec3(10));
+	//
+	//
+	//		glm::mat4 cityMatrix = translation * unrealFixRotation * glm::scale(glm::mat4{ 1.0f }, glm::vec3(.01f));
+	//		//load_prefab(asset_path("scifi/TopDownScifi.pfb").c_str(), unrealFixRotation * glm::scale(glm::mat4{ 1.0 }, glm::vec3(.01)));
+	//		load_prefab(asset_path("PolyCity/PolyCity.pfb").c_str(), cityMatrix);
+	//	//	load_prefab(asset_path("scifi/TopDownScifi.pfb").c_str(), cityMatrix);
+	//	}
+	//}
 	
 
 	//for (int x = -20; x <= 20; x++) {
@@ -1933,7 +1934,15 @@ bool VulkanEngine::load_prefab(const char* path, glm::mat4 root)
 
 					vkutil::MaterialInfo info;
 					info.parameters = nullptr;
-					info.baseTemplate = "texturedPBR_opaque";
+
+					if (material.transparency == assets::TransparencyMode::Transparent)
+					{
+						info.baseTemplate = "texturedPBR_transparent";
+					}
+					else {
+						info.baseTemplate = "texturedPBR_opaque";
+					}
+					
 					info.textures.push_back(tex);
 
 					objectMaterial = _materialSystem->build_material(materialName, info);
@@ -1956,15 +1965,10 @@ bool VulkanEngine::load_prefab(const char* path, glm::mat4 root)
 		
 		MeshObject loadmesh;
 		//transparent objects will be invisible
-		if (objectMaterial->original->transparency != assets::TransparencyMode::Opaque)
-		{
-			loadmesh.bDrawForwardPass = false;
-			loadmesh.bDrawShadowPass = false;
-		}
-		else {
-			loadmesh.bDrawForwardPass = true;
-			loadmesh.bDrawShadowPass = true;
-		}
+		
+		loadmesh.bDrawForwardPass = true;
+		loadmesh.bDrawShadowPass = true;
+		
 
 		glm::mat4 nodematrix{ 1.f };
 
@@ -2112,6 +2116,13 @@ void VulkanEngine::init_descriptors()
 
 
 	const size_t sceneParamBufferSize = FRAME_OVERLAP * pad_uniform_buffer_size(sizeof(GPUSceneData));
+
+
+	_renderScene._transparentForwardPass.compactedInstanceBuffer = create_buffer(sizeof(uint32_t) * MAX_OBJECTS, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+
+	_renderScene._transparentForwardPass.drawIndirectBuffer = create_buffer(sizeof(GPUIndirectObject) * MAX_OBJECTS, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+
+	_renderScene._transparentForwardPass.instanceBuffer = create_buffer(sizeof(GPUInstance) * MAX_OBJECTS, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
 
 
 	_renderScene._forwardPass.compactedInstanceBuffer = create_buffer(sizeof(uint32_t) * MAX_OBJECTS, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);

@@ -533,24 +533,88 @@ void extract_gltf_materials(tinygltf::Model& model, const fs::path& input, const
 		assets::MaterialInfo newMaterial;
 		newMaterial.baseEffect = "defaultPBR";
 
-		if (pbr.baseColorTexture.index < 0)
 		{
-			pbr.baseColorTexture.index = 0;
+			if (pbr.baseColorTexture.index < 0)
+			{
+				pbr.baseColorTexture.index = 0;
+			}
+			auto baseColor = model.textures[pbr.baseColorTexture.index];
+			auto baseImage = model.images[baseColor.source];
+
+			fs::path baseColorPath = outputFolder.parent_path() / baseImage.uri;
+
+			baseColorPath.replace_extension(".tx");
+
+			baseColorPath = convState.convert_to_export_relative(baseColorPath);
+
+			newMaterial.textures["baseColor"] = baseColorPath.string();
 		}
-		auto baseColor = model.textures[pbr.baseColorTexture.index];
-		auto baseImage = model.images[baseColor.source];
+		if (pbr.metallicRoughnessTexture.index >= 0)
+		{			
+			auto image = model.textures[pbr.metallicRoughnessTexture.index];
+			auto baseImage = model.images[image.source];
 
-		fs::path baseColorPath = outputFolder.parent_path() / baseImage.uri;
+			fs::path baseColorPath = outputFolder.parent_path() / baseImage.uri;
 
-		baseColorPath.replace_extension(".tx");
+			baseColorPath.replace_extension(".tx");
 
-		baseColorPath = convState.convert_to_export_relative(baseColorPath);
+			baseColorPath = convState.convert_to_export_relative(baseColorPath);
 
-		newMaterial.textures["baseColor"] = baseColorPath.string();
+			newMaterial.textures["metallicRoughness"] = baseColorPath.string();
+		}
+
+		if (glmat.normalTexture.index >= 0)
+		{
+			auto image = model.textures[glmat.normalTexture.index];
+			auto baseImage = model.images[image.source];
+
+			fs::path baseColorPath = outputFolder.parent_path() / baseImage.uri;
+
+			baseColorPath.replace_extension(".tx");
+
+			baseColorPath = convState.convert_to_export_relative(baseColorPath);
+
+			newMaterial.textures["normals"] = baseColorPath.string();
+		}
+
+		if (glmat.occlusionTexture.index >= 0)
+		{
+			auto image = model.textures[glmat.occlusionTexture.index];
+			auto baseImage = model.images[image.source];
+
+			fs::path baseColorPath = outputFolder.parent_path() / baseImage.uri;
+
+			baseColorPath.replace_extension(".tx");
+
+			baseColorPath = convState.convert_to_export_relative(baseColorPath);
+
+			newMaterial.textures["occlusion"] = baseColorPath.string();
+		}
+
+		if (glmat.emissiveTexture.index >= 0)
+		{
+			auto image = model.textures[glmat.emissiveTexture.index];
+			auto baseImage = model.images[image.source];
+
+			fs::path baseColorPath = outputFolder.parent_path() / baseImage.uri;
+
+			baseColorPath.replace_extension(".tx");
+
+			baseColorPath = convState.convert_to_export_relative(baseColorPath);
+
+			newMaterial.textures["emissive"] = baseColorPath.string();
+		}
+
 
 		fs::path materialPath = outputFolder / (matname + ".mat");
 
-		
+		if (glmat.alphaMode.compare("BLEND") == 0)
+		{
+			newMaterial.transparency = TransparencyMode::Transparent;
+		}
+		else {
+			newMaterial.transparency = TransparencyMode::Opaque;
+		}
 
 		assets::AssetFile newFile = assets::pack_material(&newMaterial);
 
@@ -1042,7 +1106,7 @@ int main(int argc, char* argv[])
 				fs::create_directory(export_path.parent_path());
 			}
 
-			if (false)//if (p.path().extension() == ".png" || p.path().extension() == ".jpg" || p.path().extension() == ".TGA")
+			if (p.path().extension() == ".png" || p.path().extension() == ".jpg" || p.path().extension() == ".TGA")
 			{
 				std::cout << "found a texture" << std::endl;
 
@@ -1059,7 +1123,7 @@ int main(int argc, char* argv[])
 			//	export_path.replace_extension(".mesh");
 			//	convert_mesh(p.path(), export_path);
 			//}
-			if (false)//p.path().extension() == ".gltf")
+			if (p.path().extension() == ".gltf")
 			{
 				using namespace tinygltf;
 				Model model;
@@ -1106,8 +1170,8 @@ int main(int argc, char* argv[])
 					auto folder = export_path.parent_path() / (p.path().stem().string() + "_GLTF");
 					fs::create_directory(folder);
 					extract_assimp_materials(scene, p.path(), folder, convstate);
-					//extract_assimp_meshes(scene, p.path(), folder, convstate);
-					//extract_assimp_nodes(scene, p.path(), folder, convstate);
+					extract_assimp_meshes(scene, p.path(), folder, convstate);
+					extract_assimp_nodes(scene, p.path(), folder, convstate);
 
 					std::vector<aiMaterial*> materials;
 					std::vector<std::string> materialNames;

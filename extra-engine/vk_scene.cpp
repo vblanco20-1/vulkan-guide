@@ -17,14 +17,21 @@ Handle<RenderObject> RenderScene::register_object(MeshObject* object)
 	
 	renderables.push_back(newObj);
 
-	if (object->bDrawForwardPass)
+	//if (object->bDrawForwardPass)
 	{
 		if (object->material->original->forwardEffect)
 		{
-			_forwardPass.unbatchedObjects.push_back(handle);
+			if (object->material->original->transparency == assets::TransparencyMode::Transparent)
+			{
+				_transparentForwardPass.unbatchedObjects.push_back(handle);
+			}
+			else {
+				_forwardPass.unbatchedObjects.push_back(handle);
+			}
+			
 		}
 	}
-	if (object->bDrawShadowPass)
+	//if (object->bDrawShadowPass)
 	{
 		if (object->material->original->shadowEffect)
 		{
@@ -133,6 +140,7 @@ void RenderScene::clear_dirty_objects()
 void RenderScene::build_batches()
 {
 	refresh_pass(&_forwardPass, true);
+	refresh_pass(&_transparentForwardPass, true);
 	refresh_pass(&_shadowPass, false);
 }
 
