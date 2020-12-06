@@ -44,6 +44,5 @@ struct Mesh {
 
 	RenderBounds bounds;
 
-	bool load_from_obj(const char* filename);
 	bool load_from_meshasset(const char* filename);
 };

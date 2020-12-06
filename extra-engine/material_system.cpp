@@ -314,7 +314,7 @@ void vkutil::MaterialSystem::fill_builders()
 
 		
 		forwardBuilder._rasterizer = vkinit::rasterization_state_create_info(VK_POLYGON_MODE_FILL);
-		forwardBuilder._rasterizer.cullMode = VK_CULL_MODE_NONE;
+		forwardBuilder._rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
 		
 		forwardBuilder._multisampling = vkinit::multisampling_state_create_info();
 		

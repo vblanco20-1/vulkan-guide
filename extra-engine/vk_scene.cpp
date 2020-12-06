@@ -8,7 +8,7 @@ Handle<RenderObject> RenderScene::register_object(MeshObject* object)
 	RenderObject newObj;
 	newObj.bounds = object->bounds;
 	newObj.transformMatrix = object->transformMatrix;	
-	newObj.material2 = getMaterialHandle(object->material);
+	newObj.material = getMaterialHandle(object->material);
 	newObj.meshID = getMeshHandle(object->mesh);
 	newObj.updateIndex = (uint32_t)-1;
 	newObj.customSortKey = object->customSortKey;
@@ -17,7 +17,7 @@ Handle<RenderObject> RenderScene::register_object(MeshObject* object)
 	
 	renderables.push_back(newObj);
 
-	//if (object->bDrawForwardPass)
+	if (object->bDrawForwardPass)
 	{
 		if (object->material->original->forwardEffect)
 		{
@@ -28,10 +28,9 @@ Handle<RenderObject> RenderScene::register_object(MeshObject* object)
 			else {
 				_forwardPass.unbatchedObjects.push_back(handle);
 			}
-			
 		}
 	}
-	//if (object->bDrawShadowPass)
+	if (object->bDrawShadowPass)
 	{
 		if (object->material->original->shadowEffect)
 		{
@@ -205,7 +204,7 @@ void RenderScene::refresh_pass(MeshPass* pass, bool forward)
 				newCommand.object = pass->unbatchedObjects[i];
 
 				//pack mesh id and material into 32 bits
-				vkutil::Material* mt = get_material(object->material2);
+				vkutil::Material* mt = get_material(object->material);
 				uint32_t mathash;
 				
 				if (forward) {
@@ -242,7 +241,7 @@ void RenderScene::refresh_pass(MeshPass* pass, bool forward)
 		newBatch.first = 0;
 		newBatch.count = 0;
 
-		vkutil::Material* mt = get_material(get_object(pass->flat_batches[0].object)->material2);
+		vkutil::Material* mt = get_material(get_object(pass->flat_batches[0].object)->material);
 		if (forward)
 		{
 			newBatch.material.materialSet = mt->forwardSet;
@@ -257,21 +256,21 @@ void RenderScene::refresh_pass(MeshPass* pass, bool forward)
 		pass->batches.push_back(newBatch);
 		RenderScene::IndirectBatch* back = &pass->batches.back();
 
-		Handle<vkutil::Material> lastMat= get_object(pass->flat_batches[0].object)->material2;
+		Handle<vkutil::Material> lastMat= get_object(pass->flat_batches[0].object)->material;
 		for (int i = 0; i < pass->flat_batches.size(); i++) {
 			RenderObject* obj = get_object(pass->flat_batches[i].object);
 			
 
 			bool bSameMesh = obj->meshID.handle == back->meshID.handle;
 			bool bSameMaterial = false;
-			if (obj->material2.handle == lastMat.handle)
+			if (obj->material.handle == lastMat.handle)
 			{
 				bSameMaterial = true;
 			}
 
 			if (!bSameMaterial || !bSameMesh)
 			{
-				vkutil::Material* mt = get_material(obj->material2);
+				vkutil::Material* mt = get_material(obj->material);
 				if (forward)
 				{
 					newBatch.material.materialSet = mt->forwardSet;

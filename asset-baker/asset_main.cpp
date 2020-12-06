@@ -397,6 +397,17 @@ void extract_gltf_vertices(tinygltf::Primitive& primitive, tinygltf::Model& mode
 		}
 	}
 
+	
+
+	//for (auto& v : _vertices)
+	//{
+	//	v.position[0] *= -1;
+	//
+	//	v.normal[0] *= -1;
+	//	v.normal[1] *= -1;
+	//	v.normal[2] *= -1;
+	//	//v.position = flip * glm::vec4(v.position, 1.f);
+	//}
 	return;
 }
 
@@ -440,6 +451,13 @@ void extract_gltf_indices(tinygltf::Primitive& primitive, tinygltf::Model& model
 		}
 
 		_primindices.push_back(index);
+	}
+
+	for (int i = 0; i < _primindices.size() / 3; i++)
+	{
+		//flip the triangle
+
+		std::swap(_primindices[i * 3 + 1], _primindices[i * 3 + 2]);
 	}
 }
 
@@ -644,6 +662,17 @@ void extract_gltf_nodes(tinygltf::Model& model, const fs::path& input, const fs:
 			for (int n = 0; n < 16; n++) {
 				matrix[n] = node.matrix[n];
 			}
+
+			//glm::mat4 flip = glm::mat4{ 1.0 };
+			//flip[1][1] = -1;
+
+			glm::mat4 mat;
+
+			memcpy(&mat, &matrix, sizeof(glm::mat4));
+
+			mat = mat;// * flip;
+
+			memcpy(matrix.data(), &mat, sizeof(glm::mat4));
 		}
 		//separate transform
 		else
@@ -668,8 +697,10 @@ void extract_gltf_nodes(tinygltf::Model& model, const fs::path& input, const fs:
 			{
 				scale = glm::scale(glm::vec3{ node.scale[0],node.scale[1] ,node.scale[2] });
 			}
+			//glm::mat4 flip = glm::mat4{ 1.0 };
+			//flip[1][1] = -1;
 
-			glm::mat4 transformMatrix = translation * rotation * scale;
+			glm::mat4 transformMatrix = (translation * rotation * scale);// * flip;
 
 			memcpy(matrix.data(), &transformMatrix, sizeof(glm::mat4));
 		}
@@ -714,6 +745,40 @@ void extract_gltf_nodes(tinygltf::Model& model, const fs::path& input, const fs:
 			prefab.node_parents[c] = i;
 		}
 	}
+	
+	//for every gltf node that is a root node (no parents), apply the coordinate fixup
+
+	glm::mat4 flip = glm::mat4{ 1.0 };
+	flip[1][1] = -1;
+
+
+	glm::mat4 rotation = glm::mat4{ 1.0 };
+	//flip[1][1] = -1;
+	rotation = glm::rotate(glm::radians(-180.f), glm::vec3{ 1,0,0 });
+
+
+	//flip[2][2] = -1;
+	for (int i = 0; i < model.nodes.size(); i++)
+	{
+
+		auto it = prefab.node_parents.find(i);
+		if (it == prefab.node_parents.end())
+		{
+			auto matrix = prefab.matrices[prefab.node_matrices[i]];
+			//no parent, root node
+			glm::mat4 mat;
+
+			memcpy(&mat, &matrix, sizeof(glm::mat4));
+
+			mat =rotation*(flip* mat);
+
+			memcpy(&matrix, &mat, sizeof(glm::mat4));
+
+			prefab.matrices[prefab.node_matrices[i]] = matrix;
+
+		}
+	}
+
 
 	int nodeindex = model.nodes.size();
 	//iterate nodes with mesh, convert each submesh into a node
@@ -1106,17 +1171,17 @@ int main(int argc, char* argv[])
 				fs::create_directory(export_path.parent_path());
 			}
 
-			if (p.path().extension() == ".png" || p.path().extension() == ".jpg" || p.path().extension() == ".TGA")
-			{
-				std::cout << "found a texture" << std::endl;
-
-				auto newpath = p.path();
-
-
-				export_path.replace_extension(".tx");
-
-				convert_image(p.path(), export_path);
-			}
+			//if (p.path().extension() == ".png" || p.path().extension() == ".jpg" || p.path().extension() == ".TGA")
+			//{
+			//	std::cout << "found a texture" << std::endl;
+			//
+			//	auto newpath = p.path();
+			//
+			//
+			//	export_path.replace_extension(".tx");
+			//
+			//	convert_image(p.path(), export_path);
+			//}
 			//if (p.path().extension() == ".obj") {
 			//	std::cout << "found a mesh" << std::endl;
 			//
@@ -1156,7 +1221,7 @@ int main(int argc, char* argv[])
 					extract_gltf_nodes(model, p.path(), folder, convstate);
 				}
 			}
-			if (p.path().extension() == ".fbx") {
+			if (false){//p.path().extension() == ".fbx") {
 				const aiScene* scene;
 				{
 					Assimp::Importer importer;

@@ -52,7 +52,7 @@ enum class PassTypeFlags : uint8_t {
 struct RenderObject {
 
 	Handle<DrawMesh> meshID;
-	Handle<vkutil::Material> material2;
+	Handle<vkutil::Material> material;
 
 	uint32_t updateIndex;
 	uint32_t customSortKey{0};

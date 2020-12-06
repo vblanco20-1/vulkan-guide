@@ -290,6 +290,10 @@ public:
 
 	std::vector<VkBufferMemoryBarrier> uploadBarriers;
 
+	std::vector<VkBufferMemoryBarrier> cullReadyBarriers;
+
+	std::vector<VkBufferMemoryBarrier> postCullBarriers;
+
 	UploadContext _uploadContext;
 
 	PlayerCamera _camera;
@@ -362,6 +366,8 @@ public:
 	glm::mat4 get_projection_matrix(bool bReverse = true);
 
 	void execute_compute_cull(VkCommandBuffer cmd, RenderScene::MeshPass& pass,CullParams& params);
+
+	void ready_cull_data(RenderScene::MeshPass& pass, VkCommandBuffer cmd);
 
 	AllocatedBufferUntyped create_buffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage, VkMemoryPropertyFlags required_flags = 0);
 

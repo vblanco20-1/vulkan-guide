@@ -102,23 +102,8 @@ void VulkanEngine::execute_compute_cull(VkCommandBuffer cmd, RenderScene::MeshPa
 		cullData.distanceCheck = true;
 	}
 
-	//copy from the cleared indirect buffer into the one we will use on rendering. This one happens every frame
-	VkBufferCopy indirectCopy;
-	indirectCopy.dstOffset = 0;
-	indirectCopy.size = pass.batches.size() * sizeof(GPUIndirectObject);
-	indirectCopy.srcOffset = 0;
-	vkCmdCopyBuffer(cmd, pass.clearIndirectBuffer._buffer, pass.drawIndirectBuffer._buffer, 1, &indirectCopy);
+	
 
-	{
-		VkBufferMemoryBarrier barrier = vkinit::buffer_barrier(pass.drawIndirectBuffer._buffer, _graphicsQueueFamily);
-		barrier.dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_SHADER_READ_BIT;
-		barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-
-		uploadBarriers.push_back(barrier);
-		
-
-		vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr, 1, &barrier, 0, nullptr);
-	}
 
 	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, _cullPipeline);
 
@@ -146,7 +131,9 @@ void VulkanEngine::execute_compute_cull(VkCommandBuffer cmd, RenderScene::MeshPa
 
 		VkBufferMemoryBarrier barriers[] = { barrier,barrier2 };
 
-		vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT, 0, 0, nullptr, 2, barriers, 0, nullptr);
+		postCullBarriers.push_back(barrier);
+		postCullBarriers.push_back(barrier2);
+		
 	}
 	if (*CVarSystem::Get()->GetIntCVar("culling.outputIndirectBufferToFile"))
 	{

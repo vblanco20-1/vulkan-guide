@@ -99,7 +99,7 @@ void main()
 {
 	vec3 color = texture(tex1,texCoord).xyz;
 	
-	float lightAngle = clamp(dot(inNormal, sceneData.sunlightDirection.xyz),0.f,1.f);
+	float lightAngle = clamp(dot(inNormal, -sceneData.sunlightDirection.xyz),0.f,1.f);
 
 	float shadow = 0;
 

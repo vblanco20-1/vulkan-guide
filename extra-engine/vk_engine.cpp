@@ -50,7 +50,7 @@ AutoCVar_Float CVAR_DrawDistance("gpu.drawDistance", "Distance cull", 5000);
 AutoCVar_Int CVAR_FreezeShadows("gpu.freezeShadows", "Stop the rendering of shadows", 0, CVarFlags::EditCheckbox);
 
 
-constexpr bool bUseValidationLayers = true;
+constexpr bool bUseValidationLayers = false;
 
 //we want to immediately abort when there is an error. In normal engines this would give an error message to the user, or perform a dump of state.
 using namespace std;
@@ -256,12 +256,28 @@ void VulkanEngine::draw()
 	_profiler->grab_queries(cmd);
 
 	{
+
+		postCullBarriers.clear();
+		cullReadyBarriers.clear();
+
 		TracyVkZone(_graphicsQueueContext, get_current_frame()._mainCommandBuffer, "All Frame");
 		ZoneScopedNC("Render Frame", tracy::Color::White);
 
-		vkutil::VulkanScopeTimer timer(cmd,_profiler,"All Frame");
-		
-		ready_mesh_draw(cmd);
+		vkutil::VulkanScopeTimer timer(cmd, _profiler, "All Frame");
+
+		{
+			vkutil::VulkanScopeTimer timer2(cmd, _profiler, "Ready Frame");
+
+			ready_mesh_draw(cmd);
+
+			ready_cull_data(_renderScene._forwardPass, cmd);
+			ready_cull_data(_renderScene._transparentForwardPass, cmd);
+			ready_cull_data(_renderScene._shadowPass, cmd);
+
+			vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr, cullReadyBarriers.size(), cullReadyBarriers.data(), 0, nullptr);
+		}
+
+
 		CullParams forwardCull;
 		forwardCull.projmat = get_projection_matrix(true);
 		forwardCull.viewmat = get_view_matrix();
@@ -270,7 +286,6 @@ void VulkanEngine::draw()
 		forwardCull.drawDist = CVAR_DrawDistance.Get();
 		forwardCull.aabb = false;
 		{
-			vkutil::VulkanScopeTimer timer2(cmd, _profiler, "Forward Cull");
 			execute_compute_cull(cmd, _renderScene._forwardPass, forwardCull);
 			execute_compute_cull(cmd, _renderScene._transparentForwardPass, forwardCull);
 		}
@@ -301,9 +316,11 @@ void VulkanEngine::draw()
 			}
 		}
 
+		vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT, 0, 0, nullptr, postCullBarriers.size(), postCullBarriers.data(), 0, nullptr);
+
+
 
 		shadow_pass(cmd);
-		
 		
 		forward_pass(clearValue, cmd);
 		
@@ -1675,6 +1692,10 @@ void VulkanEngine::init_scene()
 
 	}
 
+
+	
+
+
 	int dimHelmets =1;
 	for (int x = -dimHelmets; x <= dimHelmets; x++) {
 		for (int y = -dimHelmets; y <= dimHelmets; y++) {
@@ -1682,30 +1703,31 @@ void VulkanEngine::init_scene()
 			glm::mat4 translation = glm::translate(glm::mat4{ 1.0 }, glm::vec3(x * 5, 10, y * 5));
 			glm::mat4 scale = glm::scale(glm::mat4{ 1.0 }, glm::vec3(10));
 	
-			load_prefab(asset_path("FlightHelmet/FlightHelmet.pfb").c_str(), translation * scale);
+			load_prefab(asset_path("FlightHelmet/FlightHelmet.pfb").c_str(),(translation * scale));
 		}
 	}
 
-	//glm::mat4 sponzaMatrix = glm::scale(glm::mat4{ 1.0 }, glm::vec3(1));;
-	//
-	//glm::mat4 unrealFixRotation = glm::rotate(glm::radians(-90.f), glm::vec3{ 1,0,0 });
-	//
-	//load_prefab(asset_path("Sponza2.pfb").c_str(), sponzaMatrix);
-	//load_prefab(asset_path("scifi/TopDownScifi.pfb").c_str(), glm::scale(glm::mat4{ 1.0 }, glm::vec3(1)));
-	//int dimcities = 2;
-	//for (int x = -dimcities; x <= dimcities; x++) {
-	//	for (int y = -dimcities; y <= dimcities; y++) {
-	//
-	//		glm::mat4 translation = glm::translate(glm::mat4{ 1.0 }, glm::vec3(x * 300, y, y * 300));
-	//		glm::mat4 scale = glm::scale(glm::mat4{ 1.0 }, glm::vec3(10));
-	//
-	//
-	//		glm::mat4 cityMatrix = translation * unrealFixRotation * glm::scale(glm::mat4{ 1.0f }, glm::vec3(.01f));
-	//		//load_prefab(asset_path("scifi/TopDownScifi.pfb").c_str(), unrealFixRotation * glm::scale(glm::mat4{ 1.0 }, glm::vec3(.01)));
-	//		load_prefab(asset_path("PolyCity/PolyCity.pfb").c_str(), cityMatrix);
-	//	//	load_prefab(asset_path("scifi/TopDownScifi.pfb").c_str(), cityMatrix);
-	//	}
-	//}
+	glm::mat4 sponzaMatrix = glm::scale(glm::mat4{ 1.0 }, glm::vec3(1));;
+	
+	glm::mat4 unrealFixRotation = glm::rotate(glm::radians(-90.f), glm::vec3{ 1,0,0 });
+	
+	load_prefab(asset_path("Sponza2.pfb").c_str(), sponzaMatrix);
+	load_prefab(asset_path("scifi/TopDownScifi.pfb").c_str(),  glm::translate(glm::vec3{0,20,0}));
+	int dimcities = 0;
+	for (int x = -dimcities; x <= dimcities; x++) {
+		for (int y = -dimcities; y <= dimcities; y++) {
+	
+			glm::mat4 translation = glm::translate(glm::mat4{ 1.0 }, glm::vec3(x * 300, y, y * 300));
+			glm::mat4 scale = glm::scale(glm::mat4{ 1.0 }, glm::vec3(10));
+	
+			
+			glm::mat4 cityMatrix = translation;// * glm::scale(glm::mat4{ 1.0f }, glm::vec3(.01f));
+			//load_prefab(asset_path("scifi/TopDownScifi.pfb").c_str(), unrealFixRotation * glm::scale(glm::mat4{ 1.0 }, glm::vec3(.01)));
+			//load_prefab(asset_path("PolyCity/PolyCity.pfb").c_str(), cityMatrix);
+			load_prefab(asset_path("CITY/polycity.pfb").c_str(), cityMatrix);
+		//	load_prefab(asset_path("scifi/TopDownScifi.pfb").c_str(), cityMatrix);
+		}
+	}
 	
 
 	//for (int x = -20; x <= 20; x++) {
@@ -1722,6 +1744,26 @@ void VulkanEngine::init_scene()
 	//		_renderScene.register_object(&tri, PassTypeFlags::Forward);
 	//	}
 	//}
+}
+
+
+void VulkanEngine::ready_cull_data(RenderScene::MeshPass& pass, VkCommandBuffer cmd)
+{
+	//copy from the cleared indirect buffer into the one we will use on rendering. This one happens every frame
+	VkBufferCopy indirectCopy;
+	indirectCopy.dstOffset = 0;
+	indirectCopy.size = pass.batches.size() * sizeof(GPUIndirectObject);
+	indirectCopy.srcOffset = 0;
+	vkCmdCopyBuffer(cmd, pass.clearIndirectBuffer._buffer, pass.drawIndirectBuffer._buffer, 1, &indirectCopy);
+
+	{
+		VkBufferMemoryBarrier barrier = vkinit::buffer_barrier(pass.drawIndirectBuffer._buffer, _graphicsQueueFamily);
+		barrier.dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_SHADER_READ_BIT;
+		barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+
+		cullReadyBarriers.push_back(barrier);
+		//vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr, 1, &barrier, 0, nullptr);
+	}
 }
 
 AllocatedBufferUntyped VulkanEngine::create_buffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage, VkMemoryPropertyFlags required_flags)
@@ -1848,7 +1890,7 @@ bool VulkanEngine::load_prefab(const char* path, glm::mat4 root)
 		auto matrixIT = prefab->node_parents.find(k);
 		if (matrixIT == prefab->node_parents.end()) {
 			//add to worldmats 
-			node_worldmats[k] = root * nodematrix;
+			node_worldmats[k] = root* nodematrix;
 		}
 		else {
 			//enqueue
