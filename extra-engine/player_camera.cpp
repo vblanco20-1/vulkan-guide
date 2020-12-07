@@ -23,6 +23,16 @@ void PlayerCamera::process_input_event(SDL_Event* ev)
 		case SDLK_RIGHT:
 		case SDLK_d:
 			inputAxis.y += 1.f;
+			break;		
+		case SDLK_q:
+			inputAxis.z -= 1.f;
+			break;
+		
+		case SDLK_e:
+			inputAxis.z += 1.f;
+			break;
+		case SDLK_LSHIFT:
+			bSprint = true;
 			break;
 		}
 	}
@@ -46,6 +56,16 @@ void PlayerCamera::process_input_event(SDL_Event* ev)
 		case SDLK_d:
 			inputAxis.y -= 1.f;
 			break;
+		case SDLK_q:
+			inputAxis.z += 1.f;
+			break;
+
+		case SDLK_e:
+			inputAxis.z -= 1.f;
+			break;
+		case SDLK_LSHIFT:
+			bSprint = false;
+			break;
 		}
 	}
 	else if (ev->type == SDL_MOUSEMOTION) {
@@ -61,16 +81,17 @@ void PlayerCamera::process_input_event(SDL_Event* ev)
 
 void PlayerCamera::update_camera(float deltaSeconds)
 {
-	const float cam_vel = 0.001f;
+	const float cam_vel = 0.001f + bSprint * 0.01;
 	glm::vec3 forward = { 0,0,cam_vel };
 	glm::vec3 right = { cam_vel,0,0 };
+	glm::vec3 up = { 0,cam_vel,0 };
 
 	glm::mat4 cam_rot = get_rotation_matrix();
 
 	forward = cam_rot * glm::vec4(forward, 0.f);
 	right = cam_rot * glm::vec4(right, 0.f);
 
-	velocity = inputAxis.x * forward + inputAxis.y * right;
+	velocity = inputAxis.x * forward + inputAxis.y * right + inputAxis.z * up;
 
 	velocity *= 10 * deltaSeconds;
 

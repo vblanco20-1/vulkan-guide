@@ -17,6 +17,7 @@ struct PlayerCamera {
 	float pitch{ 0 }; //up-down rotation
 	float yaw{ 0 }; //left-right rotation
 
+	bool bSprint = false;
 	bool bLocked;
 
 	void process_input_event(SDL_Event* ev);
