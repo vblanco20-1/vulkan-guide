@@ -11,6 +11,7 @@
 #include <vk_mesh.h>
 #include <vk_scene.h>
 #include <vk_shaders.h>
+#include <vk_pushbuffer.h>
 #include <player_camera.h>
 #include <unordered_map>
 #include <material_system.h>
@@ -99,7 +100,8 @@ struct FrameData {
 	VkCommandPool _commandPool;
 	VkCommandBuffer _mainCommandBuffer;
 	
-	AllocatedBufferUntyped dynamicDataBuffer;
+	vkutil::PushBuffer dynamicData;
+	//AllocatedBufferUntyped dynamicDataBuffer;
 
 	AllocatedBufferUntyped debugOutputBuffer;
 
@@ -400,9 +402,6 @@ private:
 	void init_sync_structures();
 
 	void init_pipelines();
-
-	void fill_forward_pipeline(PipelineBuilder& pipelineBuilder);
-	void fill_shadow_pipeline(PipelineBuilder& pipelineBuilder);
 
 	void init_scene();
 

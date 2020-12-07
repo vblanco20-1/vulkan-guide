@@ -36,7 +36,7 @@ void VulkanEngine::execute_compute_cull(VkCommandBuffer cmd, RenderScene::MeshPa
 	TracyVkZone(_graphicsQueueContext, cmd, "Cull Dispatch");
 	VkDescriptorBufferInfo objectBufferInfo = _renderScene.objectDataBuffer.get_info();
 
-	VkDescriptorBufferInfo dynamicInfo = get_current_frame().dynamicDataBuffer.get_info();
+	VkDescriptorBufferInfo dynamicInfo = get_current_frame().dynamicData.source.get_info();
 	dynamicInfo.range = sizeof(GPUCameraData);
 
 	VkDescriptorBufferInfo instanceInfo = pass.instanceBuffer.get_info();
@@ -97,20 +97,19 @@ void VulkanEngine::execute_compute_cull(VkCommandBuffer cmd, RenderScene::MeshPa
 	cullData.aabbmax_z = params.aabbmax.z;
 
 	if (params.drawDist > 10000)
-	{cullData.distanceCheck = false; }
-	else{
+	{
+		cullData.distanceCheck = false; 
+	}
+	else
+	{
 		cullData.distanceCheck = true;
 	}
-
-	
-
 
 	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, _cullPipeline);
 
 	vkCmdPushConstants(cmd, _cullLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(DrawCullData), &cullData);
 
 	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, _cullLayout, 0, 1, &COMPObjectDataSet, 0, nullptr);
-
 	
 	vkCmdDispatch(cmd, static_cast<uint32_t>((pass.flat_batches.size() / 256)+1), 1, 1);
 
@@ -120,14 +119,10 @@ void VulkanEngine::execute_compute_cull(VkCommandBuffer cmd, RenderScene::MeshPa
 		VkBufferMemoryBarrier barrier = vkinit::buffer_barrier(pass.compactedInstanceBuffer._buffer, _graphicsQueueFamily);
 		barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
 		barrier.dstAccessMask = VK_ACCESS_INDIRECT_COMMAND_READ_BIT;
-		
-
 
 		VkBufferMemoryBarrier barrier2 = vkinit::buffer_barrier(pass.drawIndirectBuffer._buffer, _graphicsQueueFamily);	
 		barrier2.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
 		barrier2.dstAccessMask = VK_ACCESS_INDIRECT_COMMAND_READ_BIT;
-		
-
 
 		VkBufferMemoryBarrier barriers[] = { barrier,barrier2 };
 
@@ -312,9 +307,6 @@ void VulkanEngine::ready_mesh_draw(VkCommandBuffer cmd)
 			pass.needsIndirectRefresh = false;
 		}
 
-		
-
-
 		if (pass.needsInstanceRefresh && pass.flat_batches.size() >0)
 		{
 			ZoneScopedNC("Refresh Instancing Buffer", tracy::Color::Red);
@@ -377,29 +369,16 @@ void VulkanEngine::draw_objects_forward(VkCommandBuffer cmd, RenderScene::MeshPa
 	_sceneParameters.sunlightColor.w = CVAR_Shadowcast.Get() ? 0 : 1;
 
 	//push data to dynmem
-	uint32_t camera_data_offsets[3];
+	uint32_t camera_data_offset;
 	uint32_t scene_data_offset;
 
-	uint32_t dyn_offset = 0;
-
-	char* dynData;
-	vmaMapMemory(_allocator, get_current_frame().dynamicDataBuffer._allocation, (void**)&dynData);
-
-	camera_data_offsets[0] = dyn_offset;
-	memcpy(dynData, &camData, sizeof(GPUCameraData));
-	dyn_offset += sizeof(GPUCameraData);
-	dyn_offset = static_cast<uint32_t>(pad_uniform_buffer_size(dyn_offset));
-
-	dynData += dyn_offset;
-
-	scene_data_offset = dyn_offset;
-	memcpy(dynData, &_sceneParameters, sizeof(GPUSceneData));
-
-	vmaUnmapMemory(_allocator, get_current_frame().dynamicDataBuffer._allocation);
+	camera_data_offset = get_current_frame().dynamicData.push(camData);
+	scene_data_offset = get_current_frame().dynamicData.push(_sceneParameters);
+	
 
 	VkDescriptorBufferInfo objectBufferInfo = _renderScene.objectDataBuffer.get_info();
 
-	VkDescriptorBufferInfo dynamicInfo = get_current_frame().dynamicDataBuffer.get_info();
+	VkDescriptorBufferInfo dynamicInfo = get_current_frame().dynamicData.source.get_info();
 	dynamicInfo.range = sizeof(GPUSceneData);
 
 	VkDescriptorBufferInfo instanceInfo = pass.compactedInstanceBuffer.get_info();
@@ -426,7 +405,7 @@ void VulkanEngine::draw_objects_forward(VkCommandBuffer cmd, RenderScene::MeshPa
 	vkCmdSetDepthBias(cmd, 0, 0, 0);
 
 	std::vector<uint32_t> dynamic_offsets;
-	dynamic_offsets.push_back(camera_data_offsets[0]);
+	dynamic_offsets.push_back(camera_data_offset);
 	dynamic_offsets.push_back(scene_data_offset);
 	execute_draw_commands(cmd, pass, ObjectDataSet, dynamic_offsets, GlobalSet);
 }
@@ -529,31 +508,13 @@ void VulkanEngine::draw_objects_shadow(VkCommandBuffer cmd, RenderScene::MeshPas
 	camData.viewproj = projection * view;
 	
 	//push data to dynmem
-	uint32_t camera_data_offsets[3];
-	uint32_t scene_data_offset;
-
-	uint32_t dyn_offset = 2048;
-
-	char* dynData;
-	vmaMapMemory(_allocator, get_current_frame().dynamicDataBuffer._allocation, (void**)&dynData);
-	dynData += dyn_offset;
-
-	camera_data_offsets[0] = dyn_offset;
-	memcpy(dynData, &camData, sizeof(GPUCameraData));
-	dyn_offset += sizeof(GPUCameraData);
-	dyn_offset = static_cast<uint32_t>(pad_uniform_buffer_size(dyn_offset));
-
-	dynData += dyn_offset;
-
-	scene_data_offset = dyn_offset;
-	memcpy(dynData, &_sceneParameters, sizeof(GPUSceneData));
-
-	vmaUnmapMemory(_allocator, get_current_frame().dynamicDataBuffer._allocation);
+	uint32_t camera_data_offset = get_current_frame().dynamicData.push(camData);
+	 
 
 	VkDescriptorBufferInfo objectBufferInfo = _renderScene.objectDataBuffer.get_info();
 
-	VkDescriptorBufferInfo dynamicInfo = get_current_frame().dynamicDataBuffer.get_info();
-	dynamicInfo.range = sizeof(GPUSceneData);
+	VkDescriptorBufferInfo dynamicInfo = get_current_frame().dynamicData.source.get_info();
+	dynamicInfo.range = sizeof(GPUSceneData);	
 
 	VkDescriptorBufferInfo instanceInfo = pass.compactedInstanceBuffer.get_info();
 
@@ -572,7 +533,7 @@ void VulkanEngine::draw_objects_shadow(VkCommandBuffer cmd, RenderScene::MeshPas
 	vkCmdSetDepthBias(cmd, CVAR_ShadowBias.GetFloat(), 0, CVAR_SlopeBias.GetFloat());
 
 	std::vector<uint32_t> dynamic_offsets;
-	dynamic_offsets.push_back(camera_data_offsets[0]);
+	dynamic_offsets.push_back(camera_data_offset);
 
 	execute_draw_commands(cmd, pass, ObjectDataSet, dynamic_offsets, GlobalSet);
 }

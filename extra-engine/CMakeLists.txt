@@ -14,7 +14,7 @@ target_include_directories(extra PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 
  
 target_compile_definitions(extra PUBLIC TRACY_ENABLE)
-target_compile_definitions(extra PUBLIC GLM_FORCE_DEPTH_ZERO_TO_ONE GLM_FORCE_LEFT_HANDED)
+target_compile_definitions(extra PUBLIC GLM_FORCE_DEPTH_ZERO_TO_ONE GLM_FORCE_LEFT_HANDED) 
 
 
 target_precompile_headers(extra PUBLIC "vk_types.h" "<unordered_map>" "<vector>" "<iostream>" "<fstream>" "<string>" )

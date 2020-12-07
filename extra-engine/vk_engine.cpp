@@ -50,7 +50,7 @@ AutoCVar_Float CVAR_DrawDistance("gpu.drawDistance", "Distance cull", 5000);
 AutoCVar_Int CVAR_FreezeShadows("gpu.freezeShadows", "Stop the rendering of shadows", 0, CVarFlags::EditCheckbox);
 
 
-constexpr bool bUseValidationLayers = true;
+constexpr bool bUseValidationLayers = false;
 
 //we want to immediately abort when there is an error. In normal engines this would give an error message to the user, or perform a dump of state.
 using namespace std;
@@ -165,6 +165,7 @@ void VulkanEngine::cleanup()
 		_descriptorAllocator->cleanup();
 		_descriptorLayoutCache->cleanup();
 
+
 		vkDestroySurfaceKHR(_instance, _surface, nullptr);
 
 		vkDestroyDevice(_device, nullptr);
@@ -185,6 +186,8 @@ void VulkanEngine::draw()
 		//wait until the gpu has finished rendering the last frame. Timeout of 1 second
 		VK_CHECK(vkWaitForFences(_device, 1, &get_current_frame()._renderFence, true, 1000000000));
 		VK_CHECK(vkResetFences(_device, 1, &get_current_frame()._renderFence));
+
+		get_current_frame().dynamicData.reset();
 
 		//_renderScene.build_batches();
 		//check the debug data
@@ -1338,8 +1341,22 @@ void VulkanEngine::init_pipelines()
 
 	PipelineBuilder pipelineBuilder;
 
-	//default forwardpass parameters
-	fill_forward_pipeline(pipelineBuilder);
+	//input assembly is the configuration for drawing triangle lists, strips, or individual points.
+	//we are just going to draw triangle list
+	pipelineBuilder._inputAssembly = vkinit::input_assembly_create_info(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
+
+	//configure the rasterizer to draw filled triangles
+	pipelineBuilder._rasterizer = vkinit::rasterization_state_create_info(VK_POLYGON_MODE_FILL);
+	pipelineBuilder._rasterizer.cullMode = VK_CULL_MODE_NONE;
+	//we dont use multisampling, so just run the default one
+	pipelineBuilder._multisampling = vkinit::multisampling_state_create_info();
+
+	//a single blend attachment with no blending and writing to RGBA
+	pipelineBuilder._colorBlendAttachment = vkinit::color_blend_attachment_state();
+
+
+	//default depthtesting
+	pipelineBuilder._depthStencil = vkinit::depth_stencil_create_info(true, true, VK_COMPARE_OP_GREATER_OR_EQUAL);
 
 	//build blit pipeline
 	pipelineBuilder.setShaders(blitEffect);
@@ -1364,51 +1381,6 @@ void VulkanEngine::init_pipelines()
 	load_compute_shader(shader_path("depthReduce.comp.spv").c_str(), _depthReducePipeline, _depthReduceLayout);
 
 	load_compute_shader(shader_path("sparse_upload.comp.spv").c_str(), _sparseUploadPipeline, _sparseUploadLayout);
-}
-
-
-void VulkanEngine::fill_forward_pipeline(PipelineBuilder& pipelineBuilder)
-{
-	
-
-	//input assembly is the configuration for drawing triangle lists, strips, or individual points.
-	//we are just going to draw triangle list
-	pipelineBuilder._inputAssembly = vkinit::input_assembly_create_info(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
-
-	//configure the rasterizer to draw filled triangles
-	pipelineBuilder._rasterizer = vkinit::rasterization_state_create_info(VK_POLYGON_MODE_FILL);
-	pipelineBuilder._rasterizer.cullMode = VK_CULL_MODE_NONE;
-	//we dont use multisampling, so just run the default one
-	pipelineBuilder._multisampling = vkinit::multisampling_state_create_info();
-
-	//a single blend attachment with no blending and writing to RGBA
-	pipelineBuilder._colorBlendAttachment = vkinit::color_blend_attachment_state();
-
-
-	//default depthtesting
-	pipelineBuilder._depthStencil = vkinit::depth_stencil_create_info(true, true, VK_COMPARE_OP_GREATER_OR_EQUAL);
-}
-
-
-void VulkanEngine::fill_shadow_pipeline(PipelineBuilder& pipelineBuilder)
-{
-	
-	//input assembly is the configuration for drawing triangle lists, strips, or individual points.
-	//we are just going to draw triangle list
-	pipelineBuilder._inputAssembly = vkinit::input_assembly_create_info(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
-
-	//configure the rasterizer to draw filled triangles
-	pipelineBuilder._rasterizer = vkinit::rasterization_state_create_info(VK_POLYGON_MODE_FILL);
-	pipelineBuilder._rasterizer.cullMode = VK_CULL_MODE_FRONT_BIT;
-	pipelineBuilder._rasterizer.depthBiasEnable = VK_TRUE;
-	//we dont use multisampling, so just run the default one
-	pipelineBuilder._multisampling = vkinit::multisampling_state_create_info();
-
-	//a single blend attachment with no blending and writing to RGBA
-	pipelineBuilder._colorBlendAttachment = vkinit::color_blend_attachment_state();
-
-	//default depthtesting
-	pipelineBuilder._depthStencil = vkinit::depth_stencil_create_info(true, true, VK_COMPARE_OP_LESS);
 }
 
 bool VulkanEngine::load_compute_shader(const char* shaderPath, VkPipeline& pipeline, VkPipelineLayout& layout)
@@ -2092,7 +2064,8 @@ void VulkanEngine::init_descriptors()
 		_frames[i].dynamicDescriptorAllocator->init(_device);
 
 		//1 megabyte of dynamic data buffer
-		_frames[i].dynamicDataBuffer = create_buffer(10000000, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+		auto dynamicDataBuffer = create_buffer(10000000, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+		_frames[i].dynamicData.init(_allocator, dynamicDataBuffer, _gpuProperties.limits.minUniformBufferOffsetAlignment); 
 
 		//20 megabyte of debug output
 		_frames[i].debugOutputBuffer = create_buffer(200000000, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_TO_CPU);
