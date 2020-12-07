@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Code Walkthrough
-parent: "0: Start"
+parent: "0: Initial Setup"
 nav_order: 3
 ---
 

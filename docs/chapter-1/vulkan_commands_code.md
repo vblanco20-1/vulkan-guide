@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Setting up Vulkan commands
-parent: Chapter 1
+parent:  "1: Initialization and Render Loop"
 nav_order: 21
 ---
 

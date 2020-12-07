@@ -1,6 +1,6 @@
 ---
 layout: default
-title: "0: Start"
+title: "0: Initial Setup"
 nav_order: 2
 has_children: true
 permalink: /docs/chapter_0
