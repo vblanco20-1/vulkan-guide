@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Descriptor Sets
-parent:  "4: Buffers, Shader input/output"
+parent:  "Chapter 4. Buffers, Shader input/output"
 nav_order: 11
 ---
 

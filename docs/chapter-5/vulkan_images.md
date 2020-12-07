@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Vulkan Images
-parent: "5: Textures"
+parent: "Chapter 5. Textures"
 nav_order: 12
 ---
 

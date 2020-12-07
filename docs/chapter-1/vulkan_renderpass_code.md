@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Setting up renderpass code
-parent:  "1: Initialization and Render Loop"
+parent:  "Chapter 1. Initialization and Render Loop"
 nav_order: 31
 ---
 

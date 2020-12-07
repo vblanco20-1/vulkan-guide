@@ -1,6 +1,6 @@
 ---
 layout: default
-title: "2: The graphics pipeline, Hello Triangle"
+title: "Chapter 2. The graphics pipeline, Hello Triangle"
 nav_order: 4
 has_children: true
 permalink: /docs/chapter_2

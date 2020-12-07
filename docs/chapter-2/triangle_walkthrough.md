@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Setting up Triangle shaders
-parent:  "2: The graphics pipeline, Hello Triangle"
+parent:  "Chapter 2. The graphics pipeline, Hello Triangle"
 nav_order: 11
 ---
 
