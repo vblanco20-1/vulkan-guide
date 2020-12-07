@@ -50,7 +50,7 @@ AutoCVar_Float CVAR_DrawDistance("gpu.drawDistance", "Distance cull", 5000);
 AutoCVar_Int CVAR_FreezeShadows("gpu.freezeShadows", "Stop the rendering of shadows", 0, CVarFlags::EditCheckbox);
 
 
-constexpr bool bUseValidationLayers = false;
+constexpr bool bUseValidationLayers = true;
 
 //we want to immediately abort when there is an error. In normal engines this would give an error message to the user, or perform a dump of state.
 using namespace std;
@@ -1794,6 +1794,19 @@ AllocatedBufferUntyped VulkanEngine::create_buffer(size_t allocSize, VkBufferUsa
 	return newBuffer;
 }
 
+
+void VulkanEngine::reallocate_buffer(AllocatedBufferUntyped& buffer, size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage, VkMemoryPropertyFlags required_flags /*= 0*/)
+{
+	AllocatedBufferUntyped newBuffer = create_buffer(allocSize, usage, memoryUsage, required_flags);
+
+	get_current_frame()._frameDeletionQueue.push_function([=]() {
+
+		vmaDestroyBuffer(_allocator, buffer._buffer, buffer._allocation);
+	});
+
+	buffer = newBuffer;
+}
+
 size_t VulkanEngine::pad_uniform_buffer_size(size_t originalSize)
 {
 	// Calculate required alignment based on minimum device offset alignment
@@ -2160,29 +2173,6 @@ void VulkanEngine::init_descriptors()
 
 
 	const size_t sceneParamBufferSize = FRAME_OVERLAP * pad_uniform_buffer_size(sizeof(GPUSceneData));
-
-
-	_renderScene._transparentForwardPass.compactedInstanceBuffer = create_buffer(sizeof(uint32_t) * MAX_OBJECTS, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
-
-	_renderScene._transparentForwardPass.drawIndirectBuffer = create_buffer(sizeof(GPUIndirectObject) * MAX_OBJECTS, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
-
-	_renderScene._transparentForwardPass.instanceBuffer = create_buffer(sizeof(GPUInstance) * MAX_OBJECTS, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
-
-
-	_renderScene._forwardPass.compactedInstanceBuffer = create_buffer(sizeof(uint32_t) * MAX_OBJECTS, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
-
-	_renderScene._forwardPass.drawIndirectBuffer = create_buffer(sizeof(GPUIndirectObject) * MAX_OBJECTS, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
-
-	_renderScene._forwardPass.instanceBuffer = create_buffer(sizeof(GPUInstance) * MAX_OBJECTS, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
-	
-	_renderScene._shadowPass.compactedInstanceBuffer = create_buffer(sizeof(uint32_t) * MAX_OBJECTS, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
-
-	_renderScene._shadowPass.drawIndirectBuffer = create_buffer(sizeof(GPUIndirectObject) * MAX_OBJECTS, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
-
-	_renderScene._shadowPass.instanceBuffer = create_buffer(sizeof(GPUInstance) * MAX_OBJECTS, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
-
-	
-	_renderScene.objectDataBuffer = create_buffer(sizeof(GPUObjectData) * MAX_OBJECTS, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
 
 
 	for (int i = 0; i < FRAME_OVERLAP; i++)

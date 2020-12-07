@@ -160,10 +160,16 @@ void VulkanEngine::ready_mesh_draw(VkCommandBuffer cmd)
 	{
 		ZoneScopedNC("Refresh Object Buffer", tracy::Color::Red);
 
+		size_t copySize = _renderScene.renderables.size() * sizeof(GPUObjectData);
+		if (_renderScene.objectDataBuffer._size < copySize)
+		{
+			reallocate_buffer(_renderScene.objectDataBuffer, copySize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+		}
+
 		//if 80% of the objects are dirty, then just reupload the whole thing
 		if (_renderScene.dirtyObjects.size() >= _renderScene.renderables.size() * 0.8)
 		{
-			AllocatedBuffer<GPUObjectData> newBuffer = create_buffer(sizeof(GPUObjectData) * _renderScene.renderables.size(), VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+			AllocatedBuffer<GPUObjectData> newBuffer = create_buffer(copySize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
 
 			GPUObjectData* objectSSBO = map_buffer(newBuffer);
 			_renderScene.fill_objectData(objectSSBO);
@@ -174,6 +180,7 @@ void VulkanEngine::ready_mesh_draw(VkCommandBuffer cmd)
 				vmaDestroyBuffer(_allocator, newBuffer._buffer, newBuffer._allocation);
 				});
 
+		
 			//copy from the uploaded cpu side instance buffer to the gpu one
 			VkBufferCopy indirectCopy;
 			indirectCopy.dstOffset = 0;
@@ -262,6 +269,24 @@ void VulkanEngine::ready_mesh_draw(VkCommandBuffer cmd)
 	{
 		auto& pass = *passes[p];
 
+
+		//reallocate the gpu side buffers if needed
+
+		if (pass.drawIndirectBuffer._size < pass.batches.size() * sizeof(GPUIndirectObject))
+		{
+			reallocate_buffer(pass.drawIndirectBuffer, pass.batches.size() * sizeof(GPUIndirectObject), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+		}
+
+		if (pass.compactedInstanceBuffer._size < pass.flat_batches.size() * sizeof(uint32_t))
+		{
+			reallocate_buffer(pass.compactedInstanceBuffer, pass.flat_batches.size() * sizeof(uint32_t), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+		}
+
+		if (pass.instanceBuffer._size < pass.flat_batches.size() * sizeof(GPUInstance))
+		{
+			reallocate_buffer(pass.instanceBuffer, pass.flat_batches.size() * sizeof(GPUInstance), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+		}
+
 		//if the pass has changed the batches, need to reupload them
 		if (pass.needsIndirectRefresh && pass.batches.size() > 0)
 		{
@@ -287,6 +312,8 @@ void VulkanEngine::ready_mesh_draw(VkCommandBuffer cmd)
 			pass.needsIndirectRefresh = false;
 		}
 
+		
+
 
 		if (pass.needsInstanceRefresh && pass.flat_batches.size() >0)
 		{
@@ -302,7 +329,7 @@ void VulkanEngine::ready_mesh_draw(VkCommandBuffer cmd)
 
 				vmaDestroyBuffer(_allocator, newBuffer._buffer, newBuffer._allocation);
 				});
-
+			
 			//copy from the uploaded cpu side instance buffer to the gpu one
 			VkBufferCopy indirectCopy;
 			indirectCopy.dstOffset = 0;
