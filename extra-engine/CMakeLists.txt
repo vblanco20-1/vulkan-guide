@@ -12,7 +12,7 @@ set_property(TARGET extra PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "$<TARGET_FILE_
 
 target_include_directories(extra PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 
-
+ 
 target_compile_definitions(extra PUBLIC TRACY_ENABLE)
 target_compile_definitions(extra PUBLIC GLM_FORCE_DEPTH_ZERO_TO_ONE GLM_FORCE_LEFT_HANDED)
 

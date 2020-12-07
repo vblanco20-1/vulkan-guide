@@ -356,9 +356,9 @@ void VulkanEngine::draw_objects_forward(VkCommandBuffer cmd, RenderScene::MeshPa
 	ZoneScopedNC("DrawObjects", tracy::Color::Blue);
 	//make a model view matrix for rendering the object
 	//camera view
-	glm::mat4 view = get_view_matrix();
+	glm::mat4 view = _camera.get_view_matrix();
 	//camera projection
-	glm::mat4 projection = get_projection_matrix();
+	glm::mat4 projection = _camera.get_projection_matrix();
 
 
 	GPUCameraData camData;

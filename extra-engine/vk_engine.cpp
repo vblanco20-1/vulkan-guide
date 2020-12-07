@@ -281,8 +281,8 @@ void VulkanEngine::draw()
 
 
 		CullParams forwardCull;
-		forwardCull.projmat = get_projection_matrix(true);
-		forwardCull.viewmat = get_view_matrix();
+		forwardCull.projmat = _camera.get_projection_matrix(true);
+		forwardCull.viewmat = _camera.get_view_matrix();
 		forwardCull.frustrumCull = true;
 		forwardCull.occlusionCull = true;
 		forwardCull.drawDist = CVAR_DrawDistance.Get();
@@ -574,7 +574,7 @@ void VulkanEngine::run()
 		{
 
 			ImGui_ImplSDL2_ProcessEvent(&e);
-			process_input_event(&e);
+			_camera.process_input_event(&e);
 
 
 			//close the window when user alt-f4s or clicks the X button			
@@ -590,6 +590,18 @@ void VulkanEngine::run()
 					if (_selectedShader > 1)
 					{
 						_selectedShader = 0;
+					}
+				}
+				if (e.key.keysym.sym == SDLK_TAB)
+				{
+					if (CVAR_CamLock.Get())
+					{
+						LOG_INFO("Mouselook disabled");
+						CVAR_CamLock.Set(false);
+					}
+					else {
+						LOG_INFO("Mouselook enabled");
+						CVAR_CamLock.Set(true);
 					}
 				}
 			}
@@ -665,8 +677,11 @@ void VulkanEngine::run()
 				h.handle = rng;
 				_renderScene.update_object(h);
 			}
+			_camera.bLocked = CVAR_CamLock.Get();
 
-			update_camera(stats.frametime);
+			_camera.update_camera(stats.frametime);
+
+			_mainLight.lightPosition = _camera.position;
 		}
 	
 		draw();
@@ -690,33 +705,8 @@ void VulkanEngine::process_input_event(SDL_Event* ev)
 	if (ev->type == SDL_KEYDOWN)
 	{
 		switch (ev->key.keysym.sym)
-		{
-		case SDLK_UP:
-		case SDLK_w:
-			_camera.inputAxis.x += 1.f;
-			break;
-		case SDLK_DOWN:
-		case SDLK_s:
-			_camera.inputAxis.x -= 1.f;
-			break;
-		case SDLK_LEFT:
-		case SDLK_a:
-			_camera.inputAxis.y -= 1.f;
-			break;
-		case SDLK_RIGHT:
-		case SDLK_d:
-			_camera.inputAxis.y += 1.f;
-			break;
-		case SDLK_TAB:
-			if (CVAR_CamLock.Get())
-			{
-				LOG_INFO("Mouselook disabled");
-				CVAR_CamLock.Set(false);
-			}
-			else {
-				LOG_INFO("Mouselook enabled");
-				CVAR_CamLock.Set(true);
-			}		
+		{		
+		
 		}
 	}
 	else if (ev->type == SDL_KEYUP)
@@ -750,28 +740,6 @@ void VulkanEngine::process_input_event(SDL_Event* ev)
 	}
 
 	_camera.inputAxis = glm::clamp(_camera.inputAxis, { -1.0,-1.0,-1.0 }, { 1.0,1.0,1.0 });
-}
-
-void VulkanEngine::update_camera(float deltaSeconds)
-{
-	const float cam_vel = 0.001f;
-	glm::vec3 forward = { 0,0,cam_vel };
-	glm::vec3 right = { cam_vel,0,0 };
-
-	glm::mat4 cam_rot = _camera.get_rotation_matrix();
-
-	forward = cam_rot * glm::vec4(forward, 0.f);
-	right = cam_rot * glm::vec4(right, 0.f);
-
-	_camera.velocity = _camera.inputAxis.x * forward + _camera.inputAxis.y * right;
-
-	_camera.velocity *= 10 * deltaSeconds;
-
-	_camera.position += _camera.velocity;
-
-	
-
-	_mainLight.lightPosition = _camera.position;
 }
 
 void VulkanEngine::init_vulkan()
@@ -1605,48 +1573,6 @@ Mesh* VulkanEngine::get_mesh(const std::string& name)
 	}
 }
 
-
-
-glm::mat4 VulkanEngine::get_view_matrix()
-{
-	glm::vec3 camPos = _camera.position;
-
-	glm::mat4 cam_rot = (_camera.get_rotation_matrix());
-
-	glm::mat4 view = glm::translate(glm::mat4{ 1 }, camPos) * cam_rot;
-
-	//we need to invert the camera matrix
-	view = glm::inverse(view);
-
-	return view;
-}
-glm::mat4 perspectiveProjection(float fovY, float aspectWbyH, float zNear)
-{
-	float f = 1.0f / tanf(fovY / 2.0f);
-	return glm::mat4(
-		f / aspectWbyH, 0.0f, 0.0f, 0.0f,
-		0.0f, f, 0.0f, 0.0f,
-		0.0f, 0.0f, 0.0f, 1.0f,
-		0.0f, 0.0f, zNear, 0.0f);
-}
-glm::mat4 VulkanEngine::get_projection_matrix(bool bReverse /*= true*/)
-{
-
-	//return perspectiveProjection(glm::radians(70.f), 1700.f / 900.f, 0.1f);
-
-	if (bReverse)
-	{
-		glm::mat4 pro = glm::perspective(glm::radians(70.f), 1700.f / 900.f, 5000.0f, 0.1f);
-		pro[1][1] *= -1;
-		return pro;
-	}
-	else {
-		glm::mat4 pro = glm::perspective(glm::radians(70.f), 1700.f / 900.f, 0.1f, 5000.0f);
-		pro[1][1] *= -1;
-		return pro;
-	}
-	
-}
 void VulkanEngine::init_scene()
 {
 	VkSamplerCreateInfo samplerInfo = vkinit::sampler_create_info(VK_FILTER_NEAREST);
@@ -2062,26 +1988,11 @@ bool VulkanEngine::load_prefab(const char* path, glm::mat4 root)
 }
 
 
-std::string VulkanEngine::asset_path(const char* path)
+std::string VulkanEngine::asset_path(std::string_view path)
 {
 	return "../../assets_export/" + std::string(path);
 }
-std::string VulkanEngine::asset_path(std::string& path)
-{
-	return "../../assets_export/" + (path);
-}
 
-
-//std::string VulkanEngine::shader_path(const char* path)
-//{
-//	return "../../shaders/" + std::string(path);
-//}
-//
-//
-//std::string VulkanEngine::shader_path(std::string& path)
-//{
-//	return "../../shaders/" + (path);
-//}
 
 
 std::string VulkanEngine::shader_path(std::string_view path)
@@ -2183,9 +2094,8 @@ void VulkanEngine::init_descriptors()
 		//1 megabyte of dynamic data buffer
 		_frames[i].dynamicDataBuffer = create_buffer(10000000, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
 
-		//20 megabyte of dynamic data buffer
+		//20 megabyte of debug output
 		_frames[i].debugOutputBuffer = create_buffer(200000000, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_TO_CPU);
-		
 	}
 }
 
@@ -2254,14 +2164,6 @@ void VulkanEngine::init_imgui()
 		vkDestroyDescriptorPool(_device, imguiPool, nullptr);
 		ImGui_ImplVulkan_Shutdown();
 		});
-}
-
-glm::mat4 PlayerCamera::get_rotation_matrix()
-{
-	glm::mat4 yaw_rot = glm::rotate(glm::mat4{ 1 }, yaw, { 0,-1,0 });
-	glm::mat4 pitch_rot = glm::rotate(glm::mat4{ yaw_rot }, pitch, { -1,0,0 });
-
-	return pitch_rot;
 }
 
 

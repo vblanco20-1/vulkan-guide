@@ -11,8 +11,11 @@
 #include <vk_mesh.h>
 #include <vk_scene.h>
 #include <vk_shaders.h>
+#include <player_camera.h>
 #include <unordered_map>
 #include <material_system.h>
+
+
 
 #include <glm/glm.hpp>
 #include <glm/gtx/transform.hpp>
@@ -134,16 +137,6 @@ struct GPUObjectData {
 	glm::vec4 extents;  // bounds
 };
 
-struct PlayerCamera {
-	glm::vec3 position;
-	glm::vec3 velocity;
-	glm::vec3 inputAxis;
-
-	float pitch{0}; //up-down rotation
-	float yaw{0}; //left-right rotation
-
-	glm::mat4 get_rotation_matrix();
-};
 
 struct EngineStats {
 	float frametime;
@@ -357,13 +350,8 @@ public:
 	void execute_draw_commands(VkCommandBuffer cmd, RenderScene::MeshPass& pass, VkDescriptorSet ObjectDataSet, std::vector<uint32_t> dynamic_offsets, VkDescriptorSet GlobalSet);
 
 	void draw_objects_shadow(VkCommandBuffer cmd, RenderScene::MeshPass& pass);
-
+	
 	void reduce_depth(VkCommandBuffer cmd);
-
-	glm::mat4 get_view_matrix();
-
-
-	glm::mat4 get_projection_matrix(bool bReverse = true);
 
 	void execute_compute_cull(VkCommandBuffer cmd, RenderScene::MeshPass& pass,CullParams& params);
 
@@ -380,11 +368,8 @@ public:
 
 	bool load_prefab(const char* path, glm::mat4 root);
 
-	static std::string asset_path(const char* path);
-	static std::string asset_path(std::string& path);
+	static std::string asset_path(std::string_view path);
 	
-	//static std::string shader_path(const char* path);
-	//static std::string shader_path(std::string& path);
 	static std::string shader_path(std::string_view path);
 	void refresh_renderbounds(MeshObject* object);
 
@@ -397,7 +382,6 @@ public:
 private:
 	EngineStats stats;
 	void process_input_event(SDL_Event* ev);
-	void update_camera(float deltaSeconds);
 
 	void init_vulkan();
 
