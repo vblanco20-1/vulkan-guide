@@ -8,6 +8,7 @@
 #include <array>
 #include <unordered_map>
 #include <material_asset.h>
+
 #include <vk_mesh.h>
 
 class PipelineBuilder {
@@ -71,9 +72,34 @@ namespace vkutil {
 	{
 		
 	};
+
+	template<typename T>
+	struct PerPassData {
+		
+	public:
+		T& operator[](MeshpassType pass)
+		{
+			switch (pass)
+			{
+			case MeshpassType::Forward:
+				return data[0];
+			case MeshpassType::Transparency:
+				return data[1];
+			case MeshpassType::DirectionalShadow:
+				return data[2];
+			}
+			assert(false);
+			 return data[0];
+		};
+
+	private:
+		std::array<T, 3> data;
+	};
+
+
 	struct EffectTemplate {
-		ShaderPass* forwardEffect;
-		ShaderPass* shadowEffect;
+		PerPassData<ShaderPass*> passShaders;
+		
 		ShaderParameters* defaultParameters;
 		assets::TransparencyMode transparency;
 	};
@@ -90,8 +116,8 @@ namespace vkutil {
 
 	struct Material {
 		EffectTemplate* original;
-		VkDescriptorSet forwardSet{ VK_NULL_HANDLE };
-		VkDescriptorSet shadowSet{ VK_NULL_HANDLE };
+		PerPassData<VkDescriptorSet> passSets;
+		
 		std::vector<SampledTexture> textures;
 
 		ShaderParameters* parameters;

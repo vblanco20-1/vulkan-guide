@@ -102,6 +102,8 @@ void VulkanEngine::init()
 
 	_shaderCache.init(_device);
 
+	_renderScene.init();
+
 	init_swapchain();
 
 

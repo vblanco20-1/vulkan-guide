@@ -44,3 +44,12 @@ inline VkDescriptorBufferInfo AllocatedBufferUntyped::get_info(VkDeviceSize offs
 	info.range = _size;
 	return info;
 }
+
+
+enum class MeshpassType : uint8_t {
+	None = 0,
+	Forward = 1,
+	Transparency = 2,
+	DirectionalShadow = 3
+};
+

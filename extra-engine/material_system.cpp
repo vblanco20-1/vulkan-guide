@@ -170,8 +170,10 @@ void vkutil::MaterialSystem::build_default_templates()
 
 	{
 		EffectTemplate defaultTextured;
-		defaultTextured.forwardEffect = texturedLitPass;
-		defaultTextured.shadowEffect = opaqueShadowcastPass;
+		defaultTextured.passShaders[MeshpassType::Transparency] = nullptr;
+		defaultTextured.passShaders[MeshpassType::DirectionalShadow] = opaqueShadowcastPass;
+		defaultTextured.passShaders[MeshpassType::Forward] = texturedLitPass;
+
 		defaultTextured.defaultParameters = nullptr;
 		defaultTextured.transparency = assets::TransparencyMode::Opaque;
 
@@ -196,8 +198,10 @@ void vkutil::MaterialSystem::build_default_templates()
 		ShaderPass* transparentLitPass = build_shader(engine->_renderPass, transparentForward, texturedLit);
 
 		EffectTemplate defaultTextured;
-		defaultTextured.forwardEffect = transparentLitPass;
-		defaultTextured.shadowEffect = nullptr;//opaqueShadowcastPass;
+		defaultTextured.passShaders[MeshpassType::Transparency] = transparentLitPass;
+		defaultTextured.passShaders[MeshpassType::DirectionalShadow] = nullptr;
+		defaultTextured.passShaders[MeshpassType::Forward] = nullptr;
+
 		defaultTextured.defaultParameters = nullptr;
 		defaultTextured.transparency = assets::TransparencyMode::Transparent;
 
@@ -206,8 +210,10 @@ void vkutil::MaterialSystem::build_default_templates()
 
 	{
 		EffectTemplate defaultColored;
-		defaultColored.forwardEffect = defaultLitPass;
-		defaultColored.shadowEffect = opaqueShadowcastPass;
+		
+		defaultColored.passShaders[MeshpassType::Transparency] = nullptr;
+		defaultColored.passShaders[MeshpassType::DirectionalShadow] = opaqueShadowcastPass;
+		defaultColored.passShaders[MeshpassType::Forward] = defaultLitPass;
 		defaultColored.defaultParameters = nullptr;
 		defaultColored.transparency = assets::TransparencyMode::Opaque;
 		templateCache["colored_opaque"] = defaultColored;
@@ -249,7 +255,7 @@ vkutil::Material* vkutil::MaterialSystem::build_material(const std::string& mate
 		newMat->original = &templateCache[ info.baseTemplate];
 		newMat->parameters = info.parameters;
 		//not handled yet
-		newMat->shadowSet = VK_NULL_HANDLE;
+		newMat->passSets[MeshpassType::DirectionalShadow] = VK_NULL_HANDLE;
 		newMat->textures = info.textures;
 
 
@@ -267,7 +273,7 @@ vkutil::Material* vkutil::MaterialSystem::build_material(const std::string& mate
 
 		
 			
-		db.build(newMat->forwardSet);
+		db.build(newMat->passSets[MeshpassType::Forward]);
 		LOG_INFO("Built New Material {}", materialName);
 		//add material to cache
 		materialCache[info] = (newMat);
@@ -314,7 +320,7 @@ void vkutil::MaterialSystem::fill_builders()
 
 		
 		forwardBuilder._rasterizer = vkinit::rasterization_state_create_info(VK_POLYGON_MODE_FILL);
-		forwardBuilder._rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
+		forwardBuilder._rasterizer.cullMode = VK_CULL_MODE_NONE;//BACK_BIT;
 		
 		forwardBuilder._multisampling = vkinit::multisampling_state_create_info();
 		
@@ -356,3 +362,4 @@ size_t vkutil::MaterialInfo::hash() const
 
 	return result;
 }
+

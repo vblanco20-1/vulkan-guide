@@ -42,12 +42,7 @@ struct DrawMesh {
 	Mesh* original;
 };
 
-enum class PassTypeFlags : uint8_t {
-	None = 0,
-	Forward = 1 << 0,
-	Prepass = 1 << 1,
-	DirectionalShadow = 1 << 2
-};
+
 
 struct RenderObject {
 
@@ -110,11 +105,13 @@ public:
 
 		AllocatedBuffer<GPUIndirectObject> clearIndirectBuffer;
 
+		MeshpassType type;
+
 		bool needsIndirectRefresh = true;
 		bool needsInstanceRefresh = true;
 	};
 
-	
+	void init();
 
 	Handle<RenderObject> register_object(MeshObject* object);
 
@@ -148,6 +145,8 @@ public:
 
 	std::vector<Handle<RenderObject>> dirtyObjects;
 
+	MeshPass* get_mesh_pass(MeshpassType name);
+
 	MeshPass _forwardPass;
 	MeshPass _transparentForwardPass;
 	MeshPass _shadowPass;
@@ -166,17 +165,3 @@ public:
 	AllocatedBuffer<GPUObjectData> objectDataBuffer;	
 };
 
-inline PassTypeFlags operator&(PassTypeFlags A, PassTypeFlags B)
-{
-	uint8_t uA = (uint8_t)A;
-	uint8_t uB = (uint8_t)B;
-
-	return (PassTypeFlags)(uA & uB);
-}
-inline PassTypeFlags operator|(PassTypeFlags A, PassTypeFlags B)
-{
-	uint8_t uA = (uint8_t)A;
-	uint8_t uB = (uint8_t)B;
-
-	return (PassTypeFlags)(uA | uB);
-}

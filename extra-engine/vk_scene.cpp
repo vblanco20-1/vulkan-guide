@@ -3,6 +3,13 @@
 #include "Tracy.hpp"
 #include "logger.h"
 
+void RenderScene::init()
+{
+	_forwardPass.type = MeshpassType::Forward;
+	_shadowPass.type = MeshpassType::DirectionalShadow;
+	_transparentForwardPass.type = MeshpassType::Transparency;
+}
+
 Handle<RenderObject> RenderScene::register_object(MeshObject* object)
 {
 	RenderObject newObj;
@@ -19,20 +26,18 @@ Handle<RenderObject> RenderScene::register_object(MeshObject* object)
 
 	if (object->bDrawForwardPass)
 	{
-		if (object->material->original->forwardEffect)
+		if (object->material->original->passShaders[MeshpassType::Transparency])
 		{
-			if (object->material->original->transparency == assets::TransparencyMode::Transparent)
-			{
-				_transparentForwardPass.unbatchedObjects.push_back(handle);
-			}
-			else {
-				_forwardPass.unbatchedObjects.push_back(handle);
-			}
+			_transparentForwardPass.unbatchedObjects.push_back(handle);
+		}
+		if (object->material->original->passShaders[MeshpassType::Forward])
+		{
+			_forwardPass.unbatchedObjects.push_back(handle);
 		}
 	}
 	if (object->bDrawShadowPass)
 	{
-		if (object->material->original->shadowEffect)
+		if (object->material->original->passShaders[MeshpassType::DirectionalShadow])
 		{
 			_shadowPass.unbatchedObjects.push_back(handle);
 		}
@@ -206,13 +211,12 @@ void RenderScene::refresh_pass(MeshPass* pass, bool forward)
 				//pack mesh id and material into 32 bits
 				vkutil::Material* mt = get_material(object->material);
 				uint32_t mathash;
+
+				uint64_t pipelinehash = std::hash<uint64_t>()(uint64_t((mt->original->passShaders[pass->type])->pipeline));
+				uint64_t sethash = std::hash<uint64_t>()((uint64_t)mt->passSets[pass->type]);
+
+				mathash = static_cast<uint32_t>(pipelinehash ^ sethash);
 				
-				if (forward) {
-					mathash = static_cast<uint32_t>(std::hash<uint64_t>()(uint64_t(mt->original->forwardEffect->pipeline)) ^ std::hash<uint64_t>()((uint64_t)mt->forwardSet));
-				}
-				else {
-					mathash	= static_cast<uint32_t>(std::hash<uint64_t>()(uint64_t(mt->original->shadowEffect->pipeline)) ^ std::hash<uint64_t>()((uint64_t)mt->shadowSet));
-				}
 				uint32_t meshmat = uint64_t(mathash) ^ uint64_t(object->meshID.handle);
 
 				//pack mesh id and material into 64 bits				
@@ -242,15 +246,10 @@ void RenderScene::refresh_pass(MeshPass* pass, bool forward)
 		newBatch.count = 0;
 
 		vkutil::Material* mt = get_material(get_object(pass->flat_batches[0].object)->material);
-		if (forward)
-		{
-			newBatch.material.materialSet = mt->forwardSet;
-			newBatch.material.shaderPass = mt->original->forwardEffect;
-		}
-		else {
-			newBatch.material.materialSet = mt->shadowSet;
-			newBatch.material.shaderPass = mt->original->shadowEffect;
-		}
+		
+		newBatch.material.materialSet = mt->passSets[pass->type];
+		newBatch.material.shaderPass = mt->original->passShaders[pass->type];
+		
 		newBatch.meshID = get_object(pass->flat_batches[0].object)->meshID;
 
 		pass->batches.push_back(newBatch);
@@ -271,15 +270,9 @@ void RenderScene::refresh_pass(MeshPass* pass, bool forward)
 			if (!bSameMaterial || !bSameMesh)
 			{
 				vkutil::Material* mt = get_material(obj->material);
-				if (forward)
-				{
-					newBatch.material.materialSet = mt->forwardSet;
-					newBatch.material.shaderPass = mt->original->forwardEffect;
-				}
-				else {
-					newBatch.material.materialSet = mt->shadowSet;
-					newBatch.material.shaderPass = mt->original->shadowEffect;
-				}
+				
+				newBatch.material.materialSet = mt->passSets[pass->type];
+				newBatch.material.shaderPass = mt->original->passShaders[pass->type];
 
 				if (newBatch.material.materialSet == back->material.materialSet
 					&& newBatch.material.shaderPass == back->material.shaderPass)
@@ -369,11 +362,26 @@ DrawMesh RenderScene::get_mesh(Handle<DrawMesh> objectID)
 	return meshes[objectID.handle];
 }
 
-
-
 vkutil::Material* RenderScene::get_material(Handle<vkutil::Material> objectID)
 {
 	return materials[objectID.handle];
+}
+
+RenderScene::MeshPass* RenderScene::get_mesh_pass(MeshpassType name)
+{
+	switch (name)
+	{	
+	case MeshpassType::Forward:
+		return &_forwardPass;
+		break;
+	case MeshpassType::Transparency:
+		return &_transparentForwardPass;
+		break;
+	case MeshpassType::DirectionalShadow:
+		return &_shadowPass;
+		break;
+	}
+	return nullptr;
 }
 
 Handle<vkutil::Material> RenderScene::getMaterialHandle(vkutil::Material* m)
