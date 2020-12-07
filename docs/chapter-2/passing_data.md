@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Passing data between shader stages
-parent:  "Chapter 2. The graphics pipeline, Hello Triangle"
+parent:  "2. The graphics pipeline, Hello Triangle"
 nav_order: 14
 ---
 

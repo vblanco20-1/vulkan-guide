@@ -1,7 +1,7 @@
 ---
 layout: default
-title: Gpu Driven Rendering Overview
-parent: Gpu Driven Rendering
+title: GPU Driven Rendering Overview
+parent: GPU Driven Rendering
 nav_order: 1
 ---
 
@@ -12,14 +12,14 @@ Tutorial codebase, 125.000 objects processed and culled on main view and shadow 
 
 ## GPU Driven Rendering
 
-Over the last few years, bleeding edge render engines have been moving more and more towards calculating the rendering itself on the gpu in compute shaders.
+Over the last few years, bleeding edge render engines have been moving more and more towards calculating the rendering itself on the GPU in compute shaders.
 Thanks to the introduction of MultiDrawIndirect and similar features, it's now possible to do a very big amount of the work for the rendering inside compute shaders. The benefits are clear:
 
 * GPUs have orders of magnitude higher performance than CPU on data-parallel algorithms. Rendering is almost all data parallel algorithms.
-* With the GPU deciding its own work, latencies are minimized as there is no roundtrip from cpu to gpu and back.
+* With the GPU deciding its own work, latencies are minimized as there is no roundtrip from CPU to GPU and back.
 * Frees up the CPU from a lot of work which can now be used on other things.
 
-The result is an order of magnitude or more scene complexity and object counts. In the code that we will walk through in later chapters, based on the engine at the end of chapter 5 tutorial, we can run 250.000 "drawcalls", on Nintendo Switch, at more than 60 fps. On PC it reaches 500 fps. We essentially have a nearly unlimited object count, with the bottleneck moved into just how many triangles are we trying to make the gpu draw.
+The result is an order of magnitude or more scene complexity and object counts. In the code that we will walk through in later chapters, based on the engine at the end of chapter 5 tutorial, we can run 250.000 "drawcalls", on Nintendo Switch, at more than 60 fps. On PC it reaches 500 fps. We essentially have a nearly unlimited object count, with the bottleneck moved into just how many triangles are we trying to make the GPU draw.
 
 ![perf]({{site.baseurl}}/diagrams/indirectperf.png)
 CPU processing takes less than 0.5 milliseconds. Same view as above. Ryzen 1700
@@ -60,7 +60,7 @@ command->firstInstance = object.ID;
 
 Because it takes its parameters from a buffer, it is possible to use compute shaders to write into these buffers and do culling or LOD selection in compute shaders. Doing culling this way is one of the simplest and most performant ways of doing culling. Due to the power of the GPU you can easily expect to cull more than a million objects in less than half a millisecond. Normal scenes don't tend to go as far. In more advanced pipelines like the one in Dragon Age or Rainbow Six, they go one step further and also cull individual triangles from the meshes. They do that by writing an output Index Buffer with the surviving triangles and using indirect to draw that.
 
-When you design a gpu-driven renderer, the main idea is that all of the scene should be on the GPU. In chapter 4, we saw how to store the matrices for all loaded objects into a big SSBO. In GPU driven pipelines, we also want to store more data, such as material ID and cull bounds. Once we have a renderer where everything is stored in big GPU buffers, and we don't use PushConstants or descriptor sets per object, we are ready to go with a gpu-driven-renderer. The design of the tutorial engine is one that maps well into refactoring for a extreme performance compute based engine.
+When you design a GPU-driven renderer, the main idea is that all of the scene should be on the GPU. In chapter 4, we saw how to store the matrices for all loaded objects into a big SSBO. In GPU driven pipelines, we also want to store more data, such as material ID and cull bounds. Once we have a renderer where everything is stored in big GPU buffers, and we don't use PushConstants or descriptor sets per object, we are ready to go with a GPU-driven-renderer. The design of the tutorial engine is one that maps well into refactoring for a extreme performance compute based engine.
 
 Due to the fact that you want to have as much things on the GPU as possible, this pipeline maps very well if you combine it with "Bindless" techniques, where you stop needing to bind descriptor sets per material or changing vertex buffers. In Doom Eternal engine, they go all-in on bindless, and the engine ends up doing very few drawcalls per frame. On this guide we will not use bindless textures as their support is limited, so we will do 1 draw-indirect call per material used. We will still merge all of the meshes into a big vertex buffer to avoid having to constantly bind it between draws. Having a bindless renderer also makes raytracing much more performant and effective.
 

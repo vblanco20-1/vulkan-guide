@@ -1,6 +1,6 @@
 ---
 layout: default
-title: Gpu Driven Rendering
+title: GPU Driven Rendering
 nav_order: 8
 has_children: true
 permalink: /docs/gpudriven

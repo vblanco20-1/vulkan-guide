@@ -1,6 +1,6 @@
 ---
 layout: default
-title: "Chapter 3. Drawing meshes"
+title: "3. Drawing meshes"
 nav_order: 5
 has_children: true
 permalink: /docs/chapter_3

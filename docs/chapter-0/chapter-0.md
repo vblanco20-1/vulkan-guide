@@ -1,6 +1,6 @@
 ---
 layout: default
-title: "Chapter 0. Initial Setup"
+title: "0.. Initial Setup"
 nav_order: 2
 has_children: true
 permalink: /docs/chapter_0
@@ -16,4 +16,4 @@ In this chapter, we setup the build toolchain to compile the project
 {: .fs-6 .fw-300 }
 
 
-{% include comments.html term="Chapter 0 Comments" %}
+{% include comments.html term="0. Comments" %}

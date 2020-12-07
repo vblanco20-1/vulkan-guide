@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Memory transfers
-parent: "Chapter 5. Textures"
+parent: "5. Textures"
 nav_order: 11
 ---
 

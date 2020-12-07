@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Renderpasses
-parent:  "Chapter 1. Initialization and Render Loop"
+parent:  "1.. Initialization and Render Loop"
 nav_order: 30
 ---
 
@@ -50,4 +50,4 @@ In this first chapter, we are only going to use a few image layouts
 
 Next: [Setting up render passes]({{ site.baseurl }}{% link docs/chapter-1/vulkan_renderpass_code.md %})
 
-{% include comments.html term="Chapter 1 Comments" %}
+{% include comments.html term="1. Comments" %}

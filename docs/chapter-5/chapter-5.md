@@ -1,6 +1,6 @@
 ---
 layout: default
-title: "Chapter 5. Textures"
+title: "5. Textures"
 nav_order: 7
 has_children: true
 permalink: /docs/chapter_5

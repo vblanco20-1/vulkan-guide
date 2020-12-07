@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Code Walkthrough
-parent: "Chapter 0. Initial Setup"
+parent: "0.. Initial Setup"
 nav_order: 3
 ---
 
@@ -216,7 +216,7 @@ Now we can move forward to the first chapter, and get a render loop going.
 Next: [Initializing Vulkan]({{ site.baseurl }}{% link docs/chapter-1/vulkan_init_flow.md %})
 
 
-{% include comments.html term="Chapter 0 Comments" %}
+{% include comments.html term="0. Comments" %}
 
 
 

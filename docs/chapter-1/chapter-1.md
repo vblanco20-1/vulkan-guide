@@ -1,6 +1,6 @@
 ---
 layout: default
-title: "Chapter 1. Initialization and Render Loop"
+title: "1.. Initialization and Render Loop"
 nav_order: 3
 has_children: true
 permalink: /docs/chapter_1
@@ -13,4 +13,4 @@ We will also be writing the initial render loop, including command buffer and re
 {: .fs-6 .fw-300 }
 
 
-{% include comments.html term="Chapter 1 Comments" %}
+{% include comments.html term="1. Comments" %}

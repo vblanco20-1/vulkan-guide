@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Push Constants
-parent:  "Chapter 3. Drawing meshes"
+parent:  "3. Drawing meshes"
 nav_order: 12
 ---
 

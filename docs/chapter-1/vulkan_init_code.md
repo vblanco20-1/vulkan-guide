@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Vulkan Initialization Code
-parent:  "Chapter 1. Initialization and Render Loop"
+parent:  "1.. Initialization and Render Loop"
 nav_order: 2
 ---
 
@@ -347,4 +347,4 @@ With the Vulkan initialization completed and the layers working, we can begin to
 
 Next: [Vulkan Commands]({{ site.baseurl }}{% link docs/chapter-1/vulkan_command_flow.md %})
 
-{% include comments.html term="Chapter 1 Comments" %}
+{% include comments.html term="1. Comments" %}

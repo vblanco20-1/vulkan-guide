@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Setting up depth buffer
-parent:  "Chapter 3. Drawing meshes"
+parent:  "3. Drawing meshes"
 nav_order: 15
 ---
 

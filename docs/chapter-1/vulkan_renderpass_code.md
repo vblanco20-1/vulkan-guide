@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Setting up renderpass code
-parent:  "Chapter 1. Initialization and Render Loop"
+parent:  "1.. Initialization and Render Loop"
 nav_order: 31
 ---
 
@@ -192,5 +192,5 @@ in `VulkanEngine::Cleanup()`
 Next: [Main Loop]({{ site.baseurl }}{% link docs/chapter-1/vulkan_mainloop.md %})
 
 
-{% include comments.html term="Chapter 1 Comments" %}
+{% include comments.html term="1. Comments" %}
 

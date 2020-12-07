@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Building Project
-parent: "Chapter 0. Initial Setup"
+parent: "0.. Initial Setup"
 nav_order: 2
 ---
 
@@ -51,4 +51,4 @@ If you get the message of SDL2 dll missing, go to your sdl folder, lib directory
 Next: [Chapter 0 code walkthrough]({{ site.baseurl }}{% link docs/chapter-0/code_walkthrough.md %})
 
 
-{% include comments.html term="Chapter 0 Comments" %}
+{% include comments.html term="0. Comments" %}

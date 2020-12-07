@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Rendering Loop
-parent:  "Chapter 1. Initialization and Render Loop"
+parent:  "1.. Initialization and Render Loop"
 nav_order: 40
 ---
 
@@ -87,4 +87,4 @@ Lets begin the code for the renderloop.
 
 Next: [Programming render loop]({{ site.baseurl }}{% link docs/chapter-1/vulkan_mainloop_code.md %})
 
-{% include comments.html term="Chapter 1 Comments" %}
+{% include comments.html term="1. Comments" %}

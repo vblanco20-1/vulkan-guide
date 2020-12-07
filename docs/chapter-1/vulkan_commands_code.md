@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Setting up Vulkan commands
-parent:  "Chapter 1. Initialization and Render Loop"
+parent:  "1.. Initialization and Render Loop"
 nav_order: 21
 ---
 
@@ -243,4 +243,4 @@ At this point, it is possible to execute pure-compute commands, if you wanted to
 Next: [Vulkan Render Passes]({{ site.baseurl }}{% link docs/chapter-1/vulkan_renderpass.md %})
 
 
-{% include comments.html term="Chapter 1 Comments" %}
+{% include comments.html term="1. Comments" %}
