@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Loading Images
-parent: Chapter 5
+parent: "5: Textures"
 nav_order: 14
 ---
 

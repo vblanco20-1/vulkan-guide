@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Setting up render pipeline
-parent: Chapter 2
+parent:  "2: The graphics pipeline, Hello Triangle"
 nav_order: 12
 ---
 

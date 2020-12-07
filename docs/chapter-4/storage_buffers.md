@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Storage buffers
-parent: Chapter 4
+parent:  "4: Buffers, Shader input/output"
 nav_order: 20
 ---
 

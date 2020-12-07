@@ -1,7 +1,7 @@
 ---
 layout: default
 title: OBJ Loading
-parent: Chapter 3
+parent:  "3: Drawing meshes"
 nav_order: 13
 ---
 

@@ -1,6 +1,6 @@
 ---
 layout: default
-title: Chapter 4
+title: "4: Buffers, Shader input/output"
 nav_order: 6
 has_children: true
 permalink: /docs/chapter_4

@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Double buffering
-parent: Chapter 4
+parent:  "4: Buffers, Shader input/output"
 nav_order: 10
 ---
 

@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Scene Management
-parent: Chapter 3
+parent:  "3: Drawing meshes"
 nav_order: 20
 ---
 
