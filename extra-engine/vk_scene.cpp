@@ -183,12 +183,23 @@ void RenderScene::clear_dirty_objects()
 	}
 	dirtyObjects.clear();
 }
-
+#include <future>
 void RenderScene::build_batches()
 {
+#if 1
+	auto fwd = std::async(std::launch::async, [&] { refresh_pass(&_forwardPass); });
+	auto shadow = std::async(std::launch::async, [&] { refresh_pass(&_shadowPass); });
+	auto transparent = std::async(std::launch::async, [&] { refresh_pass(&_transparentForwardPass); });
+
+	transparent.get();
+	shadow.get();
+	fwd.get();
+#else
 	refresh_pass(&_forwardPass);
 	refresh_pass(&_transparentForwardPass);
 	refresh_pass(&_shadowPass);
+#endif
+	
 }
 
 void RenderScene::merge_meshes(VulkanEngine* engine)

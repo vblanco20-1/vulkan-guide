@@ -142,7 +142,7 @@ void VulkanEngine::execute_compute_cull(VkCommandBuffer cmd, RenderScene::MeshPa
 		get_current_frame().debugDataNames.push_back("Cull Indirect Output");
 	}
 }
-
+#include <future>
 void VulkanEngine::ready_mesh_draw(VkCommandBuffer cmd)
 {
 	
@@ -281,7 +281,20 @@ void VulkanEngine::ready_mesh_draw(VkCommandBuffer cmd)
 		{
 			reallocate_buffer(pass.instanceBuffer, pass.flat_batches.size() * sizeof(GPUInstance), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
 		}
+	}
 
+	std::vector<std::future<void>> async_calls;
+	async_calls.reserve(9);
+
+	std::vector<AllocatedBufferUntyped> unmaps;
+	
+
+	for (int p = 0; p < 3; p++)
+	{
+		RenderScene::MeshPass& pass = *passes[p];
+		RenderScene::MeshPass* ppass = passes[p];
+
+		RenderScene* pScene = &_renderScene;
 		//if the pass has changed the batches, need to reupload them
 		if (pass.needsIndirectRefresh && pass.batches.size() > 0)
 		{
@@ -290,8 +303,22 @@ void VulkanEngine::ready_mesh_draw(VkCommandBuffer cmd)
 			AllocatedBuffer<GPUIndirectObject> newBuffer = create_buffer(sizeof(GPUIndirectObject) * pass.batches.size(), VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
 
 			GPUIndirectObject* indirect = map_buffer(newBuffer);
-			_renderScene.fill_indirectArray(indirect,pass);
-			unmap_buffer(newBuffer);
+
+			
+
+			async_calls.push_back(std::async(std::launch::async, [=] { 
+				
+				
+				pScene->fill_indirectArray(indirect, *ppass);
+				
+			}));
+			//async_calls.push_back([&]() {
+			//	_renderScene.fill_indirectArray(indirect, pass);
+			//});
+			
+			unmaps.push_back(newBuffer);
+
+			//unmap_buffer(newBuffer);
 
 			if (pass.clearIndirectBuffer._buffer != VK_NULL_HANDLE)
 			{
@@ -300,7 +327,7 @@ void VulkanEngine::ready_mesh_draw(VkCommandBuffer cmd)
 				get_current_frame()._frameDeletionQueue.push_function([=]() {
 
 					vmaDestroyBuffer(_allocator, deletionBuffer._buffer, deletionBuffer._allocation);
-					});
+				});
 			}
 
 			pass.clearIndirectBuffer = newBuffer;
@@ -314,8 +341,15 @@ void VulkanEngine::ready_mesh_draw(VkCommandBuffer cmd)
 			AllocatedBuffer<GPUInstance> newBuffer = create_buffer(sizeof(GPUInstance) * pass.flat_batches.size(), VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
 
 			GPUInstance* instanceData = map_buffer(newBuffer);
-			_renderScene.fill_instancesArray(instanceData, pass);
-			unmap_buffer(newBuffer);
+			async_calls.push_back(std::async(std::launch::async, [=] {
+
+
+				pScene->fill_instancesArray(instanceData, *ppass);
+
+			}));
+			unmaps.push_back(newBuffer);
+			//_renderScene.fill_instancesArray(instanceData, pass);
+			//unmap_buffer(newBuffer);
 
 			get_current_frame()._frameDeletionQueue.push_function([=]() {
 
@@ -337,6 +371,15 @@ void VulkanEngine::ready_mesh_draw(VkCommandBuffer cmd)
 
 			pass.needsInstanceRefresh = false;
 		}
+	}
+
+	for (auto& s : async_calls)
+	{
+		s.get();
+	}
+	for (auto b : unmaps)
+	{
+		unmap_buffer(b);
 	}
 
 	vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr, static_cast<uint32_t>(uploadBarriers.size()), uploadBarriers.data(), 0, nullptr);//1, &readBarrier);
