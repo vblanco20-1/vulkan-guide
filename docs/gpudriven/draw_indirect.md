@@ -268,6 +268,17 @@ The pipeline of the tutorial starts by writing the draw-indirect command structs
 
 In other engines, something that is quite popular to do with draw indirect is to do fine grained culling and mesh merging.
 
+In the assassins creed unity presentation [Link](https://www.advances.realtimerendering.com/s2015/aaltonenhaar_siggraph2015_combined_final_footer_220dpi.pdf) They do multiple passes of culling, and write the index buffers from within the shaders themselves.
+
+In the presentation, they first cull on a per-object basis. The surviving objects get stored into a GPU buffer.
+
+Once the first pass of culling ends, they expand the objects into a list of "mesh clusters", each of them being mini-meshes of 64 triangles at a time.
+
+Another pass is then done, that culls each of those small mesh clusters, outputting to another list.
+
+As the last step, the index buffers of each of the small mesh clusters are copied into a index buffer, and the draw commands are generated that will render them. 
+Because they are merging the triangles themselves by writing the index buffer from the surviving meshes, the number of draw commands is very low. They only do 1 draw command per material/texture set. It also means that they have tons of very small meshes, and then they get merged into a bigger mesh when drawn, avoiding performance pitfalls on GPUs when rendering small objects.
+
 
 
 
