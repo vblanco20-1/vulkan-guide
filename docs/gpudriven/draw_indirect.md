@@ -255,7 +255,18 @@ for (IndirectBatch& draw : draws)
 Thats it, now the render loop is indirect and should go a bit faster. But the most important think to take into account here, is that the draw commands buffer can be cached and written/read from compute shaders. If you wanted, you can just write it once at load, and just do the loop of vkCmdDrawIndirect every frame. This is also a design where adding culling is extremelly simple.
 You just do a compute shader that sets instanceCount to 0 if the object is culled, and thats it. But keep in mind such a thing is not very optimal given that empty draw commands still have overhead, so its better to compact them somehow, either by using a design that uses instancing (like what we are doing in the tutorial engine), or by using DrawIndirectCount after removing the empty draws.
 
+There is also something you can see very clearly there. The less combinations of mesh buffer, descriptors, and pipeline you have, the more you can draw on each DrawIndirect execution. This is why generally you want to be as indirect as possible when doing draw indirect. 
 
+
+# Draw Indirect architectures
+
+The system explained above is the simplest way you can do draw indirect. It is useful, but generally you want to do a lot more things on top of it. Engines use many different architectures, using draw indirect in many different ways.  Those ways depend on what exactly do you want to do in the engine, and how that maps to draw indirect usage and features. 
+
+In the tutorial engine, we cant use DrawIndirectCount, which is quite a limitation. Instead, we prefer to do *very* few draw indirect commands, and use instancing instead. In there, we are doing 1 draw indirect instanced. 
+
+The pipeline of the tutorial starts by writing the draw-indirect command structs sorted by material and mesh. Then, it performs culling, and for each surviving mesh, it does a +1 on the instance-count of the relevant draw-indirect command. 
+
+In other engines, something that is quite popular to do with draw indirect is to do fine grained culling and mesh merging.
 
 
 
