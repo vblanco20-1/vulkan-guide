@@ -1,6 +1,6 @@
 ---
 layout: default
-title: Engine architecture
+title: Engine architecture overview
 parent: GPU Driven Rendering
 nav_order: 3
 ---
