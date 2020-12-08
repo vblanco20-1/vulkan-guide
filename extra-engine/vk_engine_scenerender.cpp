@@ -369,11 +369,9 @@ void VulkanEngine::draw_objects_forward(VkCommandBuffer cmd, RenderScene::MeshPa
 	_sceneParameters.sunlightColor.w = CVAR_Shadowcast.Get() ? 0 : 1;
 
 	//push data to dynmem
-	uint32_t camera_data_offset;
-	uint32_t scene_data_offset;
-
-	camera_data_offset = get_current_frame().dynamicData.push(camData);
-	scene_data_offset = get_current_frame().dynamicData.push(_sceneParameters);
+	
+	uint32_t camera_data_offset = get_current_frame().dynamicData.push(camData);
+	uint32_t scene_data_offset = get_current_frame().dynamicData.push(_sceneParameters);
 	
 
 	VkDescriptorBufferInfo objectBufferInfo = _renderScene.objectDataBuffer.get_info();
@@ -413,6 +411,7 @@ void VulkanEngine::draw_objects_forward(VkCommandBuffer cmd, RenderScene::MeshPa
 
 void VulkanEngine::execute_draw_commands(VkCommandBuffer cmd, RenderScene::MeshPass& pass, VkDescriptorSet ObjectDataSet, std::vector<uint32_t> dynamic_offsets, VkDescriptorSet GlobalSet)
 {
+	if(pass.batches.size() > 0)
 	{
 		ZoneScopedNC("Draw Commit", tracy::Color::Blue4);
 		Mesh* lastMesh = nullptr;

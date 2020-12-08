@@ -14,6 +14,7 @@
 #include <array>
 #include <vector>
 #include <unordered_map>
+#include "material_system.h"
 
 template<typename T>
 struct Handle {
@@ -52,6 +53,8 @@ struct RenderObject {
 	uint32_t updateIndex;
 	uint32_t customSortKey{0};
 
+	vkutil::PerPassData<int32_t> passIndices;
+
 	glm::mat4 transformMatrix;
 
 	RenderBounds bounds;
@@ -68,20 +71,34 @@ public:
 	struct PassMaterial {
 		VkDescriptorSet materialSet;
 		vkutil::ShaderPass* shaderPass;
+
+		bool operator==(const PassMaterial& other) const
+		{
+			return materialSet == other.materialSet && shaderPass == other.shaderPass;
+		}
+	};
+	struct PassObject {
+		PassMaterial material;
+		Handle<DrawMesh> meshID;
+		Handle<RenderObject> original;
+		uint32_t customKey;
+	};
+	struct RenderBatch {
+		Handle<PassObject> object;
+		uint64_t sortKey;
+
+		bool operator==(const RenderBatch& other) const
+		{
+			return object.handle == other.object.handle && sortKey == other.sortKey;
+		}
 	};
 	struct IndirectBatch {
 		Handle<DrawMesh> meshID;
-
 		PassMaterial material;
 		uint32_t first;
 		uint32_t count;
+	};
 	
-		std::vector<Handle<RenderObject>> objects;
-	};
-	struct RenderBatch {
-		Handle<RenderObject> object;
-		uint64_t sortKey;
-	};
 	struct Multibatch {
 		uint32_t first;
 		uint32_t count;
@@ -96,6 +113,12 @@ public:
 
 		std::vector<RenderScene::RenderBatch> flat_batches;
 
+		std::vector<PassObject> objects;
+
+		std::vector<Handle<PassObject>> reusableObjects;
+
+		std::vector<Handle<PassObject>> objectsToDelete;
+
 		
 		AllocatedBuffer<uint32_t> compactedInstanceBuffer;
 
@@ -104,6 +127,8 @@ public:
 		AllocatedBuffer<GPUInstance> instanceBuffer;
 
 		AllocatedBuffer<GPUIndirectObject> clearIndirectBuffer;
+
+		PassObject* get(Handle<PassObject> handle);
 
 		MeshpassType type;
 
@@ -132,8 +157,11 @@ public:
 
 	void merge_meshes(class VulkanEngine* engine);
 
-	void refresh_pass(MeshPass* pass, bool forward = true);
+	void refresh_pass(MeshPass* pass);
 
+	
+
+	void build_indirect_batches(MeshPass* pass, std::vector<IndirectBatch>& outbatches, std::vector<RenderScene::RenderBatch>& inobjects);
 	RenderObject* get_object(Handle<RenderObject> objectID);
 	DrawMesh get_mesh(Handle<DrawMesh> objectID);
 

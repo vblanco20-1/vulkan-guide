@@ -189,7 +189,7 @@ void VulkanEngine::draw()
 
 		get_current_frame().dynamicData.reset();
 
-		//_renderScene.build_batches();
+		_renderScene.build_batches();
 		//check the debug data
 		void* data;		
 		vmaMapMemory(_allocator, get_current_frame().debugOutputBuffer._allocation, &data);
@@ -671,7 +671,7 @@ void VulkanEngine::run()
 			ZoneScopedNC("Flag Objects", tracy::Color::Blue);
 			//test flagging some objects for changes
 
-			int N_changes = 100;
+			int N_changes = 1000;
 			for (int i = 0; i < N_changes; i++)
 			{
 				int rng = rand() % _renderScene.renderables.size();
@@ -1565,7 +1565,7 @@ void VulkanEngine::init_scene()
 	
 
 	{
-		vkutil::MaterialInfo texturedInfo;
+		vkutil::MaterialData texturedInfo;
 		texturedInfo.baseTemplate = "texturedPBR_opaque";
 		texturedInfo.parameters = nullptr;
 
@@ -1578,7 +1578,7 @@ void VulkanEngine::init_scene()
 		vkutil::Material* newmat = _materialSystem->build_material("textured", texturedInfo);
 	}
 	{
-		vkutil::MaterialInfo matinfo;
+		vkutil::MaterialData matinfo;
 		matinfo.baseTemplate = "texturedPBR_opaque";
 		matinfo.parameters = nullptr;
 	
@@ -1613,7 +1613,7 @@ void VulkanEngine::init_scene()
 	
 	load_prefab(asset_path("Sponza2.pfb").c_str(), sponzaMatrix);
 	load_prefab(asset_path("scifi/TopDownScifi.pfb").c_str(),  glm::translate(glm::vec3{0,20,0}));
-	int dimcities = 0;
+	int dimcities = 2;
 	for (int x = -dimcities; x <= dimcities; x++) {
 		for (int y = -dimcities; y <= dimcities; y++) {
 	
@@ -1887,7 +1887,7 @@ bool VulkanEngine::load_prefab(const char* path, glm::mat4 root)
 					tex.view = _loadedTextures[texture].imageView;
 					tex.sampler = smoothSampler;
 
-					vkutil::MaterialInfo info;
+					vkutil::MaterialData info;
 					info.parameters = nullptr;
 
 					if (material.transparency == assets::TransparencyMode::Transparent)
@@ -2031,8 +2031,6 @@ void VulkanEngine::unmap_buffer(AllocatedBufferUntyped& buffer)
 {
 	vmaUnmapMemory(_allocator, buffer._allocation);
 }
-
-
 
 void VulkanEngine::init_descriptors()
 {

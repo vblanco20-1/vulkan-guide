@@ -92,6 +92,14 @@ namespace vkutil {
 			 return data[0];
 		};
 
+		void clear(T&& val)
+		{
+			for (int i = 0; i < 3; i++)
+			{
+				data[i] = val;
+			}
+		}
+
 	private:
 		std::array<T, 3> data;
 	};
@@ -104,12 +112,12 @@ namespace vkutil {
 		assets::TransparencyMode transparency;
 	};
 
-	struct MaterialInfo {
+	struct MaterialData {
 		std::vector<SampledTexture> textures;
 		ShaderParameters* parameters;
 		std::string baseTemplate;
 
-		bool operator==(const MaterialInfo& other) const;
+		bool operator==(const MaterialData& other) const;
 
 		size_t hash() const;
 	};
@@ -134,7 +142,7 @@ namespace vkutil {
 
 		ShaderPass* build_shader(VkRenderPass renderPass,PipelineBuilder& builder, ShaderEffect* effect);
 
-		Material* build_material(const std::string& materialName, const MaterialInfo& info);
+		Material* build_material(const std::string& materialName, const MaterialData& info);
 		Material* get_material(const std::string& materialName);
 		
 		void fill_builders();
@@ -143,7 +151,7 @@ namespace vkutil {
 		struct MaterialInfoHash
 		{
 
-			std::size_t operator()(const MaterialInfo& k) const
+			std::size_t operator()(const MaterialData& k) const
 			{
 				return k.hash();
 			}
@@ -155,7 +163,7 @@ namespace vkutil {
 
 		std::unordered_map<std::string, EffectTemplate> templateCache;
 		std::unordered_map<std::string, Material*> materials;
-		std::unordered_map<MaterialInfo, Material*, MaterialInfoHash> materialCache;
+		std::unordered_map<MaterialData, Material*, MaterialInfoHash> materialCache;
 		VulkanEngine* engine;
 	};
 }

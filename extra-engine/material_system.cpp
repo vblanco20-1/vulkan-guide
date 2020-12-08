@@ -238,7 +238,7 @@ vkutil::ShaderPass* vkutil::MaterialSystem::build_shader(VkRenderPass renderPass
 }
 
 
-vkutil::Material* vkutil::MaterialSystem::build_material(const std::string& materialName, const MaterialInfo& info)
+vkutil::Material* vkutil::MaterialSystem::build_material(const std::string& materialName, const MaterialData& info)
 {
 	Material* mat;
 	//search material in the cache first in case its already built
@@ -274,6 +274,7 @@ vkutil::Material* vkutil::MaterialSystem::build_material(const std::string& mate
 		
 			
 		db.build(newMat->passSets[MeshpassType::Forward]);
+		db.build(newMat->passSets[MeshpassType::Transparency]);
 		LOG_INFO("Built New Material {}", materialName);
 		//add material to cache
 		materialCache[info] = (newMat);
@@ -331,7 +332,7 @@ void vkutil::MaterialSystem::fill_builders()
 	}	
 }
 
-bool vkutil::MaterialInfo::operator==(const MaterialInfo& other) const
+bool vkutil::MaterialData::operator==(const MaterialData& other) const
 {
 	if (other.baseTemplate.compare(baseTemplate) != 0 || other.parameters != parameters || other.textures.size() != textures.size())
 	{
@@ -344,7 +345,7 @@ bool vkutil::MaterialInfo::operator==(const MaterialInfo& other) const
 	}
 }
 
-size_t vkutil::MaterialInfo::hash() const
+size_t vkutil::MaterialData::hash() const
 {
 	using std::size_t;
 	using std::hash;
