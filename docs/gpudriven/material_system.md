@@ -1,6 +1,6 @@
 ---
 layout: default
-title: Compute Shaders
+title: Material System
 parent: GPU Driven Rendering
 nav_order: 8
 ---
