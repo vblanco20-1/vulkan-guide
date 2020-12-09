@@ -477,7 +477,7 @@ void VulkanEngine::execute_draw_commands(VkCommandBuffer cmd, RenderScene::MeshP
 			VkPipelineLayout newLayout = instanceDraw.material.shaderPass->layout;
 			VkDescriptorSet newMaterialSet = instanceDraw.material.materialSet;
 
-			Mesh* drawMesh = _renderScene.get_mesh(instanceDraw.meshID).original;
+			Mesh* drawMesh = _renderScene.get_mesh(instanceDraw.meshID)->original;
 
 			if (newPipeline != lastPipeline)
 			{
@@ -486,7 +486,6 @@ void VulkanEngine::execute_draw_commands(VkCommandBuffer cmd, RenderScene::MeshP
 				vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, newLayout, 1, 1, &ObjectDataSet, 0, nullptr);
 
 				//update dynamic binds
-				//uint32_t dynamicBinds[] = { camera_data_offsets[0],scene_data_offset };
 				vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, newLayout, 0, 1, &GlobalSet, dynamic_offsets.size(), dynamic_offsets.data());
 			}
 			if (newMaterialSet != lastMaterialSet)
@@ -495,7 +494,7 @@ void VulkanEngine::execute_draw_commands(VkCommandBuffer cmd, RenderScene::MeshP
 				vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, newLayout, 2, 1, &newMaterialSet, 0, nullptr);
 			}
 
-			bool merged = _renderScene.get_mesh(instanceDraw.meshID).isMerged;
+			bool merged = _renderScene.get_mesh(instanceDraw.meshID)->isMerged;
 			if (merged)
 			{
 				if (lastMesh != nullptr)

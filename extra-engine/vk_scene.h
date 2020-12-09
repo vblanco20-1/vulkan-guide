@@ -159,11 +159,9 @@ public:
 
 	void refresh_pass(MeshPass* pass);
 
-	
-
 	void build_indirect_batches(MeshPass* pass, std::vector<IndirectBatch>& outbatches, std::vector<RenderScene::RenderBatch>& inobjects);
 	RenderObject* get_object(Handle<RenderObject> objectID);
-	DrawMesh get_mesh(Handle<DrawMesh> objectID);
+	DrawMesh* get_mesh(Handle<DrawMesh> objectID);
 
 	vkutil::Material *get_material(Handle<vkutil::Material> objectID);
 
@@ -184,12 +182,11 @@ public:
 
 	Handle<vkutil::Material> getMaterialHandle(vkutil::Material* m);
 	Handle<DrawMesh> getMeshHandle(Mesh* m);
-
-	AllocatedBufferUntyped uploadBuffer[2];
+	
 
 	AllocatedBuffer<Vertex> mergedVertexBuffer;
 	AllocatedBuffer<uint32_t> mergedIndexBuffer;
 
-	AllocatedBuffer<GPUObjectData> objectDataBuffer;	
+	AllocatedBuffer<GPUObjectData> objectDataBuffer;
 };
 

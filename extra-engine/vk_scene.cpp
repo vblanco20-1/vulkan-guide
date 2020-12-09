@@ -146,9 +146,9 @@ void RenderScene::fill_indirectArray(GPUIndirectObject* data, MeshPass& pass)
 
 		data[dataIndex].command.firstInstance = batch.first;//i;
 		data[dataIndex].command.instanceCount = 0;
-		data[dataIndex].command.firstIndex = get_mesh(batch.meshID).firstIndex;
-		data[dataIndex].command.vertexOffset = get_mesh(batch.meshID).firstVertex;
-		data[dataIndex].command.indexCount = get_mesh(batch.meshID).indexCount;
+		data[dataIndex].command.firstIndex = get_mesh(batch.meshID)->firstIndex;
+		data[dataIndex].command.vertexOffset = get_mesh(batch.meshID)->firstVertex;
+		data[dataIndex].command.indexCount = get_mesh(batch.meshID)->indexCount;
 		data[dataIndex].objectID = 0;
 		data[dataIndex].batchID = i;
 
@@ -246,7 +246,6 @@ void RenderScene::merge_meshes(VulkanEngine* engine)
 	});
 }
 
-
 void RenderScene::refresh_pass(MeshPass* pass)
 {
 	pass->needsIndirectRefresh = true;
@@ -304,12 +303,15 @@ void RenderScene::refresh_pass(MeshPass* pass)
 			std::vector<RenderScene::RenderBatch> newbatches;
 			newbatches.reserve(pass->flat_batches.size());
 
-			std::set_difference(pass->flat_batches.begin(), pass->flat_batches.end(), deletion_batches.begin(), deletion_batches.end(), std::back_inserter(newbatches), [](const RenderScene::RenderBatch& A, const RenderScene::RenderBatch& B) {
-				if (A.sortKey < B.sortKey) { return true; }
-				else if (A.sortKey == B.sortKey) { return A.object.handle < B.object.handle; }
-				else { return false; }
-				});
+			{
+				ZoneScopedNC("Set Difference", tracy::Color::Red);
 
+				std::set_difference(pass->flat_batches.begin(), pass->flat_batches.end(), deletion_batches.begin(), deletion_batches.end(), std::back_inserter(newbatches), [](const RenderScene::RenderBatch& A, const RenderScene::RenderBatch& B) {
+					if (A.sortKey < B.sortKey) { return true; }
+					else if (A.sortKey == B.sortKey) { return A.object.handle < B.object.handle; }
+					else { return false; }
+				});
+			}
 			pass->flat_batches = std::move(newbatches);
 		}
 	}
@@ -444,7 +446,7 @@ void RenderScene::refresh_pass(MeshPass* pass)
 			IndirectBatch* batch = &pass->batches[i];
 
 			
-			bool bCompatibleMesh = get_mesh(joinbatch->meshID).isMerged;
+			bool bCompatibleMesh = get_mesh(joinbatch->meshID)->isMerged;
 			
 					
 			bool bSameMat = false;
@@ -540,9 +542,9 @@ RenderObject* RenderScene::get_object(Handle<RenderObject> objectID)
 	return &renderables[objectID.handle];
 }
 
-DrawMesh RenderScene::get_mesh(Handle<DrawMesh> objectID)
+DrawMesh* RenderScene::get_mesh(Handle<DrawMesh> objectID)
 {
-	return meshes[objectID.handle];
+	return &meshes[objectID.handle];
 }
 
 vkutil::Material* RenderScene::get_material(Handle<vkutil::Material> objectID)
