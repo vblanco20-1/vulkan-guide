@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Executing Vulkan Commands
-parent:  "1.. Initialization and Render Loop"
+parent:  "1. Initialization and Render Loop"
 nav_order: 20
 ---
 

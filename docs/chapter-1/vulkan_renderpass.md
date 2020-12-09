@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Renderpasses
-parent:  "1.. Initialization and Render Loop"
+parent:  "1. Initialization and Render Loop"
 nav_order: 30
 ---
 

@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Building Project
-parent: "0.. Initial Setup"
+parent: "0. Initial Setup"
 nav_order: 2
 ---
 
