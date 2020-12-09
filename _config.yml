@@ -2,7 +2,7 @@
 #baseurl: /vulkan-guide
 url: "//www.vkguide.dev"
 title: Vulkan Guide # site's title
-description: "Brand new guide to vulkan graphics programming" # used by search engines
+description: "Practical guide to vulkan graphics programming" # used by search engines
 
 permalink: pretty
 exclude: ["node_modules/", "*.gemspec", "*.gem", "Gemfile", "Gemfile.lock", "package.json", "package-lock.json",  "script/", "LICENSE.txt", "lib/", "bin/", "README.md", "Rakefile"]
