@@ -225,8 +225,51 @@ Last one is `compactedInstanceBuffer`, this is the one that maps gl_InstanceID i
 
 Uploading buffers is all done from `ready_mesh_draw()` function in `vk_engine_scenerender.cpp`. For each messpass, if the meshpass changed, it uploads the flat arrays into a gpu buffers.
 
+For the `clearIndirectBuffer`, it is filled from the "batches" array in the meshpass, like this.
+
+```cpp
+void RenderScene::fill_indirectArray(GPUIndirectObject* data, MeshPass& pass)
+{	
+	int dataIndex = 0;
+	for (int i = 0; i < pass.batches.size(); i++) {
+
+		auto batch = pass.batches[i];
+
+		data[dataIndex].command.firstInstance = batch.first;
+		//set instance Count to 0 because it will be filled from the compute shader
+		data[dataIndex].command.instanceCount = 0;
+		data[dataIndex].command.firstIndex = get_mesh(batch.meshID)->firstIndex;
+		data[dataIndex].command.vertexOffset = get_mesh(batch.meshID)->firstVertex;
+		data[dataIndex].command.indexCount = get_mesh(batch.meshID)->indexCount;
+		data[dataIndex].objectID = 0;
+		data[dataIndex].batchID = i;
+
+		dataIndex++;
+	}
+}
+```
+
+The instances array will be filled from the flat batches array, copying from the ranges that the batches array holds
+```cpp
+void RenderScene::fill_instancesArray(GPUInstance* data, MeshPass& pass)
+{
+	int dataIndex = 0;
+	for (int i = 0; i < pass.batches.size(); i++) {
+		
+		auto batch = pass.batches[i];
+		
+		for (int b = 0; b < batch.count; b++)
+		{			
+			data[dataIndex].objectID = pass.get(pass.flat_batches[b + batch.first].object)->original.handle;
+			data[dataIndex].batchID = i;
+			dataIndex++;
+		}
+	}
+}
+```
 
 
+When uploading the buffers, it will check if there is enough space already in the buffer, and if the size has grown, it will destroy the old buffer, and allocate a new bigger one.
 
 
 

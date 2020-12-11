@@ -57,7 +57,7 @@ typedef struct VkDrawIndirectCommand {
 
 Its important to know that you dont need to have the data be a packed array of command structs. You can have more things in the buffer, as long as you set the offset and stride correctly. In the engine we store extra data in the buffer.
 
-To create a draw-indirect buffer, it can be on both CPU side and GPU side buffers, and it doesnt really matter that much which one is it if you are doing read-only. In the engine we have the draw-indirect buffer in the gpu because we are writing to it from the culling compute shaders.
+To create a draw-indirect buffer, it can be on both CPU side and GPU side buffers, and it doesnt really matter that much which one it is if you are doing read-only. In the engine we have the draw-indirect buffer in the gpu because we are writing to it from the culling compute shaders.
 
 Here you can see an example of creating a CPU-writeable indirect buffer
 ```cpp
@@ -66,7 +66,7 @@ create_buffer(MAX_COMMANDS * sizeof(VkDrawIndexedIndirectCommand),VK_BUFFER_USAG
 	
 ```
 
-When creating a indirect draw buffer, you need to add `VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT` to the usage flags. The gpu will error otherwise. You can also have them have the transfer and storage buffer usages, as they are very useful to write and read from shaders.
+When creating an indirect draw buffer, you need to add `VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT` to the usage flags. The gpu will error otherwise. You can also have them have the transfer and storage buffer usages, as they are very useful to write and read from shaders.
 
 Executing a draw-indirect call will be equivalent to doing this.
 
@@ -90,7 +90,7 @@ void FakeDrawIndirect(VkCommandBuffer commandBuffer,void* buffer,VkDeviceSize of
 }   
 ```
 
-There is also a very popular extension that makes draw indirect even more powerful known as DrawIndirectCount. Its default in Vulkan 1.2, and works on pretty much all PC hardware. Sadly its not supported in nintendo switch, so the tutorial will not use it.
+There is also a very popular extension that makes draw indirect even more powerful known as DrawIndirectCount. The extension is a default feature in Vulkan 1.2, and works on pretty much all PC hardware. Sadly, its not supported in nintendo switch, so the tutorial will not use it.
 Draw Indirect Count is the same as a normal draw indirect call, but "drawCount" is grabbed from another buffer. This makes it possible to let the GPU decide how many draw indirect commands to draw, which makes it possible to remove culled draws easily so that there is no wasted work.
 
 
@@ -255,12 +255,12 @@ for (IndirectBatch& draw : draws)
 Thats it, now the render loop is indirect and should go a bit faster. But the most important think to take into account here, is that the draw commands buffer can be cached and written/read from compute shaders. If you wanted, you can just write it once at load, and just do the loop of vkCmdDrawIndirect every frame. This is also a design where adding culling is extremelly simple.
 You just do a compute shader that sets instanceCount to 0 if the object is culled, and thats it. But keep in mind such a thing is not very optimal given that empty draw commands still have overhead, so its better to compact them somehow, either by using a design that uses instancing (like what we are doing in the tutorial engine), or by using DrawIndirectCount after removing the empty draws.
 
-There is also something you can see very clearly there. The less combinations of mesh buffer, descriptors, and pipeline you have, the more you can draw on each DrawIndirect execution. This is why generally you want to be as indirect as possible when doing draw indirect. 
+There is also something you can see very clearly there. The less combinations of mesh buffer, descriptors, and pipeline you have, the more you can draw on each DrawIndirect execution. This is why generally you want your draws to to be as bindless as possible when doing draw indirect. 
 
 
 # Draw Indirect architectures
 
-The system explained above is the simplest way you can do draw indirect. It is useful, but generally you want to do a lot more things on top of it. Engines use many different architectures, using draw indirect in many different ways.  Those ways depend on what exactly do you want to do in the engine, and how that maps to draw indirect usage and features. 
+The system explained above is the simplest way you can do draw indirect. It is useful, but generally you want to do a lot more things on top of it. Engines use many different architectures whic use draw indirect in many different ways.  Those ways depend on what exactly do you want to do in the engine, and how that maps to draw indirect usage and features. 
 
 In the tutorial engine, we cant use DrawIndirectCount, which is quite a limitation. Instead, we prefer to do *very* few draw indirect commands, and use instancing instead. In there, we are doing 1 draw indirect instanced. 
 
