@@ -987,10 +987,11 @@ void VulkanEngine::init_swapchain()
 
 
 	
-	VkSamplerCreateInfo createInfo = { VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
+	VkSamplerCreateInfo createInfo = {};
 
 	auto reductionMode = VK_SAMPLER_REDUCTION_MODE_MIN;
 
+	createInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
 	createInfo.magFilter = VK_FILTER_LINEAR;
 	createInfo.minFilter = VK_FILTER_LINEAR;
 	createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
@@ -2062,7 +2063,7 @@ void VulkanEngine::init_descriptors()
 		_frames[i].dynamicDescriptorAllocator->init(_device);
 
 		//1 megabyte of dynamic data buffer
-		auto dynamicDataBuffer = create_buffer(10000000, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+		auto dynamicDataBuffer = create_buffer(1000000, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
 		_frames[i].dynamicData.init(_allocator, dynamicDataBuffer, _gpuProperties.limits.minUniformBufferOffsetAlignment); 
 
 		//20 megabyte of debug output

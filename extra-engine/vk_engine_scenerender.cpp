@@ -39,7 +39,7 @@ void VulkanEngine::execute_compute_cull(VkCommandBuffer cmd, RenderScene::MeshPa
 	VkDescriptorBufferInfo dynamicInfo = get_current_frame().dynamicData.source.get_info();
 	dynamicInfo.range = sizeof(GPUCameraData);
 
-	VkDescriptorBufferInfo instanceInfo = pass.instanceBuffer.get_info();
+	VkDescriptorBufferInfo instanceInfo = pass.passObjectsBuffer.get_info();
 
 	VkDescriptorBufferInfo finalInfo = pass.compactedInstanceBuffer.get_info();
 
@@ -277,9 +277,9 @@ void VulkanEngine::ready_mesh_draw(VkCommandBuffer cmd)
 			reallocate_buffer(pass.compactedInstanceBuffer, pass.flat_batches.size() * sizeof(uint32_t), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
 		}
 
-		if (pass.instanceBuffer._size < pass.flat_batches.size() * sizeof(GPUInstance))
+		if (pass.passObjectsBuffer._size < pass.flat_batches.size() * sizeof(GPUInstance))
 		{
-			reallocate_buffer(pass.instanceBuffer, pass.flat_batches.size() * sizeof(GPUInstance), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+			reallocate_buffer(pass.passObjectsBuffer, pass.flat_batches.size() * sizeof(GPUInstance), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
 		}
 	}
 
@@ -361,9 +361,9 @@ void VulkanEngine::ready_mesh_draw(VkCommandBuffer cmd)
 			indirectCopy.dstOffset = 0;
 			indirectCopy.size = pass.flat_batches.size() * sizeof(GPUInstance);
 			indirectCopy.srcOffset = 0;
-			vkCmdCopyBuffer(cmd, newBuffer._buffer, pass.instanceBuffer._buffer, 1, &indirectCopy);
+			vkCmdCopyBuffer(cmd, newBuffer._buffer, pass.passObjectsBuffer._buffer, 1, &indirectCopy);
 
-			VkBufferMemoryBarrier barrier = vkinit::buffer_barrier(pass.instanceBuffer._buffer, _graphicsQueueFamily);
+			VkBufferMemoryBarrier barrier = vkinit::buffer_barrier(pass.passObjectsBuffer._buffer, _graphicsQueueFamily);
 			barrier.dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_SHADER_READ_BIT;
 			barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 
@@ -412,15 +412,18 @@ void VulkanEngine::draw_objects_forward(VkCommandBuffer cmd, RenderScene::MeshPa
 	_sceneParameters.sunlightColor.w = CVAR_Shadowcast.Get() ? 0 : 1;
 
 	//push data to dynmem
-	
-	uint32_t camera_data_offset = get_current_frame().dynamicData.push(camData);
 	uint32_t scene_data_offset = get_current_frame().dynamicData.push(_sceneParameters);
+
+	uint32_t camera_data_offset = get_current_frame().dynamicData.push(camData);
 	
 
 	VkDescriptorBufferInfo objectBufferInfo = _renderScene.objectDataBuffer.get_info();
 
-	VkDescriptorBufferInfo dynamicInfo = get_current_frame().dynamicData.source.get_info();
-	dynamicInfo.range = sizeof(GPUSceneData);
+	VkDescriptorBufferInfo sceneInfo = get_current_frame().dynamicData.source.get_info();
+	sceneInfo.range = sizeof(GPUSceneData);
+
+	VkDescriptorBufferInfo camInfo = get_current_frame().dynamicData.source.get_info();
+	camInfo.range = sizeof(GPUCameraData);
 
 	VkDescriptorBufferInfo instanceInfo = pass.compactedInstanceBuffer.get_info();
 
@@ -433,8 +436,8 @@ void VulkanEngine::draw_objects_forward(VkCommandBuffer cmd, RenderScene::MeshPa
 
 	VkDescriptorSet GlobalSet;
 	vkutil::DescriptorBuilder::begin(_descriptorLayoutCache, get_current_frame().dynamicDescriptorAllocator)
-		.bind_buffer(0, &dynamicInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_VERTEX_BIT)
-		.bind_buffer(1, &dynamicInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_VERTEX_BIT| VK_SHADER_STAGE_FRAGMENT_BIT)
+		.bind_buffer(0, &camInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_VERTEX_BIT)
+		.bind_buffer(1, &sceneInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_VERTEX_BIT| VK_SHADER_STAGE_FRAGMENT_BIT)
 		.bind_image(2, &shadowImage, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
 		.build(GlobalSet);
 
@@ -554,15 +557,15 @@ void VulkanEngine::draw_objects_shadow(VkCommandBuffer cmd, RenderScene::MeshPas
 
 	VkDescriptorBufferInfo objectBufferInfo = _renderScene.objectDataBuffer.get_info();
 
-	VkDescriptorBufferInfo dynamicInfo = get_current_frame().dynamicData.source.get_info();
-	dynamicInfo.range = sizeof(GPUSceneData);	
+	VkDescriptorBufferInfo camInfo = get_current_frame().dynamicData.source.get_info();
+	camInfo.range = sizeof(GPUCameraData);
 
 	VkDescriptorBufferInfo instanceInfo = pass.compactedInstanceBuffer.get_info();
 
 
 	VkDescriptorSet GlobalSet;
 	vkutil::DescriptorBuilder::begin(_descriptorLayoutCache, get_current_frame().dynamicDescriptorAllocator)
-		.bind_buffer(0, &dynamicInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_VERTEX_BIT)
+		.bind_buffer(0, &camInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_VERTEX_BIT)
 		.build(GlobalSet);
 
 	VkDescriptorSet ObjectDataSet;
@@ -629,7 +632,6 @@ void VulkanEngine::reduce_depth(VkCommandBuffer cmd)
 			.build(depthSet);
 
 		vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, _depthReduceLayout, 0, 1, &depthSet, 0, nullptr);
-
 
 		uint32_t levelWidth = depthPyramidWidth >> i;
 		uint32_t levelHeight = depthPyramidHeight >> i;

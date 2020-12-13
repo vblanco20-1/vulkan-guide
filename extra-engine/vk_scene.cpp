@@ -294,8 +294,7 @@ void RenderScene::refresh_pass(MeshPass* pass)
 				if (A.sortKey < B.sortKey) { return true; }
 				else if (A.sortKey == B.sortKey) { return A.object.handle < B.object.handle; }
 				else { return false; }
-				
-				});
+			});
 		}
 		{
 			ZoneScopedNC("removal", tracy::Color::Blue1);

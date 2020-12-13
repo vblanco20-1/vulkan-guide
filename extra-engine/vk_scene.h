@@ -81,6 +81,7 @@ public:
 		PassMaterial material;
 		Handle<DrawMesh> meshID;
 		Handle<RenderObject> original;
+		int32_t builtbatch;
 		uint32_t customKey;
 	};
 	struct RenderBatch {
@@ -121,11 +122,9 @@ public:
 
 		
 		AllocatedBuffer<uint32_t> compactedInstanceBuffer;
+		AllocatedBuffer<GPUInstance> passObjectsBuffer;
 
 		AllocatedBuffer<GPUIndirectObject> drawIndirectBuffer;
-
-		AllocatedBuffer<GPUInstance> instanceBuffer;
-
 		AllocatedBuffer<GPUIndirectObject> clearIndirectBuffer;
 
 		PassObject* get(Handle<PassObject> handle);
