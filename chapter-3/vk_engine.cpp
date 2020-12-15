@@ -97,7 +97,7 @@ void VulkanEngine::draw()
 
 	//request image from the swapchain
 	uint32_t swapchainImageIndex;
-	VK_CHECK(vkAcquireNextImageKHR(_device, _swapchain, 0, _presentSemaphore, nullptr, &swapchainImageIndex));
+	VK_CHECK(vkAcquireNextImageKHR(_device, _swapchain, 1000000000, _presentSemaphore, nullptr, &swapchainImageIndex));
 
 	//naming it cmd for shorter writing
 	VkCommandBuffer cmd = _mainCommandBuffer;
