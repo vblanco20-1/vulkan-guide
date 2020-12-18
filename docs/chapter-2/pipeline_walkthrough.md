@@ -119,7 +119,7 @@ VkPipelineRasterizationStateCreateInfo vkinit::rasterization_state_create_info(V
 		info.pNext = nullptr;
 
 		info.depthClampEnable = VK_FALSE;
-		//rasterizer discard allows objects with holes, default to no
+		//discards all primitives before the rasterization stage if enabled which we don't want
 		info.rasterizerDiscardEnable = VK_FALSE;
 
 		info.polygonMode = polygonMode;
