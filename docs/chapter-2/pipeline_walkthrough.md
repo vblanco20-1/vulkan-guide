@@ -141,7 +141,7 @@ We are just going to leave polygonMode as editable input, to be able to toggle b
 
 cullMode is used to cull backfaces or frontpages, but in here we are going to leave it with no cull by default. We are also not using any depth bias here, so we are going to set all of that to 0.
 
-An important one is `rasterizerDiscardEnable`, which controls if its possible to do discard pixels from the shader. If we have objects that have alpha-test, we need to set this to true, but we are going to leave it as disabled by default as its better for performance.
+If `rasterizerDiscardEnable` is enabled, primitives (triangles in our case) are discarded before even making it to the rasterization stage which means the triangles would never get drawn to the screen. You might enable this, for example, if you're only interested in the side effects of the vertex processing stages, such as writing to a buffer which you later read from. But in our case we're interested in drawing the triangle, so we leave it disabled.
 
 ### Multisampling State
 `VkPipelineMultisampleStateCreateInfo` allows us to configure MSAA for this pipeline. We are not going to use MSAA on the entire tutorial, so we are going to default it to 1 sample and MSAA disabled.
