@@ -87,7 +87,7 @@ VkPipelineVertexInputStateCreateInfo vkinit::vertex_input_state_create_info() {
 ```
 
 ### Input Assembly
-`VkPipelineInputAssemblyStateCreateInfo` contains the configuration for what kind of topoly will be drawn. This is where you set it to draw triangles, lines,points, or others like triangle-list.
+`VkPipelineInputAssemblyStateCreateInfo` contains the configuration for what kind of topology will be drawn. This is where you set it to draw triangles, lines, points, or others like triangle-list.
 
 ```cpp
 VkPipelineInputAssemblyStateCreateInfo vkinit::input_assembly_create_info(VkPrimitiveTopology topology) {
