@@ -64,7 +64,7 @@ void VulkanEngine::init_default_renderpass()
 	// the renderpass will use this color attachment.
 	VkAttachmentDescription color_attachment = {};
 	//the attachment will have the format needed by the swapchain
-	color_attachment.format = _swachainImageFormat;
+	color_attachment.format = _swapchainImageFormat;
 	//1 sample, we wont be doing MSAA
 	color_attachment.samples = VK_SAMPLE_COUNT_1_BIT;
 	// we Clear when this attachment is loaded
