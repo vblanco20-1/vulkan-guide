@@ -132,7 +132,7 @@ In cpp, the file operations are done on streams, and it has a cursor that we wil
 //because the cursor is at the end, it gives the size directly in bytes
 size_t fileSize = (size_t)file.tellg();
 
-//spirv expects the buffer to be on uint32, so make sure to reserve a int vector big enough for the entire file
+//spirv expects the buffer to be on uint32, so make sure to reserve an int vector big enough for the entire file
 std::vector<uint32_t> buffer(fileSize / sizeof(uint32_t));
 
 //put file cursor at beggining
@@ -170,7 +170,7 @@ return true;
 
 ```
 
-It's very common to have errors in the shader that will give a fail on vkCreateShaderModule, so we will not use the VK_Check macro here. 
+It's very common to have errors in the shader that will give a fail on vkCreateShaderModule, so we will not use the VK_CHECK macro here. 
 
 Creating a VkShaderModule is very straightforward, we just need to fill the create info with the typical Vulkan sType and pnext boilerplate, and then set the code pointer to the vector where we are storing the file. 
 Then we just call the function with it to get the result.

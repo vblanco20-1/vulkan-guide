@@ -13,7 +13,7 @@ The VkPipeline is a *huge* object in Vulkan that encompasses the configuration o
 
 Once a pipeline is built, it can be bound inside a command buffer, and then when you draw anything it will use the bound pipeline.
 
-Vulkan pipelines are a massive object with many different configuration structs, some of them even running pointers and being arrays. For this reason, we are going to create a class speficially for building pipelines, that will simplify the process.
+Vulkan pipelines are a massive object with many different configuration structs, some of them even running pointers and being arrays. For this reason, we are going to create a class specifically for building pipelines, that will simplify the process.
 
 Over the tutorial, we are going to create more pipelines, so having a relatively easy way to create pipelines will be of great use.
 
@@ -139,7 +139,7 @@ VkPipelineRasterizationStateCreateInfo vkinit::rasterization_state_create_info(V
 
 We are just going to leave polygonMode as editable input, to be able to toggle between wireframe and solid drawing.
 
-cullMode is used to cull backfaces or frontpages, but in here we are going to leave it with no cull by default. We are also not using any depth bias here, so we are going to set all of that to 0.
+cullMode is used to cull backfaces or frontfaces, but in here we are going to leave it with no cull by default. We are also not using any depth bias here, so we are going to set all of that to 0.
 
 If `rasterizerDiscardEnable` is enabled, primitives (triangles in our case) are discarded before even making it to the rasterization stage which means the triangles would never get drawn to the screen. You might enable this, for example, if you're only interested in the side effects of the vertex processing stages, such as writing to a buffer which you later read from. But in our case we're interested in drawing the triangle, so we leave it disabled.
 
@@ -378,7 +378,7 @@ void VulkanEngine::init_pipelines()
 
 We have finally created the pipeline we needed to draw the triangle, so we can finally do it.
 
-Let's go to our main `draw()` function, and execute the draw
+Let's go to our main `draw()` function, and execute the draw.
 
 We need to add the draw commands between VkCmdBeginRenderPass and vkCmdEndRenderPass
 ```cpp

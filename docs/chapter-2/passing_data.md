@@ -11,7 +11,7 @@ To do that, we are going to need to pass more data from the vertex shader to the
 
 All shader stages can pass data between them by using input and output variables. If in the vertex shader we create an output variable, we will be able to read it on the fragment shader as an input variable.
 
-A very important detail, is that when compiling a pipeline which uses this sort of input and output variables, they allways have to match. If there is a mismatch, the pipeline compilation will fail.
+A very important detail, is that when compiling a pipeline which uses this sort of input and output variables, they always have to match. If there is a mismatch, the pipeline compilation will fail.
 
 To create an output variable, we do this on the vertex shader.
 
@@ -32,7 +32,7 @@ The names of the variables do not need to match. On the vertex shader we are cal
 We can output most default types from the vertex shader into the fragment shader, but be careful with it, as the more data you need to pass between stages, the more overhead you will have. Old GPUs even have a very small number of how many variables can be passed.
 
 
-Now that we know how to pass data from vertex shader into fragment shader, let's use it to create a colorful triangle.
+Now that we know how to pass data from the vertex shader into the fragment shader, let's use it to create a colorful triangle.
 
 
 ## Vertex Shader
