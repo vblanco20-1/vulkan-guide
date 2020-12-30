@@ -47,7 +47,7 @@ This tutorial will be focused on writing Vulkan for Desktop, however we will cov
 
 ## Validation layers
 
-The vulkan API is vast and as a result it is easy to make mistakes, but this is where Validation Layers comes to the rescue.
+The Vulkan API is vast and as a result it is easy to make mistakes, but this is where Validation Layers comes to the rescue.
 
 Validation Layers is an optional feature in Vulkan that detects and reports incorrect usage of the API.
 
@@ -62,7 +62,7 @@ It is important to note that the Validation Layers does not catch bugs like unin
 In the Vulkan API, almost everything is designed around objects that you create manually and then use. This is not only for the actual GPU resources such as Images/Textures and Buffers (for memory or things like Vertex data) but also for a lot of "internal" configuration structures.
 
 For example, things like GPU fixed function, like rasterizer mode, are stored into a Pipeline object which holds shaders and other configuration. In Opengl and DX11, this is calculated "on the fly" while rendering.
-When you use Vulkan, you need to think if its worth to cache these objects, or create them while rendering on-the-fly. Some objects like Pipelines are expensive to create, so its best to create them on load screens or background threads. Other objects are cheaper to create, such as DescriptorSets and its fine to create them when you need them during rendering.
+When you use Vulkan, you need to think if it's worth to cache these objects, or create them while rendering on-the-fly. Some objects like Pipelines are expensive to create, so it's best to create them on load screens or background threads. Other objects are cheaper to create, such as DescriptorSets and it's fine to create them when you need them during rendering.
 
 Because everything in Vulkan is "pre-built" by default, it means that most of the state validation in the GPU will be done when you create the object, and the rendering itself does less work and is faster. Good understanding of how these objects are created and used will allow you to control how everything executes in a way that will make the framerate smooth.
 
