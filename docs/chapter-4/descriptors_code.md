@@ -5,7 +5,7 @@ parent:  "4. Buffers, Shader input/output"
 nav_order: 12
 ---
 
-Now that descriptor sets are explained, lets look at using them in practise in a minimal example. We are going to modify the codebase and shaders, so that instead of sending the final transform matrix of the object through push constant, multiplying it in the CPU, we read the camera matrix on the shader and multiply it by the object matrix, with the multiplication being done in the shader.
+Now that descriptor sets are explained, let's look at using them in practise in a minimal example. We are going to modify the codebase and shaders, so that instead of sending the final transform matrix of the object through push constant, multiplying it in the CPU, we read the camera matrix on the shader and multiply it by the object matrix, with the multiplication being done in the shader.
 To get that to work, we are going to need to create a uniform buffer for our camera matrices, and expose that to the shader using a single descriptor set.
 
 ## Setting up camera buffers
@@ -143,7 +143,7 @@ void main()
 ```
 
 The new block is the CameraBuffer uniform declaration. In there, you can see that it follows the same syntax as the push constant block, but with a different `layout()`.
-By having `set = 0` and `binding = 0`, we are declaring that the CameraBuffer uniform will be grabbed from the descriptor set bound at slot 0, and its binding 0 within that descriptor set.
+By having `set = 0` and `binding = 0`, we are declaring that the CameraBuffer uniform will be grabbed from the descriptor set bound at slot 0, and it's binding 0 within that descriptor set.
 
 In the core of the vertex shader, we multiply the render matrix from the push-constant with the viewproj matrix on the CameraBuffer. This will get the final transformation matrix, and then we can multiply vertex position by it.
 
@@ -172,7 +172,7 @@ void VulkanEngine::init_descriptors()
 	VkDescriptorSetLayoutBinding camBufferBinding = {};
 	camBufferBinding.binding=  0;
 	camBufferBinding.descriptorCount = 1;
-	// its a uniform buffer binding
+	// it's a uniform buffer binding
 	camBufferBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER; 
 
 	// we use it from the vertex shader
@@ -196,7 +196,7 @@ void VulkanEngine::init_descriptors()
 }
 ```
 
-To create a descriptor set layout, we need another CreateInfo struct. The create-info will point into an array of `VkDescriptorSetLayoutBinding` structs. Each of those structs will contain information about the descriptor itself. In this case, we have only a single binding, which is binding 0, and its a Uniform Buffer.
+To create a descriptor set layout, we need another CreateInfo struct. The create-info will point into an array of `VkDescriptorSetLayoutBinding` structs. Each of those structs will contain information about the descriptor itself. In this case, we have only a single binding, which is binding 0, and it's a Uniform Buffer.
 
 We now have the descriptor set layout for our descriptor created, so we need to hook it to the pipeline creation. When you create a pipeline, you also need to let the pipeline know what descriptors will be bound to it.
 
@@ -248,7 +248,7 @@ void VulkanEngine::init_descriptors()
 }
 ```
 
-In this case, we know exactly what we will need to allocate from the pool, which is descriptor sets that point to uniform buffers. When creating a descriptor pool, you need to speficy how many descriptors of each type you will need, and whats the maximum number of sets to allocate from it. For now, we are going to reserve 10 uniform buffer pointers/handles, and a maximum of 10 descriptor sets allocated from the pool.
+In this case, we know exactly what we will need to allocate from the pool, which is descriptor sets that point to uniform buffers. When creating a descriptor pool, you need to speficy how many descriptors of each type you will need, and what's the maximum number of sets to allocate from it. For now, we are going to reserve 10 uniform buffer pointers/handles, and a maximum of 10 descriptor sets allocated from the pool.
 
 We can now allocate the descriptors from it. For it, continue on the `init_descriptors()` function, inside the FRAME_OVERLAP loop.
 
@@ -327,7 +327,7 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd,RenderObject* first, int cou
 	glm::mat4 projection = glm::perspective(glm::radians(70.f), 1700.f / 900.f, 0.1f, 200.0f);
 	projection[1][1] *= -1;
 
-	//fill a gpu camera data struct
+	//fill a GPU camera data struct
 	GPUCameraData camData;
 	camData.proj = projection;
 	camData.view = view;
@@ -367,7 +367,7 @@ Last thing is to modify the push constants code, to make it not multiply the mat
 MeshPushConstants constants;
 constants.render_matrix = object.transformMatrix;
 
-//upload the mesh to the gpu via pushconstants
+//upload the mesh to the GPU via pushconstants
 vkCmdPushConstants(cmd, object.material->pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(MeshPushConstants), &constants);
 ```
 

@@ -14,7 +14,7 @@ We are going to use them to remove the usage of push-constants for the object ma
 This also will mean that we will hold all the object matrices into one array, which can be used for interesting things in compute shaders.
 
 ## Creating the Shader Storage Buffer
-We are continuing on the `init_descriptors()` function, as its where we initialize all the buffers for shader parameters.
+We are continuing on the `init_descriptors()` function, as it's where we initialize all the buffers for shader parameters.
 In there, we are going to initialize one big storage buffer per frame, to hold the data for the objects. This is because we want the objects to still be dynamic. If we had fully static objects, we wouldn't need one buffer per frame, and one total would be enough.
 
 ```cpp
@@ -41,7 +41,7 @@ void VulkanEngine::init_descriptors()
 }
 ```
 Shader Storage buffers are created in the same way as uniform buffers. They also work in mostly the same way, they just have different properties like increased maximum size, and being writeable in shaders.
-We are going to reserve an array of 10000 ObjectDatas per frame. This means that we can hold up to 10000 object matrices, rendering 10000 objects per frame. Its a small number, but at the moment its not a problem. Unreal Engine grows their object buffer as needed when the engine loads more objects, but we don't have any growable buffer abstraction so we reserve upfront.
+We are going to reserve an array of 10000 ObjectDatas per frame. This means that we can hold up to 10000 object matrices, rendering 10000 objects per frame. Its a small number, but at the moment it's not a problem. Unreal Engine grows their object buffer as needed when the engine loads more objects, but we don't have any growable buffer abstraction so we reserve upfront.
 While the size here is 1000, you can increase it to whatever you want. The maximum sizes for storage buffers are quite big, in most GPUs they can be as big as the VRAM can fit, so you can do this with 100 million matrices if you want.
 
 We will now need to add it to the descriptor sets.
@@ -140,7 +140,7 @@ We need another DescriptorBufferInfo, and another WriteDescriptorSet
 Note how in here, we are using 1 `vkUpdateDescriptorSets()` call to update 2 different descriptor sets. This is completely valid to do.
 Now that the buffer is initialized and has descriptors that point to it, we need to add it to the shader.
 
-We are going to modify the `tri_mesh.vert` shader, to read the object data from SSBO instead than from the push constant. We will still keep the push constant, but it wont be used.
+We are going to modify the `tri_mesh.vert` shader, to read the object data from SSBO instead than from the push constant. We will still keep the push constant, but it won't be used.
 
 ```glsl
 #version 460
@@ -192,7 +192,7 @@ layout(std140,set = 1, binding = 0) readonly buffer ObjectBuffer{
 } objectBuffer;
 ```
 We need the std140 layout description to make the array match how arrays work in cpp. That std140 enforces some rules about how the memory is laid out, and what is its alignment.
-The set is now 1, and binding is 0, referencing that its a new descriptor set slot.
+The set is now 1, and binding is 0, referencing that it's a new descriptor set slot.
 
 We are also using `readonly buffer` instead of `uniform` when declaring it. Shader Storage buffers can be read or written to, so we need to let Vulkan know. THey are also defined with `buffer` instead of `uniform`.
 

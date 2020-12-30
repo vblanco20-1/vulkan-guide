@@ -11,7 +11,7 @@ It is possible to make the CPU render ahead more frames, which can be useful if 
 
 ## Object lifetime
 Most Vulkan objects are used while the GPU is performing its rendering work, so it is not possible to modify or delete them while they are in use.
-An example of this is command buffers. Once you submit a command buffer into a queue, that buffer cant be reset or modified until the GPU has finished executing its commands.
+An example of this is command buffers. Once you submit a command buffer into a queue, that buffer can't be reset or modified until the GPU has finished executing its commands.
 You can control this using Fences. If you submit a command buffer that will signal a fence, and then you wait until that fence is signaled, you can be sure that the command buffer can now be reused or modified. Its the same for the other objects related used in those commands.
 
 
@@ -89,7 +89,7 @@ void VulkanEngine::init_commands()
 }
 ```
 
-Note that we are creating 2 separated command pools. This is not strictly necessary right now, but its much more necessary if you create multiple command buffers per frame and want to delete them at once. (Resetting a command pool will reset all the command buffers created from it)
+Note that we are creating 2 separated command pools. This is not strictly necessary right now, but it's much more necessary if you create multiple command buffers per frame and want to delete them at once. (Resetting a command pool will reset all the command buffers created from it)
 
 In the `init_sync_structures()` function, we also create a set of semaphores and fences for each frame
 
@@ -131,7 +131,7 @@ In the `draw()` function, change every instance of _renderFence usage with `get_
 
 Example:
 ```cpp
-    //wait until the gpu has finished rendering the last frame. Timeout of 1 second
+    //wait until the GPU has finished rendering the last frame. Timeout of 1 second
 	VK_CHECK(vkWaitForFences(_device, 1, &get_current_frame()._renderFence, true, 1000000000));
 	VK_CHECK(vkResetFences(_device, 1, &get_current_frame()._renderFence));
 
