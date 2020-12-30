@@ -18,9 +18,9 @@ If you want a direct download to the code without using GIT just download from t
 
 You will need Visual Studio to build the project. The code in the project should work cross-platform, but this guide is windows-centric.
 
-First, install the Vulkan SDK <https://vulkan.lunarg.com/sdk/home>. This will contain the development headers and libraries needed to create vulkan applications. It is put in a global location, so you don't need to worry about where it gets installed.
+First, install the Vulkan SDK <https://vulkan.lunarg.com/sdk/home>. This will contain the development headers and libraries needed to create Vulkan applications. It is put in a global location, so you don't need to worry about where it gets installed.
 
-Then grab CMake, as its the build system we are going to use. <https://cmake.org/>.
+Then grab CMake, as it's the build system we are going to use. <https://cmake.org/>.
 
 Once CMake is installed, use CMake-gui to open the project root CMakeLists. Press the Configure button.
 At this point, it should give you an error about missing SDL 2.
