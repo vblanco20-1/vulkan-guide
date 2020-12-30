@@ -72,7 +72,7 @@ bool Mesh::load_from_obj(const char* filename)
 }
 ```
 We access the texcoords array in a similar way as we do with the other parameters. 
-Now the obj load code will load texture coordinates. Its very important to do the 1-y on the uv.y because Vulkan UV coordinates work like that.
+Now the obj load code will load texture coordinates. It's very important to do the 1-y on the uv.y because Vulkan UV coordinates work like that.
 
 Before we start changing the descriptors and descriptor layouts to point to the texture, we are going to create new shaders for the textured-lit shaders.
 We begin by modifying the `tri_mesh.vert` shader so that it passes the UV coordinates from the attributes to the pixel shader
@@ -366,7 +366,7 @@ Now we can use it on `init_scene`.
 
 We need to create a sampler first. For that sampler we will use `VK_FILTER_NEAREST`. That will make the texture look blocky, which is exactly what we want.
 
-For the descriptor allocation, its the same as we were doing in `init_descriptors()` with the others.
+For the descriptor allocation, it's the same as we were doing in `init_descriptors()` with the others.
 
 To write the image descriptor, we need to fill a `VkDescriptorImageInfo` with the `VkImageView` to use, the `VkSampler` to use, and the texture layout.
 

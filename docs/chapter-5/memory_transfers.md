@@ -6,7 +6,7 @@ nav_order: 11
 ---
 
 Before we go to implement textures, there is something we need to prepare first.
-Right now, we are implementing vertex buffers by storing them in CPU_TO_GPU memory type. This is doable, but its not the recommended way of dealing with mesh data.
+Right now, we are implementing vertex buffers by storing them in CPU_TO_GPU memory type. This is doable, but it's not the recommended way of dealing with mesh data.
 For vertex buffers, you want to have them accessible in the fastest memory type possible, which is GPU_ONLY memory type. The problem is that you cant write to it directly from the CPU.
 
 To send data into GPU only memory, you need to first copy your data into a CPU writeable buffer, encode a copy command in a `VkCommandBuffer`, and then submit that command buffer to a queue. This will enqueue the transfer of the memory from your CPU writeable buffer into another buffer, which can be a GPU allocated buffer.
@@ -17,7 +17,7 @@ This will likely cause an immediate rendering speed-up if you have been trying t
 ## Upload Context
 As copying meshes from CPU buffer to GPU buffer wont be the only thing we are going to do, we are going to create a small abstraction for this sort of short-lived commands. 
 
-Lets begin by adding a new struct to VulkanEngine, and a function for immediate command execution.
+Let's begin by adding a new struct to VulkanEngine, and a function for immediate command execution.
 
 ```cpp
 struct UploadContext {
@@ -68,7 +68,7 @@ The other thing is the command pool, which we create in `init_commands`
 
 Right now we are creating the pool using the graphics queue family. This is because we will submit the commands to the same queue as the graphics one.
 
-Now that the structure is initialized, lets write the code for the `immediate_submit` function
+Now that the structure is initialized, let's write the code for the `immediate_submit` function
 
 ```cpp
 
@@ -107,7 +107,7 @@ void VulkanEngine::immediate_submit(std::function<void(VkCommandBuffer cmd)>&& f
 
 This is very similar to the logic that we do in the render loop, but with some key differences.
 The most important one is that we aren't reusing the same command buffer from frame to frame. Instead, we are allocating it from the pool, and then resetting the pool.
-This is done because eventually we will want to be able to upload multiple command buffers per submit, so resetting the entire pool will work well. It also shows that its perfectly fine to allocate and then free the pool every time.
+This is done because eventually we will want to be able to upload multiple command buffers per submit, so resetting the entire pool will work well. It also shows that it's perfectly fine to allocate and then free the pool every time.
 
 We first allocate command buffer, we then call the function between begin/end command buffer, and then we submit it. Then we wait for the submit to be finished, and reset the command pool.
 
@@ -172,7 +172,7 @@ With the vertex buffer now in a Vulkan CPU side buffer, we need to create the ac
 	//this buffer is going to be used as a Vertex Buffer
 	vertexBufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
-	//let the VMA library know that this data should be gpu native	
+	//let the VMA library know that this data should be GPU native	
 	vmaallocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
 
 	//allocate the buffer
@@ -214,7 +214,7 @@ Try to run the engine now, everything should work completely fine.
 
 With this new mesh loading code, you will have great performance even uploading meshes that are tens of millions of triangles.
 
-All the logic for copying data is done for meshes, so its time to continue with textures.
+All the logic for copying data is done for meshes, so it's time to continue with textures.
 
 
 
