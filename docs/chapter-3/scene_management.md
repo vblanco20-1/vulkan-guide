@@ -17,7 +17,7 @@ A Material will just be a Pipeline pointer + PipelineLayout, for now.
 vk_engine.h
 ```cpp
 //note that we store the VkPipeline and layout by value, not pointer. 
-//They are 64 bit handles  to internal driver structures anyway so storing pointer to them isnt very useful
+//They are 64 bit handles to internal driver structures anyway so storing pointers to them isn't very useful
 
 
 struct Material {
@@ -255,7 +255,7 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd,RenderObject* first, int cou
 }
 ```
 We first calculate the matrices for the camera itself. Then we iterate each object in the renderables array, and render each of them in order. The loop right now is a simple one with no sorting, but there isnt much need for sorting when the objects in the renderables array are already sorted. You can sort the renderables array by pipeline pointer if you want.
-Note how we are checking lastMesh and lastMaterial in the BindVertexBuffers and BindPipeline calls. There is no need to rebind the same vertex buffer over and over beetween draws, and the pipeline is the same, but we are pushing the constants on every single call. 
+Note how we are checking lastMesh and lastMaterial in the BindVertexBuffers and BindPipeline calls. There is no need to rebind the same vertex buffer over and over between draws, and the pipeline is the same, but we are pushing the constants on every single call. 
 The loop here is a lot higher performance that you would think. This simple loop will render thousands and thousands of objects with no issue. Binding pipeline is a expensive call, but drawing the same object over and over with different pushconstants is very fast. 
 
 Last thing is to replace the old code in the `draw()` function with calling this function. It should end up like this.
@@ -263,7 +263,7 @@ Last thing is to replace the old code in the `draw()` function with calling this
 ```cpp
 	vkCmdBeginRenderPass(cmd, &rpInfo, VK_SUBPASS_CONTENTS_INLINE);
 	
-	draw_objects(cmd,_renderables.data(), _renderables.size());
+	draw_objects(cmd, _renderables.data(), _renderables.size());
 
 	//finalize the render pass
 	vkCmdEndRenderPass(cmd);

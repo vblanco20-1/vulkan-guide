@@ -91,10 +91,10 @@ Array layers is for layered textures. You can create textures that are many-in-o
 
 Samples controls the MSAA behavior of the texture. This only makes sense for render targets, such as depth images and images you are rendering to. We won't be doing MSAA in this tutorial, so samples will be kept at 1 sample for the entire guide.
 
-Tiling is very important. Tiling describes how  is the data for the texture arranged in the GPU. For improved performance, GPUs do not store images as 2d arrays of pixels, but instead use complex custom formats, unique to the GPU brand and even models. `VK_IMAGE_TILING_OPTIMAL` tells vulkan to use let the driver decide how the GPU arranges the memory of the image.
+Tiling is very important. Tiling describes how the data for the texture is arranged in the GPU. For improved performance, GPUs do not store images as 2d arrays of pixels, but instead use complex custom formats, unique to the GPU brand and even models. `VK_IMAGE_TILING_OPTIMAL` tells vulkan to let the driver decide how the GPU arranges the memory of the image.
 If you use `VK_IMAGE_TILING_OPTIMAL`, it won't be possible to read the data from CPU or to write it without changing its tiling first (it's possible to change the tiling of a texture at any point, but this can be a costly operation). The other tiling we can care about is `VK_IMAGE_TILING_LINEAR`, which will store the image as a 2d array of pixels. While LINEAR tiling will be a lot slower, it will allow the cpu to safely write and read from that memory.
 
-Last thing is usage flags. In a similar way to the buffers, images need the usage flags to be set properly. It is very important that the usage flags are set correctly, and you only set the flags you are going to need, because this will control how does the GPU handle the image memory. 
+Last thing is usage flags. In a similar way to the buffers, images need the usage flags to be set properly. It is very important that the usage flags are set correctly, and you only set the flags you are going to need, because this will control how the GPU handles the image memory. 
 
 Next is the image-view
 
@@ -149,7 +149,7 @@ void VulkanEngine::init_swapchain()
 	//hardcoding the depth format to 32 bit float
 	_depthFormat = VK_FORMAT_D32_SFLOAT;
 
-	//the depth image will be a image with the format we selected and Depth Attachment usage flag
+	//the depth image will be an image with the format we selected and Depth Attachment usage flag
 	VkImageCreateInfo dimg_info = vkinit::image_create_info(_depthFormat, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, depthImageExtent);
 
 	//for the depth image, we want to allocate it from GPU local memory
@@ -160,8 +160,8 @@ void VulkanEngine::init_swapchain()
 	//allocate and create the image
 	vmaCreateImage(_allocator, &dimg_info, &dimg_allocinfo, &_depthImage._image, &_depthImage._allocation, nullptr);
 
-	//build a image-view for the depth image to use for rendering
-	VkImageViewCreateInfo dview_info = vkinit::imageview_create_info(_depthFormat, _depthImage._image, VK_IMAGE_ASPECT_DEPTH_BIT);;
+	//build an image-view for the depth image to use for rendering
+	VkImageViewCreateInfo dview_info = vkinit::imageview_create_info(_depthFormat, _depthImage._image, VK_IMAGE_ASPECT_DEPTH_BIT);
 
 	VK_CHECK(vkCreateImageView(_device, &dview_info, nullptr, &_depthImageView));
 
@@ -179,7 +179,7 @@ For the image itself, we are going to create it using the depth format, with VK_
 VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT lets the vulkan driver know that this will be a depth image used for z-testing.
 
 To allocate the image, we are using VMA in almost the same way as the vertex buffers before. But this time we use `VMA_MEMORY_USAGE_GPU_ONLY` to make sure that the image is allocated on fast VRAM.
-This is critical for something like a image we are rendering to. Rendering into an image stored in cpu ram might not even be doable. To make absolutely sure that VMA really allocates the image into VRAM, we give it `VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT` on required flags. This forces VMA library to allocate the image on VRAM no matter what. (The Memory Usage part is more like a hint)
+This is critical for something like an image we are rendering to. Rendering into an image stored in cpu ram might not even be doable. To make absolutely sure that VMA really allocates the image into VRAM, we give it `VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT` on required flags. This forces VMA library to allocate the image on VRAM no matter what. (The Memory Usage part is more like a hint)
 
 We create the image using vmaCreateImage, same as vmaCreatebuffer we did before.
 
@@ -224,7 +224,7 @@ Both the depth attachment and its reference are copypaste of the color one, as i
 `depth_attachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;` In the same way that color attachment layout was at COLOR_ATTACHMENT_OPTIMAL, we set the set the final layout to DEPTH_STENCIL_ATTACHMENT_OPTIONAL because this is a depth stencil attachment, not a color one.
 Same thing with the layout on the depth attachment reference
 
-We need to hoook this attachment to the subpass, so change it to this
+We need to hook this attachment to the subpass, so change it to this
 ```cpp
 //we are going to create 1 subpass, which is the minimum you can do
 	VkSubpassDescription subpass = {};
@@ -251,7 +251,7 @@ Last thing we need is to add the depth attachment to the attachment list in the 
 	render_pass_info.pSubpasses = &subpass;
 ```
 
-Instead of storing the color attachment only in pAttachments, we add depth attachment there too.
+Instead of storing only the color attachment in pAttachments, we add the depth attachment there too.
 
 With that, the renderpass now supports depth attachments. Now we need to modify our framebuffers so that they point to the depth image.
 
@@ -299,12 +299,12 @@ VkPipelineDepthStencilStateCreateInfo vkinit::depth_stencil_create_info(bool bDe
 Depth stencil create info is a bit more complicated that other initializers, we are abstracting things a little bit.
 
 depthTestEnable holds if we should do any z-culling at all. Set to `VK_FALSE` to draw on top of everything, and `VK_TRUE` to not draw on top of other objects.
-depthWriteEnable allows the depth to be written. While DepthTest and DepthWrite will both be true most of the time, there are cases where you might want to do depth write, but without doing depthtesting, It's sometimes used for some special effects.
+depthWriteEnable allows the depth to be written. While DepthTest and DepthWrite will both be true most of the time, there are cases where you might want to do depth write, but without doing depthtesting. It's sometimes used for some special effects.
 
-the depthCompareOp holds the depth-testing function. Set to `VK_COMPARE_OP_ALLWAYS` to not do any depthtest at all. Other common depth compare OPs are `VK_COMPARE_OP_LESS` (Only draw if Z < whatever is on the depth buffer), or `VK_COMPARE_OP_EQUAL` (only draw if the depth z matches) 
+The depthCompareOp holds the depth-testing function. Set to `VK_COMPARE_OP_ALLWAYS` to not do any depthtest at all. Other common depth compare OPs are `VK_COMPARE_OP_LESS` (Only draw if Z < whatever is on the depth buffer), or `VK_COMPARE_OP_EQUAL` (only draw if the depth z matches) 
 
 min and max depth bounds lets us cap the depth test. If the depth is outside of bounds, the pixel will be skipped.
-And last, we won't be using stencil test, so thats set to VK_False by default
+And last, we won't be using stencil test, so thats set to VK_FALSE by default.
 
 Now we go back to the PipelineBuilder, and we add the depth state to it.
 

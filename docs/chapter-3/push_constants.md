@@ -8,7 +8,7 @@ nav_order: 12
 
 ## Push Constants
 We can render arbitrary meshes now, but there is not a lot we can do with them. We still don't know how to send data from the CPU to shaders outside of vertex buffers.
-While the next chapter will explain the various methods into detail, there is a simple method we can start using immediately: push constants.
+While the next chapter will explain the various methods in detail, there is a simple method we can start using immediately: push constants.
 
 Push constants let us send a small amount of data (it has a limited size) to the shader, in a very simple and performant way. Push constants can send data to any shader stage (both vertex and fragment shaders), and are stored in the command buffer itself.
 

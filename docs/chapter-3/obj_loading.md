@@ -8,7 +8,7 @@ nav_order: 13
 
 ## Loading 3d models
 
-Rendering triangles and parametric meshes is nice, but a engine loads 3d models made in dedicated programs. For that, we are going to implement basic OBJ format loading.
+Rendering triangles and parametric meshes is nice, but an engine loads 3d models made in dedicated programs. For that, we are going to implement basic OBJ format loading.
 
 The OBJ format is a very simple format, which is understood by almost all software that deals with 3d models. We will be using the library tiny_obj_loader to load a Blender monkey mesh (on the assets folder) and render it.
 
@@ -66,7 +66,7 @@ bool Mesh::load_from_obj(const char* filename)
 	std::string err;
 
     //load the OBJ file
-	tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, filename,nullptr);
+	tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, filename, nullptr);
     //make sure to output the warnings to the console, in case there are issues with the file
 	if (!warn.empty()) {
 		std::cout << "WARN: " << warn << std::endl;

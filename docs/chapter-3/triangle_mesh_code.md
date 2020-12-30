@@ -300,15 +300,15 @@ VertexInputDescription Vertex::get_vertex_description()
 
 ```
 
-`VertexInputBindingDescription` defines the vertex buffers that act as input. In this case, we are using just 1 vertex buffer, so we will only need one binding.
+`VkVertexInputBindingDescription` defines the vertex buffers that act as input. In this case, we are using just 1 vertex buffer, so we will only need one binding.
 The stride is `sizeof(Vertex)`, as we have our vertex data tightly packed, each vertex taking up `sizeof(Vertex)` size.
 
-We then create 3 `VertexInputAttributeDescription`s, one per each vertex attribute we have. On each of them, we set the format as `VK_FORMAT_R32G32B32_SFLOAT`, which maps directly to what a glm::vec3 is (three `float` components of 32-bit each), and use the offset of the member in the `Vertex` struct.
+We then create 3 `VkVertexInputAttributeDescription`s, one per each vertex attribute we have. On each of them, we set the format as `VK_FORMAT_R32G32B32_SFLOAT`, which maps directly to what a glm::vec3 is (three `float` components of 32-bit each), and use the offset of the member in the `Vertex` struct.
 
 With this, we now map directly our `Vertex` struct into what Vulkan expects on the pipeline vertex input.
 
 ## New vertex shader
-Let's now create a new shader, `mesh.vert`, that will use these vertex inputs. This vertex shader will be used with the `colored_triangle.frag` fragment shader. Make sure to refresh CMake so that it finds the new shader and compiles it.
+Let's now create a new shader, `tri_mesh.vert`, that will use these vertex inputs. This vertex shader will be used with the `colored_triangle.frag` fragment shader. Make sure to refresh CMake so that it finds the new shader and compiles it.
 
 `tri_mesh.vert`
 ```glsl
