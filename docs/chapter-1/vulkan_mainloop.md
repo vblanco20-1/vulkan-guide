@@ -31,7 +31,7 @@ VkSomeOperation(whatever, myFence);
 
 // block the CPU until the GPU operation finishes
 VkWaitForFences(myFence);
-//fences allways have to be reset before they can be used again
+//fences always have to be reset before they can be used again
 VkResetFences(myFence);
 ```
 

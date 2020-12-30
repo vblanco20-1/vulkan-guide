@@ -35,7 +35,7 @@ One of the most important goals of Vulkan when it was created, is that multi-GPU
 
 ## Swapchain
 Initializing the GPU is nice, but we want to actually perform some rendering into the screen. This is where the swapchain comes.
-Swapchains are not into the core Vulkan spec, because they are optional, and often unique to the different platforms. If you run Vulkan headless, for example to render images and saving them to disk, or performing offline calculations, it's not needed that you create a swapchain, as swapchains are just for sending the images into the screen.
+Swapchains are not in the core Vulkan spec because they are optional, and often unique to the different platforms. If you run Vulkan headless, for example to render images and saving them to disk, or performing offline calculations, it's not needed that you create a swapchain, as swapchains are just for sending the images into the screen.
 
 A swapchain is created on a given size, and if the window resizes, you will have to recreate the swapchain again. 
 

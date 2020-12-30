@@ -335,7 +335,7 @@ void VulkanEngine::cleanup()
 }
 ```
 
-We are now destroying the Instance before the Device and the Surface (which was created from the Instance) is also deleted. The validation layers should complain with a errors like this.
+We are now destroying the Instance before the Device and the Surface (which was created from the Instance) is also deleted. The validation layers should complain with an error like this.
 
 ```
 [ERROR: Validation]

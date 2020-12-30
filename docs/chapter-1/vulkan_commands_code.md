@@ -104,7 +104,7 @@ By doing that ` = {}` thing, we are letting the compiler initialize the entire s
 
 We set queueFamilyIndex to the _graphicsQueueFamily that we grabbed before. This means that the command pool will create commands that are compatible with any queue of that "graphics" family.
 
-We are also setting somethin in the .flags parameter. A lot of Vulkan structures will have that .flags parameter, for extra options. We are sending VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT , which tells Vulkan that we expect to be able to reset individual command buffers made from that pool.
+We are also setting something in the .flags parameter. A lot of Vulkan structures will have that .flags parameter, for extra options. We are sending VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT , which tells Vulkan that we expect to be able to reset individual command buffers made from that pool.
 
 At the end, we finally call VkCreateCommandPool, giving it our VkDevice, the commandPoolInfo for create parameters, and a pointer to the _commandPool member, which will get overwritten if it succeeds.
 
@@ -164,8 +164,8 @@ namespace vkinit {
 }
 ```
 
-2 new functions, `command_pool_create_info()`, and `command_buffer_allocate_info()`. We also use default arguments `flags = 0` to not have to input all arguments for basic stuff
-Now, let's copy the code into the implementation of those 2 functions
+2 new functions, `command_pool_create_info()`, and `command_buffer_allocate_info()`. We also use default arguments `flags = 0` to not have to input all arguments for basic stuff.
+Now, let's copy the code into the implementation of those 2 functions.
 
 
 vk_initializers.cpp

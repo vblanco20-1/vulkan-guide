@@ -15,7 +15,7 @@ The renderpass is a concept that only exists in Vulkan. It's there because it al
 
 A Renderpass will render into a Framebuffer. The framebuffer links to the images you will render to, and it's used when starting a renderpass to set the target images for rendering.
 
-The general use of a renderpass, when encoding commands, is like this
+The general use of a renderpass when encoding commands is like this:
 
 ```cpp
 vkBeginCommandBuffer(cmd, ...);

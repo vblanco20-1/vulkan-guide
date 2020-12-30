@@ -31,7 +31,7 @@ Queues in Vulkan are an "execution port" for GPUs. Every GPU has multiple queues
 
 All queues in Vulkan come from a Queue Family. A Queue Family is the "type" of queue it is, and what type of commands it supports. What we want in this guide is a queue that supports both Graphics and Present. This means that the same queue will be used for both rendering and to display images into the screen.
 
-Different GPUs support different Queue Families. An example is this NVidia GT 750ti from Vulkan Hardware Info <https://vulkan.gpuinfo.org/displayreport.php?id=8859#queuefamilies>. It has 2 Queue families, one that supports up to 16!  queues that have all features, and then a family that can support 1 queue for transfer only.
+Different GPUs support different Queue Families. An example is this NVidia GT 750ti from Vulkan Hardware Info <https://vulkan.gpuinfo.org/displayreport.php?id=8859#queuefamilies>. It has 2 Queue families, one that supports up to 16 queues that have all features, and then a family that can support 1 queue for transfer only.
 
 Transfer-only queue families in Vulkan are very interesting, as they are used to perform background asset upload and they often can run completely asynchronously from rendering. So if you want to upload assets to the GPU from a background thread, using a Transfer-only queue will be a great choice.
 
@@ -52,7 +52,7 @@ Once you are done, call `vkEndCommandBuffer()` to finish the recording the comma
 
 To submit the command buffer, you call `vkQueueSubmit()`, using both the command and the queue to submit into. `vkQueueSubmit` also accepts submitting multiple command buffers together. Any command buffer that is submitted is put in the Pending state.
 
-Once a command buffer has been submitted, it's still "alive", and being consumed by the GPU, at this point it is NOT safe to reset the command buffer yet. You need to make sure that the GPU has finished executing all of the commands from that command buffer until you can reset it and reuse. 
+Once a command buffer has been submitted, it's still "alive", and being consumed by the GPU, at this point it is NOT safe to reset the command buffer yet. You need to make sure that the GPU has finished executing all of the commands from that command buffer until you can reset and reuse it 
 
 To reset a command buffer, you use `vkResetCommandBuffer()`.
 
