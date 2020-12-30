@@ -40,7 +40,7 @@ void VulkanEngine::init_vulkan()
 ```
 
 With that, the allocator is set up and we can now use it to allocate buffers.
-If you try to compile the project now, you will find that VMA is missing function definitions and giving linker errors. To solve that, add this to one .cpp file in the project (its recommended you add it to vk_engine.cpp, but can be other).
+If you try to compile the project now, you will find that VMA is missing function definitions and giving linker errors. To solve that, add this to one .cpp file in the project (it's recommended you add it to vk_engine.cpp, but can be other).
 ```cpp
 #define VMA_IMPLEMENTATION
 #include "vk_mem_alloc.h"
@@ -140,7 +140,7 @@ void VulkanEngine::init()
 ```
 
 
-Lets begin filling the `load_meshes` function. The first thing we are going to do is to fill the `_vertices` vector with the vertex data for the triangle, and then just call `upload_mesh` with the triangle
+Let's begin filling the `load_meshes` function. The first thing we are going to do is to fill the `_vertices` vector with the vertex data for the triangle, and then just call `upload_mesh` with the triangle
 
 ```cpp
 void VulkanEngine::load_meshes()
@@ -164,7 +164,7 @@ void VulkanEngine::load_meshes()
 }
 ```
 
-Now its time to create the vertex buffer. We will fill the `upload_mesh` function
+Now it's time to create the vertex buffer. We will fill the `upload_mesh` function
 
 ```cpp
 void VulkanEngine::upload_mesh(Mesh& mesh)
@@ -225,7 +225,7 @@ To push data into a `VkBuffer`, we need to map it first. Mapping a buffer will g
 When we are done with the writing, we unmap the data.
 It is possible to keep the pointer mapped and not unmap it immediately, but that is an advanced technique mostly used for streaming data, which we don't need right now. Mapping and then unmapping the pointer lets the driver know that the write is finished, and will be safer.
 
-To copy the data, we use `memcpy` directly. Note that its not necesary to use memcpy, but in many implementations `memcpy` will be the fastest way to copy a chunk of memory.
+To copy the data, we use `memcpy` directly. Note that it's not necesary to use memcpy, but in many implementations `memcpy` will be the fastest way to copy a chunk of memory.
 
 Our `upload_mesh` function is finished (for now), and we are uploading the triangle.
 There should be no validation errors when you try to run the application.
@@ -255,7 +255,7 @@ struct Vertex {
 };
 ```
 
-Lets fill the `get_vertex_description` function with the correct settings.
+Let's fill the `get_vertex_description` function with the correct settings.
 `vk_mesh.cpp`
 ```cpp
 
@@ -308,7 +308,7 @@ We then create 3 `VertexInputAttributeDescription`s, one per each vertex attribu
 With this, we now map directly our `Vertex` struct into what Vulkan expects on the pipeline vertex input.
 
 ## New vertex shader
-Lets now create a new shader, `mesh.vert`, that will use these vertex inputs. This vertex shader will be used with the `colored_triangle.frag` fragment shader. Make sure to refresh CMake so that it finds the new shader and compiles it.
+Let's now create a new shader, `mesh.vert`, that will use these vertex inputs. This vertex shader will be used with the `colored_triangle.frag` fragment shader. Make sure to refresh CMake so that it finds the new shader and compiles it.
 
 `tri_mesh.vert`
 ```glsl
@@ -331,7 +331,7 @@ We no longer need to use `vertexID` to do anything, we can just send `vPosition`
 All 3 attributes work in the same way, according to the `VkVertexInputAttributeDescription`s we just wrote.
 
 ## Putting all together
-We now have the buffer uploaded, the shader written, and the input description filled. Its now time to compile the `_meshPipeline`, and use it to render our new triangle, which should be green.
+We now have the buffer uploaded, the shader written, and the input description filled. It's now time to compile the `_meshPipeline`, and use it to render our new triangle, which should be green.
 
 Go to the function `init_pipelines` of our VulkanEngine, as we will create the pipeline at the end of it.
 
@@ -399,7 +399,7 @@ void VulkanEngine::init_pipelines()
 
 There is not much here, other than connecting the vertex input info to the pipeline builder. With that and adding the `tri_mesh.vert` vertex shader, thats all we need. We also make sure that each shader module is correctly deleted at the end of the function.
 
-Now we are holding a `_meshPipeline` that knows how to render a colored mesh. Lets replace the inner loop of `draw()` function to use the new pipeline and draw the mesh. 
+Now we are holding a `_meshPipeline` that knows how to render a colored mesh. Let's replace the inner loop of `draw()` function to use the new pipeline and draw the mesh. 
 
 ```cpp
 VulkanEngine::draw()

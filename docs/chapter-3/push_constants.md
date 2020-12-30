@@ -10,7 +10,7 @@ nav_order: 12
 We can render arbitrary meshes now, but there is not a lot we can do with them. We still don't know how to send data from the CPU to shaders outside of vertex buffers.
 While the next chapter will explain the various methods into detail, there is a simple method we can start using immediately: push constants.
 
-Push constants lets us send a small amount of data (it has a limited size) to the shader, in a very simple and performant way. Push constants can send data to any shader stage (both vertex and fragment shaders), and are stored in the command buffer itself.
+Push constants let us send a small amount of data (it has a limited size) to the shader, in a very simple and performant way. Push constants can send data to any shader stage (both vertex and fragment shaders), and are stored in the command buffer itself.
 
 To use push constants, you first need to set their size (in each stage) when you create a VkPipelineLayout. Then, using the command `vkCmdPushConstants`, the data will be embedded into the command buffer, and will be accessible from the shader.
 We are going to use them for transformation matrices, to be able to move objects around and do proper 3d rendering. To start, we are going to use it to move the triangle we are rendering.
@@ -78,7 +78,7 @@ Push constants are written in ranges. A important reason for that, is that you c
 For example, you can reserve 64 bytes (1 `glm::mat4`) size on the vertex shader, and then start the pixel shader push constant from offset 64. This way you would have different push constants on different stages.
 Given that getting the ranges right is tricky, in this tutorial we are going to use a more monolithic approach of using the same push constants on both vertex and fragment shader. 
 
-Now that we have the layout, we also need to modify the shaders. Lets add the push constant to the `tri_mesh.vert` shader.
+Now that we have the layout, we also need to modify the shaders. Let's add the push constant to the `tri_mesh.vert` shader.
 
 ```cpp
 
@@ -141,7 +141,7 @@ in `draw()` function, right before the `vkCmdDraw` call, we are going to compute
     MeshPushConstants constants;
     constants.render_matrix = mesh_matrix;
 
-    //upload the matrix to the gpu via pushconstants
+    //upload the matrix to the GPU via pushconstants
     vkCmdPushConstants(cmd, _meshPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(MeshPushConstants), &constants);
 
     //we can now draw
