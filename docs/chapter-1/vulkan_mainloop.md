@@ -15,7 +15,7 @@ Some times, you explicitly want to make sure some operations have finished befor
 
 
 ## VkFence
-This is used for GPU -> CPU communication. A lot of Vulkan operations, such as vkQueueSubmit allow an *optional* fence parameter. If this is set, we can know from the CPU if the gpu has finished these operations. We will use it to sync the main loop in the CPU with the GPU.
+This is used for GPU -> CPU communication. A lot of Vulkan operations, such as vkQueueSubmit allow an *optional* fence parameter. If this is set, we can know from the CPU if the GPU has finished these operations. We will use it to sync the main loop in the CPU with the GPU.
 
 
 ![cmake]({{site.baseurl}}/diagrams/commandtimeline.png)
@@ -38,7 +38,7 @@ VkResetFences(myFence);
 
 
 ## VkSemaphore
-This is used for GPU to GPU sync. Semaphores allow defining order of operations on gpu commands, and for them to run one after another. Some Vulkan operations (like VkQueueSubmit) support to either Signal or Wait semaphores. 
+This is used for GPU to GPU sync. Semaphores allow defining order of operations on GPU commands, and for them to run one after another. Some Vulkan operations (like VkQueueSubmit) support to either Signal or Wait semaphores. 
 
 If you set it to Signal a semaphore, this means the operation will immediately "lock" said semaphore when it executes, and unlock once it finishes execution.
 
@@ -75,7 +75,7 @@ This code will do the 3 DoSomethings in strict order in the GPU. The execution o
 If you don't use semaphores in this case, the commands of the 3 operations might execute in parallel, interleaved with each other.
 
 # Render Loop
-In the render loop, we are going to use a single fence to wait until the GPU has finished executing the render work. For now we arent going to do anything advanced, and we will just wait until the work we sent to the GPU is executed to start preparing the next frame. Later in the chapter 4 of the tutorial we will change this to allow the CPU to continue preparing the next frame while the GPU is busy with the submit.
+In the render loop, we are going to use a single fence to wait until the GPU has finished executing the render work. For now we aren't going to do anything advanced, and we will just wait until the work we sent to the GPU is executed to start preparing the next frame. Later in the chapter 4 of the tutorial we will change this to allow the CPU to continue preparing the next frame while the GPU is busy with the submit.
 
 When doing the render loop, we need to request an image from the swapchain. Requesting an image from the swapchain will block the CPU thread until the image is available. Using vsync-d modes will fully block the CPU, while other modes (like Mailbox) will return almost immediately.
 
@@ -83,7 +83,7 @@ We will begin the render loop by requesting the image, which will give us a inte
 
 Then we reset the command buffer, and start rendering commands. Once rendering commands is finished, we submit them to the graphics queue, and then we Present the image we just rendered to the window by calling `VkQueuePresent()`
 
-Lets begin the code for the renderloop.
+Let's begin the code for the renderloop.
 
 Next: [Programming render loop]({{ site.baseurl }}{% link docs/chapter-1/vulkan_mainloop_code.md %})
 

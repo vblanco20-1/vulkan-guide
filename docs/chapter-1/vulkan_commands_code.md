@@ -146,11 +146,11 @@ The .commandBufferCount parameter allows you to allocate multiple buffers at onc
 
 The .level is set to Primary . Command buffers can be Primary of Secondary level.
 Primary level are the ones that are sent into a VkQueue, and do all of the work. This is what we will use in the guide.
-Secondary level are ones that can act as "subcommands" to a primary buffer. They are most commonly used in advanced multithreading scenarios. We arent going to use them.
+Secondary level are ones that can act as "subcommands" to a primary buffer. They are most commonly used in advanced multithreading scenarios. We aren't going to use them.
 
 ## The VkInit module
 
-If you remember the article that explored the project files, we commented that the vk_initializers module will contain abstraction over the initialization of Vulkan structures. Lets go abstract the 2 Info structures into there, for easier readability.
+If you remember the article that explored the project files, we commented that the vk_initializers module will contain abstraction over the initialization of Vulkan structures. Let's go abstract the 2 Info structures into there, for easier readability.
 
 
 vk_initializers.h
@@ -165,7 +165,7 @@ namespace vkinit {
 ```
 
 2 new functions, `command_pool_create_info()`, and `command_buffer_allocate_info()`. We also use default arguments `flags = 0` to not have to input all arguments for basic stuff
-Now, lets copy the code into the implementation of those 2 functions
+Now, let's copy the code into the implementation of those 2 functions
 
 
 vk_initializers.cpp
@@ -195,7 +195,7 @@ VkCommandBufferAllocateInfo vkinit::command_buffer_allocate_info(VkCommandPool p
 }
 ```
 
-We have now abstracted the calls, so lets go change VulkanEngine::init_commands() to use this.
+We have now abstracted the calls, so let's go change VulkanEngine::init_commands() to use this.
 
 ```cpp
 void VulkanEngine::init_commands()
@@ -231,9 +231,9 @@ void VulkanEngine::cleanup()
 ```
 
 As the command pool is the most recent Vulkan object, we need to destroy it before the other objects.
-Its not possible to individually destroy VkCommandBuffer, as destroying their parent pool will destroy all of the command buffers allocated from it.
+It's not possible to individually destroy VkCommandBuffer, as destroying their parent pool will destroy all of the command buffers allocated from it.
 
-VkQueue-s also cant be destroyed, as, like with the VkPhysicalDevice, they arent really created objects, more like a handle to something that already exists.
+VkQueue-s also can't be destroyed, as, like with the VkPhysicalDevice, they aren't really created objects, more like a handle to something that already exists.
 
 Now that we have the Queue and the CommandBuffer, we are ready to start executing commands, but their usability will be limited, as we still lack the structures needed to execute graphics commands.
 
