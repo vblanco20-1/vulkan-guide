@@ -8,7 +8,7 @@ nav_order: 20
 If you have run the triangle with layers enabled, you have probably seen that when you close the application, the layers complain about pipelines and other objects not being deleted. Given how far the amount of Vulkan objects we have is growning, it is time to do a small refactor, and implement a better system to take care of those deletions.
 
 ## Deletion queue
-In Vulkan, we cant delete any object until we are sure that the GPU isnt using it. Deleting the objects out of order is also a big issue, as it will make the layers complain and might crash the drivers. For those reasons, using normal Cpp destructors is out of the question, and not doable. We need a better system to delete objects.
+In Vulkan, we can't delete any object until we are sure that the GPU isnt using it. Deleting the objects out of order is also a big issue, as it will make the layers complain and might crash the drivers. For those reasons, using normal Cpp destructors is out of the question, and not doable. We need a better system to delete objects.
 
 A very common implementation is to create a deletion queue. When creating objects, we will also add the objects to the queue, and then at some point in the application, once we are sure that the GPU is finished, we go through the queue deleting everything. 
 
@@ -57,10 +57,10 @@ VkDeleteSomething(something);
 ```
 
 And then, as part of our cleanup function, we `flush()` the deletion queue, which will call the lambdas in the order they were enqueued. 
-Its very important to keep in mind how cpp lambdas capture data. In here we are using `[=]` capture, which means that it will create a *copy* of the objects. Be very careful with this, and never capture anything by reference unless you know what you are doing. 
+It's very important to keep in mind how cpp lambdas capture data. In here we are using `[=]` capture, which means that it will create a *copy* of the objects. Be very careful with this, and never capture anything by reference unless you know what you are doing. 
 In the example above, it will call the DestroyFence first, and then the DestroySemaphore calls, as it keeps order.
 
-Now that we have this, lets implement it over the current codebase so we can go back to a state where the validation layers don't complain. 
+Now that we have this, let's implement it over the current codebase so we can go back to a state where the validation layers don't complain. 
 If you want to skip this step, you can look at the tutorial code, which already uses it.
 
 ## Refactoring the code
@@ -71,7 +71,7 @@ void VulkanEngine::cleanup()
 {	
 	if (_isInitialized) {
 		
-		//make sure the gpu has stopped doing its things
+		//make sure the GPU has stopped doing its things
 		vkWaitForFences(_device, 1, &_renderFence, true, 1000000000);
 
 		_mainDeletionQueue.flush();
@@ -90,7 +90,7 @@ We are not going to put everything in the deletion queue, so we will keep the Su
 All the others we are going to convert to use the deletion queue.
 
 
-Lets add the deletion queue code to the swapchain code
+Let's add the deletion queue code to the swapchain code
 ```cpp
 void VulkanEngine::init_swapchain()
 {
@@ -198,7 +198,7 @@ void VulkanEngine::init_sync_structures()
 }
 ```
 
-Lastly, we add the deletion for the new objects from this chapter. For the shader modules, we arent going to use the queue.
+Lastly, we add the deletion for the new objects from this chapter. For the shader modules, we aren't going to use the queue.
 When a pipeline is created from a shader module, you can then delete the shader module and it will be ok.
 ```cpp
 
@@ -225,7 +225,7 @@ void VulkanEngine::init_pipelines()
 ```
 
 
-At this point, if you run the engine, and close it, the debug layers should only complain about a missing `VK_OBJECT_TYPE_DEBUG_UTILS_MESSENGER_EXT;` As this object is something implicitly created by vk-bootstrap library, we arent going to care about it.
+At this point, if you run the engine, and close it, the debug layers should only complain about a missing `VK_OBJECT_TYPE_DEBUG_UTILS_MESSENGER_EXT;` As this object is something implicitly created by vk-bootstrap library, we aren't going to care about it.
 
 With this, chapter 2 is completed. Next step is to start rendering meshes in chapter 3.
 

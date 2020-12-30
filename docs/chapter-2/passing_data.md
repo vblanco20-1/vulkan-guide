@@ -27,12 +27,12 @@ To read the variable from pixel stage, we do this.
 layout (location = 0) in vec3 inColor;
 ```
 
-The names of the variables do not need to match. On the vertex shader we are calling it `outColor`, but on the fragment shader we are calling it `inColor`. What does need to match, is the Location decorator and the type of the variable. In this case, its a location 0 vec3 variable, so things match.
+The names of the variables do not need to match. On the vertex shader we are calling it `outColor`, but on the fragment shader we are calling it `inColor`. What does need to match, is the Location decorator and the type of the variable. In this case, it's a location 0 vec3 variable, so things match.
 
-We can output most default types from the vertex shader into the fragment shader, but be careful with it, as the more data you need to pass between stages, the more overhead you will have. Old gpus even have a very small number of how many variables can be passed.
+We can output most default types from the vertex shader into the fragment shader, but be careful with it, as the more data you need to pass between stages, the more overhead you will have. Old GPUs even have a very small number of how many variables can be passed.
 
 
-Now that we know how to pass data from vertex shader into fragment shader, lets use it to create a colorful triangle.
+Now that we know how to pass data from vertex shader into fragment shader, let's use it to create a colorful triangle.
 
 
 ## Vertex Shader
@@ -88,10 +88,10 @@ void main()
 
 We can now read the color in the fragment shader, and output it as the final color.
 
-Make sure to rebuild the Shaders target in Cmake, as we need it to compile the new things. It shouldnt have any error
+Make sure to rebuild the Shaders target in Cmake, as we need it to compile the new things. It shouldn't have any error
 
 ## Changing the shaders in code
-Now, lets change the shaders used in the code, to switch the red triangle shader into a colored triangle shader.
+Now, let's change the shaders used in the code, to switch the red triangle shader into a colored triangle shader.
 
 On the code that loads the triangle shaders, we change the filenames
 
