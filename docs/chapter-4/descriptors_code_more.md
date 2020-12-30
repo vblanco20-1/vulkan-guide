@@ -157,7 +157,7 @@ We can now use it in `init_descriptors()` when creating the descriptor layout.
 
 For the scene binding, we have also changed the shader stages to include fragment shader, as we will want to read it from the fragment shader.
 
-With the layout done, we now need to modify the descriptor set writes so that the point to correct buffer and the correct offset in it.
+With the layout done, we now need to modify the descriptor set writes so that they point to the correct buffer and the correct offset in it.
 
 We continue on `init_descriptors()`, but inside the frame loop. We replace the older `VkWriteDescriptor` set part with the new abstracted version.
 

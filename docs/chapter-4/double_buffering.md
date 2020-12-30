@@ -12,7 +12,7 @@ It is possible to make the CPU render ahead more frames, which can be useful if 
 ## Object lifetime
 Most Vulkan objects are used while the GPU is performing its rendering work, so it is not possible to modify or delete them while they are in use.
 An example of this is command buffers. Once you submit a command buffer into a queue, that buffer can't be reset or modified until the GPU has finished executing its commands.
-You can control this using Fences. If you submit a command buffer that will signal a fence, and then you wait until that fence is signaled, you can be sure that the command buffer can now be reused or modified. Its the same for the other objects related used in those commands.
+You can control this using Fences. If you submit a command buffer that will signal a fence, and then you wait until that fence is signaled, you can be sure that the command buffer can now be reused or modified. Its the same for the other related objects used in those commands.
 
 
 ## The Frame struct
@@ -60,7 +60,7 @@ FrameData& VulkanEngine::get_current_frame()
 	return _frames[_frameNumber % FRAME_OVERLAP];
 }
 ```
-Every time we render a frame, the _frameNumber gets bumped by 1. This will be very useful here. With a frame overlap of 2 (the default), it means that even frames will use `_frames[0]`, while odd frames will use `_frames[1]`, While the GPU is busy executing the rendering commands from frame 0, the CPU will be writing the buffers of frame 1, and reverse.
+Every time we render a frame, the _frameNumber gets bumped by 1. This will be very useful here. With a frame overlap of 2 (the default), it means that even frames will use `_frames[0]`, while odd frames will use `_frames[1]`. While the GPU is busy executing the rendering commands from frame 0, the CPU will be writing the buffers of frame 1, and reverse.
 
 Now we need to modify the sync structures and the command buffer structures on the engine so that they use this _frames structs.
 

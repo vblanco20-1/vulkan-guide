@@ -34,7 +34,7 @@ void VulkanEngine::init_descriptors()
 	for (int i = 0; i < FRAME_OVERLAP; i++)
 	{
 		const int MAX_OBJECTS = 10000;
-		_frames[i].objectBuffer = create_buffer(sizeof(ObjectData) * MAX_OBJECTS, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+		_frames[i].objectBuffer = create_buffer(sizeof(GPUObjectData) * MAX_OBJECTS, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
 
 		//other code ....
 	}
@@ -42,7 +42,7 @@ void VulkanEngine::init_descriptors()
 ```
 Shader Storage buffers are created in the same way as uniform buffers. They also work in mostly the same way, they just have different properties like increased maximum size, and being writeable in shaders.
 We are going to reserve an array of 10000 ObjectDatas per frame. This means that we can hold up to 10000 object matrices, rendering 10000 objects per frame. Its a small number, but at the moment it's not a problem. Unreal Engine grows their object buffer as needed when the engine loads more objects, but we don't have any growable buffer abstraction so we reserve upfront.
-While the size here is 1000, you can increase it to whatever you want. The maximum sizes for storage buffers are quite big, in most GPUs they can be as big as the VRAM can fit, so you can do this with 100 million matrices if you want.
+While the size here is 10000, you can increase it to whatever you want. The maximum sizes for storage buffers are quite big, in most GPUs they can be as big as the VRAM can fit, so you can do this with 100 million matrices if you want.
 
 We will now need to add it to the descriptor sets.
 We have been adding everything into descriptor set number 0, but for this, we are going to use descriptor set number 1. This means we need another descriptor set layout for it, and also hook it to the pipeline creation.
@@ -194,7 +194,7 @@ layout(std140,set = 1, binding = 0) readonly buffer ObjectBuffer{
 We need the std140 layout description to make the array match how arrays work in cpp. That std140 enforces some rules about how the memory is laid out, and what is its alignment.
 The set is now 1, and binding is 0, referencing that it's a new descriptor set slot.
 
-We are also using `readonly buffer` instead of `uniform` when declaring it. Shader Storage buffers can be read or written to, so we need to let Vulkan know. THey are also defined with `buffer` instead of `uniform`.
+We are also using `readonly buffer` instead of `uniform` when declaring it. Shader Storage buffers can be read or written to, so we need to let Vulkan know. They are also defined with `buffer` instead of `uniform`.
 
 The array inside is also not sized. You can only have unsized arrays in storage buffers. This will let the shader scale to whatever buffer size we have.
 
@@ -267,7 +267,7 @@ Now we have multiple buffers of different kinds, and on different descriptor set
 
 The last step for the tutorial is textures, which will go into the next chapter. But before going there, I heavily recommend you try to do some things with the codebase.
 
-Right now, we have one descriptor set per frame for the Set 0 (camera and scene buffers). Try to refactor it so it only uses 1 descriptor set and 1 buffer both both camera and scene buffers, packing both the structs for all frames into the same uniform buffer, and then using dynamic offsets.
+Right now, we have one descriptor set per frame for the Set 0 (camera and scene buffers). Try to refactor it so it only uses 1 descriptor set and 1 buffer for both camera and scene buffers, packing both the structs for all frames into the same uniform buffer, and then using dynamic offsets.
 
 Alternatively, try to create another SSBO that holds something like ObjectColor, to use on a per-object basis, and try to use it to color the objects in different ways by modifying the shaders.
 

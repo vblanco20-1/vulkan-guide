@@ -170,7 +170,7 @@ void VulkanEngine::init_descriptors()
 
 	//information about the binding.
 	VkDescriptorSetLayoutBinding camBufferBinding = {};
-	camBufferBinding.binding=  0;
+	camBufferBinding.binding = 0;
 	camBufferBinding.descriptorCount = 1;
 	// it's a uniform buffer binding
 	camBufferBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER; 
@@ -179,7 +179,7 @@ void VulkanEngine::init_descriptors()
 	camBufferBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT; 
 	
 	
-	VkDescriptorSetLayoutCreateInfo setInfo= {};
+	VkDescriptorSetLayoutCreateInfo setInfo = {};
 	setInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
 	setInfo.pNext = nullptr;
 	
