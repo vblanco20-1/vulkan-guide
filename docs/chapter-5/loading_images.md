@@ -38,7 +38,7 @@ On vk_textures.cpp, we begin filling the function.
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
-bool vkutil::load_image_from_file(VulkanEngine& engine, const char* file, AllocatedImage & outImage)
+bool vkutil::load_image_from_file(VulkanEngine& engine, const char* file, AllocatedImage& outImage)
 {
 	int texWidth, texHeight, texChannels;
 

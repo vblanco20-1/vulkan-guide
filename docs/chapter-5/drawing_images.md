@@ -290,7 +290,7 @@ On `init_pipelines()`.
 
 ```
 
-We now need to create the descriptor set in the `load_scene()` function, so that our `texturedmesh` material has the texture set
+We now need to create the descriptor set in the `init_scene()` function, so that our `texturedmesh` material has the texture set
 
 
 We add a new initializers to vk_initializers, for sampler creation and descriptor image write

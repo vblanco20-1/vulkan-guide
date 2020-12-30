@@ -40,7 +40,7 @@ The `immediate_submit()` function uses an `std::function` in a very similar way 
 Eventually we will add more instant-submit functions, but this one will be the default one. 
 
 We need to initialize that command pool and fence in the upload context.
-In `init_structures()`, we will initialize the fence alongside the rendering fences that we have.
+In `init_sync_structures()`, we will initialize the fence alongside the rendering fences that we have.
 
 ```cpp
 
@@ -191,7 +191,7 @@ immediate_submit([=](VkCommandBuffer cmd) {
 		copy.dstOffset = 0;
 		copy.srcOffset = 0;
 		copy.size = bufferSize;
-		vkCmdCopyBuffer(cmd, stagingBuffer._buffer, mesh._vertexBuffer._buffer, 1, & copy);
+		vkCmdCopyBuffer(cmd, stagingBuffer._buffer, mesh._vertexBuffer._buffer, 1, &copy);
 	});
 ```
 
