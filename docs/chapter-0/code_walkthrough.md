@@ -207,7 +207,7 @@ And finally, every iteration of the main loop we call `draw();`
 
 We now have seen how to open a window with SDL, and basically not much else.
 
-There is really only one thing that can be added to this at this point, and is experimenting with the SDL events. 
+There is really only one thing that can be added to this at this point, and that is experimenting with the SDL events. 
 
 As an exercise, read the documentation of SDL2 and try to get keypress events, using `std::cout` to log them.
 

@@ -7,9 +7,9 @@ nav_order: 2
 
 # Building the project
 
-Start by syncing git project at <https://github.com/vblanco20-1/vulkan-guide/>.
+Start by syncing the Git project at <https://github.com/vblanco20-1/vulkan-guide/>.
 The all-chapters branch contains the example code for the entire project, and the starting-point branch contains the initial empty project setup. I recommend you sync both branches to different folders, and if at one point you get stuck, check how the code works in the all-chapters code.
-If you want a direct download to the code without using GIT just download from these direct links. 
+If you want a direct download to the code without using Git just download from these direct links. 
 
 [All Chapters](https://github.com/vblanco20-1/vulkan-guide/archive/all-chapters.zip)
 
@@ -23,7 +23,7 @@ First, install the Vulkan SDK <https://vulkan.lunarg.com/sdk/home>. This will co
 Then grab CMake, as it's the build system we are going to use. <https://cmake.org/>.
 
 Once CMake is installed, use CMake-gui to open the project root CMakeLists. Press the Configure button.
-At this point, it should give you an error about missing SDL 2.
+At this point, it should give you an error about missing SDL2.
 
 SDL2 is a library dependency that we need to get separately from the rest.
 
