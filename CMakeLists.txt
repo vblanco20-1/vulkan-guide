@@ -19,11 +19,7 @@ add_subdirectory(chapter-3)
 add_subdirectory(chapter-3-scene)
 add_subdirectory(chapter-4)
 add_subdirectory(chapter-5)
-if (${CMAKE_HOST_SYSTEM_PROCESSOR} STREQUAL "AMD64")
-  set(GLSL_VALIDATOR "$ENV{VULKAN_SDK}/Bin/glslangValidator.exe")
-else()
-  set(GLSL_VALIDATOR "$ENV{VULKAN_SDK}/Bin32/glslangValidator.exe")
-endif()
+find_program(GLSL_VALIDATOR glslangValidator HINTS /usr/bin /usr/local/bin $ENV{VULKAN_SDK}/Bin/ $ENV{VULKAN_SDK}/Bin32/)
 
 
 file(GLOB_RECURSE GLSL_SOURCE_FILES
