@@ -28,7 +28,7 @@ For now, we are going to be allocating our buffers all on CPU RAM, as it is sign
 
 ## Vertex Input Layout
 If you come from OpenGL, you may know about vertex attributes, where you let OpenGL know how should vertex data be read on your vertex shader, and then OpenGL fetches the data for you.
-In Vulkan, it works in a very similar way. When you create the pipeline, one of the editable objects is the vertex input layout, which have left empty for now. We can fill it out to let Vulkan know how to intepret the vertex data for your shader.
+In Vulkan, it works in a very similar way. When you create the pipeline, one of the editable objects is the vertex input layout, which we have left empty for now. We can fill it out to let Vulkan know how to intepret the vertex data for your shader.
 
 Lets go ahead and implement what we need to turn our hardcoded triangle into a non-hardcoded one!
 
