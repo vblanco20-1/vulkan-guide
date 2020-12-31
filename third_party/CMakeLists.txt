@@ -28,17 +28,17 @@ target_sources(tinyobjloader PRIVATE
 
 target_include_directories(tinyobjloader PUBLIC tinyobjloader)
 
-find_package(SDL2) # Find SDL via installed cmake config files (i.e. on linux)
 add_library(sdl2 INTERFACE)
 set(sdl2_DIR "SDL_PATH" CACHE FILEPATH "Path to SDL2")
-if (sdl2_DIR STREQUAL "" OR sdl2_DIR STREQUAL "SDL_PATH")
-  if (SDL2_INCLUDE_DIRS STREQUAL "")
-    message(WARNING "Setup path to SDL or install libsdl-2.0")
-  endif()
-else()
-  target_link_directories(sdl2 INTERFACE $<$<BOOL:UNIX>:${sdl2_DIR}/lib;${sdl2_image_DIR}/lib>  $<$<BOOL:WIN32>:"${sdl2_DIR}/lib/x64";"${sdl2_image_DIR}/lib/x64">)
+
+if (WIN32)
+target_include_directories(sdl2 INTERFACE ${sdl2_DIR}/include ${sdl2_image_DIR}/include)
+target_link_directories(sdl2 INTERFACE ${sdl2_DIR}/lib/x64 ${sdl2_image_DIR}/lib/x64)
+elseif (UNIX)
+target_include_directories(sdl2 INTERFACE ${sdl2_DIR}/include/SDL2 ${sdl2_image_DIR}/include/SDL2)
+target_link_directories(sdl2 INTERFACE ${sdl2_DIR}/lib ${sdl2_image_DIR}/lib)
 endif()
-target_include_directories(sdl2 INTERFACE ${SDL2_INCLUDE_DIRS} "${sdl2_DIR}/include" "${sdl2_image_DIR}/include")
+
 target_link_libraries(sdl2 INTERFACE SDL2 SDL2main)
 
 add_library(imgui STATIC)
