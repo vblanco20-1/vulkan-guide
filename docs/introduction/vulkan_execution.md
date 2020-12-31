@@ -8,7 +8,7 @@ parent: introduction
 # Vulkan main objects and their use
 
 - `VkInstance` : The Vulkan context, used to access drivers.
-- `VkPhysicalDevice` : A GPU. Used to query physical gpu details, like features, capabilities, memory size, etc.
+- `VkPhysicalDevice` : A GPU. Used to query physical GPU details, like features, capabilities, memory size, etc.
 - `VkDevice` : The "logical" GPU context that you actually execute things on.
 - `VkBuffer` : A chunk of GPU visible memory.
 - `VkImage` : A texture you can write to and read from. 

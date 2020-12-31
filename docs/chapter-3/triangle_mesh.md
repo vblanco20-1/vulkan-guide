@@ -22,7 +22,7 @@ All buffers and images need to be created on top of a memory allocation. As we d
 
 The number of total allocations is fixed by the driver, and can be a number as low as 1024. This minimum number can be easily exceeded if each buffer or image are placed in their own memory allocation, so a typical strategy is to allocate big chunks of memory from the driver, and then sub-allocate your buffers and images into it, using a library like Vulkan Memory Allocator (VMA) or by implementing the allocator yourself.
 
-If you look at a desktop computer, you will see that the GPU has separate memory (VRAM) from the main system memory (RAM). These different domains are called heaps. Within these heaps, the driver can expose memory regions optimized for specific usecases, called memory types. Even on integrated GPUs (without dedicated VRAM), multiple memory types might be available from a single heap. Vulkan gives complete control over where to allocate your data, be it on native GPU VRAM, or on the CPU RAM. The VMA library abstracts this slightly for us, but its still very important to know.
+If you look at a desktop computer, you will see that the GPU has separate memory (VRAM) from the main system memory (RAM). These different domains are called heaps. Within these heaps, the driver can expose memory regions optimized for specific usecases, called memory types. Even on integrated GPUs (without dedicated VRAM), multiple memory types might be available from a single heap. Vulkan gives complete control over where to allocate your data, be it on native GPU VRAM, or on the CPU RAM. The VMA library abstracts this slightly for us, but it's still very important to know.
 
 For now, we are going to be allocating our buffers all on CPU RAM, as it is significantly easier to implement, and at the moment we don't need the performance.
 
@@ -30,7 +30,7 @@ For now, we are going to be allocating our buffers all on CPU RAM, as it is sign
 If you come from OpenGL, you may know about vertex attributes, where you let OpenGL know how should vertex data be read on your vertex shader, and then OpenGL fetches the data for you.
 In Vulkan, it works in a very similar way. When you create the pipeline, one of the editable objects is the vertex input layout, which have left empty for now. We can fill it out to let Vulkan know how to intepret the vertex data for your shader.
 
-Lets go ahead and implement what we need to turn our hardcoded triangle into a non-hardcoded one!
+Let's go ahead and implement what we need to turn our hardcoded triangle into a non-hardcoded one!
 
 Next: [Implementing vertex buffers]({{ site.baseurl }}{% link docs/chapter-3/triangle_mesh_code.md %})
 

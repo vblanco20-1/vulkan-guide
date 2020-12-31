@@ -5,14 +5,14 @@ parent:  "2. The graphics pipeline, Hello Triangle"
 nav_order: 15
 ---
 
-Right now, we have 2 different shader sets for our triangle, but we do them hardcoded at compile time, and cant switch between them.
-Lets create a system that lets us toggle the shaders for our triangle by pressing the Spacebar key.
+Right now, we have 2 different shader sets for our triangle, but we do them hardcoded at compile time, and can't switch between them.
+Let's create a system that lets us toggle the shaders for our triangle by pressing the Spacebar key.
 
 
 ## SDL Input events
 Because we want to use the spacebar, we need to run code whenever the key is pressed. Thankfully, the SDL library we are using can do that easily. 
 
-Lets first add a integer variable in VulkanEngine to use for choosing between the shaders.
+Let's first add a integer variable in VulkanEngine to use for choosing between the shaders.
 
 ```cpp
 int _selectedShader{ 0 };
@@ -28,7 +28,7 @@ while (SDL_PollEvent(&e) != 0)
 	if (e.type == SDL_QUIT) bQuit = true;
 }
 ```
-We are using the event loop right now to close the window, but its in here where we can also check for keyboard events, or for mouse events.
+We are using the event loop right now to close the window, but it's in here where we can also check for keyboard events, or for mouse events.
 To detect the keyboard event, we need to change that code into:
 ```cpp
 while (SDL_PollEvent(&e) != 0)
@@ -51,7 +51,7 @@ while (SDL_PollEvent(&e) != 0)
 }
 ```
 
-SDL_QUIT isnt the only event, we also have `SDL_KEYDOWN` and `SDL_KEYUP` along others. if the event type is `SDL_KEYDOWN`, then its a key PRESSED event. It will get called whenever the key is pressed, and if the key is kept pressed, the event will get called repeatadly a few times per second (this depends on the OS). 
+SDL_QUIT isnt the only event, we also have `SDL_KEYDOWN` and `SDL_KEYUP` along others. if the event type is `SDL_KEYDOWN`, then it's a key PRESSED event. It will get called whenever the key is pressed, and if the key is kept pressed, the event will get called repeatadly a few times per second (this depends on the OS). 
 
 Once we know that the event type is a key down event, we can check which key it is by looking at key.keysym.sym variable. If you look at SDL documentation, you will see more keycodes. The one we want for spacebar is `SDLK_SPACE`
 
@@ -70,7 +70,7 @@ Right now we have exactly 1 pipeline, but we can have as many as we want. As we 
 
 We are going to keep the `_trianglePipeline` from the last chapter to hold the pipeline for the colored triangle, and we are going to put the red version in `_redTrianglePipeline`
 
-Lets make the code in `init_pipelines()` compile the shader modules for both pipelines.
+Let's make the code in `init_pipelines()` compile the shader modules for both pipelines.
 
 ```cpp
 void VulkanEngine::init_pipelines()

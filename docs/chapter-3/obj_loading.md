@@ -8,7 +8,7 @@ nav_order: 13
 
 ## Loading 3d models
 
-Rendering triangles and parametric meshes is nice, but a engine loads 3d models made in dedicated programs. For that, we are going to implement basic OBJ format loading.
+Rendering triangles and parametric meshes is nice, but an engine loads 3d models made in dedicated programs. For that, we are going to implement basic OBJ format loading.
 
 The OBJ format is a very simple format, which is understood by almost all software that deals with 3d models. We will be using the library tiny_obj_loader to load a Blender monkey mesh (on the assets folder) and render it.
 
@@ -50,7 +50,7 @@ In a OBJ file, the vertices are not stored together. Instead, it holds a separat
 In this tutorial, we load a single obj file into a single mesh, and all of the obj shapes will get merged.
 
 
-lets continue filling the load function
+Let's continue filling the load function
 ```cpp
 bool Mesh::load_from_obj(const char* filename)
 {
@@ -58,7 +58,7 @@ bool Mesh::load_from_obj(const char* filename)
 	tinyobj::attrib_t attrib;
     //shapes contains the info for each separate object in the file
 	std::vector<tinyobj::shape_t> shapes;
-    //materials contains the information about the material of each shape, but we wont use it.
+    //materials contains the information about the material of each shape, but we won't use it.
     std::vector<tinyobj::material_t> materials;
 
     //error and warning output from the load function
@@ -66,13 +66,13 @@ bool Mesh::load_from_obj(const char* filename)
 	std::string err;
 
     //load the OBJ file
-	tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, filename,nullptr);
+	tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, filename, nullptr);
     //make sure to output the warnings to the console, in case there are issues with the file
 	if (!warn.empty()) {
 		std::cout << "WARN: " << warn << std::endl;
 	}
     //if we have any error, print it to the console, and break the mesh loading. 
-    //This happens if the file cant be found or is malformed
+    //This happens if the file can't be found or is malformed
 	if (!err.empty()) {
 		std::cerr << err << std::endl;
 		return false;
@@ -136,7 +136,7 @@ The TinyOBJ conversion loop can be quite tricky to get right. This one is derive
 You can see the original at: https://github.com/tinyobjloader/tinyobjloader README page.
 In here, we are hardcoding the number of vertices per face to 3. If you use this code with a model that hasnt been triangulated, you will have issues. Loading models that have faces with 4 or more vertices is something more complicated so we will leave it for other time.
 
-With the code added, we can now load objs into our Mesh struct, so lets load the monkey mesh into our triangle mesh, and see if something happens.
+With the code added, we can now load objs into our Mesh struct, so let's load the monkey mesh into our triangle mesh, and see if something happens.
 
 
 ## Loading the mesh
@@ -158,14 +158,14 @@ void VulkanEngine::load_meshes()
     //load the monkey
 	_monkeyMesh.load_from_obj("../../assets/monkey_smooth.obj");	
 
-    //make sure both meshes are sent to the gpu
+    //make sure both meshes are sent to the GPU
     upload_mesh(_triangleMesh);
 	upload_mesh(_monkeyMesh);
 }
 ```
 
 The monkey mesh is now loaded, so we can use it in our draw loop to display it.
-Its the same as the triangle, but we now use the monkey instead of the triangleMesh
+It's the same as the triangle, but we now use the monkey instead of the triangleMesh
 ```cpp
 
  //bind the mesh vertex buffer with offset 0
@@ -178,7 +178,7 @@ Its the same as the triangle, but we now use the monkey instead of the triangleM
 ```
 
 You should be seeing a rotating monkey head. But with a glitch, some faces draw on top of each other.
-That's caused by the lack of a depth buffer that we have right now, so lets fix that on the next article.
+That's caused by the lack of a depth buffer that we have right now, so let's fix that on the next article.
 
 ![triangle]({{site.baseurl}}/diagrams/monkeyGlitch.png)
 

@@ -9,7 +9,7 @@ The first thing we are going to need to draw our first triangle, is to set the s
 For the triangle, we will only need 2 shaders, which is the minimum to render 3d objects.
 We are going to have a fragment shader that just colors the fragment red, and a vertex shader that forms a triangle.
 
-Shaders are written in GLSL, which is OpenGL Shading Language. Its similar to C, but with some small differences. 
+Shaders are written in GLSL, which is OpenGL Shading Language. It's similar to C, but with some small differences. 
 
 Vertex shaders will execute the function (in this case we will use `main()`, but it can have other names) once per vertex in the drawcall. The job of a vertex shader is to write to gl_Position to output the final location of the vertex, and output more variables to the fragment shader.
 
@@ -20,7 +20,7 @@ We are going to add 2 new files to our shader folder. triangle.frag and triangle
 
 
 ## Vertex Shader
-Lets open triangle.vert and write the shader:
+Let's open triangle.vert and write the shader:
 
 ```glsl
 //we will be using glsl version 4.5 syntax
@@ -42,7 +42,7 @@ void main()
 
 In our first vertex shader, we create a constant array of 3 vector-3s, which will be the positions for each of the vertices of the triangle. 
 
-We then have to write to `gl_Position` to tell the GPU whats the position for the vertex. This is obligatory for vertex shaders to work. In here we will access our positions array with gl_VertexIndex, which is the number of the vertex that this shader is being executed for. We then convert it into a vec4 because thats what `gl_Position` expects.
+We then have to write to `gl_Position` to tell the GPU what's the position for the vertex. This is obligatory for vertex shaders to work. In here we will access our positions array with gl_VertexIndex, which is the number of the vertex that this shader is being executed for. We then convert it into a vec4 because thats what `gl_Position` expects.
 
 ## Fragment shader
 
@@ -75,7 +75,7 @@ If the shaders are on the correct folder, project/shaders, they will be detected
 Re-generate the Cmake visual studio project, and they should be detected. 
 Check the project "Shaders" on the generated visual studio solution, and the new 2 files should be in there. If you rebuild the Shaders project, the shaders should be compiled. In the build output it will give the errors if they happen.
 
-If you look at the CMakeLists.txt at the root project folder, you will see that its creating a custom Shader targets building from grabbing all the files that end in *.frag and *.vert from the shaders/ folder. I recommend you read that section. It is commented explaining how it works.
+If you look at the CMakeLists.txt at the root project folder, you will see that it's creating a custom Shader targets building from grabbing all the files that end in *.frag and *.vert from the shaders/ folder. I recommend you read that section. It is commented explaining how it works.
 
 ## Vulkan Shader workflow
 Vulkan doesnt understand GLSL directly, it understands SPIRV. SPIRV is shader bytecode for Vulkan. Think of SPIRV as a binary optimized version of GLSL. 
@@ -90,7 +90,7 @@ Now that we have our .spv files, we can attempt to load them.
 
 In Vulkan, loaded shaders are stored in a VkShaderModule. You can use and combine multiple of them with multiple pipelines, so we are going to begin by creating a "load_module()" function that will load and compile the SPIRV file into a VkShaderModule
 
-Lets begin by adding a new function to our VulkanEngine class 
+Let's begin by adding a new function to our VulkanEngine class 
 ```cpp
 
 //loads a shader module from a spir-v file. Returns false if it errors
@@ -132,7 +132,7 @@ In cpp, the file operations are done on streams, and it has a cursor that we wil
 //because the cursor is at the end, it gives the size directly in bytes
 size_t fileSize = (size_t)file.tellg();
 
-//spirv expects the buffer to be on uint32, so make sure to reserve a int vector big enough for the entire file
+//spirv expects the buffer to be on uint32, so make sure to reserve an int vector big enough for the entire file
 std::vector<uint32_t> buffer(fileSize / sizeof(uint32_t));
 
 //put file cursor at beggining
@@ -170,7 +170,7 @@ return true;
 
 ```
 
-Its very common to have errors in the shader that will give a fail on vkCreateShaderModule, so we will not use the VK_Check macro here. 
+It's very common to have errors in the shader that will give a fail on vkCreateShaderModule, so we will not use the VK_CHECK macro here. 
 
 Creating a VkShaderModule is very straightforward, we just need to fill the create info with the typical Vulkan sType and pnext boilerplate, and then set the code pointer to the vector where we are storing the file. 
 Then we just call the function with it to get the result.
@@ -178,7 +178,7 @@ Then we just call the function with it to get the result.
 
 
 ## Loading the shaders on initialization.
-We are going to add yet another init_ function to VulkanEngine class, `init_pipelines()`, where we are going to initialize the pipelines for the objects we are going to render. We arent going to write the pipeline yet, but we will attempt to load the SPIRV shaders to see if everything is going well.
+We are going to add yet another init_ function to VulkanEngine class, `init_pipelines()`, where we are going to initialize the pipelines for the objects we are going to render. We aren't going to write the pipeline yet, but we will attempt to load the SPIRV shaders to see if everything is going well.
 
 Add it to the other init_ declarations in the class too
 ```cpp
@@ -205,9 +205,9 @@ VkShaderModule triangleFragShader;
 }
 ```
 
-Lets load both shader modules using relative paths. Its very easy to have it not work well, so we will print to the console if the shaders loaded or not.
+Let's load both shader modules using relative paths. It's very easy to have it not work well, so we will print to the console if the shaders loaded or not.
 
-Only thing left is to call the init_pipelines() function from our main init() function. We can call it at any point we want as long as its after init_vulkan(), but we will just add it to the end.
+Only thing left is to call the init_pipelines() function from our main init() function. We can call it at any point we want as long as it's after init_vulkan(), but we will just add it to the end.
 
 ```cpp
 void VulkanEngine::init()

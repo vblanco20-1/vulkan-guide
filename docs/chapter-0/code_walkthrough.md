@@ -17,7 +17,7 @@ The files are all stored in the project/src/ folder
 
 Physical design (how the project is laid out) is very important for complex projects. We will call a pair of matched .h/.cpp files a "module". It doesn't necessarily have to be only one class, or a class at all. We will have them be generally standalone when possible. The reason for calling them modules is that they will likely *be* modules once C++20 modules are widely adopted.
 
-vk_types is completely standalone (depends on nothing other than vulkan), and so will be the vk_initializers component. Once they grow, you can safely keep them for your own projects as your own small abstractions.
+vk_types is completely standalone (depends on nothing other than Vulkan), and so will be the vk_initializers component. Once they grow, you can safely keep them for your own projects as your own small abstractions.
 vk_engine will be the "end point" of almost everything. It will depend on most parts of the project.
 
 Whenever possible, we will try to keep the headers of each component as lightweight as possible. The lighter the headers are, the faster your program will compile, and this is crucial when dealing with C++
@@ -107,7 +107,7 @@ We have a flag to know if the engine is initialized, a frame number integer (ver
 
 The declaration `struct SDL_Window* _window;` is of special interest. Note the `struct` at the beginning. This is called a forward-declaration, and its what allows us to have the `SDL_Window `pointer in the class, without including SDL on the Vulkan engine header. This variable holds the window that we create for the application.
 
-With the header seen, lets go to the cpp files.
+With the header seen, let's go to the cpp files.
 
 vk_engine.cpp line 1
 ```cpp
@@ -207,7 +207,7 @@ And finally, every iteration of the main loop we call `draw();`
 
 We now have seen how to open a window with SDL, and basically not much else.
 
-There is really only one thing that can be added to this at this point, and is experimenting with the SDL events. 
+There is really only one thing that can be added to this at this point, and that is experimenting with the SDL events. 
 
 As an exercise, read the documentation of SDL2 and try to get keypress events, using `std::cout` to log them.
 
