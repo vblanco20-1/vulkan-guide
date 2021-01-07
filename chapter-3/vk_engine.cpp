@@ -72,9 +72,10 @@ void VulkanEngine::cleanup()
 	if (_isInitialized) {
 		
 		//make sure the gpu has stopped doing its things
-		vkWaitForFences(_device, 1, &_renderFence, true, 1000000000);
+		vkDeviceWaitIdle(_device);
 
 		_mainDeletionQueue.flush();
+		
 
 		vkDestroySurfaceKHR(_instance, _surface, nullptr);
 
@@ -287,6 +288,10 @@ void VulkanEngine::init_vulkan()
 	allocatorInfo.device = _device;
 	allocatorInfo.instance = _instance;
 	vmaCreateAllocator(&allocatorInfo, &_allocator);
+
+	_mainDeletionQueue.push_function([&]() {
+		vmaDestroyAllocator(_allocator);
+	});
 }
 
 void VulkanEngine::init_swapchain()
@@ -669,6 +674,7 @@ void VulkanEngine::init_pipelines()
 		vkDestroyPipeline(_device, _meshPipeline, nullptr);
 
 		vkDestroyPipelineLayout(_device, _trianglePipelineLayout, nullptr);
+		vkDestroyPipelineLayout(_device, _meshPipelineLayout, nullptr);
 	});
 }
 

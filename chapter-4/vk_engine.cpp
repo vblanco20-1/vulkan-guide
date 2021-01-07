@@ -75,7 +75,7 @@ void VulkanEngine::cleanup()
 	if (_isInitialized) {
 		
 		//make sure the gpu has stopped doing its things
-		vkWaitForFences(_device, 1, &get_current_frame()._renderFence, true, 1000000000);
+		vkDeviceWaitIdle(_device);
 
 		_mainDeletionQueue.flush();
 
@@ -273,7 +273,9 @@ void VulkanEngine::init_vulkan()
 	allocatorInfo.instance = _instance;
 	vmaCreateAllocator(&allocatorInfo, &_allocator);
 
-	
+	_mainDeletionQueue.push_function([&]() {
+		vmaDestroyAllocator(_allocator);
+		});
 
 	vkGetPhysicalDeviceProperties(_chosenGPU, &_gpuProperties);
 
@@ -1012,6 +1014,9 @@ void VulkanEngine::init_descriptors()
 
 	_sceneParameterBuffer = create_buffer(sceneParamBufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
 	
+	
+
+
 
 	for (int i = 0; i < FRAME_OVERLAP; i++)
 	{
@@ -1064,4 +1069,20 @@ void VulkanEngine::init_descriptors()
 
 		vkUpdateDescriptorSets(_device, 3, setWrites, 0, nullptr);
 	}
+
+	_mainDeletionQueue.push_function([&]() {
+
+		vmaDestroyBuffer(_allocator, _sceneParameterBuffer._buffer, _sceneParameterBuffer._allocation);
+		vkDestroyDescriptorSetLayout(_device, _objectSetLayout, nullptr);
+		vkDestroyDescriptorSetLayout(_device, _globalSetLayout, nullptr);
+
+		vkDestroyDescriptorPool(_device, _descriptorPool, nullptr);
+
+		for (int i = 0; i < FRAME_OVERLAP; i++)
+		{
+			vmaDestroyBuffer(_allocator,_frames[i].cameraBuffer._buffer, _frames[i].cameraBuffer._allocation);
+
+			vmaDestroyBuffer(_allocator, _frames[i].objectBuffer._buffer, _frames[i].objectBuffer._allocation);
+		}
+	});
 }

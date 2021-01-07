@@ -67,7 +67,7 @@ void VulkanEngine::cleanup()
 	if (_isInitialized) {
 		
 		//make sure the gpu has stopped doing its things
-		vkWaitForFences(_device, 1, &_renderFence, true, 1000000000);
+		vkDeviceWaitIdle(_device);
 
 		_mainDeletionQueue.flush();
 

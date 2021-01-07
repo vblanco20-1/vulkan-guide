@@ -79,7 +79,7 @@ void VulkanEngine::cleanup()
 	if (_isInitialized) {
 		
 		//make sure the gpu has stopped doing its things
-		vkWaitForFences(_device, 1, &get_current_frame()._renderFence, true, 1000000000);
+		vkDeviceWaitIdle(_device);
 
 		_mainDeletionQueue.flush();
 
@@ -277,7 +277,9 @@ void VulkanEngine::init_vulkan()
 	allocatorInfo.instance = _instance;
 	vmaCreateAllocator(&allocatorInfo, &_allocator);
 
-	
+	_mainDeletionQueue.push_function([&]() {
+		vmaDestroyAllocator(_allocator);
+	});
 
 	vkGetPhysicalDeviceProperties(_chosenGPU, &_gpuProperties);
 
@@ -645,11 +647,15 @@ void VulkanEngine::init_pipelines()
 
 	vkDestroyShaderModule(_device, meshVertShader, nullptr);
 	vkDestroyShaderModule(_device, colorMeshShader, nullptr);
+	vkDestroyShaderModule(_device, texturedMeshShader, nullptr);
+	
 
 	_mainDeletionQueue.push_function([=]() {
 		vkDestroyPipeline(_device, meshPipeline, nullptr);
+		vkDestroyPipeline(_device, texPipeline, nullptr);
 
 		vkDestroyPipelineLayout(_device, meshPipLayout, nullptr);
+		vkDestroyPipelineLayout(_device, texturedPipeLayout, nullptr);
 	});
 }
 
@@ -793,8 +799,12 @@ void VulkanEngine::load_images()
 	
 	vkutil::load_image_from_file(*this, "../../assets/lost_empire-RGBA.png", lostEmpire.image);
 	
-	VkImageViewCreateInfo imageinfo = vkinit::imageview_create_info(VK_FORMAT_R8G8B8A8_UNORM, lostEmpire.image._image, 0);
+	VkImageViewCreateInfo imageinfo = vkinit::imageview_create_info(VK_FORMAT_R8G8B8A8_UNORM, lostEmpire.image._image, VK_IMAGE_ASPECT_COLOR_BIT);
 	vkCreateImageView(_device, &imageinfo, nullptr, &lostEmpire.imageView);
+
+	_mainDeletionQueue.push_function([=]() {
+		vkDestroyImageView(_device, lostEmpire.imageView, nullptr);	
+	});
 
 	_loadedTextures["empire_diffuse"] = lostEmpire;
 }
@@ -854,7 +864,7 @@ void VulkanEngine::upload_mesh(Mesh& mesh)
 	_mainDeletionQueue.push_function([=]() {
 
 		vmaDestroyBuffer(_allocator, mesh._vertexBuffer._buffer, mesh._vertexBuffer._allocation);
-		});
+	});
 
 	immediate_submit([=](VkCommandBuffer cmd) {
 		VkBufferCopy copy;
@@ -1051,6 +1061,10 @@ void VulkanEngine::init_scene()
 	VkSampler blockySampler;
 	vkCreateSampler(_device, &samplerInfo, nullptr, &blockySampler);
 
+	_mainDeletionQueue.push_function([=]() {
+		vkDestroySampler(_device, blockySampler, nullptr);
+	});
+
 	VkDescriptorImageInfo imageBufferInfo;
 	imageBufferInfo.sampler = blockySampler;
 	imageBufferInfo.imageView = _loadedTextures["empire_diffuse"].imageView;
@@ -1246,4 +1260,23 @@ void VulkanEngine::init_descriptors()
 
 		vkUpdateDescriptorSets(_device, 3, setWrites, 0, nullptr);
 	}
+
+
+	_mainDeletionQueue.push_function([&]() {
+
+		vmaDestroyBuffer(_allocator, _sceneParameterBuffer._buffer, _sceneParameterBuffer._allocation);
+
+		vkDestroyDescriptorSetLayout(_device, _objectSetLayout, nullptr);
+		vkDestroyDescriptorSetLayout(_device, _globalSetLayout, nullptr);
+		vkDestroyDescriptorSetLayout(_device, _singleTextureSetLayout, nullptr);
+
+		vkDestroyDescriptorPool(_device, _descriptorPool, nullptr);
+
+		for (int i = 0; i < FRAME_OVERLAP; i++)
+		{
+			vmaDestroyBuffer(_allocator, _frames[i].cameraBuffer._buffer, _frames[i].cameraBuffer._allocation);
+
+			vmaDestroyBuffer(_allocator, _frames[i].objectBuffer._buffer, _frames[i].objectBuffer._allocation);
+		}
+	});
 }
