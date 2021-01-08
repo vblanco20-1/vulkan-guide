@@ -49,7 +49,7 @@ With those two done, we can go forward with initialization of the basic structur
 # Initializing core Vulkan structures
 
 
-The first thing we are going to initialize, is the Vulkan instance. For that, lets start by adding a new function and the stored handles to the VulkanEngine class
+The first thing we are going to initialize, is the Vulkan instance. For that, let's start by adding a new function and the stored handles to the VulkanEngine class
 
 vk_engine.h
 ```cpp
@@ -59,7 +59,7 @@ public:
     // --- ommited --- 
     VkInstance _instance; // Vulkan library handle
 	VkDebugUtilsMessengerEXT _debug_messenger; // Vulkan debug output handle
-	VkPhysicalDevice _chosenGPU; // gpu chosen as the default device
+	VkPhysicalDevice _chosenGPU; // GPU chosen as the default device
 	VkDevice _device; // Vulkan device for commands
 	VkSurfaceKHR _surface; // Vulkan window surface
 
@@ -127,8 +127,8 @@ Now that our new init_Vulkan function is added, we can start filling it.
 We are going to create a vkb::InstanceBuilder, which is from the VkBootstrap library, and simplifies the creation of a Vulkan VkInstance.
 
 For the creation of the instance, we want it to have the name "Example Vulkan Application", have validation layers enabled, and use default debug logger.
-The "Example Vulkan Application" name is completely meaningless. If you want to change it to anything, it wont be a problem.
-When initializing a VkInstance, the name of the application and engine is supplied. This is so driver vendors can detect the names of AAA games, so they can tweak internal driver logic for them alone. For normal people, its not really important.
+The "Example Vulkan Application" name is completely meaningless. If you want to change it to anything, it won't be a problem.
+When initializing a VkInstance, the name of the application and engine is supplied. This is so driver vendors can detect the names of AAA games, so they can tweak internal driver logic for them alone. For normal people, it's not really important.
 
 We want to enable validation layers by default, hardcoded. With what we are going to do during the guide, there is no need to ever turn them off, as they will catch our errors very nicely. On a more advanced engine, you would only enable the layers in debug mode, or with a specific configuration parameter.
 
@@ -146,8 +146,8 @@ We store the VkDebugUtilsMessengerEXT so we can destroy it at program exit, othe
 	// get the surface of the window we opened with SDL    
 	SDL_Vulkan_CreateSurface(_window, _instance, &_surface);
 
-	//use vkbootstrap to select a gpu. 
-	//We want a gpu that can write to the SDL surface and supports Vulkan 1.1
+	//use vkbootstrap to select a GPU. 
+	//We want a GPU that can write to the SDL surface and supports Vulkan 1.1
 	vkb::PhysicalDeviceSelector selector{ vkb_inst };
 	vkb::PhysicalDevice physicalDevice = selector
 		.set_minimum_version(1, 1)
@@ -165,11 +165,11 @@ We store the VkDebugUtilsMessengerEXT so we can destroy it at program exit, othe
 	_chosenGPU = physicalDevice.physical_device;
 ```
 
-To select a gpu to use, we are going to use vkb::PhysicalDeviceSelector.
+To select a GPU to use, we are going to use vkb::PhysicalDeviceSelector.
 
-First of all, we need to create a VkSurfaceKHR object from the SDL window. This is the actual window we will be rendering to, so we need to tell the physical device selector to grab a gpu that can render to said window.
+First of all, we need to create a VkSurfaceKHR object from the SDL window. This is the actual window we will be rendering to, so we need to tell the physical device selector to grab a GPU that can render to said window.
 
-For the gpu selector, we just want Vulkan 1.1 support and the window surface, so there is not much to find. The library will make sure to select the dedicated gpu in the system.
+For the GPU selector, we just want Vulkan 1.1 support and the window surface, so there is not much to find. The library will make sure to select the dedicated GPU in the system.
 
 Once we have a VkPhysicalDevice, we can directly build a VkDevice from it.
 
@@ -264,7 +264,7 @@ void VulkanEngine::init_swapchain()
 }
 ```
 
-The most important detail here is the present mode, which we have set to `VK_PRESENT_MODE_FIFO_KHR`. This way we are doing a hard VSync, which will limit the FPS of the entire engine to the speed of the monitor. Its a good way to have a FPS limit for now.
+The most important detail here is the present mode, which we have set to `VK_PRESENT_MODE_FIFO_KHR`. This way we are doing a hard VSync, which will limit the FPS of the entire engine to the speed of the monitor. It's a good way to have a FPS limit for now.
 
 We also send the window sizes to the swapchain. This is important as creating a swapchain will also create the images for it, so the size is locked. If you need to resize the window, the swapchain will need to be rebuild.
 
@@ -300,7 +300,7 @@ void VulkanEngine::cleanup()
 
 It is imperative that objects are destroyed in the opposite order that they are created. In some cases, if you know what you are doing, the order can be changed a bit and it will be fine, but destroying the objects in reverse order is an easy way to have it work.
 
-VkPhysicalDevice cant be destroyed, as its not a Vulkan resource per-se, its more like just a handle to a gpu in the system.
+VkPhysicalDevice can't be destroyed, as it's not a Vulkan resource per-se, it's more like just a handle to a GPU in the system.
 
 Because our initialization order was SDL Window -> Instance -> Surface -> Device -> Swapchain, we are doing exactly the opposite order for destruction.
 
@@ -310,7 +310,7 @@ There is no need to destroy the Images in this specific case, because the images
 
 
 ## Validation layer errors
-Just to check that our validation layers are working, lets try to call the destruction functions in the wrong order
+Just to check that our validation layers are working, let's try to call the destruction functions in the wrong order
 
 ```cpp
 void VulkanEngine::cleanup()
@@ -335,7 +335,7 @@ void VulkanEngine::cleanup()
 }
 ```
 
-We are now destroying the Instance before the Device and the Surface (which was created from the Instance) is also deleted. The validation layers should complain with a errors like this.
+We are now destroying the Instance before the Device and the Surface (which was created from the Instance) is also deleted. The validation layers should complain with an error like this.
 
 ```
 [ERROR: Validation]

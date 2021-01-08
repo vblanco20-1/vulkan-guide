@@ -9,15 +9,15 @@ nav_order: 12
 
 Now that we can load the shaders we needed for the triangle, we have to build the VkPipeline to render it.
 
-The VkPipeline is a *huge* object in Vulkan that encompasses the configuration of the entire GPU for the draw. Building them can be very expensive, as it will fully convert the shader module into the gpu instructions, and will validate the setup for it.
+The VkPipeline is a *huge* object in Vulkan that encompasses the configuration of the entire GPU for the draw. Building them can be very expensive, as it will fully convert the shader module into the GPU instructions, and will validate the setup for it.
 
 Once a pipeline is built, it can be bound inside a command buffer, and then when you draw anything it will use the bound pipeline.
 
-Vulkan pipelines are a massive object with many different configuration structs, some of them even running pointers and being arrays. For this reason, we are going to create a class speficially for building pipelines, that will simplify the process.
+Vulkan pipelines are a massive object with many different configuration structs, some of them even running pointers and being arrays. For this reason, we are going to create a class specifically for building pipelines, that will simplify the process.
 
 Over the tutorial, we are going to create more pipelines, so having a relatively easy way to create pipelines will be of great use.
 
-lets begin by declaring the class. We are going to add the class into the vk_engine.h header, alongside the VulkanEngine class.
+Let's begin by declaring the class. We are going to add the class into the vk_engine.h header, alongside the VulkanEngine class.
 
 vk_engine.h
 ```cpp
@@ -41,7 +41,7 @@ public:
 ```
 
 The pipeline builder is a class with all the needed Vulkan structs stored inside (this is a basic set, there are more, but for now these are the ones we will need to fill). And a build_pipeline function that will finalize it and build it. 
-If you want, you can put the builder in its own file (recomended vk_pipeline.h) but we arent doing it to keep number of files low.
+If you want, you can put the builder in its own file (recomended vk_pipeline.h) but we aren't doing it to keep number of files low.
 
 We will now go to vk_initializers.h and start writing an initializer for each of those structs.
 
@@ -68,7 +68,7 @@ VkPipelineShaderStageCreateInfo vkinit::pipeline_shader_stage_create_info(VkShad
 	}
 ```
 
-We are hardcoding the entry point to "main". Remember from the last article that the entry point for the shaders was the `main()` function. This allows us to control it, but main() is fairly standard so lets just keep it like that.
+We are hardcoding the entry point to "main". Remember from the last article that the entry point for the shaders was the `main()` function. This allows us to control it, but main() is fairly standard so let's just keep it like that.
 
 ### Vertex Input State
 `VkPipelineVertexInputStateCreateInfo` contains the information for vertex buffers and vertex formats. This is equivalent to the VAO configuration on opengl, but at the time we are not using it, so we will initialize it with an empty state. On the next tutorial chapter we will learn how to set this one up correctly.
@@ -87,7 +87,7 @@ VkPipelineVertexInputStateCreateInfo vkinit::vertex_input_state_create_info() {
 ```
 
 ### Input Assembly
-`VkPipelineInputAssemblyStateCreateInfo` contains the configuration for what kind of topoly will be drawn. This is where you set it to draw triangles, lines,points, or others like triangle-list.
+`VkPipelineInputAssemblyStateCreateInfo` contains the configuration for what kind of topology will be drawn. This is where you set it to draw triangles, lines, points, or others like triangle-list.
 
 ```cpp
 VkPipelineInputAssemblyStateCreateInfo vkinit::input_assembly_create_info(VkPrimitiveTopology topology) {
@@ -119,7 +119,7 @@ VkPipelineRasterizationStateCreateInfo vkinit::rasterization_state_create_info(V
 		info.pNext = nullptr;
 
 		info.depthClampEnable = VK_FALSE;
-		//rasterizer discard allows objects with holes, default to no
+		//discards all primitives before the rasterization stage if enabled which we don't want
 		info.rasterizerDiscardEnable = VK_FALSE;
 
 		info.polygonMode = polygonMode;
@@ -139,9 +139,9 @@ VkPipelineRasterizationStateCreateInfo vkinit::rasterization_state_create_info(V
 
 We are just going to leave polygonMode as editable input, to be able to toggle between wireframe and solid drawing.
 
-cullMode is used to cull backfaces or frontpages, but in here we are going to leave it with no cull by default. We are also not using any depth bias here, so we are going to set all of that to 0.
+cullMode is used to cull backfaces or frontfaces, but in here we are going to leave it with no cull by default. We are also not using any depth bias here, so we are going to set all of that to 0.
 
-An important one is `rasterizerDiscardEnable`, which controls if its possible to do discard pixels from the shader. If we have objects that have alpha-test, we need to set this to true, but we are going to leave it as disabled by default as its better for performance.
+If `rasterizerDiscardEnable` is enabled, primitives (triangles in our case) are discarded before even making it to the rasterization stage which means the triangles would never get drawn to the screen. You might enable this, for example, if you're only interested in the side effects of the vertex processing stages, such as writing to a buffer which you later read from. But in our case we're interested in drawing the triangle, so we leave it disabled.
 
 ### Multisampling State
 `VkPipelineMultisampleStateCreateInfo` allows us to configure MSAA for this pipeline. We are not going to use MSAA on the entire tutorial, so we are going to default it to 1 sample and MSAA disabled.
@@ -166,7 +166,7 @@ VkPipelineMultisampleStateCreateInfo vkinit::multisampling_state_create_info()
 ```
 
 ### Color Blend Attachment State
-`VkPipelineColorBlendAttachmentState` Controls how this pipeline blends into a given attachment. We are rendering to only 1 attachment, so we will just need one of them, and defaulted to "not blend" and just override. In here its possible to make objects that will blend with the image. This one also doesnt have sType + pNext
+`VkPipelineColorBlendAttachmentState` Controls how this pipeline blends into a given attachment. We are rendering to only 1 attachment, so we will just need one of them, and defaulted to "not blend" and just override. In here it's possible to make objects that will blend with the image. This one also doesnt have sType + pNext
 
 
 ```cpp
@@ -182,12 +182,12 @@ VkPipelineColorBlendAttachmentState vkinit::color_blend_attachment_state() {
 ## Finishing the PipelineBuilder
 Now that have all of the structs, we need to fill the build_pipeline function of the PipelineBuilder, that assembles all of the above into the final Info struct to create the pipeline.
 
-Lets begin by connecting the viewport and scissor into ViewportState, and setting the ColorBlenderStateCreateInfo
+Let's begin by connecting the viewport and scissor into ViewportState, and setting the ColorBlenderStateCreateInfo
 
 ```cpp
 VkPipeline PipelineBuilder::build_pipeline(VkDevice device, VkRenderPass pass) {
 			//make viewport state from our stored viewport and scissor.
-			//at the moment we wont support multiple viewports or scissors
+			//at the moment we won't support multiple viewports or scissors
 			VkPipelineViewportStateCreateInfo viewportState = {};
 			viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
 			viewportState.pNext = nullptr;
@@ -197,7 +197,7 @@ VkPipeline PipelineBuilder::build_pipeline(VkDevice device, VkRenderPass pass) {
 			viewportState.scissorCount = 1;
 			viewportState.pScissors = &_scissor;
 
-			//setup dummy color blending. We arent using transparent objects yet
+			//setup dummy color blending. We aren't using transparent objects yet
 			//the blending is just "no blend", but we do write to the color attachment
 			VkPipelineColorBlendStateCreateInfo colorBlending = {};
 			colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
@@ -237,7 +237,7 @@ VkPipeline PipelineBuilder::build_pipeline(VkDevice device, VkRenderPass pass) {
 	pipelineInfo.subpass = 0;
 	pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 
-	//its easy to error out on create graphics pipeline, so we handle it a bit better than the common VK_CHECK case
+	//it's easy to error out on create graphics pipeline, so we handle it a bit better than the common VK_CHECK case
 	VkPipeline newPipeline;
 	if (vkCreateGraphicsPipelines(
 		device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &newPipeline) != VK_SUCCESS) {
@@ -254,9 +254,9 @@ VkPipeline PipelineBuilder::build_pipeline(VkDevice device, VkRenderPass pass) {
 ## Pipeline Layout
 Alongside of all the State structs, we will need a VkPipelineLayout object for our pipeline. Unlike the other state structs, this one is an actual full Vulkan object, and needs to be created separately from the pipeline.
 
-Pipeline layouts contain the information about shader inputs of a given pipeline. Its here where you would configure your push-constants and descriptor sets, but at the time we wont need it, so we are going to create an empty pipeline layout for our Pipeline
+Pipeline layouts contain the information about shader inputs of a given pipeline. It's here where you would configure your push-constants and descriptor sets, but at the time we won't need it, so we are going to create an empty pipeline layout for our Pipeline
 
-We need yet another info struct, so lets add it.
+We need yet another info struct, so let's add it.
 ```cpp
 VkPipelineLayoutCreateInfo vkinit::pipeline_layout_create_info() {
 		VkPipelineLayoutCreateInfo info{};
@@ -274,7 +274,7 @@ VkPipelineLayoutCreateInfo vkinit::pipeline_layout_create_info() {
 ```
 We are setting pSetLayouts and pPushConstantRanges both to null because our shader has no inputs, but we will soon add something to here.
 
-It is needed that we store the pipeline layout somewhere, as there are a lot of Vulkan commands that need it, so lets add a member to our VulkanEngine class for it
+It is needed that we store the pipeline layout somewhere, as there are a lot of Vulkan commands that need it, so let's add a member to our VulkanEngine class for it
 
 
 ```cpp
@@ -313,7 +313,7 @@ void VulkanEngine::init_pipelines()
 
 ## Creating the triangle pipeline
 
-Its now time to assemble everything together and build the pipeline for rendering the triangle.
+It's now time to assemble everything together and build the pipeline for rendering the triangle.
 
 Add _trianglePipeline as a new variable on the VulkanEngine class
 ```cpp
@@ -341,7 +341,7 @@ void VulkanEngine::init_pipelines()
 		vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT, triangleFragShader));
 
 
-	//vertex input controls how to read vertices from vertex buffers. We arent using it yet
+	//vertex input controls how to read vertices from vertex buffers. We aren't using it yet
 	pipelineBuilder._vertexInputInfo = vkinit::vertex_input_state_create_info();
 	
 	//input assembly is the configuration for drawing triangle lists, strips, or individual points.
@@ -378,7 +378,7 @@ void VulkanEngine::init_pipelines()
 
 We have finally created the pipeline we needed to draw the triangle, so we can finally do it.
 
-Lets go to our main `draw()` function, and execute the draw
+Let's go to our main `draw()` function, and execute the draw.
 
 We need to add the draw commands between VkCmdBeginRenderPass and vkCmdEndRenderPass
 ```cpp

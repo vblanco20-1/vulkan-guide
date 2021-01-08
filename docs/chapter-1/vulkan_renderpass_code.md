@@ -6,7 +6,7 @@ nav_order: 31
 ---
 
 
-Lets start by adding the new members we are going to need to the class.
+Let's start by adding the new members we are going to need to the class.
 
 vk_engine.h
 ```cpp
@@ -55,7 +55,7 @@ void VulkanEngine::init()
 
 We need to create the renderpass BEFORE the framebuffers, because the framebuffers are created for a specific renderpass.
 
-Lets start filling the `init_default_renderpass()` function
+Let's start filling the `init_default_renderpass()` function
 
 
 ```cpp
@@ -64,8 +64,8 @@ void VulkanEngine::init_default_renderpass()
 	// the renderpass will use this color attachment.
 	VkAttachmentDescription color_attachment = {};
 	//the attachment will have the format needed by the swapchain
-	color_attachment.format = _swachainImageFormat;
-	//1 sample, we wont be doing MSAA
+	color_attachment.format = _swapchainImageFormat;
+	//1 sample, we won't be doing MSAA
 	color_attachment.samples = VK_SAMPLE_COUNT_1_BIT;
 	// we Clear when this attachment is loaded
 	color_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
@@ -85,7 +85,7 @@ void VulkanEngine::init_default_renderpass()
 
 First thing we start writing is the color attachment. This is the description of the image we will be writing into with rendering commands.
 
-The image will use the format we got from the swapchain (so its compatible), and we will clear it when the renderpass begins. When the renderpass ends, we will store the image so that it can be read later.
+The image will use the format we got from the swapchain (so it's compatible), and we will clear it when the renderpass begins. When the renderpass ends, we will store the image so that it can be read later.
 
 Before the renderpass, the image layout will be undefined, which means "we don't care". And after the renderpass ends, the layout will be ready to be displayed with the swapchain.
 

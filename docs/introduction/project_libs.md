@@ -19,7 +19,7 @@ For the Vulkan engine, we use a specific folder layout.
 
 On the engine, we use a set of libraries, most stored in `/third_party`. The only library that isn't vendored-in is SDL
 
-All the libraries in third-party are vendored-in, and CMake will build them automatically. For SDL, its required to build it separately from the project, and tell CMake where to find it.
+All the libraries in third-party are vendored-in, and CMake will build them automatically. For SDL, it's required to build it separately from the project, and tell CMake where to find it.
 
 The Libraries we are using:
 - [GLM (openGL Mathematics)](https://github.com/g-truc/glm) Mathematics library, Header only. We use this for its matrix and vector math functionality. It's a library that contains types that are directly compatible with GLSL types in most cases. For example, a `glm::mat4` has similar operations and is directly compatible with a `mat4` in a shader. While it says OpenGL in the name, it works great with Vulkan.
