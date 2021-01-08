@@ -22,7 +22,7 @@ bool vkutil::load_image_from_file(VulkanEngine& engine, const char* file, Alloca
 	void* pixel_ptr = pixels;
 	VkDeviceSize imageSize = texWidth * texHeight * 4;
 
-	VkFormat image_format = VK_FORMAT_R8G8B8A8_UNORM;
+	VkFormat image_format = VK_FORMAT_R8G8B8A8_SRGB;
 
 	AllocatedBuffer stagingBuffer = engine.create_buffer(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
 
