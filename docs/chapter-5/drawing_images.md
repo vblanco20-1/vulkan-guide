@@ -217,7 +217,7 @@ We will add a texture descriptor parameter into our Material struct, and we will
 
 ```cpp
 struct Material {
-	VkDescriptorSet textureSet;
+	VkDescriptorSet textureSet{VK_NULL_HANDLE}; //texture defaulted to null
 	VkPipeline pipeline;
 	VkPipelineLayout pipelineLayout;
 };
