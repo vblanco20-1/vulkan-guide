@@ -362,11 +362,11 @@ if(Part->IsDead)
 
 
 ## Links
-* [1] : CPPCon16, “Want fast C++? Know your hardware!"  https://www.youtube.com/watch?v=BP6NxVxDQIs
-* [2] : Fabien Sanglard Doom 3 engine overview: https://fabiensanglard.net/doom3_bfg/threading.php
-* [3] : GDC	Parallelizing the Naughty Dog Engine Using Fibers https://www.gdcvault.com/play/1022186/Parallelizing-the-Naughty-Dog-Engine
-* [4] : GDC Multithreading the Entire Destiny Engine https://www.youtube.com/watch?v=v2Q_zHG3vqg
-* [5] : GDC	Destiny's Multithreaded Rendering Architecture https://www.youtube.com/watch?v=0nTDFLMLX9k
+* [1] : [CPPCon16, “Want fast C++? Know your hardware!"](https://www.youtube.com/watch?v=BP6NxVxDQIs)
+* [2] : [Fabien Sanglard Doom 3 engine overview](https://fabiensanglard.net/doom3_bfg/threading.php)
+* [3] : [GDC Parallelizing the Naughty Dog Engine Using Fibers](https://www.gdcvault.com/play/1022186/Parallelizing-the-Naughty-Dog-Engine)
+* [4] : [GDC Multithreading the Entire Destiny Engine](https://www.youtube.com/watch?v=v2Q_zHG3vqg)
+* [5] : [GDC Destiny's Multithreaded Rendering Architecture](https://www.youtube.com/watch?v=0nTDFLMLX9k)
 
 
 
