@@ -11,9 +11,11 @@ For the last 20 years, computers and game consoles have had multiple cores in th
 
 A multicore CPU generally has multiple "standalone" cores, each of them being a full CPU on its own. Each of the cores can execute an arbitrary program on its own. If the CPU has hyperthreading/SMT, the CPU will not execute one thread of program instructions, but multiple (often 2). When this happens the inner resources of the CPU (memory units, math units, logic units, caches) will be shared between those multiple threads.
 
-The different cores on the CPU work on their own, and the CPU syncronizes the memory writes from one core so that other cores can also see it if it detects that one core is writing to the same memory location a different core is also writing into or reading from. That syncronization has a cost, so whenever you program multithreaded programs, its important to try to avoid having multiple threads writing to the same memory, or one thread writing and other reading.
+The different cores on the CPU work on their own, and the CPU synchronizes the memory writes from one core so that other cores can also see it if it detects that one core is writing to the same memory location a different core is also writing into or reading from. That syncronization has a cost, so whenever you program multithreaded programs, its important to try to avoid having multiple threads writing to the same memory, or one thread writing and other reading.
 
-For correct syncronization of operations, CPUs also have specific instructions that can syncronize multiple cores, like atomic instructions. Those instructions are the backbone of the syncronization primitives that are used to communicate between threads.
+For correct syncronization of operations, CPUs also have specific instructions that can synchronize multiple cores, like atomic instructions. Those instructions are the backbone of the syncronization primitives that are used to communicate between threads.
+
+If you want to learn more about the hardware details of CPUs and how they map to Cpp programming, this CPPCon presentation explains it nicely [1];
 
 
 ## Ways of using multithreading in game engines.
@@ -21,18 +23,19 @@ At first, game engines were completely singlethreaded, and wouldnt use multiple 
 
 The first and most classic way of multithreading a game engine is to make multiple threads, and have each of them perform their own task.
 
-For example, you have a Game Thread, which runs all of the gameplay logic and AI. Then you have a Render Thread that handles all the code that deals with rendering, preparing objects to draw and executing graphics commands.
+For example, you have a Game Thread, which runs all of the gameplay logic and AI. Then you have a Render Thread that handles all the code that deals with rendering, preparing objects to draw and executing graphics commands. 
 
-An example we can see of this is Unreal Engine 2, 3, and 4. Unreal Engine 4 is open source, so it can be a good example.
+An example we can see of this is Unreal Engine 2, 3, and 4. Unreal Engine 4 is open source, so it can be a good example. Doom 3 (2004) engine as explained on this article shows it clearly too [2].
 
-Unreal Engine 4 will have a Game Thread and a Render Thread as main, and then a few others for things such as helpers, audio, or loading. The Game Thread in Unreal Engine will run all of the gameplay logic that developers write in Blueprints and Cpp, and at the end of each frame, it will syncronize the positions and state of the objects in the world with the Render Thread, which will do all of the rendering logic and make sure to display them.
+Unreal Engine 4 will have a Game Thread and a Render Thread as main, and then a few others for things such as helpers, audio, or loading. The Game Thread in Unreal Engine will run all of the gameplay logic that developers write in Blueprints and Cpp, and at the end of each frame, it will synchronize the positions and state of the objects in the world with the Render Thread, which will do all of the rendering logic and make sure to display them.
 
 While this approach is very popular and very easy to use, it has the drawback of scaling terribly. You will commonly see that Unreal Engine games struggle scaling past 4 cores, and in consoles the performance is much lower that it could be due to not filling the 8 cores with work. Another issue with this model is that if you have one of the threads have more work than the others, then the entire simulation will wait. In unreal engine 4, the Game THread and Render Thread are synced at each frame, so if either of them is slow, both will be slowed as the run at the same time. A game that has lots of blueprint usage and AI calculations in UE4 will have the Game Thread busy doing work in 1 core, and then every other core in the machine unused.
 
 A common approach of enhancing this architecture is to move it more into a fork/join approach, where you have a main execution thread, and at some points, parts of the work is split between threads. Unreal Engine does this for animation and physics. While the Game Thread is the one in charge of the whole game logic part of the engine, when it reaches the point where it has to do animations, it will split the animations to calculate into small tasks, and distribute those across helper threads in other cores. This way while it still has a main timeline of execution, there are points where it gets extra help from the unused cores. This improves scalability, but its still not good enough as the rest of the frame is still singlethreaded.
 
 
-Mostly since the ps4 generation of consoles, which have 8 very weak cores, architectures have evolved into trying to make sure all the cores are working on something and doing something useful. A lot of game engines have moved to a Task based system for that purpose. In there, you dont dedicate 1 thread to do one thing, but instead split your work into small sections, and then have multiple threads work on those sections on their own, merging the results after the tasks finish. Unlike the fork-join approach of having one dedicated thread and having it ship off work to helpers, you do everything on the helpers for the most part. Your main timeline of operations is created as a graph of tasks to do, and then those are distributed across cores. A task cant start until all of its predecessor tasks are finished. If a task system is used well, it grants really good scalability as everything automatically distributes to however many cores are available. A great example of this is Doom Eternal, where you can see it smoothly scaling from PCs with 4 cores to PCs with 16 cores.
+Mostly since the ps4 generation of consoles, which have 8 very weak cores, architectures have evolved into trying to make sure all the cores are working on something and doing something useful. A lot of game engines have moved to a Task based system for that purpose. In there, you dont dedicate 1 thread to do one thing, but instead split your work into small sections, and then have multiple threads work on those sections on their own, merging the results after the tasks finish. Unlike the fork-join approach of having one dedicated thread and having it ship off work to helpers, you do everything on the helpers for the most part. Your main timeline of operations is created as a graph of tasks to do, and then those are distributed across cores. A task cant start until all of its predecessor tasks are finished. If a task system is used well, it grants really good scalability as everything automatically distributes to however many cores are available. A great example of this is Doom Eternal, where you can see it smoothly scaling from PCs with 4 cores to PCs with 16 cores. Some great talks from GDC about it are Naughty Dog "Parallelizing the Naughty Dog Engine Using Fibers" [3] and the 2 Destiny Engine talks [4] [5]
+
 
 ## In practice.
 Cpp since version 11 has a lot of utilities in the standard library that we can use for multithreading. The starter one is `std::thread`. This will wrap around a thread from the operating system. Threads are expensive to create and creating more threads than you have cores will decrease performance due to overhead. Even then, using a `std::thread` to create something like explained above with dedicated threads can be straightforward.
@@ -190,7 +193,7 @@ auto physics_task = std::async(std::launch::async,
        physicsSystem->UpdatePhysics();
     });
     
-//syncronize the 3 tasks
+//synchronize the 3 tasks
 particles_task.wait();
 animation_task.wait();
 physics_task.wait();
@@ -212,9 +215,9 @@ A common way to know that a given task can run alongside another one is to "pack
 For most tasks, there are places where we just cant guarantee that only one task is working on it at a time, and so we need a way of syncronizing data beetwen the different tasks run at the same time on multiple cores.
 
 ## Syncronizing data.
-There are a lot of ways of syncronizing the data tasks work on. Generally you really want to minimize the shared data a lot, as its a source of bugs, and can be horrible if not syncronized properly. There are a few patterns that do work quite well that can be used. 
+There are a lot of ways of syncronizing the data tasks work on. Generally you really want to minimize the shared data a lot, as its a source of bugs, and can be horrible if not synchronized properly. There are a few patterns that do work quite well that can be used. 
 
-A common one is to have tasks publish messages into queues, and then another task can read it at other point. Lets say that our Particles from above need to be deleted, but the particles are stored in an array, and deleting a particle from that array when the other threads are working on other particles of the same array is a guaranteed way to make the program crash. We could insert the particle IDs into a shared syncronized queue, and after all particles finished their work, delete the particles from that queue.
+A common one is to have tasks publish messages into queues, and then another task can read it at other point. Lets say that our Particles from above need to be deleted, but the particles are stored in an array, and deleting a particle from that array when the other threads are working on other particles of the same array is a guaranteed way to make the program crash. We could insert the particle IDs into a shared synchronized queue, and after all particles finished their work, delete the particles from that queue.
 
 We are not going to look at the implementation details of the queue. Lets say its a magic queue where you can safely push elements into from multiple cores at once. There are lots of those queues around.
 
@@ -286,11 +289,11 @@ std::for_each(std::execution::par,
 
 ```
 
-In this example, if we were using a normal integer, the count will very likely be wrong, as each thread will add a different value and its very likely that one thread will override another thread, but in here, we are using `atomic<int>`, which is guaranteed to have the correct value in a case like this. Atomic numbers also implement more abstract operations such as Compare and Swap, and Fetch Add, which can be used to implement syncronized data structures, but doing that properly is for the experts, as its some of the hardest things you can try to implement yourself.
+In this example, if we were using a normal integer, the count will very likely be wrong, as each thread will add a different value and its very likely that one thread will override another thread, but in here, we are using `atomic<int>`, which is guaranteed to have the correct value in a case like this. Atomic numbers also implement more abstract operations such as Compare and Swap, and Fetch Add, which can be used to implement synchronized data structures, but doing that properly is for the experts, as its some of the hardest things you can try to implement yourself.
 
-When used wrong, atomic variables will error in very subtle ways depending on the hardware of the CPU. Debugging this sort of errors can be near impossible to do. As bonus fun points, atomics are implemented in different ways across different types and brands of CPUs, so you really need to know what you are doing to use them in complicated cases or to build parallel data structures.
+When used wrong, atomic variables will error in very subtle ways depending on the hardware of the CPU. Debugging this sort of errors can be hard to do. 
 
-To actually syncronize data structures or multithreaded access to something its better to use mutexes.
+To actually synchronize data structures or multithreaded access to something its better to use mutexes.
 
 
 ## Mutex
@@ -358,6 +361,12 @@ if(Part->IsDead)
 
 
 
+## Links
+* [1] : CPPCon16, “Want fast C++? Know your hardware!"  https://www.youtube.com/watch?v=BP6NxVxDQIs
+* [2] : Fabien Sanglard Doom 3 engine overview: https://fabiensanglard.net/doom3_bfg/threading.php
+* [3] : GDC	Parallelizing the Naughty Dog Engine Using Fibers https://www.gdcvault.com/play/1022186/Parallelizing-the-Naughty-Dog-Engine
+* [4] : GDC Multithreading the Entire Destiny Engine https://www.youtube.com/watch?v=v2Q_zHG3vqg
+* [5] : GDC	Destiny's Multithreaded Rendering Architecture https://www.youtube.com/watch?v=0nTDFLMLX9k
 
 
 
