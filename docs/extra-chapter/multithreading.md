@@ -9,14 +9,12 @@ nav_order: 40
 
 For the last 20 years, computers and game consoles have had multiple cores in their CPUs. Over time, the number of cores has increased, with the new consoles having 8 cores with hyperthreading, and PCs getting more and more cores, with things like some ARM servers hitting 80 real cores in a single CPU. Meanwhile, the single-thread performance of CPUs has been relatively stagnant for quite a while, hitting a GHZ barrier of 4-5 gz of clock speed in the CPUs. This means that applications these days need to be programmed for multiple cores to really use the full power of the CPU.
 
-To be able to write good multithreaded code, its important to have an idea of how multicore CPUs are designed and implemented, as it affects directly what the best patterns are.
+A multicore CPU generally has multiple "standalone" cores, each of them being a full CPU on its own. Each of the cores can execute an arbitrary program on its own. If the CPU has hyperthreading/SMT, the CPU will not execute one thread of program instructions, but multiple (often 2). When this happens the inner resources of the CPU (memory units, math units, logic units, caches) will be shared between those multiple threads.
 
-A multicore CPU generally has multiple "standalone" cores, each of them being a full CPU on its own. Each of the cores can execute an arbitrary program on its own. Generally, each of the cores has its own L1 cache, and thats what the core will use for the data its doing work at the time. If the CPU has hyperthreading/SMT, the CPU will not execute one thread of program instructions, but multiple (often 2). When this happens the inner resources of the CPU (memory units, math units, logic units, caches) will be shared beetween those multiple threads.
-In most CPUs, the Level 3 cache, which is much bigger than the L1 cache, will be shared beetween the cores on the CPU. The exact layout of the caches changes depending on the CPU design and architecture, so you can read the information by the manufacturer to know the specifics. Generally L1 is private to each core, and L3 is shared beetween multiple cores.
+The different cores on the CPU work on their own, and the CPU syncronizes the memory writes from one core so that other cores can also see it if it detects that one core is writing to the same memory location a different core is also writing into or reading from. That syncronization has a cost, so whenever you program multithreaded programs, its important to try to avoid having multiple threads writing to the same memory, or one thread writing and other reading.
 
-Each of the cores works on its own data, so there has to be a way to syncronize the data to make sure that things are kept coherent. For that, CPUs implement a system that flags memory locations that each core is working on, and if multiple cores work in the same exact memory location, then circuitry in the CPU makes sure that things are somewhat syncronized. That machinery is slow as the cores need to go to L2 or L3 for everything instead of using their local L1, so when you code something that is multithreaded, you need to make sure that the CPUs generally dont work on the exact same memory locations to avoid that slowdown.
+For correct syncronization of operations, CPUs also have specific instructions that can syncronize multiple cores, like atomic instructions. Those instructions are the backbone of the syncronization primitives that are used to communicate between threads.
 
-While that memory coherency system works, its very much not reliable as cores can overwrite each others work. For that reason, CPUs implement Atomic operations, which are very specific operations like Add or Compare and Swap that will go through all the cache levels and make sure that the operations happen properly. For example, if you use AtomicAdd operations on a number from multiple cores, the final value will be correct to what each core added. If you just did addition operations without atomics, each core will add the numbers on its own and will likely override each other, so at the end the number wont match up. Atomic operations are the core of all syncronization primitives, and the way you communicate beetween cores. Things like Mutexes are programmed on top of them.
 
 ## Ways of using multithreading in game engines.
 At first, game engines were completely singlethreaded, and wouldnt use multiple cores at all. Over time, the engines were programmed to use more and more cores, with patterns and architectures that map to that amount of cores.
@@ -254,4 +252,112 @@ for(Particle* Part : deletion_queue)
 ```
 
 This is a very common pattern in multithreaded code, and very useful, but like everything, it has its drawbacks. Having queues like this will increase the memory usage of the application due to all the data duplication, and inserting the data into these threadsafe queues is not free.
+
+## Atomics
+
+The core syncronization primitives to communicate data between cores are atomic operations, and Cpp past 11 has them integrated into the STL. 
+Atomic operations are a specific set of instructions that are guaranteed to work well(as specified) even if multiple cores are doing things at once. Things like parallel queues and mutexes are implemented with them. 
+Atomic operations are often significantly more expensive than normal operations, so you cant just make every variable in your application an atomic one, as that would harm performance a lot. They are most often used to aggregate the data from multiple threads or do some light syncronization. 
+
+As an example of what atomics are, we are going to continue with the example above of the particle system, and we will use atomic-add to add how many vertices we have across all particles, without splitting the parallel for.
+
+For that use, we are going to be using `std::atomic<int>`. You can have atomic variables of multiple base types like integers and floats.
+
+```cpp
+
+//create variable to hold how many billboards we have
+std::atomic<int> vertex{0};
+
+std::for_each(std::execution::par, 
+            ParticleSystems.begin(),
+            ParticleSystems.end(),
+            [](Particle* Part){ 
+                Part->UpdateParticles();
+
+                if(Part->IsDead)
+                {
+                    deletion_queue.push(Part);
+                }
+                else{
+                //add the number of vertices in this system
+                vertexAmount += Part->vertexCount;
+                }
+            });   
+
+```
+
+In this example, if we were using a normal integer, the count will very likely be wrong, as each thread will add a different value and its very likely that one thread will override another thread, but in here, we are using `atomic<int>`, which is guaranteed to have the correct value in a case like this. Atomic numbers also implement more abstract operations such as Compare and Swap, and Fetch Add, which can be used to implement syncronized data structures, but doing that properly is for the experts, as its some of the hardest things you can try to implement yourself.
+
+When used wrong, atomic variables will error in very subtle ways depending on the hardware of the CPU. Debugging this sort of errors can be near impossible to do. As bonus fun points, atomics are implemented in different ways across different types and brands of CPUs, so you really need to know what you are doing to use them in complicated cases or to build parallel data structures.
+
+To actually syncronize data structures or multithreaded access to something its better to use mutexes.
+
+
+## Mutex
+
+A mutex is a higher level primitive that is used to control the execution flow on threads. You can use them to make sure that a given operation is only being executed by one thread at a time.
+
+Mutexes are implemented using atomics, but if they block a thread for a long time, they can ask the OS to put that thread on the background and let a different thread execute. This can be expensive, so mutexes are best used on operations that you know wont block too much.
+
+Continuing with the example, we are going to implement the parallel queue above as a normal vector, but protected with a mutex.
+
+
+```cpp
+
+//create variable to hold how many billboards we have
+std::vector<Particle*> deletion_list;
+
+//declare a mutex for the syncronization.
+std::mutex deletion_mutex;
+
+std::for_each(std::execution::par, 
+            ParticleSystems.begin(),
+            ParticleSystems.end(),
+            [](Particle* Part){ 
+                Part->UpdateParticles();
+
+                if(Part->IsDead)
+                {
+                    //lock the mutex. If the mutex is already locked, the current thread will wait until it unlocks
+                    deletion_mutex.lock();
+
+                    //only one thread at a time will execute this line
+                    deletion_list.push(Part);
+
+                    //dont forget to unlock the mutex!!!!!
+                    deletion_mutex.unlock();
+
+                }                
+            });   
+```
+
+Cpp mutexes have a Lock and Unlock function, and there is also a try_lock function that returns false if the mutex is locked and cant be locked again.
+
+Only one thread at a time can lock the mutex. If a second thread tries to lock the mutex, then that second thread will have to wait until the mutex unlocks. This can be used to define sections of code that are guaranteed to only be executed for one thread at a time.
+
+Whenever mutexes are used, its very important that they are locked for a short amount of time, and unlocked as soon as possible. If you are using a task system, its imperative that all mutexes are unlocked before the task finishes, as if a task finishes without unlocking a mutex it will block everything.
+
+Mutexes have the great issue that if they are used wrong, the program can completely block itself. This is known as a Deadlock, and its very easy to have it on code that looks fine but at some point in some case 2 threads can lock each other.
+
+There are ways to avoid deadlocks, one of the most straightforward one is that any time you use a mutex you shouldnt take another mutex unless you know what you are doing, and any time you lock a mutex you unlock it asap.
+
+As calling lock/unlock manually can be done wrong very easily, specially in cases where the function returns or there is an exception, Cpp STL has `std::lock_guard`, which does it automatically. Using it, the code above would look like this
+
+```cpp
+if(Part->IsDead)
+{
+    //the mutex is locked in the constructor of the lock_guard
+    std::lock_guard<std::mutex> lock(deletion_mutex);
+
+    //only one thread at a time will execute this line
+    deletion_list.push(Part);
+
+    //automatically unlocks 
+}          
+```
+
+
+
+
+
 
