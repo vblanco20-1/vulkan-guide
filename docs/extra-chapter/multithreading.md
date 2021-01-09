@@ -379,3 +379,6 @@ if(Part->IsDead)
 * [11]: [CppCon 2014, "Lock-Free Programming (or, Juggling Razor Blades), Part I"](https://www.youtube.com/watch?v=c1gO9aB9nbs)
 * [12]: [CppCon 2017, “C++ atomics, from basic to advanced. What do they really do?”](https://www.youtube.com/watch?v=ZQFzMfHIxng)
 * [13]: [Cpp reference std::mutex](https://en.cppreference.com/w/cpp/thread/mutex)
+
+
+{% include comments.html term="Multithreading info Comments" %}
