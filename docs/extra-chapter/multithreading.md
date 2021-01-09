@@ -38,8 +38,7 @@ Mostly since the ps4 generation of consoles, which have 8 very weak cores, archi
 
 
 ## In practice.
-Cpp since version 11 has a lot of utilities in the standard library that we can use for multithreading. The starter one is `std::thread`. This will wrap around a thread from the operating system. Threads are expensive to create and creating more threads than you have cores will decrease performance due to overhead. Even then, using a `std::thread` to create something like explained above with dedicated threads can be straightforward.
-
+Cpp since version 11 has a lot of utilities in the standard library that we can use for multithreading. The starter one is `std::thread`. This will wrap around a thread from the operating system. Threads are expensive to create and creating more threads than you have cores will decrease performance due to overhead. Even then, using a `std::thread` to create something like explained above with dedicated threads can be straightforward. Detailed info here [6](https://en.cppreference.com/w/cpp/thread/thread)
 Pseudocode
 ```cpp
 
@@ -117,7 +116,7 @@ In our main game loop, we have a sequence of things that we require to do for ea
 
 There is something we can use here that will work great, known as a ParallelFor. ParallelFor is a very common multithreading primitive that nearly every multithreading library implements. A ParallelFor will split each of the iterations of a for loop into multiple cores automatically. Given that UpdateAnimation is done on each character and its standalone, we can use it here. 
 
-Cpp17 added parallelized std::algorithms, which are awesome, but only implemented in Visual Studio for now. You can play around with them if you use VS, but if you want multiplatform, you will need to find alternatives.
+Cpp17 added parallelized std::algorithms, which are awesome, but only implemented in Visual Studio for now. You can play around with them if you use VS, but if you want multiplatform, you will need to find alternatives. You can find some more information about the parallel algorithms here [7](https://devblogs.microsoft.com/cppblog/using-c17-parallel-algorithms-for-better-performance/), and if you want to learn about std::algorithms in general, this cppcon talk gives a overview [8](https://www.youtube.com/watch?v=2olsGf6JIkU)
 
 One of the parallel algorithms is std::for_each(), which is the parallel for we want. If we use that, then the code can now look like this.
 
@@ -135,7 +134,10 @@ With this, our code is now similar to unreal engine 4, in that it has a game thr
 
 But we still want more parallelism, as with this model only a small amount of the frame uses other cores, so we can try to see if we can convert it into a task system.
 
-As stand-in for a task system, we will use `std::async`. std::async creates a lightweight thread, so we can create many of them without too much issue, as they are much cheaper than creating a std::thread. For medium/small lived tasks, they can work nicely. Make sure to check how they run in your platform, as they are very well implemented in Visual Studio, but in GCC/clang their implementation might not be as good. As with the parallel algorithms, you can find a lot of libraries that implement something very similar.
+As stand-in for a task system, we will use `std::async`. `std::async` creates a lightweight thread, so we can create many of them without too much issue, as they are much cheaper than creating a `std::thread`. For medium/small lived tasks, they can work nicely. Make sure to check how they run in your platform, as they are very well implemented in Visual Studio, but in GCC/clang their implementation might not be as good. As with the parallel algorithms, you can find a lot of libraries that implement something very similar.
+
+For a library that works quite well, you can try Taskflow, which has a `std::async` but better equivalent, alongside many more features [9](https://github.com/taskflow/taskflow)
+
 
 pseudocode
 ```cpp
@@ -204,7 +206,7 @@ With this, we are defining a graph of tasks, and their dependencies for executio
 
 Having sections of the frame that bottleneck the tasks and have to run in one core only is very common, so what most engines do is that they still have game thread and render thread, but each of them has its own parallel tasks. Hopefully there are enough tasks that can run on their own to fill all of the cores.
 
-While the example here uses async, you really want to use better libraries for this. I personally recomend Taskflow as an amazing library for task execution, but something like  EnkiTS will implement std::async type functionality but far better and with much less overheads.
+While the example here uses async, you really want to use better libraries for this. Its also probable that you will want a better control over execution instead of launching many asyncs and parallel for. Using taskflow here would work great.
 
 ## Identifying tasks.
 While we have been commenting that things like UpdatePhysics() can run overlapped, things are never so simple in practice. 
@@ -219,7 +221,7 @@ There are a lot of ways of syncronizing the data tasks work on. Generally you re
 
 A common one is to have tasks publish messages into queues, and then another task can read it at other point. Lets say that our Particles from above need to be deleted, but the particles are stored in an array, and deleting a particle from that array when the other threads are working on other particles of the same array is a guaranteed way to make the program crash. We could insert the particle IDs into a shared synchronized queue, and after all particles finished their work, delete the particles from that queue.
 
-We are not going to look at the implementation details of the queue. Lets say its a magic queue where you can safely push elements into from multiple cores at once. There are lots of those queues around.
+We are not going to look at the implementation details of the queue. Lets say its a magic queue where you can safely push elements into from multiple cores at once. There are lots of those queues around. Ive used Moodycamel Concurrent Queue a lot for this purpose [10](https://github.com/cameron314/concurrentqueue)
 
 ```cpp
 parallel_queue<Particle*> deletion_queue;
@@ -293,12 +295,14 @@ In this example, if we were using a normal integer, the count will very likely b
 
 When used wrong, atomic variables will error in very subtle ways depending on the hardware of the CPU. Debugging this sort of errors can be hard to do. 
 
+A great presentation about using atomics to implement synchronized data structures, and how hard it really is, is this talk from Cppcon. [11](https://www.youtube.com/watch?v=c1gO9aB9nbs). For a more in-depth explanation about how exactly std atomic works, this other talk explains it well. [12](https://www.youtube.com/watch?v=ZQFzMfHIxng)
+
 To actually synchronize data structures or multithreaded access to something its better to use mutexes.
 
 
 ## Mutex
 
-A mutex is a higher level primitive that is used to control the execution flow on threads. You can use them to make sure that a given operation is only being executed by one thread at a time.
+A mutex is a higher level primitive that is used to control the execution flow on threads. You can use them to make sure that a given operation is only being executed by one thread at a time. API details can be found here [13](https://en.cppreference.com/w/cpp/thread/mutex)
 
 Mutexes are implemented using atomics, but if they block a thread for a long time, they can ask the OS to put that thread on the background and let a different thread execute. This can be expensive, so mutexes are best used on operations that you know wont block too much.
 
@@ -362,11 +366,16 @@ if(Part->IsDead)
 
 
 ## Links
-* [1] : [CPPCon16, “Want fast C++? Know your hardware!"](https://www.youtube.com/watch?v=BP6NxVxDQIs)
+* [1] : [CppCon 2016, “Want fast C++? Know your hardware!"](https://www.youtube.com/watch?v=BP6NxVxDQIs)
 * [2] : [Fabien Sanglard Doom 3 engine overview](https://fabiensanglard.net/doom3_bfg/threading.php)
 * [3] : [GDC Parallelizing the Naughty Dog Engine Using Fibers](https://www.gdcvault.com/play/1022186/Parallelizing-the-Naughty-Dog-Engine)
 * [4] : [GDC Multithreading the Entire Destiny Engine](https://www.youtube.com/watch?v=v2Q_zHG3vqg)
 * [5] : [GDC Destiny's Multithreaded Rendering Architecture](https://www.youtube.com/watch?v=0nTDFLMLX9k)
-
-
-
+* [6] : [Cpp reference std::thread](https://en.cppreference.com/w/cpp/thread/thread)  
+* [7] : [MSVC blog, Using C++17 Parallel Algorithms for Better Performance](https://devblogs.microsoft.com/cppblog/using-c17-parallel-algorithms-for-better-performance/)
+* [8] : [CppCon 2018, “105 STL Algorithms in Less Than an Hour”](https://www.youtube.com/watch?v=2olsGf6JIkU)
+* [9] : [Github taskflow](https://github.com/taskflow/taskflow)
+* [10]: [Github parallel queue](https://github.com/cameron314/concurrentqueue)
+* [11]: [CppCon 2014, "Lock-Free Programming (or, Juggling Razor Blades), Part I"](https://www.youtube.com/watch?v=c1gO9aB9nbs)
+* [12]: [CppCon 2017, “C++ atomics, from basic to advanced. What do they really do?”](https://www.youtube.com/watch?v=ZQFzMfHIxng)
+* [13]: [Cpp reference std::mutex](https://en.cppreference.com/w/cpp/thread/mutex)
