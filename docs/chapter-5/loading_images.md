@@ -248,7 +248,7 @@ void VulkanEngine::load_images()
 	
 	vkutil::load_image_from_file(*this, "../../assets/lost_empire-RGBA.png", lostEmpire.image);
 	
-	VkImageViewCreateInfo imageinfo = vkinit::imageview_create_info(VK_FORMAT_R8G8B8A8_UNORM, lostEmpire.image._image, VK_IMAGE_ASPECT_COLOR_BIT);
+	VkImageViewCreateInfo imageinfo = vkinit::imageview_create_info(VK_FORMAT_R8G8B8A8_SRGB, lostEmpire.image._image, VK_IMAGE_ASPECT_COLOR_BIT);
 	vkCreateImageView(_device, &imageinfo, nullptr, &lostEmpire.imageView);
 
 	_loadedTextures["empire_diffuse"] = lostEmpire;
