@@ -223,7 +223,7 @@ A common way to know that a given task can run alongside another one is to "pack
 
 For most tasks, there are places where we just cant guarantee that only one task is working on it at a time, and so we need a way of synchronizing data between the different tasks run at the same time on multiple cores.
 
-## synchronizing data.
+## Synchronizing data.
 There are a lot of ways of synchronizing the data tasks work on. Generally you really want to minimize the shared data a lot, as its a source of bugs, and can be horrible if not synchronized properly. There are a few patterns that do work quite well that can be used. 
 
 A common one is to have tasks publish messages into queues, and then another task can read it at other point. Lets say that our Particles from above need to be deleted, but the particles are stored in an array, and deleting a particle from that array when the other threads are working on other particles of the same array is a guaranteed way to make the program crash. We could insert the particle IDs into a shared synchronized queue, and after all particles finished their work, delete the particles from that queue.
