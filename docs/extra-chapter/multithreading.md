@@ -27,6 +27,11 @@ For example, you have a Game Thread, which runs all of the gameplay logic and AI
 
 An example we can see of this is Unreal Engine 2, 3, and 4. Unreal Engine 4 is open source, so it can be a good example. Doom 3 (2004) engine as explained on this article shows it clearly too [2](https://fabiensanglard.net/doom3_bfg/threading.php).
 
+<div class="mxgraph" style="max-width:100%;border:1px solid transparent;" data-mxgraph="{&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;lightbox&quot;:false,&quot;nav&quot;:true,&quot;resize&quot;:true,&quot;toolbar&quot;:&quot;zoom layers&quot;,&quot;edit&quot;:&quot;_blank&quot;,&quot;xml&quot;:&quot;&lt;mxfile host=\&quot;app.diagrams.net\&quot; modified=\&quot;2021-01-10T15:33:32.286Z\&quot; agent=\&quot;5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.141 Safari/537.36\&quot; etag=\&quot;eTC0UaUczo5M02PF7Xze\&quot; version=\&quot;14.1.9\&quot; type=\&quot;device\&quot;&gt;&lt;diagram id=\&quot;q9bGoWlUwqU2tdE4CgEq\&quot; name=\&quot;Page-1\&quot;&gt;5Zhdb5swFIZ/DZeTwA4fuWyyfkmbGq2bKu1mcvAB3AGOjEnIfv0OiSFkUDXTSFppIRfm9Vf8vIdjE4vOs+pWsVXyWXJILWLzyqIfLUKcCSFW/bX5dq/4nhFiJbhpdBAexS8wom3UUnAojhpqKVMtVsdiKPMcQn2kMaXk5rhZJNPjWVcshp7wGLK0rz4JrpO9GhD/oN+BiJNmZseb7msy1jQ2KykSxuWmI9Fri86VlHpfyqo5pDW8hsu+380Lte0PU5DrUzp8ena+3z3/gAf3ab2I1vNqm9sfzChrlpZmwbcsA1S+JgoYt4iX4uCzpcJSXJfMWvS2AaShqvVEZykKDhYLreRPmMtUKlRymWPLWSTS9A+JpSLO8TbEBQDqszUoLRD9lanIBOf1NLNNIjQ8rlhYz7nBQENNyTLnUK/Nbn9WPQBUL/JxWuoYriAz0GqLTZoOnjHKRCrx3f395uD7xDRJOpY3/jITaXE78sEMLBg//sIb2vNmIXe97vNVqXtGHAMZQtbxqGuHRWgURSQMe95hDfeWnuuNQ7jF1xK2TyJMz0V40iP8bcWZruP/6n5cwEEIw4CXgTtxRwphErwO2CGXJOz2CF/lAlOjkPmofLkLAZ8M8Q3IknojBfDEPoEvvSRfr58jkm0hwmJUuuAgX3+I7tTzKRuJrkvfWXrwe3C/ADJUne3xf9kMKXnjzTAY8ILx7Q6/KkNdKhg35iO3voZi3tt9sCZWjAsE2s3mu+s82yUl/echuOTzMO15MC93vR6Wz3j2Hpl/FHISDB5J/OnStof5RxFz7ZGegZb3e+HfvBN1DLiRasMUJiJ7wYqRDXj9yDJgADA8MJ5pux0yoE1Ul3Gg/760kIWOqn8jP8Bx6nPb99/qoOP20v/ZtmK8PbwD7+o6/yTQ698=&lt;/diagram&gt;&lt;/mxfile&gt;&quot;}"></div>
+<script type="text/javascript" src="https://viewer.diagrams.net/js/viewer-static.min.js"></script>
+
+
+
 Unreal Engine 4 will have a Game Thread and a Render Thread as main, and then a few others for things such as helpers, audio, or loading. The Game Thread in Unreal Engine will run all of the gameplay logic that developers write in Blueprints and Cpp, and at the end of each frame, it will synchronize the positions and state of the objects in the world with the Render Thread, which will do all of the rendering logic and make sure to display them.
 
 While this approach is very popular and very easy to use, it has the drawback of scaling terribly. You will commonly see that Unreal Engine games struggle scaling past 4 cores, and in consoles the performance is much lower that it could be due to not filling the 8 cores with work. Another issue with this model is that if you have one of the threads have more work than the others, then the entire simulation will wait. In unreal engine 4, the Game Thread and Render Thread are synced at each frame, so if either of them is slow, both will be slowed as the run at the same time. A game that has lots of blueprint usage and AI calculations in UE4 will have the Game Thread busy doing work in 1 core, and then every other core in the machine unused.
@@ -223,6 +228,7 @@ A common one is to have tasks publish messages into queues, and then another tas
 
 We are not going to look at the implementation details of the queue. Lets say its a magic queue where you can safely push elements into from multiple cores at once. There are lots of those queues around. I've used Moodycamel Concurrent Queue a lot for this purpose [10](https://github.com/cameron314/concurrentqueue)
 
+pseudocode
 ```cpp
 parallel_queue<Particle*> deletion_queue;
 
