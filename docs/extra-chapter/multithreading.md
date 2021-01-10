@@ -364,6 +364,71 @@ if(Part->IsDead)
 ```
 
 
+## Multithreading Vulkan
+We have explained the ways one can parallelize things in the engine, but what about GPU calls themselves? If we were talking about OpenGL, there would be absolutely nothing you can do. In OpenGL or other older APIs, its only possible to do API calls from one thread. Not even one thread at a time, but one specific thread. For those apis, renderers often created a dedicated OpenGL/API thread that would execute the commands that other threads sent to it. You can see that on both the Doom3 engine and the UE4 engine.
+
+On more modern APIs like Vulkan and DX12, we have a design that is meant to be used from multiple cores. In the case of vulkan, the spec defines some rules about what resources must be protected and not used at once. We are going to see some typical examples of the kind of things you can multithread in vulkan, and their rules.
+
+For compiling pipelines, vkCreateShaderModule and vkCreateGraphicsPipeline are both allowed to be called from multiple threads at once. A common approach for multithreaded shader compilation is to have a background thread dedicated to it, with it constantly looking into a parallel queue to receive compilation requests, and putting the compiled pipelines into another queue that then the main renderthread will connect to the simulation. This is very important to do if you want to have an engine that doesnt have a lot of hitching. Compiling shader pipelines can take a very long time, so if you have to compile pipelines at runtime outside of a load screen, then you need to implement such a multithreaded async compile scheme for your game to work well.
+
+For descriptor set building, that can also be done from multiple threads, as long as the access to the DescriptorPool you are using to allocate the descriptor sets is syncronized and not used from multiple threads at once. A very common approach for it is to keep multiple DescriptorPools around, and whenever a thread needs to allocate descriptors, it will "grab" one of the multiple availible descriptor pools, use it, and then return it so that other threads can use the same pool.
+
+Command submission and recording is also completely parallel, but there are some rules around it. A Thread can only do VkQueueSubmit to a given queue at once. If you want multiple threads doing VkQueueSubmit, then you need to create multiple queues. As the number of queues can be as low as 1 in some devices, what engines tend to do for this is to do something similar to the pipeline compile thread or the OpenGL api call thread, and have a thread dedicated to just doing VkQueueSubmit. As VkQueueSubmit is a very expensive operation, this can bring a very nice speedup as the time spent executing that call is done in a second thread and the main logic of the engine doesnt have to stop.
+
+When you record command buffers, a thread can only record commands created from one command pool. While you can create multiple command buffers from a command pool, you cant fill those commands from multiple threads. If you want to record command buffers from multiple threads, then you will need more command pools, one per thread. 
+
+Vulkan command buffers have a system for primary and secondary commands. The primary commands are the ones that open and close RenderPasses, and get submitted to a queue. Secondary commands can be used to create "child" command buffers that execute as part of a main one. Their main purpose is multithreading.
+
+Lets say you have a ForwardPass renderpass. Before making the main command buffer that will get submitted, you make sure to get 3 command pools, allocate 3 command buffers from them, and then send them to 3 worker threads to record one third of the forward pass commands each. Once the 3 workers have finished their work, you have 3 secondary command buffers, each of them recording a third of the ForwardPass renderpass. Then you can finish recording the main command buffer which will execute those 3 subpasses on its renderpass.
+
+pseudocode
+```cpp
+
+VkCommandBuffer primaryBuffer = allocate_buffer( main_command_pool );
+
+vkCmdBegin(primaryBuffer, ... );
+
+VkRenderPassBeginInfo renderPassBeginInfo = init_renderpass(forward_pass);
+
+
+//begin render pass from the main execution
+vkCmdBeginRenderPass(primaryBuffer, forward_pass);
+
+
+//when allocating secondary commands, we need to fill inheritance info struct, to tell the commands what renderpass is their parent.
+VkCommandBufferInheritanceInfo inheritanceInfo = init_inheritance_info(forward_pass);
+
+
+//we can now record the secondary commands
+std::array<VkCommandBuffer, 3> subcommands;
+
+//create 3 parallel tasks to each render a section
+parallel_for(3,[](int i)
+{
+    //secondary commands have to be created with the inheritance info that links to renderpass
+    subcommands[i] = allocate_buffer( worker_command_pools[i],inheritanceInfo );
+
+    build_scene_section(i, subcommands[i]);
+});
+ 
+//now that the workers have finished writing the commands, we can add their contents to the main command buffer
+vkCmdExecuteCommands(primaryBuffer, subcommands.size(), subcommands.data());
+
+//finish the buffer
+vkCmdEndRenderPass(primaryBuffer);
+vkEndCommandBuffer(primaryBuffer);
+```
+
+This scheme of synchronizing the Vulkan subcommands and their resources can be tricky to get right, and Vulkan command encoding is very very fast, so you arent optimizing much here. Some engines implement their own command buffer abstraction that is easier to handle from multiple threads, and then a recording thread will very quickly transform those abstracted commands into vulkan. 
+
+Because vulkan commands record so fast, recording from multiple threads wont be a big optimization. But your renderer isnt just recording commands in a deep loop, you have to do a lot more work. By splitting the command recording across multiple threads, then you can multithread your renderer internals in general much better. Doom eternal is known to do this.
+
+Data upload is another section that is very often multithreaded. In here, you have a dedicated IO thread that will load assets to disk, and said IO thread will have its own queue and command allocators, hopefully a transfer queue. This way it is possible to upload assets at a speed completely separated from the main frame loop, so if it takes half a second to upload a set of big textures, you dont have a hitch. 
+To do that, you need to create a transfer or async-compute queue (if available), and dedicate that one to the loader thread. Once you have that, its similar to what was commented on the pipeline compiler thread, and you have an IO thread that communicates through a parallel queue with the main simulation loop to upload data in an asynchronous way. Once a transfer has been uploaded, and checked that it has finished with a Fence, then the IO thread can send the info to the main loop, and then the engine can connect the new textures or models into the renderer.
+
+
+
+
 
 ## Links
 * [1]  [CppCon 2016, “Want fast C++? Know your hardware!"](https://www.youtube.com/watch?v=BP6NxVxDQIs)
