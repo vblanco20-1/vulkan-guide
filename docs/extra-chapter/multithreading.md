@@ -7,7 +7,7 @@ nav_order: 40
 
 ## Multithreading Overview
 
-For the last 20 years, computers and game consoles have had multiple cores in their CPUs. Over time, the number of cores has increased, with the new consoles having 8 cores with hyperthreading, and PCs getting more and more cores, with things like some ARM servers hitting 80 real cores in a single CPU. Meanwhile, the single-thread performance of CPUs has been relatively stagnant for quite a while, hitting a GHZ barrier of 4-5 gz of clock speed in the CPUs. This means that applications these days need to be programmed for multiple cores to really use the full power of the CPU.
+For the last 20 years, computers and game consoles have had multiple cores in their CPUs. Over time, the number of cores has increased, with the new consoles having 8 cores with hyperthreading, and PCs getting more and more cores, with things like some ARM servers hitting 80 real cores in a single CPU. Meanwhile, the single-thread performance of CPUs has been relatively stagnant for quite a while, hitting a GHZ barrier of 4-5ghz of clock speed in the CPUs. This means that applications these days need to be programmed for multiple cores to really use the full power of the CPU.
 
 A multicore CPU generally has multiple "standalone" cores, each of them being a full CPU on its own. Each of the cores can execute an arbitrary program on its own. If the CPU has hyperthreading/SMT, the CPU will not execute one thread of program instructions, but multiple (often 2). When this happens the inner resources of the CPU (memory units, math units, logic units, caches) will be shared between those multiple threads.
 
@@ -19,7 +19,7 @@ If you want to learn more about the hardware details of CPUs and how they map to
 
 
 ## Ways of using multithreading in game engines.
-At first, game engines were completely singlethreaded, and wouldnt use multiple cores at all. Over time, the engines were programmed to use more and more cores, with patterns and architectures that map to that amount of cores.
+At first, game engines were completely singlethreaded, and wouldn't use multiple cores at all. Over time, the engines were programmed to use more and more cores, with patterns and architectures that map to that amount of cores.
 
 The first and most classic way of multithreading a game engine is to make multiple threads, and have each of them perform their own task.
 
@@ -29,7 +29,7 @@ An example we can see of this is Unreal Engine 2, 3, and 4. Unreal Engine 4 is o
 
 Unreal Engine 4 will have a Game Thread and a Render Thread as main, and then a few others for things such as helpers, audio, or loading. The Game Thread in Unreal Engine will run all of the gameplay logic that developers write in Blueprints and Cpp, and at the end of each frame, it will synchronize the positions and state of the objects in the world with the Render Thread, which will do all of the rendering logic and make sure to display them.
 
-While this approach is very popular and very easy to use, it has the drawback of scaling terribly. You will commonly see that Unreal Engine games struggle scaling past 4 cores, and in consoles the performance is much lower that it could be due to not filling the 8 cores with work. Another issue with this model is that if you have one of the threads have more work than the others, then the entire simulation will wait. In unreal engine 4, the Game THread and Render Thread are synced at each frame, so if either of them is slow, both will be slowed as the run at the same time. A game that has lots of blueprint usage and AI calculations in UE4 will have the Game Thread busy doing work in 1 core, and then every other core in the machine unused.
+While this approach is very popular and very easy to use, it has the drawback of scaling terribly. You will commonly see that Unreal Engine games struggle scaling past 4 cores, and in consoles the performance is much lower that it could be due to not filling the 8 cores with work. Another issue with this model is that if you have one of the threads have more work than the others, then the entire simulation will wait. In unreal engine 4, the Game Thread and Render Thread are synced at each frame, so if either of them is slow, both will be slowed as the run at the same time. A game that has lots of blueprint usage and AI calculations in UE4 will have the Game Thread busy doing work in 1 core, and then every other core in the machine unused.
 
 A common approach of enhancing this architecture is to move it more into a fork/join approach, where you have a main execution thread, and at some points, parts of the work is split between threads. Unreal Engine does this for animation and physics. While the Game Thread is the one in charge of the whole game logic part of the engine, when it reaches the point where it has to do animations, it will split the animations to calculate into small tasks, and distribute those across helper threads in other cores. This way while it still has a main timeline of execution, there are points where it gets extra help from the unused cores. This improves scalability, but its still not good enough as the rest of the frame is still singlethreaded.
 
@@ -118,7 +118,7 @@ There is something we can use here that will work great, known as a ParallelFor.
 
 Cpp17 added parallelized std::algorithms, which are awesome, but only implemented in Visual Studio for now. You can play around with them if you use VS, but if you want multiplatform, you will need to find alternatives. You can find some more information about the parallel algorithms here [7](https://devblogs.microsoft.com/cppblog/using-c17-parallel-algorithms-for-better-performance/), and if you want to learn about std::algorithms in general, this cppcon talk gives a overview [8](https://www.youtube.com/watch?v=2olsGf6JIkU)
 
-One of the parallel algorithms is std::for_each(), which is the parallel for we want. If we use that, then the code can now look like this.
+One of the parallel algorithms is `std::for_each()`, which is the parallel for we want. If we use that, then the code can now look like this.
 
 ```cpp
 
@@ -206,7 +206,7 @@ With this, we are defining a graph of tasks, and their dependencies for executio
 
 Having sections of the frame that bottleneck the tasks and have to run in one core only is very common, so what most engines do is that they still have game thread and render thread, but each of them has its own parallel tasks. Hopefully there are enough tasks that can run on their own to fill all of the cores.
 
-While the example here uses async, you really want to use better libraries for this. Its also probable that you will want a better control over execution instead of launching many asyncs and parallel for. Using taskflow here would work great.
+While the example here uses async, you really want to use better libraries for this. Its also probable that you will want a better control over execution instead of launching many asyncs and parallel for. Using Taskflow here would work great.
 
 ## Identifying tasks.
 While we have been commenting that things like UpdatePhysics() can run overlapped, things are never so simple in practice. 
@@ -365,7 +365,7 @@ if(Part->IsDead)
 
 
 ## Multithreading Vulkan
-We have explained the ways one can parallelize things in the engine, but what about GPU calls themselves? If we were talking about OpenGL, there would be absolutely nothing you can do. In OpenGL or other older APIs, its only possible to do API calls from one thread. Not even one thread at a time, but one specific thread. For those apis, renderers often created a dedicated OpenGL/API thread that would execute the commands that other threads sent to it. You can see that on both the Doom3 engine and the UE4 engine.
+We have explained the ways one can parallelize things in the engine, but what about GPU calls themselves? If we were talking about OpenGL, there would be absolutely nothing you can do. In OpenGL or other older APIs, its only possible to do API calls from one thread. Not even one thread at a time, but one specific thread. For those APIs, renderers often created a dedicated OpenGL/API thread that would execute the commands that other threads sent to it. You can see that on both the Doom3 engine and the UE4 engine.
 
 On more modern APIs like Vulkan and DX12, we have a design that is meant to be used from multiple cores. In the case of Vulkan, the spec defines some rules about what resources must be protected and not used at once. We are going to see some typical examples of the kind of things you can multithread in Vulkan, and their rules.
 
