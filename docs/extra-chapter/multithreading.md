@@ -1,6 +1,6 @@
 ---
 layout: default
-title: Multithreading for game engines WIP
+title: Multithreading for game engines
 parent: Extra Chapter
 nav_order: 40
 ---
