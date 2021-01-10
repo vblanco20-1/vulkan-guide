@@ -11,9 +11,9 @@ For the last 20 years, computers and game consoles have had multiple cores in th
 
 A multicore CPU generally has multiple "standalone" cores, each of them being a full CPU on its own. Each of the cores can execute an arbitrary program on its own. If the CPU has hyperthreading/SMT, the CPU will not execute one thread of program instructions, but multiple (often 2). When this happens the inner resources of the CPU (memory units, math units, logic units, caches) will be shared between those multiple threads.
 
-The different cores on the CPU work on their own, and the CPU synchronizes the memory writes from one core so that other cores can also see it if it detects that one core is writing to the same memory location a different core is also writing into or reading from. That syncronization has a cost, so whenever you program multithreaded programs, its important to try to avoid having multiple threads writing to the same memory, or one thread writing and other reading.
+The different cores on the CPU work on their own, and the CPU synchronizes the memory writes from one core so that other cores can also see it if it detects that one core is writing to the same memory location a different core is also writing into or reading from. That synchronization has a cost, so whenever you program multithreaded programs, its important to try to avoid having multiple threads writing to the same memory, or one thread writing and other reading.
 
-For correct syncronization of operations, CPUs also have specific instructions that can synchronize multiple cores, like atomic instructions. Those instructions are the backbone of the syncronization primitives that are used to communicate between threads.
+For correct synchronization of operations, CPUs also have specific instructions that can synchronize multiple cores, like atomic instructions. Those instructions are the backbone of the synchronization primitives that are used to communicate between threads.
 
 If you want to learn more about the hardware details of CPUs and how they map to Cpp programming, this CPPCon presentation explains it nicely [1](https://www.youtube.com/watch?v=BP6NxVxDQIs);
 
@@ -34,7 +34,7 @@ While this approach is very popular and very easy to use, it has the drawback of
 A common approach of enhancing this architecture is to move it more into a fork/join approach, where you have a main execution thread, and at some points, parts of the work is split between threads. Unreal Engine does this for animation and physics. While the Game Thread is the one in charge of the whole game logic part of the engine, when it reaches the point where it has to do animations, it will split the animations to calculate into small tasks, and distribute those across helper threads in other cores. This way while it still has a main timeline of execution, there are points where it gets extra help from the unused cores. This improves scalability, but its still not good enough as the rest of the frame is still singlethreaded.
 
 
-Mostly since the ps4 generation of consoles, which have 8 very weak cores, architectures have evolved into trying to make sure all the cores are working on something and doing something useful. A lot of game engines have moved to a Task based system for that purpose. In there, you dont dedicate 1 thread to do one thing, but instead split your work into small sections, and then have multiple threads work on those sections on their own, merging the results after the tasks finish. Unlike the fork-join approach of having one dedicated thread and having it ship off work to helpers, you do everything on the helpers for the most part. Your main timeline of operations is created as a graph of tasks to do, and then those are distributed across cores. A task cant start until all of its predecessor tasks are finished. If a task system is used well, it grants really good scalability as everything automatically distributes to however many cores are available. A great example of this is Doom Eternal, where you can see it smoothly scaling from PCs with 4 cores to PCs with 16 cores. Some great talks from GDC about it are Naughty Dog "Parallelizing the Naughty Dog Engine Using Fibers" [3](https://www.gdcvault.com/play/1022186/Parallelizing-the-Naughty-Dog-Engine) and the 2 Destiny Engine talks [4](https://www.youtube.com/watch?v=v2Q_zHG3vqg)  [5](https://www.youtube.com/watch?v=0nTDFLMLX9k)
+Mostly since the ps4 generation of consoles, which have 8 very weak cores, architectures have evolved into trying to make sure all the cores are working on something and doing something useful. A lot of game engines have moved to a Task based system for that purpose. In there, you don't dedicate 1 thread to do one thing, but instead split your work into small sections, and then have multiple threads work on those sections on their own, merging the results after the tasks finish. Unlike the fork-join approach of having one dedicated thread and having it ship off work to helpers, you do everything on the helpers for the most part. Your main timeline of operations is created as a graph of tasks to do, and then those are distributed across cores. A task cant start until all of its predecessor tasks are finished. If a task system is used well, it grants really good scalability as everything automatically distributes to however many cores are available. A great example of this is Doom Eternal, where you can see it smoothly scaling from PCs with 4 cores to PCs with 16 cores. Some great talks from GDC about it are Naughty Dog "Parallelizing the Naughty Dog Engine Using Fibers" [3](https://www.gdcvault.com/play/1022186/Parallelizing-the-Naughty-Dog-Engine) and the 2 Destiny Engine talks [4](https://www.youtube.com/watch?v=v2Q_zHG3vqg)  [5](https://www.youtube.com/watch?v=0nTDFLMLX9k)
 
 
 ## In practice.
@@ -75,7 +75,7 @@ void main(){
 In here, the mainloop renders, and each frame is synced with the gamethread. Once both threads finish their work, the renderthread copies the gamethread data into its internal structures.
 In a design like this, the game thread CANT access the renderer internal structures, and the renderer cant access the data of the gamethread until the gamethread has finished executing. The 2 threads are working on their own, and only sharing at the end of the frame.
 
-With the renderer design in vkguide gpudriven chapter, something like this can be implemented in a straightforward way. The renderer doesnt care about game logic, so you can have your game logic however you want, and at the sync point of each frame you create/delete/move the renderables of the render engine.
+With the renderer design in vkguide gpudriven chapter, something like this can be implemented in a straightforward way. The renderer doesn't care about game logic, so you can have your game logic however you want, and at the sync point of each frame you create/delete/move the renderables of the render engine.
 
 This design will only scale to 2 cores, so we need to find a way to split things more. Lets take a deeper look into `PerformGameLogic()`, and see if there are things we can do to make it scale more.
 
@@ -212,16 +212,16 @@ While the example here uses async, you really want to use better libraries for t
 While we have been commenting that things like UpdatePhysics() can run overlapped, things are never so simple in practice. 
 Identifying what tasks can run at the same time as others is something very hard to do in a project, and in Cpp, its not possible to validate it. If you use rust, this comes automatically thanks to the borrowcheck model. 
 
-A common way to know that a given task can run alongside another one is to "package" the data the task could need, and make sure that the task NEVER accesses any other data outside of it. In the example with game thread and render thread, we have a Renderer class where all the render data is stored, and the game thread never touches that. We also only let the render thread access the gamethread data at a very specific point in the frame where we know the gamethread isnt working on it.
+A common way to know that a given task can run alongside another one is to "package" the data the task could need, and make sure that the task NEVER accesses any other data outside of it. In the example with game thread and render thread, we have a Renderer class where all the render data is stored, and the game thread never touches that. We also only let the render thread access the gamethread data at a very specific point in the frame where we know the gamethread isn't working on it.
 
-For most tasks, there are places where we just cant guarantee that only one task is working on it at a time, and so we need a way of syncronizing data beetwen the different tasks run at the same time on multiple cores.
+For most tasks, there are places where we just cant guarantee that only one task is working on it at a time, and so we need a way of synchronizing data between the different tasks run at the same time on multiple cores.
 
-## Syncronizing data.
-There are a lot of ways of syncronizing the data tasks work on. Generally you really want to minimize the shared data a lot, as its a source of bugs, and can be horrible if not synchronized properly. There are a few patterns that do work quite well that can be used. 
+## synchronizing data.
+There are a lot of ways of synchronizing the data tasks work on. Generally you really want to minimize the shared data a lot, as its a source of bugs, and can be horrible if not synchronized properly. There are a few patterns that do work quite well that can be used. 
 
 A common one is to have tasks publish messages into queues, and then another task can read it at other point. Lets say that our Particles from above need to be deleted, but the particles are stored in an array, and deleting a particle from that array when the other threads are working on other particles of the same array is a guaranteed way to make the program crash. We could insert the particle IDs into a shared synchronized queue, and after all particles finished their work, delete the particles from that queue.
 
-We are not going to look at the implementation details of the queue. Lets say its a magic queue where you can safely push elements into from multiple cores at once. There are lots of those queues around. Ive used Moodycamel Concurrent Queue a lot for this purpose [10](https://github.com/cameron314/concurrentqueue)
+We are not going to look at the implementation details of the queue. Lets say its a magic queue where you can safely push elements into from multiple cores at once. There are lots of those queues around. I've used Moodycamel Concurrent Queue a lot for this purpose [10](https://github.com/cameron314/concurrentqueue)
 
 ```cpp
 parallel_queue<Particle*> deletion_queue;
@@ -260,9 +260,9 @@ This is a very common pattern in multithreaded code, and very useful, but like e
 
 ## Atomics
 
-The core syncronization primitives to communicate data between cores are atomic operations, and Cpp past 11 has them integrated into the STL. 
+The core synchronization primitives to communicate data between cores are atomic operations, and Cpp past 11 has them integrated into the STL. 
 Atomic operations are a specific set of instructions that are guaranteed to work well(as specified) even if multiple cores are doing things at once. Things like parallel queues and mutexes are implemented with them. 
-Atomic operations are often significantly more expensive than normal operations, so you cant just make every variable in your application an atomic one, as that would harm performance a lot. They are most often used to aggregate the data from multiple threads or do some light syncronization. 
+Atomic operations are often significantly more expensive than normal operations, so you cant just make every variable in your application an atomic one, as that would harm performance a lot. They are most often used to aggregate the data from multiple threads or do some light synchronization. 
 
 As an example of what atomics are, we are going to continue with the example above of the particle system, and we will use atomic-add to add how many vertices we have across all particles, without splitting the parallel for.
 
@@ -314,7 +314,7 @@ Continuing with the example, we are going to implement the parallel queue above 
 //create variable to hold how many billboards we have
 std::vector<Particle*> deletion_list;
 
-//declare a mutex for the syncronization.
+//declare a mutex for the synchronization.
 std::mutex deletion_mutex;
 
 std::for_each(std::execution::par, 
@@ -331,7 +331,7 @@ std::for_each(std::execution::par,
                     //only one thread at a time will execute this line
                     deletion_list.push(Part);
 
-                    //dont forget to unlock the mutex!!!!!
+                    //don't forget to unlock the mutex!!!!!
                     deletion_mutex.unlock();
 
                 }                
@@ -346,7 +346,7 @@ Whenever mutexes are used, its very important that they are locked for a short a
 
 Mutexes have the great issue that if they are used wrong, the program can completely block itself. This is known as a Deadlock, and its very easy to have it on code that looks fine but at some point in some case 2 threads can lock each other.
 
-There are ways to avoid deadlocks, one of the most straightforward one is that any time you use a mutex you shouldnt take another mutex unless you know what you are doing, and any time you lock a mutex you unlock it asap.
+There are ways to avoid deadlocks, one of the most straightforward one is that any time you use a mutex you shouldn't take another mutex unless you know what you are doing, and any time you lock a mutex you unlock it asap.
 
 As calling lock/unlock manually can be done wrong very easily, specially in cases where the function returns or there is an exception, Cpp STL has `std::lock_guard`, which does it automatically. Using it, the code above would look like this
 
@@ -367,13 +367,13 @@ if(Part->IsDead)
 ## Multithreading Vulkan
 We have explained the ways one can parallelize things in the engine, but what about GPU calls themselves? If we were talking about OpenGL, there would be absolutely nothing you can do. In OpenGL or other older APIs, its only possible to do API calls from one thread. Not even one thread at a time, but one specific thread. For those apis, renderers often created a dedicated OpenGL/API thread that would execute the commands that other threads sent to it. You can see that on both the Doom3 engine and the UE4 engine.
 
-On more modern APIs like Vulkan and DX12, we have a design that is meant to be used from multiple cores. In the case of vulkan, the spec defines some rules about what resources must be protected and not used at once. We are going to see some typical examples of the kind of things you can multithread in vulkan, and their rules.
+On more modern APIs like Vulkan and DX12, we have a design that is meant to be used from multiple cores. In the case of Vulkan, the spec defines some rules about what resources must be protected and not used at once. We are going to see some typical examples of the kind of things you can multithread in Vulkan, and their rules.
 
-For compiling pipelines, vkCreateShaderModule and vkCreateGraphicsPipeline are both allowed to be called from multiple threads at once. A common approach for multithreaded shader compilation is to have a background thread dedicated to it, with it constantly looking into a parallel queue to receive compilation requests, and putting the compiled pipelines into another queue that then the main renderthread will connect to the simulation. This is very important to do if you want to have an engine that doesnt have a lot of hitching. Compiling shader pipelines can take a very long time, so if you have to compile pipelines at runtime outside of a load screen, then you need to implement such a multithreaded async compile scheme for your game to work well.
+For compiling pipelines, vkCreateShaderModule and vkCreateGraphicsPipeline are both allowed to be called from multiple threads at once. A common approach for multithreaded shader compilation is to have a background thread dedicated to it, with it constantly looking into a parallel queue to receive compilation requests, and putting the compiled pipelines into another queue that then the main renderthread will connect to the simulation. This is very important to do if you want to have an engine that doesn't have a lot of hitching. Compiling shader pipelines can take a very long time, so if you have to compile pipelines at runtime outside of a load screen, then you need to implement such a multithreaded async compile scheme for your game to work well.
 
-For descriptor set building, that can also be done from multiple threads, as long as the access to the DescriptorPool you are using to allocate the descriptor sets is syncronized and not used from multiple threads at once. A very common approach for it is to keep multiple DescriptorPools around, and whenever a thread needs to allocate descriptors, it will "grab" one of the multiple availible descriptor pools, use it, and then return it so that other threads can use the same pool.
+For descriptor set building, that can also be done from multiple threads, as long as the access to the DescriptorPool you are using to allocate the descriptor sets is synchronized and not used from multiple threads at once. A very common approach for it is to keep multiple DescriptorPools around, and whenever a thread needs to allocate descriptors, it will "grab" one of the multiple available descriptor pools, use it, and then return it so that other threads can use the same pool.
 
-Command submission and recording is also completely parallel, but there are some rules around it. A Thread can only do VkQueueSubmit to a given queue at once. If you want multiple threads doing VkQueueSubmit, then you need to create multiple queues. As the number of queues can be as low as 1 in some devices, what engines tend to do for this is to do something similar to the pipeline compile thread or the OpenGL api call thread, and have a thread dedicated to just doing VkQueueSubmit. As VkQueueSubmit is a very expensive operation, this can bring a very nice speedup as the time spent executing that call is done in a second thread and the main logic of the engine doesnt have to stop.
+Command submission and recording is also completely parallel, but there are some rules around it. A Thread can only do VkQueueSubmit to a given queue at once. If you want multiple threads doing VkQueueSubmit, then you need to create multiple queues. As the number of queues can be as low as 1 in some devices, what engines tend to do for this is to do something similar to the pipeline compile thread or the OpenGL api call thread, and have a thread dedicated to just doing VkQueueSubmit. As VkQueueSubmit is a very expensive operation, this can bring a very nice speedup as the time spent executing that call is done in a second thread and the main logic of the engine doesn't have to stop.
 
 When you record command buffers, a thread can only record commands created from one command pool. While you can create multiple command buffers from a command pool, you cant fill those commands from multiple threads. If you want to record command buffers from multiple threads, then you will need more command pools, one per thread. 
 
@@ -419,11 +419,11 @@ vkCmdEndRenderPass(primaryBuffer);
 vkEndCommandBuffer(primaryBuffer);
 ```
 
-This scheme of synchronizing the Vulkan subcommands and their resources can be tricky to get right, and Vulkan command encoding is very very fast, so you arent optimizing much here. Some engines implement their own command buffer abstraction that is easier to handle from multiple threads, and then a recording thread will very quickly transform those abstracted commands into vulkan. 
+This scheme of synchronizing the Vulkan subcommands and their resources can be tricky to get right, and Vulkan command encoding is very very fast, so you aren't optimizing much here. Some engines implement their own command buffer abstraction that is easier to handle from multiple threads, and then a recording thread will very quickly transform those abstracted commands into Vulkan. 
 
-Because vulkan commands record so fast, recording from multiple threads wont be a big optimization. But your renderer isnt just recording commands in a deep loop, you have to do a lot more work. By splitting the command recording across multiple threads, then you can multithread your renderer internals in general much better. Doom eternal is known to do this.
+Because Vulkan commands record so fast, recording from multiple threads wont be a big optimization. But your renderer isn't just recording commands in a deep loop, you have to do a lot more work. By splitting the command recording across multiple threads, then you can multithread your renderer internals in general much better. Doom eternal is known to do this.
 
-Data upload is another section that is very often multithreaded. In here, you have a dedicated IO thread that will load assets to disk, and said IO thread will have its own queue and command allocators, hopefully a transfer queue. This way it is possible to upload assets at a speed completely separated from the main frame loop, so if it takes half a second to upload a set of big textures, you dont have a hitch. 
+Data upload is another section that is very often multithreaded. In here, you have a dedicated IO thread that will load assets to disk, and said IO thread will have its own queue and command allocators, hopefully a transfer queue. This way it is possible to upload assets at a speed completely separated from the main frame loop, so if it takes half a second to upload a set of big textures, you don't have a hitch. 
 To do that, you need to create a transfer or async-compute queue (if available), and dedicate that one to the loader thread. Once you have that, its similar to what was commented on the pipeline compiler thread, and you have an IO thread that communicates through a parallel queue with the main simulation loop to upload data in an asynchronous way. Once a transfer has been uploaded, and checked that it has finished with a Fence, then the IO thread can send the info to the main loop, and then the engine can connect the new textures or models into the renderer.
 
 
