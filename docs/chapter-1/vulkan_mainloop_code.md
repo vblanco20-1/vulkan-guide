@@ -45,7 +45,7 @@ void VulkanEngine::init_sync_structures()
 	fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
 	fenceCreateInfo.pNext = nullptr;
 
-	//we want to create the fence with the Create  Signaled flag, so we can wait on it before using it on a gpu command (for the first frame)
+	//we want to create the fence with the Create Signaled flag, so we can wait on it before using it on a GPU command (for the first frame)
 	fenceCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
 	VK_CHECK(vkCreateFence(_device, &fenceCreateInfo, nullptr, &_renderFence));
@@ -64,24 +64,24 @@ void VulkanEngine::init_sync_structures()
 Creating the fences and semaphores is very straightforward as they are relatively simple structures.
 
 # Draw loop
-Lets start the draw loop by first waiting for the GPU to have finished its work, using the fence
+Let's start the draw loop by first waiting for the GPU to have finished its work, using the fence
 
 ```cpp
 void VulkanEngine::draw()
 {
-	//wait until the gpu has finished rendering the last frame. Timeout of 1 second
+	//wait until the GPU has finished rendering the last frame. Timeout of 1 second
 	VK_CHECK(vkWaitForFences(_device, 1, &_renderFence, true, 1000000000));
 	VK_CHECK(vkResetFences(_device, 1, &_renderFence));
 }
 ```
 
 We use `vkWaitForFences()` to wait for the GPU to have finished its work, and after it we reset the fence.
-Fences have to be reset between uses, you cant use the same fence on multiple gpu commands without resetting it in the middle.
+Fences have to be reset between uses, you can't use the same fence on multiple GPU commands without resetting it in the middle.
 
-The timeout of the WaitFences call is of 1 second. Its using nanoseconds for the wait time.
+The timeout of the WaitFences call is of 1 second. It's using nanoseconds for the wait time.
 If you call the function with 0 as the timeout, you can use it to know if the GPU is still executing the command or not.
 
-Next, we are going to request a image index from the swapchain
+Next, we are going to request an image index from the swapchain.
 
 ```cpp
 	//request image from the swapchain, one second timeout
@@ -109,7 +109,7 @@ Once the command buffer is reset, we can begin it.
 	VkCommandBuffer cmd = _mainCommandBuffer;
 
 	//begin the command buffer recording. We will use this command buffer exactly once, so we want to let Vulkan know that
-	VkCommandBufferBeginInfo cmdBeginInfo= {};
+	VkCommandBufferBeginInfo cmdBeginInfo = {};
 	cmdBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 	cmdBeginInfo.pNext = nullptr;
 
@@ -120,14 +120,14 @@ Once the command buffer is reset, we can begin it.
 ```
 
 Yet another Vulkan info structure, so typical sType and pNext values.
-Inheritance info on a command buffer is used for secondary command buffers, but we arent going to use them, so leave it nullptr.
+Inheritance info on a command buffer is used for secondary command buffers, but we aren't going to use them, so leave it nullptr.
 For flags, we want to let Vulkan know that this command buffer will be submitted once.
-As we are going to be recording the command buffer every frame, its best if Vulkan knows that this command will only execute once, as it can allow for great optimization by the driver.
+As we are going to be recording the command buffer every frame, it's best if Vulkan knows that this command will only execute once, as it can allow for great optimization by the driver.
 
-With the command buffer recording started, lets add commands to it. We are going to launch the render pass, with a clear color that flashes over time.
+With the command buffer recording started, let's add commands to it. We are going to launch the render pass, with a clear color that flashes over time.
 
 ```cpp
-	//make a clear-color from frame number. This will flash with a 120 frame period.
+	//make a clear-color from frame number. This will flash with a 120*pi frame period.
 	VkClearValue clearValue;
 	float flash = abs(sin(_frameNumber / 120.f));
 	clearValue.color = { { 0.0f, 0.0f, flash, 1.0f } };
@@ -211,9 +211,9 @@ the `.pWaitDstStageMask` is a complex parameter. We are not going to explain it 
 
 After the commands are submitted, we now display the image to the screen
 ```cpp
-	// this will put the image we just rendered to into the visible window.
+	// this will put the image we just rendered into the visible window.
 	// we want to wait on the _renderSemaphore for that, 
-	// as its necessary that drawing commands have finished before the image is displayed to the user
+	// as it's necessary that drawing commands have finished before the image is displayed to the user
 	VkPresentInfoKHR presentInfo = {};
 	presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 	presentInfo.pNext = nullptr;

@@ -26,7 +26,7 @@ struct AllocatedImage {
 };
 ```
 
-Its exactly the same as AllocatedBuffer but with VkImage instead of VkBuffer.
+It's exactly the same as AllocatedBuffer but with VkImage instead of VkBuffer.
 
 We can now add it to VulkanEngine class to store it
 
@@ -46,7 +46,7 @@ public:
 
 In vulkan you can't use VkImages directly, the VkImages have to go through a VkImageView, which contains some information about how to treat the image. We are doing it in a similar way as the swapchain images, but instead of letting the Vkbootstrap library initialize them, we will do it ourselves.
 
-We are going to need a new initializer for our vk_initializers file for the image create info and image view create info, so lets add it.
+We are going to need a new initializer for our vk_initializers file for the image create info and image view create info, so let's add it.
 
 vk_initializers.h
 ```cpp
@@ -86,13 +86,13 @@ imageType holds how many dimensions the image has. 1, 2, or 3. Because 3d and 1d
 Format holds what the data of the texture is, like holding a single float (for depth), or holding color.
 Extent is the size of the image, in pixels.
 
-MipLevels holds the amount of mipmap levels the image has. Because we arent using them here, we leave the levels to 1.
-Array layers is for layered textures. You can create textures that are many-in-one, using layers. An example of layered textures is cubemaps, where you have 6 layers, one layer for each face of the cubemap. We default it to 1 layer because we arent doing cubemaps.
+MipLevels holds the amount of mipmap levels the image has. Because we aren't using them here, we leave the levels to 1.
+Array layers is for layered textures. You can create textures that are many-in-one, using layers. An example of layered textures is cubemaps, where you have 6 layers, one layer for each face of the cubemap. We default it to 1 layer because we aren't doing cubemaps.
 
-Samples controls the MSAA behavior of the texture. This only makes sense for render targets, such as depth images and images you are rendering to. We wont be doing MSAA in this tutorial, so samples will be kept at 1 sample for the entire guide.
+Samples controls the MSAA behavior of the texture. This only makes sense for render targets, such as depth images and images you are rendering to. We won't be doing MSAA in this tutorial, so samples will be kept at 1 sample for the entire guide.
 
-Tiling is very important. Tiling describes how the data for the texture is arranged on the GPU. For improved performance, GPUs do not store images as 2d arrays of pixels, but instead use complex custom formats, unique to the GPU brand and even models. `VK_IMAGE_TILING_OPTIMAL` tells vulkan to let the driver decide how the GPU arranges the memory of the image.
-If you use `VK_IMAGE_TILING_OPTIMAL`, it wont be possible to read the data from CPU or to write it without changing its tiling first (it's possible to change the tiling of a texture at any point, but this can be a costly operation). The other tiling we can care about is `VK_IMAGE_TILING_LINEAR`, which will store the image as a 2d array of pixels. While LINEAR tiling will be a lot slower, it will allow the cpu to safely write and read from that memory.
+Tiling is very important. Tiling describes how the data for the texture is arranged in the GPU. For improved performance, GPUs do not store images as 2d arrays of pixels, but instead use complex custom formats, unique to the GPU brand and even models. `VK_IMAGE_TILING_OPTIMAL` tells vulkan to let the driver decide how the GPU arranges the memory of the image.
+If you use `VK_IMAGE_TILING_OPTIMAL`, it won't be possible to read the data from CPU or to write it without changing its tiling first (it's possible to change the tiling of a texture at any point, but this can be a costly operation). The other tiling we can care about is `VK_IMAGE_TILING_LINEAR`, which will store the image as a 2d array of pixels. While LINEAR tiling will be a lot slower, it will allow the cpu to safely write and read from that memory.
 
 Last thing is usage flags. In a similar way to the buffers, images need the usage flags to be set properly. It is very important that the usage flags are set correctly, and you only set the flags you are going to need, because this will control how the GPU handles the image memory. 
 
@@ -120,14 +120,14 @@ VkImageViewCreateInfo vkinit::imageview_create_info(VkFormat format, VkImage ima
 ```
 
 sType and pNext as usual.
-View Type is very similar to the imageType on the image, except it has more options. While imageType held the dimensionality of the texture, viewType has a lot more options, like VK_IMAGE_VIEW_TYPE_CUBE for cubemaps. In here, we will have it matched to image_create_info, and hardcode it to 2D images as its the most common case.
+View Type is very similar to the imageType on the image, except it has more options. While imageType held the dimensionality of the texture, viewType has a lot more options, like VK_IMAGE_VIEW_TYPE_CUBE for cubemaps. In here, we will have it matched to image_create_info, and hardcode it to 2D images as it's the most common case.
 
 image has to point to the image this imageview is being created from. As imageViews "wrap" an image, you need to point to the original one.
-format has to match the format in the image this view was created from. Its possible for the formats to not match, and that will let you "reinterpret" the formats, but that can be tricky to use, and very niche, so for now make sure that the formats will match.
+format has to match the format in the image this view was created from. It's possible for the formats to not match, and that will let you "reinterpret" the formats, but that can be tricky to use, and very niche, so for now make sure that the formats will match.
 
-subresourceRange holds the information about where the image points to. This is used for layered images, where you might have multiple layers in one image, and want to create a imageview that points to a specific layer. Its also possible to control the mipmap levels with it. For our current usage, we are going to default it to no mipmaps (mipmap base 0, and mipmaps level 1), and only 1 texture layer.
+subresourceRange holds the information about where the image points to. This is used for layered images, where you might have multiple layers in one image, and want to create an imageview that points to a specific layer. It's also possible to control the mipmap levels with it. For our current usage, we are going to default it to no mipmaps (mipmap base 0, and mipmaps level 1), and only 1 texture layer.
 
-aspectMask is similar to the usageFlags from the image. Its about what this image is used for.
+aspectMask is similar to the usageFlags from the image. It's about what this image is used for.
 
 Now that we have those initializers, we can create the depth image.
 
@@ -149,10 +149,10 @@ void VulkanEngine::init_swapchain()
 	//hardcoding the depth format to 32 bit float
 	_depthFormat = VK_FORMAT_D32_SFLOAT;
 
-	//the depth image will be a image with the format we selected and Depth Attachment usage flag
+	//the depth image will be an image with the format we selected and Depth Attachment usage flag
 	VkImageCreateInfo dimg_info = vkinit::image_create_info(_depthFormat, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, depthImageExtent);
 
-	//for the depth image, we want to allocate it from gpu local memory
+	//for the depth image, we want to allocate it from GPU local memory
 	VmaAllocationCreateInfo dimg_allocinfo = {};
 	dimg_allocinfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
 	dimg_allocinfo.requiredFlags = VkMemoryPropertyFlags(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
@@ -160,7 +160,7 @@ void VulkanEngine::init_swapchain()
 	//allocate and create the image
 	vmaCreateImage(_allocator, &dimg_info, &dimg_allocinfo, &_depthImage._image, &_depthImage._allocation, nullptr);
 
-	//build a image-view for the depth image to use for rendering
+	//build an image-view for the depth image to use for rendering
 	VkImageViewCreateInfo dview_info = vkinit::imageview_create_info(_depthFormat, _depthImage._image, VK_IMAGE_ASPECT_DEPTH_BIT);
 
 	VK_CHECK(vkCreateImageView(_device, &dview_info, nullptr, &_depthImageView));
@@ -173,13 +173,13 @@ void VulkanEngine::init_swapchain()
 }
 ```
 
-First we are hardcoding the depth format to 32 bit float. Most GPUs support this depth format, so its fine to use it. You might want to choose other formats for other uses, or if you use Stencil buffer.
+First we are hardcoding the depth format to 32 bit float. Most GPUs support this depth format, so it's fine to use it. You might want to choose other formats for other uses, or if you use Stencil buffer.
 
 For the image itself, we are going to create it using the depth format, with VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT for usage, and the same size as the window.
 VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT lets the vulkan driver know that this will be a depth image used for z-testing.
 
 To allocate the image, we are using VMA in almost the same way as the vertex buffers before. But this time we use `VMA_MEMORY_USAGE_GPU_ONLY` to make sure that the image is allocated on fast VRAM.
-This is critical for something like a image we are rendering to. Rendering into an image stored in cpu ram might not even be doable. To make absolutely sure that VMA really allocates the image into VRAM, we give it `VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT` on required flags. This forces VMA library to allocate the image on VRAM no matter what. (The Memory Usage part is more like a hint)
+This is critical for something like an image we are rendering to. Rendering into an image stored in cpu ram might not even be doable. To make absolutely sure that VMA really allocates the image into VRAM, we give it `VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT` on required flags. This forces VMA library to allocate the image on VRAM no matter what. (The Memory Usage part is more like a hint)
 
 We create the image using vmaCreateImage, same as vmaCreatebuffer we did before.
 
@@ -224,7 +224,7 @@ Both the depth attachment and its reference are copypaste of the color one, as i
 `depth_attachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;` In the same way that color attachment layout was at COLOR_ATTACHMENT_OPTIMAL, we set the set the final layout to DEPTH_STENCIL_ATTACHMENT_OPTIONAL because this is a depth stencil attachment, not a color one.
 Same thing with the layout on the depth attachment reference
 
-We need to hoook this attachment to the subpass, so change it to this
+We need to hook this attachment to the subpass, so change it to this
 ```cpp
 //we are going to create 1 subpass, which is the minimum you can do
 	VkSubpassDescription subpass = {};
@@ -251,7 +251,7 @@ Last thing we need is to add the depth attachment to the attachment list in the 
 	render_pass_info.pSubpasses = &subpass;
 ```
 
-Instead of storing the color attachment only in pAttachments, we add depth attachment there too.
+Instead of storing only the color attachment in pAttachments, we add the depth attachment there too.
 
 With that, the renderpass now supports depth attachments. Now we need to modify our framebuffers so that they point to the depth image.
 
@@ -304,7 +304,7 @@ depthWriteEnable allows the depth to be written. While DepthTest and DepthWrite 
 The depthCompareOp holds the depth-testing function. Set to `VK_COMPARE_OP_ALWAYS` to not do any depthtest at all. Other common depth compare OPs are `VK_COMPARE_OP_LESS` (Only draw if Z < whatever is on the depth buffer), or `VK_COMPARE_OP_EQUAL` (only draw if the depth z matches) 
 
 min and max depth bounds lets us cap the depth test. If the depth is outside of bounds, the pixel will be skipped.
-And last, we wont be using stencil test, so thats set to VK_False by default
+And last, we won't be using stencil test, so thats set to VK_FALSE by default.
 
 Now we go back to the PipelineBuilder, and we add the depth state to it.
 
@@ -317,7 +317,7 @@ class PipelineBuilder {
 }
 ```
 
-And of course, make sure that its used when building the pipeline. On build_pipeline, we hook the depth stencil state into the `VkGraphicsPipelineCreateInfo` 
+And of course, make sure that it's used when building the pipeline. On build_pipeline, we hook the depth stencil state into the `VkGraphicsPipelineCreateInfo` 
 
 ```cpp
 VkPipeline PipelineBuilder::build_pipeline(VkDevice device, VkRenderPass pass)

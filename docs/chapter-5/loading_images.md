@@ -5,7 +5,7 @@ parent: "5. Textures"
 nav_order: 14
 ---
 
-Lets start the code to upload and handle textures on the engine.
+Let's start the code to upload and handle textures on the engine.
 
 We will begin by creating another pair of files. Like we did with the mesh. vk_textures.h and .cpp. We will store the main code for loading textures in there.
 
@@ -38,7 +38,7 @@ On vk_textures.cpp, we begin filling the function.
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
-bool vkutil::load_image_from_file(VulkanEngine& engine, const char* file, AllocatedImage & outImage)
+bool vkutil::load_image_from_file(VulkanEngine& engine, const char* file, AllocatedImage& outImage)
 {
 	int texWidth, texHeight, texChannels;
 
@@ -64,7 +64,7 @@ With the texture file loaded into the pixels array, we can create a staging buff
 	VkDeviceSize imageSize = texWidth * texHeight * 4;
 
     //the format R8G8B8A8 matchs exactly with the pixels loaded from stb_image lib
-	VkFormat image_format = VK_FORMAT_R8G8B8A8_UNORM;
+	VkFormat image_format = VK_FORMAT_R8G8B8A8_SRGB;
 
     //allocate temporary buffer for holding texture data to upload
 	AllocatedBuffer stagingBuffer = engine.create_buffer(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
@@ -218,9 +218,9 @@ bool vkutil::load_image_from_file(VulkanEngine& engine, const char* file, Alloca
 }
 ```
 
-We can now load many file formats like .jpeg and .png into a texture. Lets try it with one from the assets folder to make sure that it works.
+We can now load many file formats like .jpeg and .png into a texture. Let's try it with one from the assets folder to make sure that it works.
 
-Lets add a way to load and store the images on VulkanEngine
+Let's add a way to load and store the images on VulkanEngine
 
 vulkan_engine.h
 ```cpp
@@ -248,7 +248,7 @@ void VulkanEngine::load_images()
 	
 	vkutil::load_image_from_file(*this, "../../assets/lost_empire-RGBA.png", lostEmpire.image);
 	
-	VkImageViewCreateInfo imageinfo = vkinit::imageview_create_info(VK_FORMAT_R8G8B8A8_UNORM, lostEmpire.image._image, 0);
+	VkImageViewCreateInfo imageinfo = vkinit::imageview_create_info(VK_FORMAT_R8G8B8A8_SRGB, lostEmpire.image._image, VK_IMAGE_ASPECT_COLOR_BIT);
 	vkCreateImageView(_device, &imageinfo, nullptr, &lostEmpire.imageView);
 
 	_loadedTextures["empire_diffuse"] = lostEmpire;

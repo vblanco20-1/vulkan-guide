@@ -6,9 +6,9 @@ nav_order: 20
 ---
 
 We have arbitrary mesh rendering with depth buffers and materials, but at the moment, each object is hardcoded.
-We are going to refactor the rendering a little bit to render an array of objects. While its a very simple way of setting up a scene, it will allow you to start making interesting things, like simple 3d games.
+We are going to refactor the rendering a little bit to render an array of objects. While it's a very simple way of setting up a scene, it will allow you to start making interesting things, like simple 3d games.
 
-The way its going to work is that we are going to have a RenderObject struct, which holds the data needed for a single draw. Mesh, Matrix, and Material. We will have an array of those, and just render each of them in order.
+The way it's going to work is that we are going to have a RenderObject struct, which holds the data needed for a single draw. Mesh, Matrix, and Material. We will have an array of those, and just render each of them in order.
 
 To store the materials and meshes, we are going to store them in an unordered_map. One of the main features an unordered_map has, is that it keeps pointers to the objects working well, so we can have a hashmap of materials by name, and then just store pointers to them.
 
@@ -17,7 +17,7 @@ A Material will just be a Pipeline pointer + PipelineLayout, for now.
 vk_engine.h
 ```cpp
 //note that we store the VkPipeline and layout by value, not pointer. 
-//They are 64 bit handles  to internal driver structures anyway so storing pointer to them isnt very useful
+//They are 64 bit handles to internal driver structures anyway so storing pointers to them isn't very useful
 
 
 struct Material {
@@ -33,7 +33,7 @@ struct RenderObject {
 	glm::mat4 transformMatrix;
 };
 ```
-In the VulkanEngine class, lets add a few members and functions to handle those.
+In the VulkanEngine class, let's add a few members and functions to handle those.
 
 ```cpp
 //add unordered_map to the headers on top
@@ -52,10 +52,10 @@ std::unordered_map<std::string,Mesh> _meshes;
 //create material and add it to the map
 Material* create_material(VkPipeline pipeline, VkPipelineLayout layout,const std::string& name);
 
-//returns nullptr if it cant be found
+//returns nullptr if it can't be found
 Material* get_material(const std::string& name);
 
-//returns nullptr if it cant be found
+//returns nullptr if it can't be found
 Mesh* get_mesh(const std::string& name);
 
 //our draw function
@@ -107,9 +107,9 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd,RenderObject* first, int cou
 
 
 We are adding the 2 maps for materials and meshes, and a draw_objects function. 
-We do not have a single draw-mesh function. In a renderer, there is almost never a case where you render only one object, and we want to do sorting on the function, so its better if our draw function takes an array of objects to draw. 
+We do not have a single draw-mesh function. In a renderer, there is almost never a case where you render only one object, and we want to do sorting on the function, so it's better if our draw function takes an array of objects to draw. 
 
-Lets move our triangle and the monkey meshes so that they get registered in the maps, and make sure that the materials for them also get registered, so that we can use them when rendering.
+Let's move our triangle and the monkey meshes so that they get registered in the maps, and make sure that the materials for them also get registered, so that we can use them when rendering.
 
 ```cpp
 void VulkanEngine::load_meshes()
@@ -131,7 +131,7 @@ void VulkanEngine::load_meshes()
     upload_mesh(_triangleMesh);
 	upload_mesh(_monkeyMesh);
 
-	//note that we are copying them. Eventually we will delete the hardcoded _monkey and _triangle meshes, so its no problem now.
+	//note that we are copying them. Eventually we will delete the hardcoded _monkey and _triangle meshes, so it's no problem now.
 	_meshes["monkey"] = _monkeyMesh;
 	_meshes["triangle"] = _triangleMesh;
 }
@@ -239,10 +239,10 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd,RenderObject* first, int cou
 		MeshPushConstants constants;
 		constants.render_matrix = mesh_matrix;
 
-		//upload the mesh to the gpu via pushconstants
+		//upload the mesh to the GPU via pushconstants
 		vkCmdPushConstants(cmd, object.material->pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(MeshPushConstants), &constants);
 
-		//only bind the mesh if its a different one from last bind
+		//only bind the mesh if it's a different one from last bind
 		if (object.mesh != lastMesh) {
 			//bind the mesh vertex buffer with offset 0
 			VkDeviceSize offset = 0;
@@ -255,7 +255,7 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd,RenderObject* first, int cou
 }
 ```
 We first calculate the matrices for the camera itself. Then we iterate each object in the renderables array, and render each of them in order. The loop right now is a simple one with no sorting, but there isnt much need for sorting when the objects in the renderables array are already sorted. You can sort the renderables array by pipeline pointer if you want.
-Note how we are checking lastMesh and lastMaterial in the BindVertexBuffers and BindPipeline calls. There is no need to rebind the same vertex buffer over and over beetween draws, and the pipeline is the same, but we are pushing the constants on every single call. 
+Note how we are checking lastMesh and lastMaterial in the BindVertexBuffers and BindPipeline calls. There is no need to rebind the same vertex buffer over and over between draws, and the pipeline is the same, but we are pushing the constants on every single call. 
 The loop here is a lot higher performance that you would think. This simple loop will render thousands and thousands of objects with no issue. Binding pipeline is a expensive call, but drawing the same object over and over with different pushconstants is very fast. 
 
 Last thing is to replace the old code in the `draw()` function with calling this function. It should end up like this.
@@ -263,7 +263,7 @@ Last thing is to replace the old code in the `draw()` function with calling this
 ```cpp
 	vkCmdBeginRenderPass(cmd, &rpInfo, VK_SUBPASS_CONTENTS_INLINE);
 	
-	draw_objects(cmd,_renderables.data(), _renderables.size());
+	draw_objects(cmd, _renderables.data(), _renderables.size());
 
 	//finalize the render pass
 	vkCmdEndRenderPass(cmd);
@@ -271,12 +271,12 @@ Last thing is to replace the old code in the `draw()` function with calling this
 
 Now that we have changed the code, you can try to remove the _triangleMesh, _monkeyMesh, and their hardcoded pipelines from Vulkan Engine class. We no longer need any of that, as we have a simple system to manage the meshes and pipelines now.
 
-Feel free to play around with the amount of triangles and monkeys created in the load_scene function, or to change how they are generated. You will find you can reach object counts in the hundreds of thousands before it gets slow if you disable the debug layers and run in release mode. In debug mode with layers it wont be that fast.
+Feel free to play around with the amount of triangles and monkeys created in the load_scene function, or to change how they are generated. You will find you can reach object counts in the hundreds of thousands before it gets slow if you disable the debug layers and run in release mode. In debug mode with layers it won't be that fast.
 
 Now that we have an engine that actually does something. There are some exercises you can try to do.
 - Clean up all the hardcoded pipelines and meshes from VulkanEngine class
 - Create multiple pipelines with newer shaders, and use them to render monkeys each with a different material each
-- Load more meshes. As long as its a obj with TRIANGLE meshes, it should work fine. Make sure on export that the obj includes normals and colors
+- Load more meshes. As long as it's an obj with TRIANGLE meshes, it should work fine. Make sure on export that the obj includes normals and colors
 - Add WASD controls to the camera. For that, you would need to modify the camera matrices in the draw functions.
 - Sort the renderables array before rendering by Pipeline and Mesh, to reduce number of binds.
 

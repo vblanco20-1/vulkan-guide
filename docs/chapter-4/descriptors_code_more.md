@@ -12,7 +12,7 @@ We are going to change the code a bit. We will add a "environment data" buffer, 
 
 Allocating multiple things into the same buffer is generally a good idea in Vulkan. There are some very nice techniques that can be done with that, like dynamic descriptors, that allow to reuse the same descriptor set over and over again but every time with a different offset into the buffer.
 
-The main complication that comes from sub allocating data on a buffer, is that you need to be very mindful of alignment. The GPUs often cant read from an arbitrary address, and your buffer offsets have to be aligned into a certain minimum size.
+The main complication that comes from sub allocating data on a buffer, is that you need to be very mindful of alignment. The GPUs often can't read from an arbitrary address, and your buffer offsets have to be aligned into a certain minimum size.
 
 ## Looking up GPU stats
 To know what is the minimum alignment size for buffers, we need to query it from the GPU.  The limit we are looking for is called `minUniformBufferOffsetAlignment`. You can look at said limit in the vulkaninfo page [Link](https://vulkan.gpuinfo.org/displaydevicelimit.php?name=minUniformBufferOffsetAlignment&platform=windows)  
@@ -20,7 +20,7 @@ To know what is the minimum alignment size for buffers, we need to query it from
 We can see that all GPUs at least support an alignment of 256 bytes, but we are going to check it at runtime anyway.
 To do that, we are going to add some code to `init_vulkan()` where we are going to request GPU information and store the minimum alignment that we need.
 
-We are going to add a `VkPhysicalDeviceProperties` member to the VulkanEngine class, and make Vulkan fill it.  The struct will contain most GPU properties, so its useful to keep it around.
+We are going to add a `VkPhysicalDeviceProperties` member to the VulkanEngine class, and make Vulkan fill it.  The struct will contain most GPU properties, so it's useful to keep it around.
 
 ```cpp
 class VulkanEngine {
@@ -64,13 +64,13 @@ class VulkanEngine {
 ```
 
 We will be adding some default parameters to the scene data.
-We will stick fog, ambient color, and a sunlight here. We wont be using all of the data, its there as example data that you can use however you want.
+We will stick fog, ambient color, and a sunlight here. We won't be using all of the data, it's there as example data that you can use however you want.
 Note how everything is on glm::vec4s, and with packed data.
 GPUs don't read the data in the exact same way as CPUs do. The rules for that are complicated. A simple way to bypass said rules is by sticking to only vec4s and mat4s, and pack things yourself. Be very careful if you decide to mix types into the buffers. 
 
-This struct is 4 (float) * 4 (vec4) * 5 bytes, 80 bytes. 80 bytes does not meet any of the alignments for any GPU. If we want to have them packed in a buffer as if it was a normal array wont work. To have it work we will have to pad the buffer so that things align. 
+This struct is 4 (float) * 4 (vec4) * 5 bytes, 80 bytes. 80 bytes does not meet any of the alignments for any GPU. If we want to have them packed in a buffer as if it was a normal array won't work. To have it work we will have to pad the buffer so that things align. 
 
-We are going to need a function that pads the size of something to the alignment boundary, so lets add it.
+We are going to need a function that pads the size of something to the alignment boundary, so let's add it.
 
 ```cpp
 size_t VulkanEngine::pad_uniform_buffer_size(size_t originalSize)
@@ -101,7 +101,7 @@ With this, our `_sceneParameterBuffer` will hold enough space for FRAME_OVERLAP 
 
 We can now modify the descriptor layout for our global set so that we add the link to the scene parameter buffer.
 
-Seeing that we are creating more `VkDescriptorSetLayoutBinding`, lets abstract that into vk_initializers first. We will also abstract for `VkWriteDescriptorSet`
+Seeing that we are creating more `VkDescriptorSetLayoutBinding`, let's abstract that into vk_initializers first. We will also abstract for `VkWriteDescriptorSet`
 
 ```cpp
 VkDescriptorSetLayoutBinding vkinit::descriptorset_layout_binding(VkDescriptorType type, VkShaderStageFlags stageFlags, uint32_t binding)
@@ -157,7 +157,7 @@ We can now use it in `init_descriptors()` when creating the descriptor layout.
 
 For the scene binding, we have also changed the shader stages to include fragment shader, as we will want to read it from the fragment shader.
 
-With the layout done, we now need to modify the descriptor set writes so that the point to correct buffer and the correct offset in it.
+With the layout done, we now need to modify the descriptor set writes so that they point to the correct buffer and the correct offset in it.
 
 We continue on `init_descriptors()`, but inside the frame loop. We replace the older `VkWriteDescriptorSet` part with the new abstracted version.
 
@@ -251,7 +251,7 @@ On `draw_objects()` , before or after when we map the camera buffer and write to
 	vmaUnmapMemory(_allocator, _sceneParameterBuffer._allocation);
 ```
 
-We need to do evil pointer arithmetic to offset the data pointer and make it point where we want to. Other than that, its more or less the same as the camera buffer.
+We need to do evil pointer arithmetic to offset the data pointer and make it point where we want to. Other than that, it's more or less the same as the camera buffer.
 
 If you run this now, you will see that the objects have a tint that changes across time.
 
@@ -278,7 +278,7 @@ In `init_descriptors()`, change the descriptor sizes for creating the descriptor
 	};
 ```
 Dynamic uniform buffers are a different descriptor type, so we need to add some of them when creating the pool.
-Now, we need to change the descriptor type for the scene binding when creating the descriptor set layout so that its uniform buffer dynamic.
+Now, we need to change the descriptor type for the scene binding when creating the descriptor set layout so that it's uniform buffer dynamic.
 
 ```cpp
 VkDescriptorSetLayoutBinding sceneBind = vkinit::descriptorset_layout_binding(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 1);	
@@ -319,7 +319,7 @@ We need to send the offset to the `vkCmdBindDescriptorSets()` call. The offsets 
 
 If we had a descriptor set that had binding 0, 2 and 3 using static uniform buffer, and bindings 1,4,5 using dynamic descriptors, we would need to send 3 uint32_t to the bind function.
 
-Dynamic uniform buffer bindings can be slightly slower in the GPU than hardcoded ones, but in general is such a low difference that its hard to measure. On the CPU side they are a considerable gain as they remove the need to constantly reallocate descriptor sets, as you can just keep reusing the same dynamic descriptors at different offsets. If you have data that is bound once per frame, like a camera matrix, a normal descriptor is probably best, but if you have per-object data, consider using dynamic descriptors.
+Dynamic uniform buffer bindings can be slightly slower in the GPU than hardcoded ones, but in general is such a low difference that it's hard to measure. On the CPU side they are a considerable gain as they remove the need to constantly reallocate descriptor sets, as you can just keep reusing the same dynamic descriptors at different offsets. If you have data that is bound once per frame, like a camera matrix, a normal descriptor is probably best, but if you have per-object data, consider using dynamic descriptors.
 
 Due to their dynamic and not hardcoded nature, they are very popular to use in game engines. Some game engines don't even use the normal uniform buffer descriptors, and prefer to use strictly only dynamic ones.
 
