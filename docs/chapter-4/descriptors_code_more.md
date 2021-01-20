@@ -159,7 +159,7 @@ For the scene binding, we have also changed the shader stages to include fragmen
 
 With the layout done, we now need to modify the descriptor set writes so that the point to correct buffer and the correct offset in it.
 
-We continue on `init_descriptors()`, but inside the frame loop. We replace the older `VkWriteDescriptor` set part with the new abstracted version.
+We continue on `init_descriptors()`, but inside the frame loop. We replace the older `VkWriteDescriptorSet` part with the new abstracted version.
 
 ```cpp
 
