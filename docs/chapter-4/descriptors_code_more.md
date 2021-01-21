@@ -240,7 +240,7 @@ On `draw_objects()` , before or after when we map the camera buffer and write to
 	_sceneParameters.ambientColor = { sin(framed),0,cos(framed),1 };
 
 	char* sceneData;
-	vmaMapMemory(_allocator, _sceneParameterBuffer._allocation , &(void*)sceneData);
+	vmaMapMemory(_allocator, _sceneParameterBuffer._allocation , (void**)&sceneData);
 
 	int frameIndex = _frameNumber % FRAME_OVERLAP;
 
