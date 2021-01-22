@@ -63,7 +63,7 @@ With the texture file loaded into the pixels array, we can create a staging buff
     void* pixel_ptr = pixels;
 	VkDeviceSize imageSize = texWidth * texHeight * 4;
 
-    //the format R8G8B8A8 matchs exactly with the pixels loaded from stb_image lib
+    //the format R8G8B8A8 matches exactly with the pixels loaded from stb_image lib
 	VkFormat image_format = VK_FORMAT_R8G8B8A8_SRGB;
 
     //allocate temporary buffer for holding texture data to upload
@@ -185,7 +185,7 @@ The image now has the correct pixel data, so we can change its layout one more t
 	imageBarrier_toReadable.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
 	//barrier the image into the shader readable layout
-	vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, imageBarrier_toReadable);
+	vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier_toReadable);
 ```
 
 We are transferring the image into `VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL`, to let the driver know to shuffle the image into whatever internal format works best for reading from shaders.
