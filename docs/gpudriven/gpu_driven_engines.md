@@ -79,7 +79,7 @@ To move textures into bindless, you use texture arrays. With the correct extensi
 
 To make materials bindless, you need to stop having 1 pipeline per material. Instead, you want to move the material parameters into SSBOs, and go with an ubershader approach. In the Doom engines, they have a very low amount of pipelines for the entire game. Doom eternal has less than 500 pipelines, while Unreal Engine games often have 100.000+ pipelines. If you use ubershaders to massively lower the amount of unique pipelines, you will be able to increase efficiency in a huge way, as VkCmdBindPipeline is one of the most expensive calls when drawing objects in vulkan.
 
-Push Constants and Dynamic Descriptors can be used, but they have to be "global". Using pushconstants for things like camera location is perfectly fine, but you cant use them for object ID as thats a per-object call and you specifically want to draw as many objects as possible in 1 draw.
+Push Constants and Dynamic Descriptors can be used, but they have to be "global". Using pushconstants for things like camera location is perfectly fine, but you cant use them for object ID as that's a per-object call and you specifically want to draw as many objects as possible in 1 draw.
 
 The general workflow is to put stuff into buffers, and have big buffers so you don't need to bind them every call. The bonus is that you can also write those buffers from the GPU, which is what Dragon Age Inquisition does for Index buffers, where it writes to them from the culling shaders so that only the visible triangles get drawn.
 

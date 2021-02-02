@@ -6,7 +6,7 @@ nav_order: 31
 ---
 In the tutorial, we have been loading .obj and .png files directly. The issue with doing that is that we depend on 3rd party libraries (stb_image and tinyobj), and loading the formats like that is quite inefficient. You have probably seen that the engine takes a couple seconds to load when you are in debug mode.
 
-On real engines, you dont load those formats at runtime. Instead, you convert those formats into a engine-specific fast-loadable format, and then load that.
+On real engines, you don't load those formats at runtime. Instead, you convert those formats into a engine-specific fast-loadable format, and then load that.
 
 The advantages are considerable:
 * Orders of magnitude faster loading.
@@ -19,9 +19,9 @@ The advantages are considerable:
 On the other side, there are a few disadvantages to take into account.
 * Need to develop and maintain the custom formats.
 * Need to develop and maintain a converter that converts from classic formats into the custom one.
-* Custom formats wont be readable by any tool.
+* Custom formats won't be readable by any tool.
 
-In general, its a good idea to implement an asset system into your engine, unless you dont care about the load times or the executable bloat. While maintaining the custom formats is extra work, its not that much compared to the productivity increase of having an engine that loads scenes very quickly.
+In general, it's a good idea to implement an asset system into your engine, unless you don't care about the load times or the executable bloat. While maintaining the custom formats is extra work, it's not that much compared to the productivity increase of having an engine that loads scenes very quickly.
 
 # Asset System architecture
 
@@ -37,7 +37,7 @@ Engine and Converter will both link AssetLib. Converter will link all the differ
 
 
 # Libraries
-We will add 2 libraries to the project. The first one is LZ4 compression library, which we will be using to compress the binary blobs. The second one is nhlomans Json library, which is the easiest to use json library for modern Cpp and its really nice to use.
+We will add 2 libraries to the project. The first one is LZ4 compression library, which we will be using to compress the binary blobs. The second one is nhlomans Json library, which is the easiest to use json library for modern Cpp and it's really nice to use.
 
 * LZ4: https://github.com/lz4/lz4
 * Json: https://github.com/nlohmann/json
@@ -48,7 +48,7 @@ We are going to keep the file format very simple, while still being very fast to
 We are taking a hint from how the glTF format works, and have a binary file that holds a json header alongside a binary blob.
 The json header will contain metadata and information about the object, and the binary blob will contain the raw data of the object, like the pixels of a texture.
 
-For the binary blob, we will also compress it using LZ4 format. LZ4 is a compression codec that is optimized around speed, and if we use it, its very likely that we will go faster than reading uncompressed data from disk. But we will also keep space in the format for other compression systems, as things like the new consoles have .zip or kraken compression implemented in hardware.
+For the binary blob, we will also compress it using LZ4 format. LZ4 is a compression codec that is optimized around speed, and if we use it, it's very likely that we will go faster than reading uncompressed data from disk. But we will also keep space in the format for other compression systems, as things like the new consoles have .zip or kraken compression implemented in hardware.
 
 All assets will follow the format of json metadata + compressed binary blob. This way the code will be unified and easier to handle.
 
@@ -124,7 +124,7 @@ We will be doing purely binary files.
 
 We begin by storing the 4 chars that are the asset type. For textures this will be `TEXI`, and for meshes it will be `MESH`. We can use this to easily identify if the binary file we are loading is a mesh or a texture, or some wrong format.
 
-Next, we store Version, which is a single uint32 number. We can use this if we change the format at some point, to give an error when trying to load it. Its critical to allways version your file formats.
+Next, we store Version, which is a single uint32 number. We can use this if we change the format at some point, to give an error when trying to load it. It's critical to allways version your file formats.
 
 After the version, we store the lenght, in bytes, of the json string, and then the lenght of the binary blob.
 
@@ -169,7 +169,7 @@ Then we read the json string by using the lenght stored in the header, and same 
 
 We are not doing any version or type check yet here. The functions will just return false if the file isnt found, but there is no error checking.
 
-Thats all we needed for the asset file itself. Its just a very simple dump of the json string and the binary drop into a packed file.
+That's all we needed for the asset file itself. It's just a very simple dump of the json string and the binary drop into a packed file.
 
 The more interesting thing is handling textures and meshes. We will only walkthrough the Texture save/load logic, as meshes work in the same way, you can look at the codebase to see the differences.
 
@@ -204,7 +204,7 @@ namespace assets {
 Like with the main asset file, we are going to keep the API very small and stateless.
 The `read_texture_info` will parse the metadata json in a file and convert it into the TextureInfo struct, which is the main data of the texture. 
 
-`unpack_texture` will work with a texture info alongside the binary blob of pixel data, and will decompress the texture into the destination buffer. Its very important that the destination buffer is big enough, or it will overflow. This is meant to be used to unpack the blob directly into a buffer.
+`unpack_texture` will work with a texture info alongside the binary blob of pixel data, and will decompress the texture into the destination buffer. It's very important that the destination buffer is big enough, or it will overflow. This is meant to be used to unpack the blob directly into a buffer.
 
 ```cpp
 	//prepare asset file and texture info
@@ -324,7 +324,7 @@ void assets::unpack_texture(TextureInfo* info, const char* sourcebuffer, size_t 
 
 When unpacking, we just decompress directly into the target destination. If the file isnt compressed, we then just memcpy directly.
 
-Thats all for the texture asset logic. For the mesh logic, it works in a similar way, so you can look at the code.
+That's all for the texture asset logic. For the mesh logic, it works in a similar way, so you can look at the code.
 
 * Core asset system: https://github.com/vblanco20-1/vulkan-guide/blob/engine/assetlib/asset_loader.cpp
 * Texture loader: https://github.com/vblanco20-1/vulkan-guide/blob/engine/assetlib/texture_asset.cpp
@@ -334,7 +334,7 @@ Thats all for the texture asset logic. For the mesh logic, it works in a similar
 ## Converter
 
 With the texture save/load logic implemented, we can now look at the converter itself.
-The converter will be a separate executable from the normal engine. This is to isolate all of the libs it will use so that they dont pollute the engine. This also means we can compile it in release mode and have it convert everything very fast, and then we load that from our debug mode engine.
+The converter will be a separate executable from the normal engine. This is to isolate all of the libs it will use so that they don't pollute the engine. This also means we can compile it in release mode and have it convert everything very fast, and then we load that from our debug mode engine.
 
 The entire codebase for the converted is here https://github.com/vblanco20-1/vulkan-guide/blob/engine/asset-baker/asset_main.cpp
 
@@ -372,7 +372,7 @@ for (auto& p : fs::directory_iterator(directory))
 We are using the Cpp17 Filesystem library. This is so we get an easy way of iterate a folder contents. If you cant use Cpp17 then you will have to use a platform API for that.
 
 We begin by storing argv[1] into a filesystem::path. We will then iterate the contents at that path using `directory_iterator`.
-For each file in the folder, we check if the extension is `.png`, and convert it as a texture. We convert into a mesh if its a `.obj` file.
+For each file in the folder, we check if the extension is `.png`, and convert it as a texture. We convert into a mesh if it's a `.obj` file.
 Textures will be stored as `.tx`, and meshes as `.mesh`.
 
 The code inside the conversion function is copypasted from the code we used to have in the main engine. It works exactly the same, except instead of loading it into a buffer for the gpu, we use the asset library to store it to disk. We will be looking at the texture one, as again, the mesh is similar and you can look at the implementation.

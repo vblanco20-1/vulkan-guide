@@ -15,7 +15,7 @@ Because this is necessary when dealing with textures, we will implement this cop
 This will likely cause an immediate rendering speed-up if you have been trying to load heavy meshes.
 
 ## Upload Context
-As copying meshes from CPU buffer to GPU buffer wont be the only thing we are going to do, we are going to create a small abstraction for this sort of short-lived commands. 
+As copying meshes from CPU buffer to GPU buffer won't be the only thing we are going to do, we are going to create a small abstraction for this sort of short-lived commands. 
 
 Let's begin by adding a new struct to VulkanEngine, and a function for immediate command execution.
 
@@ -52,7 +52,7 @@ In `init_sync_structures()`, we will initialize the fence alongside the renderin
 	});
 ```
 
-On this fence we wont set the `VK_FENCE_CREATE_SIGNALED_BIT` flag, as we will not try to wait on it before sending commands like we do in the render loop.
+On this fence we won't set the `VK_FENCE_CREATE_SIGNALED_BIT` flag, as we will not try to wait on it before sending commands like we do in the render loop.
 
 The other thing is the command pool, which we create in `init_commands`
 
@@ -144,7 +144,7 @@ void VulkanEngine::upload_mesh(Mesh& mesh)
 }
 ```
 
-We are creating the stagingBuffer with enough size to hold the mesh data, and giving it the `VK_BUFFER_USAGE_TRANSFER_SRC_BIT` usage flag. This flag tells Vulkan that this buffer will only be used as source for transfer commands. We wont be using the staging buffer for rendering.
+We are creating the stagingBuffer with enough size to hold the mesh data, and giving it the `VK_BUFFER_USAGE_TRANSFER_SRC_BIT` usage flag. This flag tells Vulkan that this buffer will only be used as source for transfer commands. We won't be using the staging buffer for rendering.
 
 We can now copy the mesh data to this buffer
 

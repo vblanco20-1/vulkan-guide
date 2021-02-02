@@ -89,7 +89,7 @@ Next, we are going to request an image index from the swapchain.
 	VK_CHECK(vkAcquireNextImageKHR(_device, _swapchain, 1000000000, _presentSemaphore, nullptr, &swapchainImageIndex));
 ```
 
-vkAcquireNextImageKHR will request the image index from the swapchain, and if the swapchain doesnt have any image we can use, it will block the thread with a maximum for the timeout set, which will be 1 second. This will be our FPS lock.
+vkAcquireNextImageKHR will request the image index from the swapchain, and if the swapchain doesn't have any image we can use, it will block the thread with a maximum for the timeout set, which will be 1 second. This will be our FPS lock.
 
 Check how we are sending the _presentSemaphore to it. This is to make sure that we can sync other operations with the swapchain having an image ready to render.
 

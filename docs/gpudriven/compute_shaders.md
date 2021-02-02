@@ -9,21 +9,21 @@ During this GPU driven chapter compute shaders have been mentioned many times, b
 
 ## A primer on GPU Hardware
 The GPU is a computation machine, much in the same way as a CPU is. A GPU executes arbitrary code to do things like running the shaders or rendering triangles.
-While GPUs at first used to be just triangle-render machines, over time, they became more and more like CPUs due to the need of executing pixel/vertex shaders. Eventually, graphic APIs added compute shaders, which are a special type of shader that doesnt use the fixed graphics pipeline, and just allows to run arbitrary computations on the GPU.
+While GPUs at first used to be just triangle-render machines, over time, they became more and more like CPUs due to the need of executing pixel/vertex shaders. Eventually, graphic APIs added compute shaders, which are a special type of shader that doesn't use the fixed graphics pipeline, and just allows to run arbitrary computations on the GPU.
 
 Modern GPUs are parallel compute machines first, with a few fixed hardware that accelerates graphics such as texture accessors and triangle rasterizers. A Gpu is composed of a set of "Compute units", which are roughly equivalent to a CPU core. But because a GPU is about parallelism first, their cores are different in some mayor ways. 
 
-First of all, the cores execute instructions in a very wide SIMD (Single Instruction, Multiple Data). While a CPU executes instructions on items one-at-a-time by default unless you use special instructions, a GPU executes everything in a wide manner, often 32 or 64 items at a time. Those are often called threads/lanes/cuda-cores. Also, each of the cores in the GPU overlaps the execution of multiple of those 32/64 wide instruction streams at a time, so that if one stream is waiting for a memory access, it can execute a different one. This works a lot like Hyperthreading does on CPUs, but its a much more extreme version of the same concept.
+First of all, the cores execute instructions in a very wide SIMD (Single Instruction, Multiple Data). While a CPU executes instructions on items one-at-a-time by default unless you use special instructions, a GPU executes everything in a wide manner, often 32 or 64 items at a time. Those are often called threads/lanes/cuda-cores. Also, each of the cores in the GPU overlaps the execution of multiple of those 32/64 wide instruction streams at a time, so that if one stream is waiting for a memory access, it can execute a different one. This works a lot like Hyperthreading does on CPUs, but it's a much more extreme version of the same concept.
 
 If you look at a GPU like a RTX 2080ti, it has 68 "Streaming Multiprocessors", which is the "core" thing above. Each of those has 64 "cuda cores", each of them mapping into a SIMD lane, with each "core" having 2 32-wide executors. 
 
-This is a total of 4352 possible execution lanes at a time. You then want at least a few of them overlapping so that memory accesses can be masked by the hyperthreading, so at the end, to put a 2080ti at full power, you are going to want at least 20.000+ "threads" at a time, better if its on the millions.
+This is a total of 4352 possible execution lanes at a time. You then want at least a few of them overlapping so that memory accesses can be masked by the hyperthreading, so at the end, to put a 2080ti at full power, you are going to want at least 20.000+ "threads" at a time, better if it's on the millions.
 
 A very important detail is that because executions run 32 or 64 at a time, they cant do branching on a per-element basis. If you have a branch that is taken 50% of the time, the GPU will have to execute those 2 branches one after another. 
 
 ## The GPU Compute model
 To tame all of this power, GPUs run a different programming model than CPUs do. In a CPU you program scalar-first, workling on elements one at a time, while on the GPU want to do the same operations on thousands of elements at a time to let the wide GPU do its thing.
-Its for that reason the vertex shaders and pixel shaders run the way they do, one pixel or vertex at a time. On the driver, your pixel shader will be called in parallel with many threads at a time.
+It's for that reason the vertex shaders and pixel shaders run the way they do, one pixel or vertex at a time. On the driver, your pixel shader will be called in parallel with many threads at a time.
 
 For compute shaders, you access this a bit more directly. In compute shaders, there is a split beetween individual elements, and "work groups", which are groups of individual elements. Elements within the same workgroup can do some features such as access workgroup-local memory in a fast way, which is useful for many operations.
 
@@ -33,8 +33,8 @@ To define a workgroup size, you have to set that up in the shader itself.
 layout (local_size_x = 256) in;
 ```
 
-By doing this, we are letting vulkan know that we want our compute shader to be executed in groups of 256 elements at a time. This maps very nicely to what was said above that the GPU executes instructions 32 or 64 at a time, and that it overlaps multiple execution streams in the same core. A workgroup can map to one of those cores, but thats for the driver to decide. Most of the time people choose a workgroup size that is a multiple of 64, and not very big, as a bigger workgroup size has to reserve more memory, and could be split within multiple cores.
-The workgroup can be multidimensional. Its very common to have things like 16x16 workgroup size when doing postprocess filters or other similar rendering shaders.
+By doing this, we are letting vulkan know that we want our compute shader to be executed in groups of 256 elements at a time. This maps very nicely to what was said above that the GPU executes instructions 32 or 64 at a time, and that it overlaps multiple execution streams in the same core. A workgroup can map to one of those cores, but that's for the driver to decide. Most of the time people choose a workgroup size that is a multiple of 64, and not very big, as a bigger workgroup size has to reserve more memory, and could be split within multiple cores.
+The workgroup can be multidimensional. It's very common to have things like 16x16 workgroup size when doing postprocess filters or other similar rendering shaders.
 
 Within the compute shader itself, you can find what "element" you are by using
 
@@ -44,7 +44,7 @@ gl_GlobalInvocationID.x;
 This will be unique per shader invocation and is what you will use for almost everything. You can also access `gl_LocalInvocationID`, which gives you what index you have within the workgroup, and `gl_WorkGroupID` to know what workgroup is being executed.
 
 
-Once you have your ID, its up to you how you use it. An example could be a matrix-multiply shader that multiplies all of the matrices in a buffer by a camera matrix and stores them in another buffer.
+Once you have your ID, it's up to you how you use it. An example could be a matrix-multiply shader that multiplies all of the matrices in a buffer by a camera matrix and stores them in another buffer.
 
 ```glsl
 layout (local_size_x = 256) in;
@@ -67,7 +67,7 @@ void main()
 {		
     //grab global ID
 	uint gID = gl_GlobalInvocationID.x;
-    //make sure we dont access past the buffer size
+    //make sure we don't access past the buffer size
     if(gID < matrixCount)
     {
         // do math
@@ -90,7 +90,7 @@ When you do a `vkCmdDispatch` call, you arent dispatching individual elements, y
 
 ## Compute shaders and barriers
 
-All of the GPU commands sent to a VkQueue will start in order, but will not end in order. The GPU is free to schedule and reorganize the commands in whatever way it sees fit. This means that if we run a shader like above, and then try to do some rendering that uses said matrix buffer, its possible that the compute shader hasnt finished executing before the buffer is used, thus doing a data race and likely causing bad things to happen.
+All of the GPU commands sent to a VkQueue will start in order, but will not end in order. The GPU is free to schedule and reorganize the commands in whatever way it sees fit. This means that if we run a shader like above, and then try to do some rendering that uses said matrix buffer, it's possible that the compute shader hasnt finished executing before the buffer is used, thus doing a data race and likely causing bad things to happen.
 
 To syncronize this, vulkan has the concept of barriers. We have been using barriers before for data transfers and image transitions, but we will need to use them in here too.
 

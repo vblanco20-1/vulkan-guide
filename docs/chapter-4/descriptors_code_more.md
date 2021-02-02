@@ -229,7 +229,7 @@ if (!load_shader_module("../../shaders/default_lit.frag.spv", &colorMeshShader))
 }
 ```
 
-If you try to run this now, it should work, but the color of the objects will be unknown, as we aren't writing to the buffers yet. Its probably zero initialized, which will mean the ambient light does nothing.
+If you try to run this now, it should work, but the color of the objects will be unknown, as we aren't writing to the buffers yet. it's probably zero initialized, which will mean the ambient light does nothing.
 
 Lets write into the buffer from our core render loop.
 On `draw_objects()` , before or after when we map the camera buffer and write to it.
@@ -302,7 +302,7 @@ That's it, now our descriptor is created as dynamic. Now, when binding the descr
 Lets go to `draw_objects()` function, and modify the place where the descriptor set is bound so that it uses the offsets.
 ```cpp
 
-//only bind the pipeline if it doesnt match with the already bound one
+//only bind the pipeline if it doesn't match with the already bound one
 if (object.material != lastMaterial) {
 
 vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipeline);

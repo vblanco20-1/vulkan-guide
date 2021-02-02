@@ -349,7 +349,7 @@ We fill the struct, and then copy it to the buffer with the same pattern that we
 The buffer now holds the proper camera data, so now we can bind it.
 
 ```cpp
-//only bind the pipeline if it doesnt match with the already bound one
+//only bind the pipeline if it doesn't match with the already bound one
 if (object.material != lastMaterial) {
 
 	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipeline);

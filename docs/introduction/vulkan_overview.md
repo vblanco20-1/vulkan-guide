@@ -27,7 +27,7 @@ Although this tutorial is written in C++, porting it to other low level language
 ## When to use Vulkan
 
 If your main bottleneck is GPU-side, it is unlikely that implementing Vulkan will improve performance enough to be worth it.
-It should be mentioned that Vulkan is significantly harder to use compared to OpenGL, and its extra complexity often means longer development times.
+It should be mentioned that Vulkan is significantly harder to use compared to OpenGL, and it's extra complexity often means longer development times.
 
 If your application consists of big maps, dynamic worlds, or CAD type scenes with a lot of objects, then Vulkan's multithreaded capabilities will likely boost performance.
 

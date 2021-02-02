@@ -204,7 +204,7 @@ void VulkanEngine::init_default_renderpass()
     depth_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
     depth_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
     depth_attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    depth_attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    depth_attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_don't_CARE;
     depth_attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     depth_attachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
@@ -304,7 +304,7 @@ depthWriteEnable allows the depth to be written. While DepthTest and DepthWrite 
 The depthCompareOp holds the depth-testing function. Set to `VK_COMPARE_OP_ALLWAYS` to not do any depthtest at all. Other common depth compare OPs are `VK_COMPARE_OP_LESS` (Only draw if Z < whatever is on the depth buffer), or `VK_COMPARE_OP_EQUAL` (only draw if the depth z matches) 
 
 min and max depth bounds lets us cap the depth test. If the depth is outside of bounds, the pixel will be skipped.
-And last, we won't be using stencil test, so thats set to VK_FALSE by default.
+And last, we won't be using stencil test, so that's set to VK_FALSE by default.
 
 Now we go back to the PipelineBuilder, and we add the depth state to it.
 

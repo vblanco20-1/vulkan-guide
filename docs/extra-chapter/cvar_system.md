@@ -9,10 +9,10 @@ As the engine grows, we find that we have more and more configuration options in
 
 If you look at how engines like Unreal Engine or IDTech engines do it, they have a Console Variable system. Users can declare any console variable (CVAR) they want, and then access it through the code. Having the configuration and debug options all inside the same centralized location gives some very nice properties, such as having 1 centralized way to edit them, and being able to easily save them to disk.
 
-For the vulkan engine, we are going to implement a system for CVARs very similar to the one in Unreal Engine, but highly simplified. This is also something that can be done for any Cpp project, it doesnt require anything from the rest of the engine. The CVar system explained here is the same as the one that was created for the Novus Core project, but with some small tweaks.
+For the vulkan engine, we are going to implement a system for CVARs very similar to the one in Unreal Engine, but highly simplified. This is also something that can be done for any Cpp project, it doesn't require anything from the rest of the engine. The CVar system explained here is the same as the one that was created for the Novus Core project, but with some small tweaks.
 
 ## Usage
-To declare a CVAR, its done this way:
+To declare a CVAR, it's done this way:
 ```cpp
 
 //checkbox CVAR
@@ -43,7 +43,7 @@ Using the cvar property is the quickest and most efficient way to access a CVAR,
 
 ```cpp
 
-//returns a pointer because it will be nullptr if the cvar doesnt exist
+//returns a pointer because it will be nullptr if the cvar doesn't exist
 int* value = CVarSystem::Get()->GetIntCvar("test.int");
 if(value)
 {
@@ -51,14 +51,14 @@ if(value)
 }
 
 //for the setter it can be done directly.
-//if the cvar doesnt exist, this does nothing
+//if the cvar doesn't exist, this does nothing
  CVarSystem::Get()->SetIntCvar("test.int",3);
 
 ```
 
-This makes CVars a sort of global database. Do not use it like that. CVars are meant for configuration variables and other similar globals, so its best to avoid using it as a global variable storage.
+This makes CVars a sort of global database. Do not use it like that. CVars are meant for configuration variables and other similar globals, so it's best to avoid using it as a global variable storage.
 
-Lastly, its possible to create cvars at runtime. Most useful if you are loading cvars from files or as part of a modding system or scripts.
+Lastly, it's possible to create cvars at runtime. Most useful if you are loading cvars from files or as part of a modding system or scripts.
 The AutoCvar things above use this
 
 ```cpp
@@ -67,7 +67,7 @@ CVarParameter* cvar =  CVarSystem::Get()->CreateIntCVar("test.int2", "another in
 
 ```
 
-Its not possible to remove cvars. This is by design, as it doesnt make a lot of sense to delete these global variables.
+It's not possible to remove cvars. This is by design, as it doesn't make a lot of sense to delete these global variables.
 
 All cvars will get a spot into the cvar editor menu on the Imgui menu bar. This makes it very easy to see what the cvar values are and allows a centralized spot to edit them from inside the engine.
 
@@ -110,7 +110,7 @@ CVarSystem* CVarSystem::Get()
 ```
 
 The Impl class is empty for now, but we implement the `CVarSystem::Get()` function. In there, we declare a static CVarSystemImpl object, and return its adress.
-This is known as the statically initialized singleton, and its the modern way of doing Singletons in Cpp11 and more. It has the very interesting property that Get() is fully threadsafe due to the rules of static variables inside functions.
+This is known as the statically initialized singleton, and it's the modern way of doing Singletons in Cpp11 and more. It has the very interesting property that Get() is fully threadsafe due to the rules of static variables inside functions.
 
 To store the cvars, we are going to implement a way to store the cvars into the System, for that we start by implementing a very simple cvar struct
 
@@ -212,11 +212,11 @@ struct CVarArray
 };
 ```
 
-We will be using templates for this to make sure its much simpler to implement the multiple types of cvars.
+We will be using templates for this to make sure it's much simpler to implement the multiple types of cvars.
 
 Starting by the `CVarStorage<T>` type, where we store the current and initial values of a given CVar, alongside the pointer to the `CVarParamter` this Storage holds the value for.
 
-`CVarArray<T>` is an array of those CVarStorage objects, with a few functions to handle said array. Its going to be a very typical heap-allocated array like a vector, but we wont support resizing.
+`CVarArray<T>` is an array of those CVarStorage objects, with a few functions to handle said array. It's going to be a very typical heap-allocated array like a vector, but we won't support resizing.
 
 On the array, we hold an integer to know how filled it is, and we use the index to get the data. This index will correlate to the index stored in a CVarStorage. 
 
@@ -238,7 +238,7 @@ public:
 	CVarArray<std::string> stringCVars{ MAX_STRING_CVARS };
 
 	//using templates with specializations to get the cvar arrays for each type.
-	//if you try to use a type that doesnt have specialization, it will trigger a linked error
+	//if you try to use a type that doesn't have specialization, it will trigger a linked error
 	template<typename T>
 	CVarArray<T>* GetCVarArray();
 
@@ -260,10 +260,10 @@ public:
 }
 ```
 
-We are going to hardcode the array sizes for all the cvars. This is done to simplify the system. Generally you dont really have that many cvars, so its not really wasting much space. 1000 float and int cvars is bigger than what UnrealEngine uses, and Quake 3 only had a few dozens.
+We are going to hardcode the array sizes for all the cvars. This is done to simplify the system. Generally you don't really have that many cvars, so it's not really wasting much space. 1000 float and int cvars is bigger than what UnrealEngine uses, and Quake 3 only had a few dozens.
 
 One thing to note here is the `GetCVarArray` template trick. By doing this, we can allow a very significant code repetition when dealing with the different data arrays.
-We start by declaring the GetCVarArray template function, with a empty implementation that will error, in case its not implemented. We then follow with 3 separated specializations of the GetCVarArray template.
+We start by declaring the GetCVarArray template function, with a empty implementation that will error, in case it's not implemented. We then follow with 3 separated specializations of the GetCVarArray template.
 The end result of this is that we can then do this.
 
 ```cpp
@@ -352,7 +352,7 @@ CVarParameter* CVarSystemImpl::CreateFloatCVar(const char* name, const char* des
 On the typed CreateFloatCVar function, we initialize the cvar with the above function, and then we use 
 `GetCVarArray<double>()` to grab the correct data array to insert the cvar into. We also make sure to set the param->type of the cvar to Float type.
 
-For int and string its the same just replacing the types. 
+For int and string it's the same just replacing the types. 
 
 Now that we can create cvars, lets continue on the GetCVar function
 ```cpp
@@ -505,4 +505,4 @@ Again, this works exactly the same for all other types.
 
 If you want to add more types to the cvar system, you just need to create the functions in the public API, implement them, and add a storage array to the implementation. Some common types to add are vector properties, or maybe even other objects.
 
-For the imgui editor itself. Its just normal imgui edit functions that are used from the data arrays.
+For the imgui editor itself. It's just normal imgui edit functions that are used from the data arrays.

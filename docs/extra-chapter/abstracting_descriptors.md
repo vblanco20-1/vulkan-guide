@@ -7,7 +7,7 @@ nav_order: 33
 
 Creating and managing descriptor sets is one of the most painful things about vulkan. Creating an abstraction that simplifies is is really important, and will improve the workflow a lot.
 
-Im going to show you a simple way to create a thin abstraction over descriptor sets, that makes it easier to handle them.
+I'm going to show you a simple way to create a thin abstraction over descriptor sets, that makes it easier to handle them.
 
 The end result will look like this.
 
@@ -40,9 +40,9 @@ The abstraction is composed of 3 modular parts.
 * DescriptorLayoutCache: caches DescriptorSetLayouts to avoid creating duplicated layouts.
 * DescriptorBuilder: Uses the 2 objects above to allocate and write a descriptor set and its layout automatically.
 
-Note that both the layout and the allocator wont be threadsafe, but they could be made so relatively easily. The descriptor builder is fully stateless so it would be threadsafe by default.
+Note that both the layout and the allocator won't be threadsafe, but they could be made so relatively easily. The descriptor builder is fully stateless so it would be threadsafe by default.
 
-We are going to put the 3 classes into `vk_descriptors.h` and `vk_descriptors.cpp`. They wont depend on the rest of the engine, only on vulkan.h and STL.
+We are going to put the 3 classes into `vk_descriptors.h` and `vk_descriptors.cpp`. They won't depend on the rest of the engine, only on vulkan.h and STL.
 
 ## Descriptor Allocator
 Explained in chapter 4, descriptors have to be allocated from a pool. You need to manage this pool, and create more as needed, also reusing them whenever possible if you allocate descriptors every frame.
@@ -51,7 +51,7 @@ We are going to make a basic abstraction where it allocates pools of 1000 descri
 
 We will have multiple allocators in the engine. One of them will be for "persistent" descriptors, and one allocator per frame to use for dynamically allocated descriptors.
 
-Lets start with the class itself
+Let's start with the class itself
 
 ```cpp
 class DescriptorAllocator {
@@ -92,7 +92,7 @@ class DescriptorAllocator {
 	};
 ```
 
-We will store multipliers of descriptor types in the PoolSizes struct. The idea is that its a multiplier on the number of descriptor sets allocated for the pools.
+We will store multipliers of descriptor types in the PoolSizes struct. The idea is that it's a multiplier on the number of descriptor sets allocated for the pools.
 
 For example, if you set `VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER` to `4.f` in there, it means that when a pool for 1000 descriptors is allocated, the pool will have space for 4000 combined image descriptors. The numbers in there as default are a reasonable default, but you can improve memory usage of this allocator significantly if you tweak it to what your project uses. 
 
@@ -174,14 +174,14 @@ VkDescriptorPool DescriptorAllocator::grab_pool()
 }
 ```
 
-On the function, we reuse a descriptor pool if its availible, and if we dont have one, we then create a new pool to hold 1000 descriptors. The 1000 count is arbitrary. Could also create growing pools or different sizes.
+On the function, we reuse a descriptor pool if it's availible, and if we don't have one, we then create a new pool to hold 1000 descriptors. The 1000 count is arbitrary. Could also create growing pools or different sizes.
 
 With those functions coded, we can now focus on the main `allocate` function, which is where the meat of the allocator is.
 
 ```cpp
 bool DescriptorAllocator::allocate(VkDescriptorSet* set, VkDescriptorSetLayout layout)
 	{
-		//initialize the currentPool handle if its null
+		//initialize the currentPool handle if it's null
 		if (currentPool == VK_NULL_HANDLE){
 
 			currentPool = grab_pool();
@@ -231,7 +231,7 @@ bool DescriptorAllocator::allocate(VkDescriptorSet* set, VkDescriptorSetLayout l
 	}
 ```
 
-In the function, we begin by initializing the `currentPool` handle if its null, and reusing or allocating a new descriptor pool.
+In the function, we begin by initializing the `currentPool` handle if it's null, and reusing or allocating a new descriptor pool.
 
 After that, we try to allocate the descriptor using `vkAllocateDescriptorSets()`. After that call, we check the error code.
 If there is no error `VK_SUCCESS`, everything went fine and we can return from the function.
@@ -258,7 +258,7 @@ void DescriptorAllocator::reset_pools(){
 
 On the reset, we call `vkResetDescriptorPool` on every pool, and then move them to the `freePools` array for reuse. We also set the currentPool handle to null so that the allocation function tries to grab a pool on the next allocation.
 
-This simple allocator wont be the most optimal, but if you use it right by setting the proper size multipliers, it will be optimal.
+This simple allocator won't be the most optimal, but if you use it right by setting the proper size multipliers, it will be optimal.
 If you have common descriptor set shapes, it might be a good idea to have an allocator just for those descriptors. For example an allocator only for sets that hold textures.
 
 
@@ -387,7 +387,7 @@ To use `std::sort` we need to include `<algorithm>`. std::sort uses `operator<` 
 
 With it sorted, we can now try to find it in the hashmap. If we find it, we return the already created layout. If we cant find it, we create a new layout, add it to the cache, and then return it.
 
-The hashmap doesnt work without the operators, so now we implement them.
+The hashmap doesn't work without the operators, so now we implement them.
 For equality, we are going to do this
 ```cpp
 bool DescriptorLayoutCache::DescriptorLayoutInfo::operator==(const DescriptorLayoutInfo& other) const{
@@ -415,7 +415,7 @@ bool DescriptorLayoutCache::DescriptorLayoutInfo::operator==(const DescriptorLay
 }
 ```
 
-We first compare if the bindings vector is the same size, and if it is, we compare each of the bindings in there. This is why we need to have them sorted, so testing equality doesnt require a more complex loop.
+We first compare if the bindings vector is the same size, and if it is, we compare each of the bindings in there. This is why we need to have them sorted, so testing equality doesn't require a more complex loop.
 
 The hash looks like this.
 
@@ -428,7 +428,7 @@ size_t DescriptorLayoutCache::DescriptorLayoutInfo::hash() const{
 
 		for (const VkDescriptorSetLayoutBinding& b : bindings)
 		{
-			//pack the binding data into a single int64. Not fully correct but its ok
+			//pack the binding data into a single int64. Not fully correct but it's ok
 			size_t binding_hash = b.binding | b.descriptorType << 8 | b.descriptorCount << 16 | b.stageFlags << 24;
 
 			//shuffle the packed binding data and xor it with the main hash
@@ -439,7 +439,7 @@ size_t DescriptorLayoutCache::DescriptorLayoutInfo::hash() const{
 	}
 ```
 
-We will begin the hash by hashing the number of bindings that we have in the layout info. After that, we compress the data of each binding into a size_t, and xor that one with the hash. While the packing we do is not really the best, it doesnt matter that much.
+We will begin the hash by hashing the number of bindings that we have in the layout info. After that, we compress the data of each binding into a size_t, and xor that one with the hash. While the packing we do is not really the best, it doesn't matter that much.
 
 The descriptor cache is now live. You can use similar code to cache almost any other vulkan object. Some recomended ones are pipelines themselves and render passes.
 
@@ -471,13 +471,13 @@ private:
 	};
 ```
 
-On the `begin()` function we request an allocator and a layout cache. This builder can be used without them, but it works much better when its all together.
+On the `begin()` function we request an allocator and a layout cache. This builder can be used without them, but it works much better when it's all together.
 
-Next we have the bind functions, one for buffers, and other for images. They are very similar.
+Next we have the bind functions, one for buffers, and another for images. They are very similar.
 
-And last, 2 build functions. One that returns layout, and other that doesnt. You dont allways need the layout to its nice to not have it in the call.
+And last, 2 build functions. One that returns layout, and another that doesn't. You don't always need the layout, so it's nice to not have it in the call.
 
-The data in the class will be the cache and allocator that we store, alongside 2 vectors. One for descriptor writes, and other for layout bindings. We will use those to create the cache and write the descriptor data.
+The data in the class will be the cache and allocator that we store, alongside 2 vectors. One for descriptor writes, and another for layout bindings. We will use those to create the cache and write the descriptor data.
 
 Lets start with the begin call.
 ```cpp
@@ -559,9 +559,9 @@ We begin by filling in the layoutInfo and creating the layout. Because we have b
 
 With the layout created, we can use the descriptor allocator to allocate a new descriptor set.
 
-Then we can write into it. We need to go through the array of writes, and make sure that they point to the newly created descriptor set. Once thats done, we can finally call `vkUpdateDescriptorSets` with that array, setting the data in the set.
+Then we can write into it. We need to go through the array of writes, and make sure that they point to the newly created descriptor set. Once that's done, we can finally call `vkUpdateDescriptorSets` with that array, setting the data in the set.
 
-Thats it, now you have a thin abstraction over descriptor sets and their layouts, that makes it much easier to handle them at runtime.
+That's it, now you have a thin abstraction over descriptor sets and their layouts, that makes it much easier to handle them at runtime.
 You can look at how the code in the engine uses it.
 
 The `draw_objects()` function in the engine branch uses this abstractions, so you can check how they are used. https://github.com/vblanco20-1/vulkan-guide/blob/engine/extra-engine/vk_engine.cpp

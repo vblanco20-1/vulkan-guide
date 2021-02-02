@@ -42,7 +42,7 @@ void main()
 
 In our first vertex shader, we create a constant array of 3 vector-3s, which will be the positions for each of the vertices of the triangle. 
 
-We then have to write to `gl_Position` to tell the GPU what's the position for the vertex. This is obligatory for vertex shaders to work. In here we will access our positions array with gl_VertexIndex, which is the number of the vertex that this shader is being executed for. We then convert it into a vec4 because thats what `gl_Position` expects.
+We then have to write to `gl_Position` to tell the GPU what's the position for the vertex. This is obligatory for vertex shaders to work. In here we will access our positions array with gl_VertexIndex, which is the number of the vertex that this shader is being executed for. We then convert it into a vec4 because that's what `gl_Position` expects.
 
 ## Fragment shader
 
@@ -78,9 +78,9 @@ Check the project "Shaders" on the generated visual studio solution, and the new
 If you look at the CMakeLists.txt at the root project folder, you will see that it's creating a custom Shader targets building from grabbing all the files that end in *.frag and *.vert from the shaders/ folder. I recommend you read that section. It is commented explaining how it works.
 
 ## Vulkan Shader workflow
-Vulkan doesnt understand GLSL directly, it understands SPIRV. SPIRV is shader bytecode for Vulkan. Think of SPIRV as a binary optimized version of GLSL. 
+Vulkan doesn't understand GLSL directly, it understands SPIRV. SPIRV is shader bytecode for Vulkan. Think of SPIRV as a binary optimized version of GLSL. 
 
-We need to convert the GLSL we have just written into spirv, so that Vulkan can understand it. Thats what we did above, and the result is some .spv files that we can load onto Vulkan.
+We need to convert the GLSL we have just written into spirv, so that Vulkan can understand it. That's what we did above, and the result is some .spv files that we can load onto Vulkan.
 
 The Vulkan SDL comes with a built version of the glslang shader compiler, which is what we are using here to compile the shaders offline. It is possible to use the same compiler as a library, and compile GLSL shaders on-the-fly in your game engine, but we are not going to do that *yet*. 
 

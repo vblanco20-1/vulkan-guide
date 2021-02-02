@@ -55,9 +55,9 @@ typedef struct VkDrawIndirectCommand {
 
 ```
 
-Its important to know that you dont need to have the data be a packed array of command structs. You can have more things in the buffer, as long as you set the offset and stride correctly. In the engine we store extra data in the buffer.
+It's important to know that you don't need to have the data be a packed array of command structs. You can have more things in the buffer, as long as you set the offset and stride correctly. In the engine we store extra data in the buffer.
 
-To create a draw-indirect buffer, it can be on both CPU side and GPU side buffers, and it doesnt really matter that much which one it is if you are doing read-only. In the engine we have the draw-indirect buffer in the gpu because we are writing to it from the culling compute shaders.
+To create a draw-indirect buffer, it can be on both CPU side and GPU side buffers, and it doesn't really matter that much which one it is if you are doing read-only. In the engine we have the draw-indirect buffer in the gpu because we are writing to it from the culling compute shaders.
 
 Here you can see an example of creating a CPU-writeable indirect buffer
 ```cpp
@@ -90,7 +90,7 @@ void FakeDrawIndirect(VkCommandBuffer commandBuffer,void* buffer,VkDeviceSize of
 }   
 ```
 
-There is also a very popular extension that makes draw indirect even more powerful known as DrawIndirectCount. The extension is a default feature in Vulkan 1.2, and works on pretty much all PC hardware. Sadly, its not supported in nintendo switch, so the tutorial will not use it.
+There is also a very popular extension that makes draw indirect even more powerful known as DrawIndirectCount. The extension is a default feature in Vulkan 1.2, and works on pretty much all PC hardware. Sadly, it's not supported in nintendo switch, so the tutorial will not use it.
 Draw Indirect Count is the same as a normal draw indirect call, but "drawCount" is grabbed from another buffer. This makes it possible to let the GPU decide how many draw indirect commands to draw, which makes it possible to remove culled draws easily so that there is no wasted work.
 
 
@@ -120,7 +120,7 @@ The Render loop looks like this by the end of chapter 4 (pseudocode)
 	{
 		RenderObject& object = objects[i];
 
-		//only bind the pipeline if it doesnt match with the already bound one
+		//only bind the pipeline if it doesn't match with the already bound one
 		if (object.material != lastMaterial) {
 
 			bind_descriptors(object.material);
@@ -215,7 +215,7 @@ With the draws compacted in this way, we can rewrite the draw loop into this, wh
 
 Note how now we have a direct vkCmdDraw() loop. This maps exactly to a draw indirect command. With the loop like this, we can now write the commands, and execute it that way. 
 
-Im assuming the indirect buffer is allocated as shown above, but using VkDrawIndirectCommand, instead of VkDrawInstancedIndirectCommand. as in the chapter 4 code base indexed rendering wasnt implemented.
+I'm assuming the indirect buffer is allocated as shown above, but using VkDrawIndirectCommand, instead of VkDrawInstancedIndirectCommand. as in the chapter 4 code base indexed rendering wasn't implemented.
 
 
 ```cpp
@@ -252,8 +252,8 @@ for (IndirectBatch& draw : draws)
     vkCmdDrawIndirect(cmd,get_current_frame().indirectBuffer,indirect_offset, draw.count,draw_stride);
 }
 ```
-Thats it, now the render loop is indirect and should go a bit faster. But the most important think to take into account here, is that the draw commands buffer can be cached and written/read from compute shaders. If you wanted, you can just write it once at load, and just do the loop of vkCmdDrawIndirect every frame. This is also a design where adding culling is extremelly simple.
-You just do a compute shader that sets instanceCount to 0 if the object is culled, and thats it. But keep in mind such a thing is not very optimal given that empty draw commands still have overhead, so its better to compact them somehow, either by using a design that uses instancing (like what we are doing in the tutorial engine), or by using DrawIndirectCount after removing the empty draws.
+That's it, now the render loop is indirect and should go a bit faster. But the most important think to take into account here, is that the draw commands buffer can be cached and written/read from compute shaders. If you wanted, you can just write it once at load, and just do the loop of vkCmdDrawIndirect every frame. This is also a design where adding culling is extremelly simple.
+You just do a compute shader that sets instanceCount to 0 if the object is culled, and that's it. But keep in mind such a thing is not very optimal given that empty draw commands still have overhead, so it's better to compact them somehow, either by using a design that uses instancing (like what we are doing in the tutorial engine), or by using DrawIndirectCount after removing the empty draws.
 
 There is also something you can see very clearly there. The less combinations of mesh buffer, descriptors, and pipeline you have, the more you can draw on each DrawIndirect execution. This is why generally you want your draws to to be as bindless as possible when doing draw indirect. 
 

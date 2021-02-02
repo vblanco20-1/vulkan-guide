@@ -72,8 +72,8 @@ void VulkanEngine::init_default_renderpass()
 	// we keep the attachment stored when the renderpass ends
 	color_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 	//we don't care about stencil
-	color_attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;	
-	color_attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+	color_attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_don't_CARE;	
+	color_attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_don't_CARE;
 
 	//we don't know or care about the starting layout of the attachment
 	color_attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
@@ -131,7 +131,7 @@ Now that the main attachment and the subpass is done, we can create the renderpa
 ```
 We will have only 1 attachment, which will be the color_attachment defined above, for our main color target. Then we also connect the subpass into it.
 
-Thats it, we have now created our very basic renderpass. We will go back to this code later when we add depth testing, which needs more attachments defined.
+That's it, we have now created our very basic renderpass. We will go back to this code later when we add depth testing, which needs more attachments defined.
 
 ## Framebuffers
 Once the renderpass is made, we can use it to create the framebuffers. Framebuffers are created from a given renderpass, and they act as link between the attachments of the renderpass and the real images that they should render to.
