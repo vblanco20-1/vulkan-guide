@@ -204,7 +204,7 @@ void VulkanEngine::init_default_renderpass()
     depth_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
     depth_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
     depth_attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    depth_attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_don't_CARE;
+    depth_attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
     depth_attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     depth_attachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
