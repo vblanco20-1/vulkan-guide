@@ -72,8 +72,8 @@ void VulkanEngine::init_default_renderpass()
 	// we keep the attachment stored when the renderpass ends
 	color_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 	//we don't care about stencil
-	color_attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_don't_CARE;	
-	color_attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_don't_CARE;
+	color_attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;	
+	color_attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 
 	//we don't know or care about the starting layout of the attachment
 	color_attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
