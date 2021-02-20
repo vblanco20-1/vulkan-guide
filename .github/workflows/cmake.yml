@@ -24,7 +24,7 @@ jobs:
       
 
     - name: Dependencies
-      run: sudo apt-get install libsdl2.0debian libsdl-gfx1.2-5 libsdl-gfx1.2-dev mesa-common-dev
+      run: sudo apt-get install libsdl2 libsdl-gfx1.2-5 libsdl-gfx1.2-dev mesa-common-dev
 
     - name: Configure CMake
       # Use a bash shell so we can use the same syntax for environment variable
