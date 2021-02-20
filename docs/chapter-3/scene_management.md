@@ -224,7 +224,7 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd,RenderObject* first, int cou
 	{
 		RenderObject& object = first[i];
 
-		//only bind the pipeline if it doesnt match with the already bound one
+		//only bind the pipeline if it doesn't match with the already bound one
 		if (object.material != lastMaterial) {
 
 			vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipeline);

@@ -86,7 +86,7 @@ bool IsVisible(uint objectIndex)
 }
 ```
 
-For all of the `cullData`, thats written from the Cpp when calling the compute shader. It holds the frustrum data and the configuration for the culling.
+For all of the `cullData`, that's written from the Cpp when calling the compute shader. It holds the frustrum data and the configuration for the culling.
 
 We begin by grabbing the object sphereBounds from the objectIndex. The spherebounds are calculated every time the object moves, or is initialized. 
 
@@ -96,7 +96,7 @@ If the checks pass, then all is good, and we can return visible to use when writ
 Frustrum culling will easily cut half the objects, but we can go much further. 
 
 ## Occlusion Culling
-We want to avoid rendering objects that wont be visible at all due to them being behind other objects. To do that, we are going to implement occlusion culling using the depth buffer from the last frame. This is a very common technique with the downside of having 1 frame of latency. Some engines instead render a few bigger objects, and then use that depth buffer to do culling.
+We want to avoid rendering objects that won't be visible at all due to them being behind other objects. To do that, we are going to implement occlusion culling using the depth buffer from the last frame. This is a very common technique with the downside of having 1 frame of latency. Some engines instead render a few bigger objects, and then use that depth buffer to do culling.
 
 The normal depth buffer is too detailed for doing efficient culling, so we need to convert it into a depth pyramid.
 The idea of a depth pyramid is that we build a mipmap chain for the depth buffer in a way that the depth values are allways the maximum depth of that region. That way, we can look up directly into a mipmap so that pixel size is similar to object size, and it gives us a fairly accurate approximation.
@@ -182,7 +182,7 @@ void main()
 ```
 
 The real trick on it is the sampler for the texture. In here, we are using a commonly found extension that will calculate the minimum of a 2x2 texel quad, instead of averaging the values like a LINEAR mipmap does.
-The sampler will also be used in the cull shader, and its created like this.
+The sampler will also be used in the cull shader, and it's created like this.
 
 ```cpp
 	VkSamplerCreateInfo createInfo = {};
@@ -209,7 +209,7 @@ The sampler will also be used in the cull shader, and its created like this.
 	VK_CHECK(vkCreateSampler(_device, &createInfo, 0, &_depthSampler));
 ```
 
-This is a extension that will have to be enabled, but its supported everywhere, even on switch. In vulkan 1.2, its a default feature. [Spec](https://www.khronos.org/registry/vulkan/specs/1.2-extensions/man/html/VK_EXT_sampler_filter_minmax.html)
+This is a extension that will have to be enabled, but its supported everywhere, even on switch. In vulkan 1.2, it's a default feature. [Spec](https://www.khronos.org/registry/vulkan/specs/1.2-extensions/man/html/VK_EXT_sampler_filter_minmax.html)
 
 
 With the depth pyramid written, we can finally use it in the cull shader.
@@ -247,7 +247,7 @@ With the depth pyramid written, we can finally use it in the cull shader.
 
 We are finding the AABB that covers the sphere in screen space, and then accessing the depth pyramid at that point, in the mipmap where the size of the AABB is similar to a pixel. 
 
-This depth pyramid logic is very similar if not almost exactly the same as the cull system used in unreal engine. In there, they dont have draw indirect, so instead they do the cull in a shader, and output into an array of visible objects. This array is then read from the CPU to know what objects are visible or not.
+This depth pyramid logic is very similar if not almost exactly the same as the cull system used in unreal engine. In there, they don't have draw indirect, so instead they do the cull in a shader, and output into an array of visible objects. This array is then read from the CPU to know what objects are visible or not.
 
 With this last piece of the puzzle, the engine can now render huge scenes at really high perf, because it will only render whatever is visible on the screen, but without a roundtrip to the CPU. 
 
@@ -259,7 +259,7 @@ Sadly, doing culling and sorting at the same time is a really hard problem, so i
 The culling uses GPU atomics, whose order depends on how the threads are executed in the GPU hardware. This means it has no stability at all for sorting, and the final layout of the rendering will be different.
 
 Even then, there are ways of working around it.
-If instead of doing the draw indirect using instancing we have 1 draw command per object, and set its instance count to 0 if culled, we can keep the order. But if we do that, we will have 0 sized draws which will still cost performance in the engine, so its not that good of a solution.
+If instead of doing the draw indirect using instancing we have 1 draw command per object, and set its instance count to 0 if culled, we can keep the order. But if we do that, we will have 0 sized draws which will still cost performance in the engine, so it's not that good of a solution.
 
 Another possibility is to sort in the gpu itself, but gpu sorting is a nontrivial operation, so we arent doing it in the tutorial due to it being off scope.
 

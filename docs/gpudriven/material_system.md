@@ -5,15 +5,15 @@ parent: GPU Driven Rendering
 nav_order: 8
 ---
 
-For the engine, we start to have multiple passes of rendering, so its time to create an actual material system.
+For the engine, we start to have multiple passes of rendering, so ' time to create an actual material system.
 Material systems are notoriously hard to architect in rendering engines, due to their need to balance many things (flexibility, ease of use, batching), with many different parts of the engine.
 
-In the engine, the system used is a fairly simple one, but does its job for now. Its not the best solution, but its a solution that works in this use case.
+In the engine, the system used is a fairly simple one, but does its job for now. It's not the best solution, but it's a solution that works in this use case.
 
 
 The material system can be found on the `material_system.h/cpp` pair, but it also depends on the descriptor system and shader reflection system.
 
-Its based on the same core logic as the original material system shown in the main tutorial chapters. A material will contain the pipeline and shaders, alongside a descriptor set for slot 2 which will be used for textures.
+It's based on the same core logic as the original material system shown in the main tutorial chapters. A material will contain the pipeline and shaders, alongside a descriptor set for slot 2 which will be used for textures.
 
 ## Shader Effect
 ```cpp
@@ -160,15 +160,15 @@ struct MaterialData {
 	}
 ```
 
-Its incredibly common with most GLTF and FBX files that you will have the same materials under different names. This is even more common when loading multiple prefabs, where its likely that some materials are the same. 
+It's incredibly common with most GLTF and FBX files that you will have the same materials under different names. This is even more common when loading multiple prefabs, where it's likely that some materials are the same. 
 To improve this, the material system is very heavily cached.
-The `build_material` function is a lie, and will first try to find if there is a material that is the same to what you want to create. It will only create the material and properly build the texture descriptors if its a unique combination. This way, materials get merged constantly, which makes it much better to use from a draw indirect batching standpoint.
+The `build_material` function is a lie, and will first try to find if there is a material that is the same to what you want to create. It will only create the material and properly build the texture descriptors if it's a unique combination. This way, materials get merged constantly, which makes it much better to use from a draw indirect batching standpoint.
 
 ```cpp
 vkutil::Material* vkutil::MaterialSystem::build_material(const std::string& materialName, const MaterialData& info)
 {
 	Material* mat;
-	//search material in the cache first in case its already built
+	//search material in the cache first in case it's already built
 	auto it = materialCache.find(info);
 	if (it != materialCache.end())
 	{
@@ -231,7 +231,7 @@ if (object->bDrawShadowPass)
 
 The only thing that is needed for rendering is the pipeline ID and the descriptor set ID, for that reason the mesh renderer in `vk_scene.cpp` will "unpack" the layers of the material, and eventually only store what is needed. By doing that, the materials that share the same pipeline ID are "merged" together when the system sorts the meshes, and will batch much better together.
 
-Because the shadow pass uses allways the same default opaque-shadow effect, and it has no textures (null descriptor set), the shadow pass in the engine will allways render in a single drawcall. Even if the scene is composed of multiple different materials, when its time to render, the system will see that pipeline is allways the same, so it will only be one drawcall.
+Because the shadow pass uses allways the same default opaque-shadow effect, and it has no textures (null descriptor set), the shadow pass in the engine will allways render in a single drawcall. Even if the scene is composed of multiple different materials, when it's time to render, the system will see that pipeline is allways the same, so it will only be one drawcall.
 
 
 

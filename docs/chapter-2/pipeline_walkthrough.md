@@ -166,7 +166,7 @@ VkPipelineMultisampleStateCreateInfo vkinit::multisampling_state_create_info()
 ```
 
 ### Color Blend Attachment State
-`VkPipelineColorBlendAttachmentState` Controls how this pipeline blends into a given attachment. We are rendering to only 1 attachment, so we will just need one of them, and defaulted to "not blend" and just override. In here it's possible to make objects that will blend with the image. This one also doesnt have sType + pNext
+`VkPipelineColorBlendAttachmentState` Controls how this pipeline blends into a given attachment. We are rendering to only 1 attachment, so we will just need one of them, and defaulted to "not blend" and just override. In here it's possible to make objects that will blend with the image. This one also doesn't have sType + pNext
 
 
 ```cpp

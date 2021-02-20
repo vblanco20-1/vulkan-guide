@@ -53,7 +53,7 @@ bool vkutil::load_image_from_file(VulkanEngine& engine, const char* file, Alloca
 }
 ```
 
-At the start, we use `stbi_load()` to load a texure directly from file into a CPU array of pixels. The function will return nullptr if it doesnt find the file, or if there are errors.
+At the start, we use `stbi_load()` to load a texure directly from file into a CPU array of pixels. The function will return nullptr if it doesn't find the file, or if there are errors.
 When loading the function, we also send `STBI_rgb_alpha` to the function, which will make the library always load the pixels as RGBA 4 channels. This is useful as it will match with the format we will use for Vulkan.
 
 With the texture file loaded into the pixels array, we can create a staging buffer and store the pixels there. This is almost the same as what we did in the last article when copying meshes to the GPU.
