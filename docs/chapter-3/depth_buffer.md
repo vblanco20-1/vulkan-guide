@@ -83,7 +83,7 @@ VkImageCreateInfo vkinit::image_create_info(VkFormat format, VkImageUsageFlags u
 As usual, sType and pNext set properly.
 imageType holds how many dimensions the image has. 1, 2, or 3. Because 3d and 1d textures can be niche, we are just defaulting it to 2d images on the initializer.
 
-Format holds what's the data of the texture, like holding a single float (for depth), or holding color.
+Format holds what the data of the texture is, like holding a single float (for depth), or holding color.
 Extent is the size of the image, in pixels.
 
 MipLevels holds the amount of mipmap levels the image has. Because we aren't using them here, we leave the levels to 1.
@@ -125,7 +125,7 @@ View Type is very similar to the imageType on the image, except it has more opti
 image has to point to the image this imageview is being created from. As imageViews "wrap" an image, you need to point to the original one.
 format has to match the format in the image this view was created from. It's possible for the formats to not match, and that will let you "reinterpret" the formats, but that can be tricky to use, and very niche, so for now make sure that the formats will match.
 
-subresourceRange holds the information about where does the image points to. This is used for layered images, where you might have multiple layers in one image, and want to create a imageview that points to a specific layer. It's also possible to control the mipmap levels with it. For our current usage, we are going to default it to no mipmaps (mipmap base 0, and mipmaps level 1), and only 1 texture layer.
+subresourceRange holds the information about where the image points to. This is used for layered images, where you might have multiple layers in one image, and want to create an imageview that points to a specific layer. It's also possible to control the mipmap levels with it. For our current usage, we are going to default it to no mipmaps (mipmap base 0, and mipmaps level 1), and only 1 texture layer.
 
 aspectMask is similar to the usageFlags from the image. It's about what this image is used for.
 
@@ -270,7 +270,7 @@ for (int i = 0; i < swapchain_imagecount; i++) {
 	VK_CHECK(vkCreateFramebuffer(_device, &fb_info, nullptr, &_framebuffers[i]));
 }
 ```
-Note how we are using the same depth image on each of the swapchain framebuffers. This is because we do not need to change the depth image beetween frames, we can just keep clearing and reusing the same depth image for every frame.
+Note how we are using the same depth image on each of the swapchain framebuffers. This is because we do not need to change the depth image between frames, we can just keep clearing and reusing the same depth image for every frame.
 
 The renderpass initialization for depth buffer is now done, so the last thing needed is to add depth-testing to our pipeline for the mesh.
 
@@ -296,12 +296,12 @@ VkPipelineDepthStencilStateCreateInfo vkinit::depth_stencil_create_info(bool bDe
 }
 ```
 
-Depth stencil create info is a bit more complicated that other initializers, we are abstracting things a little bit.
+Depth stencil create info is a bit more complicated than other initializers, so we are abstracting things a little bit.
 
 depthTestEnable holds if we should do any z-culling at all. Set to `VK_FALSE` to draw on top of everything, and `VK_TRUE` to not draw on top of other objects.
-depthWriteEnable allows the depth to be written. While DepthTest and DepthWrite will both be true most of the time, there are cases where you might want to do depth write, but without doing depthtesting. It's sometimes used for some special effects.
+depthWriteEnable allows the depth to be written. While DepthTest and DepthWrite will both be true most of the time, there are cases where you might want to do depth write, but without doing depthtesting; it's sometimes used for some special effects.
 
-The depthCompareOp holds the depth-testing function. Set to `VK_COMPARE_OP_ALLWAYS` to not do any depthtest at all. Other common depth compare OPs are `VK_COMPARE_OP_LESS` (Only draw if Z < whatever is on the depth buffer), or `VK_COMPARE_OP_EQUAL` (only draw if the depth z matches) 
+The depthCompareOp holds the depth-testing function. Set to `VK_COMPARE_OP_ALWAYS` to not do any depthtest at all. Other common depth compare OPs are `VK_COMPARE_OP_LESS` (Only draw if Z < whatever is on the depth buffer), or `VK_COMPARE_OP_EQUAL` (only draw if the depth z matches) 
 
 min and max depth bounds lets us cap the depth test. If the depth is outside of bounds, the pixel will be skipped.
 And last, we won't be using stencil test, so that's set to VK_FALSE by default.

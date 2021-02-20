@@ -159,7 +159,7 @@ For the scene binding, we have also changed the shader stages to include fragmen
 
 With the layout done, we now need to modify the descriptor set writes so that they point to the correct buffer and the correct offset in it.
 
-We continue on `init_descriptors()`, but inside the frame loop. We replace the older `VkWriteDescriptor` set part with the new abstracted version.
+We continue on `init_descriptors()`, but inside the frame loop. We replace the older `VkWriteDescriptorSet` part with the new abstracted version.
 
 ```cpp
 
@@ -240,7 +240,7 @@ On `draw_objects()` , before or after when we map the camera buffer and write to
 	_sceneParameters.ambientColor = { sin(framed),0,cos(framed),1 };
 
 	char* sceneData;
-	vmaMapMemory(_allocator, _sceneParameterBuffer._allocation , &(void*)sceneData);
+	vmaMapMemory(_allocator, _sceneParameterBuffer._allocation , (void**)&sceneData);
 
 	int frameIndex = _frameNumber % FRAME_OVERLAP;
 
