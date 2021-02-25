@@ -82,7 +82,7 @@ Vulkan doesn't understand GLSL directly, it understands SPIRV. SPIRV is shader b
 
 We need to convert the GLSL we have just written into spirv, so that Vulkan can understand it. That's what we did above, and the result is some .spv files that we can load onto Vulkan.
 
-The Vulkan SDL comes with a built version of the glslang shader compiler, which is what we are using here to compile the shaders offline. It is possible to use the same compiler as a library, and compile GLSL shaders on-the-fly in your game engine, but we are not going to do that *yet*. 
+The Vulkan SDK comes with a built version of the glslang shader compiler, which is what we are using here to compile the shaders offline. It is possible to use the same compiler as a library, and compile GLSL shaders on-the-fly in your game engine, but we are not going to do that *yet*. 
 
 ## Loading the shaders in the code
 
