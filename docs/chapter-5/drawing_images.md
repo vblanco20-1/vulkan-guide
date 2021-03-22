@@ -164,7 +164,7 @@ void VulkanEngine::init_pipelines()
 }
 ```
 
-We can now add a new render object that will be the textured mesh. For that, im using lost_empire.obj, which is a minecraft map. This makes for a good test case to check textured rendering.
+We can now add a new render object that will be the textured mesh. For that, I'm using lost_empire.obj, which is a minecraft map. This makes for a good test case to check textured rendering.
 
 ```cpp
 void VulkanEngine::load_meshes()

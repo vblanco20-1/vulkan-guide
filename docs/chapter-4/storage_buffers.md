@@ -41,7 +41,7 @@ void VulkanEngine::init_descriptors()
 }
 ```
 Shader Storage buffers are created in the same way as uniform buffers. They also work in mostly the same way, they just have different properties like increased maximum size, and being writeable in shaders.
-We are going to reserve an array of 10000 ObjectDatas per frame. This means that we can hold up to 10000 object matrices, rendering 10000 objects per frame. Its a small number, but at the moment it's not a problem. Unreal Engine grows their object buffer as needed when the engine loads more objects, but we don't have any growable buffer abstraction so we reserve upfront.
+We are going to reserve an array of 10000 ObjectDatas per frame. This means that we can hold up to 10000 object matrices, rendering 10000 objects per frame. it's a small number, but at the moment it's not a problem. Unreal Engine grows their object buffer as needed when the engine loads more objects, but we don't have any growable buffer abstraction so we reserve upfront.
 While the size here is 10000, you can increase it to whatever you want. The maximum sizes for storage buffers are quite big, in most GPUs they can be as big as the VRAM can fit, so you can do this with 100 million matrices if you want.
 
 We will now need to add it to the descriptor sets.

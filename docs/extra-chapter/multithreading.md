@@ -11,7 +11,7 @@ For the last 20 years, computers and game consoles have had multiple cores in th
 
 A multicore CPU generally has multiple "standalone" cores, each of them being a full CPU on its own. Each of the cores can execute an arbitrary program on its own. If the CPU has hyperthreading/SMT, the CPU will not execute one thread of program instructions, but multiple (often 2). When this happens the inner resources of the CPU (memory units, math units, logic units, caches) will be shared between those multiple threads.
 
-The different cores on the CPU work on their own, and the CPU synchronizes the memory writes from one core so that other cores can also see it if it detects that one core is writing to the same memory location a different core is also writing into or reading from. That synchronization has a cost, so whenever you program multithreaded programs, its important to try to avoid having multiple threads writing to the same memory, or one thread writing and other reading.
+The different cores on the CPU work on their own, and the CPU synchronizes the memory writes from one core so that other cores can also see it if it detects that one core is writing to the same memory location a different core is also writing into or reading from. That synchronization has a cost, so whenever you program multithreaded programs, it's important to try to avoid having multiple threads writing to the same memory, or one thread writing and other reading.
 
 For correct synchronization of operations, CPUs also have specific instructions that can synchronize multiple cores, like atomic instructions. Those instructions are the backbone of the synchronization primitives that are used to communicate between threads.
 
@@ -35,7 +35,7 @@ Unreal Engine 4 has a Game Thread and a Render Thread as main, and then a few ot
 
 While this approach is very popular and very easy to use, it has the drawback of scaling terribly. You will commonly see that Unreal Engine games struggle scaling past 4 cores, and in consoles the performance is much lower that it could be due to not filling the 8 cores with work. Another issue with this model is that if you have one of the threads have more work than the others, then the entire simulation will wait. In unreal engine 4, the Game Thread and Render Thread are synced at each frame, so if either of them is slow, both will be slowed as the run at the same time. A game that has lots of blueprint usage and AI calculations in UE4 will have the Game Thread busy doing work in 1 core, and then every other core in the machine unused.
 
-A common approach of enhancing this architecture is to move it more into a fork/join approach, where you have a main execution thread, and at some points, parts of the work is split between threads. Unreal Engine does this for animation and physics. While the Game Thread is the one in charge of the whole game logic part of the engine, when it reaches the point where it has to do animations, it will split the animations to calculate into small tasks, and distribute those across helper threads in other cores. This way while it still has a main timeline of execution, there are points where it gets extra help from the unused cores. This improves scalability, but its still not good enough as the rest of the frame is still singlethreaded.
+A common approach of enhancing this architecture is to move it more into a fork/join approach, where you have a main execution thread, and at some points, parts of the work is split between threads. Unreal Engine does this for animation and physics. While the Game Thread is the one in charge of the whole game logic part of the engine, when it reaches the point where it has to do animations, it will split the animations to calculate into small tasks, and distribute those across helper threads in other cores. This way while it still has a main timeline of execution, there are points where it gets extra help from the unused cores. This improves scalability, but it's still not good enough as the rest of the frame is still singlethreaded.
 
 <div class="mxgraph" style="max-width:100%;border:1px solid transparent;" data-mxgraph="{&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;lightbox&quot;:false,&quot;nav&quot;:true,&quot;resize&quot;:true,&quot;toolbar&quot;:&quot;zoom layers&quot;,&quot;edit&quot;:&quot;_blank&quot;,&quot;xml&quot;:&quot;&lt;mxfile host=\&quot;app.diagrams.net\&quot; modified=\&quot;2021-01-10T15:48:25.695Z\&quot; agent=\&quot;5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.141 Safari/537.36\&quot; etag=\&quot;D93s046FuunqymOw8Eon\&quot; version=\&quot;14.1.9\&quot; type=\&quot;device\&quot;&gt;&lt;diagram id=\&quot;ilJUOgdIxLSSPok9l4Cx\&quot; name=\&quot;Page-1\&quot;&gt;7ZpdU6MwFIZ/DZe7A+H7UtG6XuyOs9Vx3buUhMIIpIZg2/31m9DQQoPTqpTWdYszwskXfd6T5JyoZgbZ4orCWfydIJxqQEcLzbzQADAsADTxo6PlyuI60jClCZKVNoZx8gdLoy6tZYJw0arICElZMmsbQ5LnOGQtG6SUzNvVIpK2R53BKVYM4xCmqvU+QSxeWT3gbuzfcDKN65ENx1+VZLCuLL9JEUNE5g2TeamZASWEre6yRYBTAa/msmo3eqF0/WIU52yfBqOIPTz8+h1fPmU3FxSyu8BefpG9PMO0lF9YA07K+zuPCO9WcE0JrUqcp1K86rkGTOSLq2lypuL3Fcwwb3MbUwxR3RF/o1VfqzoSBlvWhBleCHvMspQbDH5bMEoecSBHzkmOxfskabplgmkyzfljyAlgbj9/xpQlXLszWZAlCIlhzudxwvB4BkMx5px7KrdRUuYICzj6+rVEB3jxImBjLRv3d0wyzOiSV5ENgC6Vlq4OXPk83ziOJU1xw2dqB4HSVafrnjdq8hsp6CvEBYq4N6RqdZ3PSqYI0QbShayhUVMO7hFRFIEwVLQTvuJMHNvpibC/Rdix9yJsHoqwqRC+myHIxCQ4u+4XsBfibsATz7bsnlzYNE8MsKUAPssTvrQmJO8VL7Kxh6wuvB6YmE5P/mu6u/G6Q+K11RUiXhZJWPQKFxscr9sF13dcE/YE17JOzHcdBe5PzBnSxg55kluh2K0bGgUjcR1mizTBkbdIt0MjiJaVLLQMWUlxv3MhssXVNRec6sNLphSiBLc0mFTXYTZR01DniTPkPPEUDYJStFqFjxP6YuT4voAlRMDrDFhcf6Lr3TpEEbT1vvZae7cOg65XvqLDiNA5pHyd0m9g0fM82B3PdPDHkEeTfW3Ge8wDb0j+dcrbitcLFi3eB74Do+8i3XWPFQVZ7ok5vvG2LFivPmoWPH74Eeyb/L5uCh1wY7bfFjy5/qE0UZPX95xM3BP6WEVexv9jCUONuewhYy5DzZp7kRZ8emmNjhOnYaVVE0pxDqLfwuJx6PChjxBhK6U0HJWvOehOpeaU4jzkEIQHigWMUyOsZoQfnDDYWv71YxNW872PTXg7kTg+YTWTkxk1zASwfFLM/sF8evtwtUMGMKQM9WCfW4auFX3Q7A6omcTmHLb3uOQEjvfsndPAslX+wP1qv1oB/rj5A3ZV1vg3APPyLw==&lt;/diagram&gt;&lt;/mxfile&gt;&quot;}"></div>
 <script type="text/javascript" src="https://viewer.diagrams.net/js/viewer-static.min.js"></script>
@@ -121,7 +121,7 @@ void PerformGameLogic(){
 
 In our main game loop, we have a sequence of things that we require to do for each gameplay frame. We need to query input, update AIs, animate objects... . All of this is a lot of work, so we need to find something that is a "standalone" task that we can safely ship to other threads. After looking into the codebase, we find that UpdateAnimation() on each AiCharacter is something that only accesses that character, and as such is safe if we ship it to multiple threads.
 
-There is something we can use here that will work great, known as a ParallelFor. ParallelFor is a very common multithreading primitive that nearly every multithreading library implements. A ParallelFor will split each of the iterations of a for loop into multiple cores automatically. Given that UpdateAnimation is done on each character and its standalone, we can use it here. 
+There is something we can use here that will work great, known as a ParallelFor. ParallelFor is a very common multithreading primitive that nearly every multithreading library implements. A ParallelFor will split each of the iterations of a for loop into multiple cores automatically. Given that UpdateAnimation is done on each character and it's standalone, we can use it here. 
 
 Cpp17 added parallelized std::algorithms, which are awesome, but only implemented in Visual Studio for now. You can play around with them if you use VS, but if you want multiplatform, you will need to find alternatives. You can find some more information about the parallel algorithms here [7](https://devblogs.microsoft.com/cppblog/using-c17-parallel-algorithms-for-better-performance/), and if you want to learn about std::algorithms in general, this cppcon talk gives a overview [8](https://www.youtube.com/watch?v=2olsGf6JIkU)
 
@@ -129,7 +129,7 @@ One of the parallel algorithms is `std::for_each()`, which is the parallel for w
 
 ```cpp
 
-std::for_each(std::execution::par, //we need the execution::par for this foreach to execute parallel. Its on the <execution> header
+std::for_each(std::execution::par, //we need the execution::par for this foreach to execute parallel. It's on the <execution> header
             AICharacters.begin(),
             AICharacters.end(),
             [](AICharacter* AiChar){ //cpp lambda that executes for each element in the AICharacters container.
@@ -213,22 +213,22 @@ With this, we are defining a graph of tasks, and their dependencies for executio
 
 Having sections of the frame that bottleneck the tasks and have to run in one core only is very common, so what most engines do is that they still have game thread and render thread, but each of them has its own parallel tasks. Hopefully there are enough tasks that can run on their own to fill all of the cores.
 
-While the example here uses async, you really want to use better libraries for this. Its also probable that you will want a better control over execution instead of launching many asyncs and parallel for. Using Taskflow here would work great.
+While the example here uses async, you really want to use better libraries for this. It's also probable that you will want a better control over execution instead of launching many asyncs and parallel for. Using Taskflow here would work great.
 
 ## Identifying tasks.
 While we have been commenting that things like UpdatePhysics() can run overlapped, things are never so simple in practice. 
-Identifying what tasks can run at the same time as others is something very hard to do in a project, and in Cpp, its not possible to validate it. If you use rust, this comes automatically thanks to the borrowcheck model. 
+Identifying what tasks can run at the same time as others is something very hard to do in a project, and in Cpp, it's not possible to validate it. If you use rust, this comes automatically thanks to the borrowcheck model. 
 
 A common way to know that a given task can run alongside another one is to "package" the data the task could need, and make sure that the task NEVER accesses any other data outside of it. In the example with game thread and render thread, we have a Renderer class where all the render data is stored, and the game thread never touches that. We also only let the render thread access the gamethread data at a very specific point in the frame where we know the gamethread isn't working on it.
 
 For most tasks, there are places where we just cant guarantee that only one task is working on it at a time, and so we need a way of synchronizing data between the different tasks run at the same time on multiple cores.
 
 ## Synchronizing data.
-There are a lot of ways of synchronizing the data tasks work on. Generally you really want to minimize the shared data a lot, as its a source of bugs, and can be horrible if not synchronized properly. There are a few patterns that do work quite well that can be used. 
+There are a lot of ways of synchronizing the data tasks work on. Generally you really want to minimize the shared data a lot, as it's a source of bugs, and can be horrible if not synchronized properly. There are a few patterns that do work quite well that can be used. 
 
 A common one is to have tasks publish messages into queues, and then another task can read it at other point. Lets say that our Particles from above need to be deleted, but the particles are stored in an array, and deleting a particle from that array when the other threads are working on other particles of the same array is a guaranteed way to make the program crash. We could insert the particle IDs into a shared synchronized queue, and after all particles finished their work, delete the particles from that queue.
 
-We are not going to look at the implementation details of the queue. Lets say its a magic queue where you can safely push elements into from multiple cores at once. There are lots of those queues around. I've used Moodycamel Concurrent Queue a lot for this purpose [10](https://github.com/cameron314/concurrentqueue)
+We are not going to look at the implementation details of the queue. Let's say it's a magic queue where you can safely push elements into from multiple cores at once. There are lots of those queues around. I've used Moodycamel Concurrent Queue a lot for this purpose [10](https://github.com/cameron314/concurrentqueue)
 
 pseudocode
 ```cpp
@@ -255,7 +255,7 @@ auto particles_task = std::async(std::launch::async,
 
 particles_task.wait();
 
-//after waiting for the particles task, there is nothing else that touches the particles, so its safe to apply the deletions
+//after waiting for the particles task, there is nothing else that touches the particles, so it's safe to apply the deletions
 for(Particle* Part : deletion_queue)
 {
     Part->Remove();
@@ -299,20 +299,20 @@ std::for_each(std::execution::par,
 
 ```
 
-In this example, if we were using a normal integer, the count will very likely be wrong, as each thread will add a different value and its very likely that one thread will override another thread, but in here, we are using `atomic<int>`, which is guaranteed to have the correct value in a case like this. Atomic numbers also implement more abstract operations such as Compare and Swap, and Fetch Add, which can be used to implement synchronized data structures, but doing that properly is for the experts, as its some of the hardest things you can try to implement yourself.
+In this example, if we were using a normal integer, the count will very likely be wrong, as each thread will add a different value and it's very likely that one thread will override another thread, but in here, we are using `atomic<int>`, which is guaranteed to have the correct value in a case like this. Atomic numbers also implement more abstract operations such as Compare and Swap, and Fetch Add, which can be used to implement synchronized data structures, but doing that properly is for the experts, as it's some of the hardest things you can try to implement yourself.
 
 When used wrong, atomic variables will error in very subtle ways depending on the hardware of the CPU. Debugging this sort of errors can be hard to do. 
 
 A great presentation about using atomics to implement synchronized data structures, and how hard it really is, is this talk from Cppcon. [11](https://www.youtube.com/watch?v=c1gO9aB9nbs). For a more in-depth explanation about how exactly std atomic works, this other talk explains it well. [12](https://www.youtube.com/watch?v=ZQFzMfHIxng)
 
-To actually synchronize data structures or multithreaded access to something its better to use mutexes.
+To actually synchronize data structures or multithreaded access to something it's better to use mutexes.
 
 
 ## Mutex
 
 A mutex is a higher level primitive that is used to control the execution flow on threads. You can use them to make sure that a given operation is only being executed by one thread at a time. API details can be found here [13](https://en.cppreference.com/w/cpp/thread/mutex)
 
-Mutexes are implemented using atomics, but if they block a thread for a long time, they can ask the OS to put that thread on the background and let a different thread execute. This can be expensive, so mutexes are best used on operations that you know wont block too much.
+Mutexes are implemented using atomics, but if they block a thread for a long time, they can ask the OS to put that thread on the background and let a different thread execute. This can be expensive, so mutexes are best used on operations that you know won't block too much.
 
 Continuing with the example, we are going to implement the parallel queue above as a normal vector, but protected with a mutex.
 
@@ -350,9 +350,9 @@ Cpp mutexes have a Lock and Unlock function, and there is also a try_lock functi
 
 Only one thread at a time can lock the mutex. If a second thread tries to lock the mutex, then that second thread will have to wait until the mutex unlocks. This can be used to define sections of code that are guaranteed to only be executed for one thread at a time.
 
-Whenever mutexes are used, its very important that they are locked for a short amount of time, and unlocked as soon as possible. If you are using a task system, its imperative that all mutexes are unlocked before the task finishes, as if a task finishes without unlocking a mutex it will block everything.
+Whenever mutexes are used, its very important that they are locked for a short amount of time, and unlocked as soon as possible. If you are using a task system, it's imperative that all mutexes are unlocked before the task finishes, as if a task finishes without unlocking a mutex it will block everything.
 
-Mutexes have the great issue that if they are used wrong, the program can completely block itself. This is known as a Deadlock, and its very easy to have it on code that looks fine but at some point in some case 2 threads can lock each other.
+Mutexes have the great issue that if they are used wrong, the program can completely block itself. This is known as a Deadlock, and it's very easy to have it on code that looks fine but at some point in some case 2 threads can lock each other.
 
 There are ways to avoid deadlocks, one of the most straightforward one is that any time you use a mutex you shouldn't take another mutex unless you know what you are doing, and any time you lock a mutex you unlock it asap.
 
@@ -429,10 +429,10 @@ vkEndCommandBuffer(primaryBuffer);
 
 This scheme of synchronizing the Vulkan subcommands and their resources can be tricky to get right, and Vulkan command encoding is very very fast, so you aren't optimizing much here. Some engines implement their own command buffer abstraction that is easier to handle from multiple threads, and then a recording thread will very quickly transform those abstracted commands into Vulkan. 
 
-Because Vulkan commands record so fast, recording from multiple threads wont be a big optimization. But your renderer isn't just recording commands in a deep loop, you have to do a lot more work. By splitting the command recording across multiple threads, then you can multithread your renderer internals in general much better. Doom eternal is known to do this.
+Because Vulkan commands record so fast, recording from multiple threads won't be a big optimization. But your renderer isn't just recording commands in a deep loop, you have to do a lot more work. By splitting the command recording across multiple threads, then you can multithread your renderer internals in general much better. Doom eternal is known to do this.
 
 Data upload is another section that is very often multithreaded. In here, you have a dedicated IO thread that will load assets to disk, and said IO thread will have its own queue and command allocators, hopefully a transfer queue. This way it is possible to upload assets at a speed completely separated from the main frame loop, so if it takes half a second to upload a set of big textures, you don't have a hitch. 
-To do that, you need to create a transfer or async-compute queue (if available), and dedicate that one to the loader thread. Once you have that, its similar to what was commented on the pipeline compiler thread, and you have an IO thread that communicates through a parallel queue with the main simulation loop to upload data in an asynchronous way. Once a transfer has been uploaded, and checked that it has finished with a Fence, then the IO thread can send the info to the main loop, and then the engine can connect the new textures or models into the renderer.
+To do that, you need to create a transfer or async-compute queue (if available), and dedicate that one to the loader thread. Once you have that, it's similar to what was commented on the pipeline compiler thread, and you have an IO thread that communicates through a parallel queue with the main simulation loop to upload data in an asynchronous way. Once a transfer has been uploaded, and checked that it has finished with a Fence, then the IO thread can send the info to the main loop, and then the engine can connect the new textures or models into the renderer.
 
 
 

@@ -7,9 +7,9 @@ nav_order: 3
 
 # Code map
 
-To find the code that implements all of the draw indirect improvements, its on the "engine" branch of the github repo. For a direct link, here it is: [Repo](https://github.com/vblanco20-1/vulkan-guide/tree/engine)
+To find the code that implements all of the draw indirect improvements, it's on the "engine" branch of the github repo. For a direct link, here it is: [Repo](https://github.com/vblanco20-1/vulkan-guide/tree/engine)
 
-The codebase continues from where Chapter 5 left off, but a lot of improvements and abstractions were added to it. Everything in the "Extra" chapter is on here, and there are a few things that dont have an article on Extra chapter.
+The codebase continues from where Chapter 5 left off, but a lot of improvements and abstractions were added to it. Everything in the "Extra" chapter is on here, and there are a few things that don't have an article on Extra chapter.
 
 * Imgui support: Added imgui UI to the engine, can be found mostly on VulkanEngine class. Explained [here]({{ site.baseurl }}{% link docs/extra-chapter/implementing_imgui.md %})
 * CVars.h/cpp: Implements a CVar system for some configuration variables. Explained in [here]({{ site.baseurl }}{% link docs/extra-chapter/cvar_system.md %}). The implementation in here also has support for tweaking the variables in Imgui.
@@ -32,7 +32,7 @@ The main engine render loop is similar to the one after the chapters, but a lot 
 
 When the engine initializes, it loads some prefabs and spawns them into the world as MeshObjects, which it injects into the RenderScene that will then add the objects into the multiple mesh passes according to materials and configuration. 
 
-There are 3 mesh passes handled. Forward pass handles the "opaque" rendering of objects, Transparent handles the translucent objects, and draws after the opaque objects are finished. Then there is the Shadow pass that will render a sun shadow. MeshObjects will register into these 3 passes according to their setup. Opaque objects will be added to Forward and Shadow passes, while translucent objects will only register into the Transparent pass, as we dont want the translucent objects to cast shadow.
+There are 3 mesh passes handled. Forward pass handles the "opaque" rendering of objects, Transparent handles the translucent objects, and draws after the opaque objects are finished. Then there is the Shadow pass that will render a sun shadow. MeshObjects will register into these 3 passes according to their setup. Opaque objects will be added to Forward and Shadow passes, while translucent objects will only register into the Transparent pass, as we don't want the translucent objects to cast shadow.
 
 Once the engine is loaded, `RenderScene::build_batches()` and `RenderScene::merge_meshes()` are called at the end of engine initialization. build_batches will process all the mesh passes and prepare their indirect draw commands. merge_meshes will grab the vertex buffers of each of the meshes registered with the RenderScene, and merge them into a huge vertex buffer. This allows us to bind the vertex buffer once per mesh pass and never touch it again.
 

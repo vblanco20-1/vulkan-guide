@@ -10,7 +10,7 @@ https://github.com/ocornut/imgui
 Dear Imgui is one of the best debug user interface libraries around. Using it makes it very easy to create debug windows with widgets of various kinds.
 This guide will use a few things from chapter 5 code, but can be done standalone just fine.
 
-Imgui itself is a portable library, but it doesnt do any user interaction or rendering by itself, you need to hook it into your renderer or input system. The library comes with a set of example implementations that hook those into imgui.
+Imgui itself is a portable library, but it doesn't do any user interaction or rendering by itself, you need to hook it into your renderer or input system. The library comes with a set of example implementations that hook those into imgui.
 We are using Vulkan for rendering, and SDL for user input events. Those 2 are covered by the example implementations, so we are going to use those.
 
 ## Compiling
@@ -43,7 +43,7 @@ For that, create a `init_imgui()` function, and make sure to call it as part of 
 void VulkanEngine::init_imgui()
 {
 	//1: create descriptor pool for IMGUI
-	// the size of the pool is very oversize, but its copied from imgui demo itself.
+	// the size of the pool is very oversize, but it's copied from imgui demo itself.
 	VkDescriptorPoolSize pool_sizes[] =
 	{
 		{ VK_DESCRIPTOR_TYPE_SAMPLER, 1000 },
@@ -108,7 +108,7 @@ void VulkanEngine::init_imgui()
 
 ```
 
-We begin by creating a descriptor pool that imgui needs. Having a descriptor pool just for imgui is the easiest. While this descriptor pool with 1000 of everything is likely going to be oversized, it wont really matter. 
+We begin by creating a descriptor pool that imgui needs. Having a descriptor pool just for imgui is the easiest. While this descriptor pool with 1000 of everything is likely going to be oversized, it won't really matter. 
 
 Then, we need to call the functions that initialize imgui itself, and the implementations for vulkan and for SDL
 On the Vulkan implementation, there are a few things that we have to hook. `VkInstance`, `VkPhysicalDevice`, `VkDevice`,the  `VkQueue` for graphics, and the descriptor pool we just created. Image count is for the overlapping of the commands. Use the same variables that you use when creating your swapchain.
@@ -152,9 +152,9 @@ Last thing is to render the imgui objects.
 On the `draw()` function, we call `ImGui::Render();` at the start. 
 
 As part of your main renderpass, call `ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmd);` right before you end it. 
-This will make imgui render as part as your main pass. If you have an UI pass of some kind, thats a good place to put it.
+This will make imgui render as part as your main pass. If you have an UI pass of some kind, that's a good place to put it.
 
-Thats really all that was needed, so enjoy using imgui!
+That's really all that was needed, so enjoy using imgui!
 
 ![map]({{site.baseurl}}/diagrams/IMGUI.png)
 

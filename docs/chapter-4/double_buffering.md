@@ -12,7 +12,7 @@ It is possible to make the CPU render ahead more frames, which can be useful if 
 ## Object lifetime
 Most Vulkan objects are used while the GPU is performing its rendering work, so it is not possible to modify or delete them while they are in use.
 An example of this is command buffers. Once you submit a command buffer into a queue, that buffer can't be reset or modified until the GPU has finished executing its commands.
-You can control this using Fences. If you submit a command buffer that will signal a fence, and then you wait until that fence is signaled, you can be sure that the command buffer can now be reused or modified. Its the same for the other related objects used in those commands.
+You can control this using Fences. If you submit a command buffer that will signal a fence, and then you wait until that fence is signaled, you can be sure that the command buffer can now be reused or modified. it's the same for the other related objects used in those commands.
 
 
 ## The Frame struct

@@ -105,7 +105,7 @@ As with vk_init, we include vk_types. We already need a Vulkan type in VkExtent2
 The Vulkan engine will be the core of everything we will be doing.
 We have a flag to know if the engine is initialized, a frame number integer (very useful!), and the size of the window we are going to open, in pixels. 
 
-The declaration `struct SDL_Window* _window;` is of special interest. Note the `struct` at the beginning. This is called a forward-declaration, and its what allows us to have the `SDL_Window `pointer in the class, without including SDL on the Vulkan engine header. This variable holds the window that we create for the application.
+The declaration `struct SDL_Window* _window;` is of special interest. Note the `struct` at the beginning. This is called a forward-declaration, and it's what allows us to have the `SDL_Window `pointer in the class, without including SDL on the Vulkan engine header. This variable holds the window that we create for the application.
 
 With the header seen, let's go to the cpp files.
 
@@ -165,7 +165,7 @@ void VulkanEngine::cleanup()
 }
 ```
 In a similar way that we did `SDL_CreateWindow`, we need to do `SDL_DestroyWindow` This will destroy the window for the program.
-Over time, we will add more logic into this cleanup function. While its not completely necessary to cleanup properly, as the OS will delete everything for us anyway when the program terminates, its good practice to do it.
+Over time, we will add more logic into this cleanup function. While it's not completely necessary to cleanup properly, as the OS will delete everything for us anyway when the program terminates, it's good practice to do it.
 
 vk_engine.cpp, line 37
 ```cpp

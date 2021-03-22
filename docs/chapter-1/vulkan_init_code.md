@@ -175,7 +175,7 @@ Once we have a VkPhysicalDevice, we can directly build a VkDevice from it.
 
 And at the end, we store the handles in the class.
 
-Thats it, we have initialized Vulkan. We can now start calling Vulkan commands.
+That's it, we have initialized Vulkan. We can now start calling Vulkan commands.
 
 But before we start executing commands, there is one last thing to do.
 

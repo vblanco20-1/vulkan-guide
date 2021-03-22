@@ -397,7 +397,7 @@ void VulkanEngine::init_pipelines()
 }
 ```
 
-There is not much here, other than connecting the vertex input info to the pipeline builder. With that and adding the `tri_mesh.vert` vertex shader, thats all we need. We also make sure that each shader module is correctly deleted at the end of the function.
+There is not much here, other than connecting the vertex input info to the pipeline builder. With that and adding the `tri_mesh.vert` vertex shader, that's all we need. We also make sure that each shader module is correctly deleted at the end of the function.
 
 Now we are holding a `_meshPipeline` that knows how to render a colored mesh. Let's replace the inner loop of `draw()` function to use the new pipeline and draw the mesh. 
 

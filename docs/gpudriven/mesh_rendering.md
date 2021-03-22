@@ -9,7 +9,7 @@ Now that the material system is explained, we can go forward to the meat of it, 
 
 Most of the system code is on `vk_scene.h/cpp` files. The part that does the rendering commands for it is done in `vk_engine_scenerender.h/cpp` files.
 
-The design of the system is inspired by work shown in Unreal Engine and OurMachinery blogs and presentations. Its not the best solution, but its one that does work fairly well.
+The design of the system is inspired by work shown in Unreal Engine and OurMachinery blogs and presentations. It's not the best solution, but it's one that does work fairly well.
 
 
 ## Mesh Passes
@@ -53,7 +53,7 @@ struct RenderBatch {
 		uint64_t sortKey;
 ```
 
-Flat_batches is the individual non-instanced draws for every object in the pass. This one can get very big if there are enough objects. If you dont want to use draw indirect, you can render this array directly. They are just a handle to the objects array + the calculated sort key. Flat-batches array will be kept in-order allways.
+Flat_batches is the individual non-instanced draws for every object in the pass. This one can get very big if there are enough objects. If you don't want to use draw indirect, you can render this array directly. They are just a handle to the objects array + the calculated sort key. Flat-batches array will be kept in-order allways.
 
 ```cpp
 struct IndirectBatch {
@@ -170,14 +170,14 @@ Handle<RenderObject> RenderScene::register_object(MeshObject* object)
 }
 ```
 
-When adding an object into a given meshpass, it looks up if the material actually has shaders for that type of pass. An object whose material is transparent will be registered into the transparent meshpass, and an object that doesnt have a DirectionalShadow shader effect wont cast shadows.
+When adding an object into a given meshpass, it looks up if the material actually has shaders for that type of pass. An object whose material is transparent will be registered into the transparent meshpass, and an object that doesn't have a DirectionalShadow shader effect won't cast shadows.
 
-This is done so that each pass is fully standalone and doesnt do any work it doesnt have to. In the test scenes, there are generally very few transparent objects, so the transparent meshpass is always very lightweight.
+This is done so that each pass is fully standalone and doesn't do any work it doesn't have to. In the test scenes, there are generally very few transparent objects, so the transparent meshpass is always very lightweight.
 
 
 ## Meshpass update logic
 
-When objects are added or removed from a meshpass, the meshpass needs to update its main flat_batches array, and its parents. This is done from the `refresh_pass` function, which has to be whenever there are changes to apply. Its not necesary to call this every frame, and its safe to call from multiple threads.
+When objects are added or removed from a meshpass, the meshpass needs to update its main flat_batches array, and its parents. This is done from the `refresh_pass` function, which has to be whenever there are changes to apply. It's not necesary to call this every frame, and it's safe to call from multiple threads.
 
 The code in the repo for this part is still work in progress, and the optimizations done around partial updates can be tricky to follow. But the general logic works like this for the full-rebuild.
 
@@ -187,7 +187,7 @@ Once the PassObject array is filled, we go over it, and calculate the draw hashe
 
 Once we have the flat_batches array sorted, we go over it, and compact the draws into the IndirectBatch array. Multiple draws in the flat_batches array will become a single IndirectBatch, which is an instanced draw.
 
-After that array is made, its compacted again into the multibatch array.
+After that array is made, it's compacted again into the multibatch array.
 
 
 ## GPU Side buffers
@@ -215,7 +215,7 @@ AllocatedBuffer<GPUIndirectObject> clearIndirectBuffer;
 `drawIndirectBuffer` and `clearIndirectBuffer` are both created from the meshpass batches array,and they hold the draw-indirect commands.
 `clearIndirectBuffer` is a CPU-writeable buffer, and it has the correct data, but with `command.instanceCount` set to 0. From the culling shader we keep adding instances, so we use this one to "reset" `drawIndirectBuffer` every frame.
 
-`drawIndirectBuffer` is a GPU-side buffer, and its the one we actually use for rendering. 
+`drawIndirectBuffer` is a GPU-side buffer, and it's the one we actually use for rendering. 
 
 `passObjectsBuffer` is the main array used for the GPU compute pass. Each of the GPUInstance objects holds objectID and batchID. batchID will be used to access the proper draw-command if the cull passes, and object ID is just the global index of the object, to access its data.
 
