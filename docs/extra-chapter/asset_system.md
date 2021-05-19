@@ -66,7 +66,7 @@ The mesh asset will be similar to the textures, except that we will not copy the
 
 ## CODE
 We will begin by writing the core Asset logic. This will handle the generic "json + blob" structure which we will then process as different kinds of assets.
-On the code for the asset library, there are 2 incredibly important things to keep into account. We want to make absolutely sure that the headers do not include libraries such as nlohman json or lz4. Those libraries will be compiled into the AssetLib library, and will be invisible to the vulkan engine itself. Also, we are going to make the api completely stateless. No classes or state kept beetween function calls. This way we make sure that the library will be possible to use from multiple threads safely.
+On the code for the asset library, there are 2 incredibly important things to keep in mind. We want to make absolutely sure that the headers do not include libraries such as nlohman json or lz4. Those libraries will be compiled into the AssetLib library, and will be invisible to the vulkan engine itself. Also, we are going to make the api completely stateless. No classes or state kept beetween function calls. This way we make sure that the library will be possible to use from multiple threads safely.
 
 We only need 2 functions for the api of the "Core" asset file, and the AssetFile struct.
 
@@ -101,16 +101,16 @@ bool assets::save_binaryfile(const  char* path, const assets::AssetFile& file)
 	//version
 	outfile.write((const char*)&version, sizeof(uint32_t));
 
-	//json lenght
-	uint32_t lenght = file.json.size();
-	outfile.write((const char*)&lenght, sizeof(uint32_t));
+	//json length
+	uint32_t length = file.json.size();
+	outfile.write((const char*)&length, sizeof(uint32_t));
 
-	//blob lenght
-	uint32_t bloblenght = file.binaryBlob.size();
-	outfile.write((const char*)&bloblenght, sizeof(uint32_t));
+	//blob length
+	uint32_t bloblength = file.binaryBlob.size();
+	outfile.write((const char*)&bloblength, sizeof(uint32_t));
 
 	//json stream
-	outfile.write(file.json.data(), lenght);
+	outfile.write(file.json.data(), length);
 	//blob data
 	outfile.write(file.binaryBlob.data(), file.binaryBlob.size());
 
@@ -124,23 +124,23 @@ We will be doing purely binary files.
 
 We begin by storing the 4 chars that are the asset type. For textures this will be `TEXI`, and for meshes it will be `MESH`. We can use this to easily identify if the binary file we are loading is a mesh or a texture, or some wrong format.
 
-Next, we store Version, which is a single uint32 number. We can use this if we change the format at some point, to give an error when trying to load it. It's critical to allways version your file formats.
+Next, we store Version, which is a single uint32 number. We can use this if we change the format at some point, to give an error when trying to load it. It's critical to always version your file formats.
 
-After the version, we store the lenght, in bytes, of the json string, and then the lenght of the binary blob.
+After the version, we store the length, in bytes, of the json string, and then the length of the binary blob.
 
 With the header written, now we just write the json and the blob directly to the file. We begin by writing the entire json string, and then directly the binary blob.
 
 To load the file from disk, we do the same, but in reverse.
 
 ```cpp
-bool assets::load_binaryfile(const  char* path, assets::AssetFile& outputFile)
+bool assets::load_binaryfile(const char* path, assets::AssetFile& outputFile)
 {
 	std::ifstream infile;
 	infile.open(path, std::ios::binary);
 
 	if (!infile.is_open()) return false;
 
-	//move file cursor to begining
+	//move file cursor to beginning
 	infile.seekg(0);
 
 	infile.read(outputFile.type, 4);
@@ -164,8 +164,8 @@ bool assets::load_binaryfile(const  char* path, assets::AssetFile& outputFile)
 }
 ```
 
-We read version, type, and lenght of json and blob.
-Then we read the json string by using the lenght stored in the header, and same thing with the blob.
+We read version, type, and length of json and blob.
+Then we read the json string by using the length stored in the header, and same thing with the blob.
 
 We are not doing any version or type check yet here. The functions will just return false if the file isnt found, but there is no error checking.
 
