@@ -89,7 +89,7 @@ That will be our entire public API for the core asset system. Textures and meshe
 
 Loading a file will copy the json into the string, and will copy the compressed binary blob into the vector inside the asset. Be very careful with that, as the AssetFile structs will be really big, so do not store them anywhere to avoid bloating up RAM usage.
 
-Lets start by showing the code to save an asset to disk
+Let's start by showing the code to save an asset to disk
 ```cpp
 bool assets::save_binaryfile(const  char* path, const assets::AssetFile& file)
 {
@@ -144,7 +144,6 @@ bool assets::load_binaryfile(const char* path, assets::AssetFile& outputFile)
 	infile.seekg(0);
 
 	infile.read(outputFile.type, 4);
-	uint32_t vers;
 	infile.read((char*)&outputFile.version, sizeof(uint32_t));
 
 	uint32_t jsonlen = 0;
@@ -154,7 +153,6 @@ bool assets::load_binaryfile(const char* path, assets::AssetFile& outputFile)
 	infile.read((char*)&bloblen, sizeof(uint32_t));
 
 	outputFile.json.resize(jsonlen);
-
 	infile.read(outputFile.json.data(), jsonlen);
 
 	outputFile.binaryBlob.resize(bloblen);
@@ -222,7 +220,7 @@ The `read_texture_info` will parse the metadata json in a file and convert it in
 
 	//upload texture to gpu with commands
 ```
-Lets look at the implementation to pack a texture into an AssetFile
+Let's look at the implementation to pack a texture into an AssetFile
 
 ```cpp
 assets::AssetFile assets::pack_texture(assets::TextureInfo* info, void* pixelData)
@@ -336,9 +334,9 @@ That's all for the texture asset logic. For the mesh logic, it works in a simila
 With the texture save/load logic implemented, we can now look at the converter itself.
 The converter will be a separate executable from the normal engine. This is to isolate all of the libs it will use so that they don't pollute the engine. This also means we can compile it in release mode and have it convert everything very fast, and then we load that from our debug mode engine.
 
-The entire codebase for the converted is here https://github.com/vblanco20-1/vulkan-guide/blob/engine/asset-baker/asset_main.cpp
+The entire codebase for the converter is here https://github.com/vblanco20-1/vulkan-guide/blob/engine/asset-baker/asset_main.cpp
 
-The converter is using by giving it a target folder to process. It will then go through the files in the folder and attempt to convert them.
+The converter is used by giving it a target folder to process. It will then go through the files in the folder and attempt to convert them.
 
 ```cpp
 fs::path path{ argv[1] };
@@ -428,7 +426,7 @@ bool vkutil::load_image_from_asset(VulkanEngine& engine, const char* filename, A
 	bool loaded = assets::load_binaryfile(filename, file);
 
 	if (!loaded) {
-		std::cout << "Error when loading mesh ";
+		std::cout << "Error when loading image\n";
 		return false;
 	}
 	
