@@ -5,7 +5,7 @@ parent:  "4. Buffers, Shader input/output"
 nav_order: 12
 ---
 
-Now that descriptor sets are explained, let's look at using them in practise in a minimal example. We are going to modify the codebase and shaders, so that instead of sending the final transform matrix of the object through push constant, multiplying it in the CPU, we read the camera matrix on the shader and multiply it by the object matrix, with the multiplication being done in the shader.
+Now that descriptor sets are explained, let's look at using them in practice in a minimal example. We are going to modify the codebase and shaders, so that instead of sending the final transform matrix of the object through push constant, multiplying it in the CPU, we read the camera matrix on the shader and multiply it by the object matrix, with the multiplication being done in the shader.
 To get that to work, we are going to need to create a uniform buffer for our camera matrices, and expose that to the shader using a single descriptor set.
 
 ## Setting up camera buffers
@@ -26,7 +26,7 @@ AllocatedBuffer VulkanEngine::create_buffer(size_t allocSize, VkBufferUsageFlags
 	bufferInfo.size = allocSize;
 	bufferInfo.usage = usage;
 
-	
+
 	VmaAllocationCreateInfo vmaallocInfo = {};
 	vmaallocInfo.usage = memoryUsage;
 
@@ -57,7 +57,7 @@ struct FrameData {
 	// other code ...
 	//buffer that holds a single GPUCameraData to use when rendering
 	AllocatedBuffer cameraBuffer;
-	
+
 	VkDescriptorSet globalDescriptor;
 };
 ```
@@ -79,13 +79,13 @@ class VulkanEngine {
 ```cpp
 void VulkanEngine::init()
 {
-	// other code .... 
+	// other code ....
 
 	init_sync_structures();
 
 	init_descriptors();
 
-	init_pipelines();	
+	init_pipelines();
 
 	//other code ....
 }
@@ -120,7 +120,7 @@ layout (location = 2) in vec3 vColor;
 
 layout (location = 0) out vec3 outColor;
 
-layout(set = 0, binding = 0) uniform  CameraBuffer{   
+layout(set = 0, binding = 0) uniform  CameraBuffer{
 	mat4 view;
 	mat4 proj;
 	mat4 viewproj;
@@ -133,8 +133,8 @@ layout( push_constant ) uniform constants
  mat4 render_matrix;
 } PushConstants;
 
-void main() 
-{	
+void main()
+{
 	mat4 transformMatrix = (cameraData.viewproj * PushConstants.render_matrix);
 	gl_Position = transformMatrix * vec4(vPosition, 1.0f);
 	outColor = vColor;
@@ -161,7 +161,7 @@ VkDescriptorPool _descriptorPool;
 
 ```
 
-A `VkDescriptorSetLayout` holds information about the shape of a descriptor set. In this case, our descriptor set is going to be a set that holds a single uniform buffer reference at binding 0. 
+A `VkDescriptorSetLayout` holds information about the shape of a descriptor set. In this case, our descriptor set is going to be a set that holds a single uniform buffer reference at binding 0.
 
 
 ```cpp
@@ -173,16 +173,16 @@ void VulkanEngine::init_descriptors()
 	camBufferBinding.binding = 0;
 	camBufferBinding.descriptorCount = 1;
 	// it's a uniform buffer binding
-	camBufferBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER; 
+	camBufferBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 
 	// we use it from the vertex shader
-	camBufferBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT; 
-	
-	
+	camBufferBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+
 	VkDescriptorSetLayoutCreateInfo setInfo = {};
 	setInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
 	setInfo.pNext = nullptr;
-	
+
 	//we are going to have 1 binding
 	setInfo.bindingCount = 1;
 	//no flags
@@ -200,7 +200,7 @@ To create a descriptor set layout, we need another CreateInfo struct. The create
 
 We now have the descriptor set layout for our descriptor created, so we need to hook it to the pipeline creation. When you create a pipeline, you also need to let the pipeline know what descriptors will be bound to it.
 
-Back into `init_pipelines()`. We need to modify the creation of the `VkPipelineLayout` by hooking the descriptor layout to it. 
+Back into `init_pipelines()`. We need to modify the creation of the `VkPipelineLayout` by hooking the descriptor layout to it.
 
 ```cpp
 
@@ -208,7 +208,7 @@ Back into `init_pipelines()`. We need to modify the creation of the `VkPipelineL
 mesh_pipeline_layout_info.pPushConstantRanges = &push_constant;
 mesh_pipeline_layout_info.pushConstantRangeCount = 1;
 
-//hook the global set layout 
+//hook the global set layout
 mesh_pipeline_layout_info.setLayoutCount = 1;
 mesh_pipeline_layout_info.pSetLayouts = &_globalSetLayout;
 
@@ -220,7 +220,7 @@ Now our pipeline builder will connect the pipeline layout to everything, which w
 
 The pipeline setup is done, so now we have to allocate a descriptor set, and bind it when rendering.
 
-## Allocating descriptorsets
+## Allocating descriptor sets
 
 Back to `init_descriptors()`, we first need to create a `VkDescriptorPool` to allocate the descriptors from.
 
@@ -241,14 +241,14 @@ void VulkanEngine::init_descriptors()
 	pool_info.maxSets = 10;
 	pool_info.poolSizeCount = (uint32_t)sizes.size();
 	pool_info.pPoolSizes = sizes.data();
-	
+
 	vkCreateDescriptorPool(_device, &pool_info, nullptr, &_descriptorPool);
 
 	// other code ....
 }
 ```
 
-In this case, we know exactly what we will need to allocate from the pool, which is descriptor sets that point to uniform buffers. When creating a descriptor pool, you need to speficy how many descriptors of each type you will need, and what's the maximum number of sets to allocate from it. For now, we are going to reserve 10 uniform buffer pointers/handles, and a maximum of 10 descriptor sets allocated from the pool.
+In this case, we know exactly what we will need to allocate from the pool, which is descriptor sets that point to uniform buffers. When creating a descriptor pool, you need to specify how many descriptors of each type you will need, and what's the maximum number of sets to allocate from it. For now, we are going to reserve 10 uniform buffer pointers/handles, and a maximum of 10 descriptor sets allocated from the pool.
 
 We can now allocate the descriptors from it. For it, continue on the `init_descriptors()` function, inside the FRAME_OVERLAP loop.
 
@@ -279,7 +279,7 @@ With this, We now have a descriptor stored in our frame struct. But this descrip
 
 for (int i = 0; i < FRAME_OVERLAP; i++)
 	{
-		// allocation code ... 
+		// allocation code ...
 
 		//information about the buffer we want to point at in the descriptor
 		VkDescriptorBufferInfo binfo;
@@ -303,9 +303,9 @@ for (int i = 0; i < FRAME_OVERLAP; i++)
 		//and the type is uniform buffer
 		setWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		setWrite.pBufferInfo = &binfo;
-	   
 
-		vkUpdateDescriptorSets(_device, 1, &setWrite, 0, nullptr);    
+
+		vkUpdateDescriptorSets(_device, 1, &setWrite, 0, nullptr);
 	}
 ```
 
@@ -318,7 +318,7 @@ In the `draw_objects()` function, we will start by writing to the camera buffer 
 
 void VulkanEngine::draw_objects(VkCommandBuffer cmd,RenderObject* first, int count)
 {
-	
+
 	//camera view
 	glm::vec3 camPos = { 0.f,-6.f,-10.f };
 
@@ -359,19 +359,19 @@ if (object.material != lastMaterial) {
 }
 ```
 
-We will bind the set whenever we switch pipeline. Its not strictly necesary right now, as all our pipelines are the same, but it will be easier.
+We will bind the set whenever we switch pipeline. Its not strictly necessary right now, as all our pipelines are the same, but it will be easier.
 
-Last thing is to modify the push constants code, to make it not multiply the matrix there, and just pushconstant the model matrix.
+Last thing is to modify the push constants code, to make it not multiply the matrix there, and just push constant the model matrix.
 
 ```cpp
 MeshPushConstants constants;
 constants.render_matrix = object.transformMatrix;
 
-//upload the mesh to the GPU via pushconstants
+//upload the mesh to the GPU via push constants
 vkCmdPushConstants(cmd, object.material->pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(MeshPushConstants), &constants);
 ```
 
-If you run the code right now, everything should be working fine. But we have now a way to let the shader read some data from a buffer, instead of having to pushconstant all of the data of the shader.
+If you run the code right now, everything should be working fine. But we have now a way to let the shader read some data from a buffer, instead of having to push constant all of the data of the shader.
 
 
 

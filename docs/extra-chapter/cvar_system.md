@@ -5,7 +5,7 @@ parent: Extra Chapter
 nav_order: 33
 ---
 
-As the engine grows, we find that we have more and more configuration options in the engine. Having them tweable in the UI requires us to add some edit code every time we add a variable. This gets annoying very quickly, and those configuration variables also arent globally accessible.
+As the engine grows, we find that we have more and more configuration options in the engine. Having them tweable in the UI requires us to add some edit code every time we add a variable. This gets annoying very quickly, and those configuration variables also aren't globally accessible.
 
 If you look at how engines like Unreal Engine or IDTech engines do it, they have a Console Variable system. Users can declare any console variable (CVAR) they want, and then access it through the code. Having the configuration and debug options all inside the same centralized location gives some very nice properties, such as having 1 centralized way to edit them, and being able to easily save them to disk.
 
@@ -74,7 +74,7 @@ All cvars will get a spot into the cvar editor menu on the Imgui menu bar. This 
 Now lets talk about how the code works
 
 ## Architecture
-You can look at the code here: 
+You can look at the code here:
 [Header](https://github.com/vblanco20-1/vulkan-guide/blob/engine/extra-engine/cvars.h)
 [Source](https://github.com/vblanco20-1/vulkan-guide/blob/engine/extra-engine/cvars.cpp)
 
@@ -151,7 +151,7 @@ public:
 };
 ```
 
-This CVarParameter is going to store the name, description, and type. 
+This CVarParameter is going to store the name, description, and type.
 It also stores flags and arrayIndex. The flags are declared in the header because they will be part of the public interface, but the CVarParameter itself is going to be private details.
 
 We store arrayIndex inside the parameter because we are going to store the cvar data (the actual ints/floats) into arrays, so we need to access them. This way we can use this same struct for all types of data.
@@ -204,7 +204,7 @@ struct CVarArray
 		cvars[index].parameter = param;
 
 		param->arrayIndex = index;
-		lastCVar++; 
+		lastCVar++;
 		return index;
 	}
 
@@ -218,7 +218,7 @@ Starting by the `CVarStorage<T>` type, where we store the current and initial va
 
 `CVarArray<T>` is an array of those CVarStorage objects, with a few functions to handle said array. It's going to be a very typical heap-allocated array like a vector, but we won't support resizing.
 
-On the array, we hold an integer to know how filled it is, and we use the index to get the data. This index will correlate to the index stored in a CVarStorage. 
+On the array, we hold an integer to know how filled it is, and we use the index to get the data. This index will correlate to the index stored in a CVarStorage.
 
 We can now add this arrays into the CVarSystemImpl class
 
@@ -333,7 +333,7 @@ CVarParameter* CVarSystemImpl::InitCVar(const char* name, const char* descriptio
 }
 ```
 
-For the InitCVar function we arent doing much, we hash the name of the cvar, set its name and description, and insert it into the savedCVars hashmap. 
+For the InitCVar function we aren't doing much, we hash the name of the cvar, set its name and description, and insert it into the savedCVars hashmap.
 
 The second part of the initialization is the typed part. We will be showing float, but it works the same for all types.
 ```cpp
@@ -349,10 +349,10 @@ CVarParameter* CVarSystemImpl::CreateFloatCVar(const char* name, const char* des
 	return param;
 }
 ```
-On the typed CreateFloatCVar function, we initialize the cvar with the above function, and then we use 
+On the typed CreateFloatCVar function, we initialize the cvar with the above function, and then we use
 `GetCVarArray<double>()` to grab the correct data array to insert the cvar into. We also make sure to set the param->type of the cvar to Float type.
 
-For int and string it's the same just replacing the types. 
+For int and string it's the same just replacing the types.
 
 Now that we can create cvars, lets continue on the GetCVar function
 ```cpp
@@ -497,7 +497,7 @@ void AutoCVar_Float::Set(double f)
 }
 
 ```
-We are back to more template trickery. For all of the autocvars to have some abstracted syntax, we create 2 Get and Set cvar functions that are global (not inside the class) and directly set and get the values by the template type itself. 
+We are back to more template trickery. For all of the autocvars to have some abstracted syntax, we create 2 Get and Set cvar functions that are global (not inside the class) and directly set and get the values by the template type itself.
 
 We can then implement AutoCVar_Float Get/Set from them using the CVarType typedef which is there by inheritance from `AutoCVar<double>` The constructor registers the cvar and stores the index.
 

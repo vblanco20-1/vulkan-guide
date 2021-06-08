@@ -16,7 +16,7 @@ A Material will just be a Pipeline pointer + PipelineLayout, for now.
 
 vk_engine.h
 ```cpp
-//note that we store the VkPipeline and layout by value, not pointer. 
+//note that we store the VkPipeline and layout by value, not pointer.
 //They are 64 bit handles to internal driver structures anyway so storing pointers to them isn't very useful
 
 
@@ -76,7 +76,7 @@ Material* VulkanEngine::create_material(VkPipeline pipeline, VkPipelineLayout la
 
 Material* VulkanEngine::get_material(const std::string& name)
 {
-	//search for the object, and return nullpointer if not found
+	//search for the object, and return nullptr if not found
 	auto it = _materials.find(name);
 	if (it == _materials.end()) {
 		return nullptr;
@@ -106,14 +106,14 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd,RenderObject* first, int cou
 ```
 
 
-We are adding the 2 maps for materials and meshes, and a draw_objects function. 
-We do not have a single draw-mesh function. In a renderer, there is almost never a case where you render only one object, and we want to do sorting on the function, so it's better if our draw function takes an array of objects to draw. 
+We are adding the 2 maps for materials and meshes, and a draw_objects function.
+We do not have a single draw-mesh function. In a renderer, there is almost never a case where you render only one object, and we want to do sorting on the function, so it's better if our draw function takes an array of objects to draw.
 
 Let's move our triangle and the monkey meshes so that they get registered in the maps, and make sure that the materials for them also get registered, so that we can use them when rendering.
 
 ```cpp
 void VulkanEngine::load_meshes()
-{	
+{
 	_triangleMesh._vertices.resize(3);
 
 	_triangleMesh._vertices[0].position = { 1.f,1.f, 0.5f };
@@ -126,7 +126,7 @@ void VulkanEngine::load_meshes()
 
 
 	_monkeyMesh.load_from_obj("../../assets/monkey.obj");
-	
+
 
     upload_mesh(_triangleMesh);
 	upload_mesh(_monkeyMesh);
@@ -137,7 +137,7 @@ void VulkanEngine::load_meshes()
 }
 ```
 
-on the load_pipelines function we are also going to put the last pipeline created, the mesh one, into the maps. 
+on the load_pipelines function we are also going to put the last pipeline created, the mesh one, into the maps.
 ```cpp
 void VulkanEngine::init_pipelines()
 {
@@ -162,7 +162,7 @@ We are going to add a new function to VulkanEngine, `init_scene`, to create a bu
 ```cpp
 void VulkanEngine::init()
 {
-	//other .... 
+	//other ....
 
 	init_pipelines();
 
@@ -239,7 +239,7 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd,RenderObject* first, int cou
 		MeshPushConstants constants;
 		constants.render_matrix = mesh_matrix;
 
-		//upload the mesh to the GPU via pushconstants
+		//upload the mesh to the GPU via push constants
 		vkCmdPushConstants(cmd, object.material->pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(MeshPushConstants), &constants);
 
 		//only bind the mesh if it's a different one from last bind
@@ -254,15 +254,15 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd,RenderObject* first, int cou
 	}
 }
 ```
-We first calculate the matrices for the camera itself. Then we iterate each object in the renderables array, and render each of them in order. The loop right now is a simple one with no sorting, but there isnt much need for sorting when the objects in the renderables array are already sorted. You can sort the renderables array by pipeline pointer if you want.
-Note how we are checking lastMesh and lastMaterial in the BindVertexBuffers and BindPipeline calls. There is no need to rebind the same vertex buffer over and over between draws, and the pipeline is the same, but we are pushing the constants on every single call. 
-The loop here is a lot higher performance that you would think. This simple loop will render thousands and thousands of objects with no issue. Binding pipeline is a expensive call, but drawing the same object over and over with different pushconstants is very fast. 
+We first calculate the matrices for the camera itself. Then we iterate each object in the renderables array, and render each of them in order. The loop right now is a simple one with no sorting, but there isn't much need for sorting when the objects in the renderables array are already sorted. You can sort the renderables array by pipeline pointer if you want.
+Note how we are checking lastMesh and lastMaterial in the BindVertexBuffers and BindPipeline calls. There is no need to rebind the same vertex buffer over and over between draws, and the pipeline is the same, but we are pushing the constants on every single call.
+The loop here is a lot higher performance that you would think. This simple loop will render thousands and thousands of objects with no issue. Binding pipeline is a expensive call, but drawing the same object over and over with different push constants is very fast.
 
 Last thing is to replace the old code in the `draw()` function with calling this function. It should end up like this.
 
 ```cpp
 	vkCmdBeginRenderPass(cmd, &rpInfo, VK_SUBPASS_CONTENTS_INLINE);
-	
+
 	draw_objects(cmd, _renderables.data(), _renderables.size());
 
 	//finalize the render pass

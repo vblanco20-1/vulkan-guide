@@ -7,7 +7,7 @@ nav_order: 14
 
 We have been able to render a red triangle, but this is too boring. Now, we will add more color to it, converting it into the classic RGB triangle.
 
-To do that, we are going to need to pass more data from the vertex shader to the fragment shader. At the moment we only pass the position, which is a default Vulkan variable, but there isnt a color variable we can use, so we need to make our own.
+To do that, we are going to need to pass more data from the vertex shader to the fragment shader. At the moment we only pass the position, which is a default Vulkan variable, but there isn't a color variable we can use, so we need to make our own.
 
 All shader stages can pass data between them by using input and output variables. If in the vertex shader we create an output variable, we will be able to read it on the fragment shader as an input variable.
 
@@ -42,7 +42,7 @@ Create a new shader, called `colored_triangle.vert`. It will be mostly the same 
 //output variable to the fragment shader
 layout (location = 0) out vec3 outColor;
 
-void main() 
+void main()
 {
 	//const array of positions for the triangle
 	const vec3 positions[3] = vec3[3](
@@ -67,7 +67,7 @@ void main()
 In the same way as we do with positions, we are declaring a const array of colors, Red, Green, and Blue, and then outputting them to the outColor variable.
 
 ## Fragment Shader
-Create a new shader, called `colored_triangle.frag`. 
+Create a new shader, called `colored_triangle.frag`.
 
 ```glsl
 #version 450
@@ -79,7 +79,7 @@ layout (location = 0) in vec3 inColor;
 layout (location = 0) out vec4 outFragColor;
 
 
-void main() 
+void main()
 {
 	//return color
 	outFragColor = vec4(inColor,1.0f);
@@ -102,7 +102,7 @@ On the code that loads the triangle shaders, we change the filenames
         std::cout << "Error when building the triangle fragment shader module" << std::endl;
     }
     else {
-        std::cout << "Triangle fragment shader succesfully loaded" << std::endl;
+        std::cout << "Triangle fragment shader successfully loaded" << std::endl;
     }
 
     VkShaderModule triangleVertexShader;
@@ -112,7 +112,7 @@ On the code that loads the triangle shaders, we change the filenames
 
     }
     else {
-        std::cout << "Triangle vertex shader succesfully loaded" << std::endl;
+        std::cout << "Triangle vertex shader successfully loaded" << std::endl;
     }
 ```
 

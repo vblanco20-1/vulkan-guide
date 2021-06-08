@@ -10,7 +10,7 @@ Let's create a system that lets us toggle the shaders for our triangle by pressi
 
 
 ## SDL Input events
-Because we want to use the spacebar, we need to run code whenever the key is pressed. Thankfully, the SDL library we are using can do that easily. 
+Because we want to use the spacebar, we need to run code whenever the key is pressed. Thankfully, the SDL library we are using can do that easily.
 
 Let's first add a integer variable in VulkanEngine to use for choosing between the shaders.
 
@@ -24,7 +24,7 @@ If you look into the `VulkanEngine::run()` function, you can see that we have th
 //Handle events on queue
 while (SDL_PollEvent(&e) != 0)
 {
-	//close the window when user alt-f4s or clicks the X button			
+	//close the window when user alt-f4s or clicks the X button
 	if (e.type == SDL_QUIT) bQuit = true;
 }
 ```
@@ -34,7 +34,7 @@ To detect the keyboard event, we need to change that code into:
 while (SDL_PollEvent(&e) != 0)
 {
 	if (e.type == SDL_QUIT)
-	{ 
+	{
 		bQuit = true;
 	}
 	else if (e.type == SDL_KEYDOWN)
@@ -51,11 +51,11 @@ while (SDL_PollEvent(&e) != 0)
 }
 ```
 
-SDL_QUIT isnt the only event, we also have `SDL_KEYDOWN` and `SDL_KEYUP` along others. if the event type is `SDL_KEYDOWN`, then it's a key PRESSED event. It will get called whenever the key is pressed, and if the key is kept pressed, the event will get called repeatadly a few times per second (this depends on the OS). 
+SDL_QUIT isn't the only event, we also have `SDL_KEYDOWN` and `SDL_KEYUP` along others. if the event type is `SDL_KEYDOWN`, then it's a key PRESSED event. It will get called whenever the key is pressed, and if the key is kept pressed, the event will get called repeatedly a few times per second (this depends on the OS).
 
 Once we know that the event type is a key down event, we can check which key it is by looking at key.keysym.sym variable. If you look at SDL documentation, you will see more keycodes. The one we want for spacebar is `SDLK_SPACE`
 
-We then rotate the _selectedShader integer, so it goes from 0 to 1, and then back to 0. 
+We then rotate the _selectedShader integer, so it goes from 0 to 1, and then back to 0.
 
 Now that the input is done, we can toggle the shaders in the code.
 
@@ -82,7 +82,7 @@ void VulkanEngine::init_pipelines()
 		std::cout << "Error when building the triangle fragment shader module" << std::endl;
 	}
 	else {
-		std::cout << "Triangle fragment shader succesfully loaded" << std::endl;
+		std::cout << "Triangle fragment shader successfully loaded" << std::endl;
 	}
 
 	VkShaderModule triangleVertexShader;
@@ -91,7 +91,7 @@ void VulkanEngine::init_pipelines()
 		std::cout << "Error when building the triangle vertex shader module" << std::endl;
 	}
 	else {
-		std::cout << "Triangle vertex shader succesfully loaded" << std::endl;
+		std::cout << "Triangle vertex shader successfully loaded" << std::endl;
 	}
 
 	//compile red triangle modules
@@ -101,7 +101,7 @@ void VulkanEngine::init_pipelines()
 		std::cout << "Error when building the triangle fragment shader module" << std::endl;
 	}
 	else {
-		std::cout << "Red Triangle fragment shader succesfully loaded" << std::endl;
+		std::cout << "Red Triangle fragment shader successfully loaded" << std::endl;
 	}
 
 	VkShaderModule redTriangleVertShader;
@@ -110,7 +110,7 @@ void VulkanEngine::init_pipelines()
 		std::cout << "Error when building the triangle vertex shader module" << std::endl;
 	}
 	else {
-		std::cout << "Red Triangle vertex shader succesfully loaded" << std::endl;
+		std::cout << "Red Triangle vertex shader successfully loaded" << std::endl;
 	}
 
 	//other code ....
@@ -169,7 +169,7 @@ void VulkanEngine::draw()
 	{
 		vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _redTrianglePipeline);
 	}
-	
+
 	vkCmdDraw(cmd, 3, 1, 0, 0);
 
 	//finalize the render pass

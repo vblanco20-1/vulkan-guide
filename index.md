@@ -13,7 +13,7 @@ Welcome to a new work-in-progress Vulkan guide. The focus of this guide is to un
 
 While the guide is focused around game rendering, its concepts can be used in CAD and visualization just fine.
 
-We will be using C++, but we arent doing complex C++ unique features, so following this guide on C or Rust can be doable.
+We will be using C++, but we aren't doing complex C++ unique features, so following this guide on C or Rust can be doable.
 
 This guide is meant for the people who already know the basics about 3d graphics, and have worked with either OpenGL or DirectX in the past. This guide will not explain 3d rendering basics such as linear algebra math.
 

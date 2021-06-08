@@ -53,7 +53,7 @@ bool vkutil::load_image_from_file(VulkanEngine& engine, const char* file, Alloca
 }
 ```
 
-At the start, we use `stbi_load()` to load a texure directly from file into a CPU array of pixels. The function will return nullptr if it doesn't find the file, or if there are errors.
+At the start, we use `stbi_load()` to load a texture directly from file into a CPU array of pixels. The function will return nullptr if it doesn't find the file, or if there are errors.
 When loading the function, we also send `STBI_rgb_alpha` to the function, which will make the library always load the pixels as RGBA 4 channels. This is useful as it will match with the format we will use for Vulkan.
 
 With the texture file loaded into the pixels array, we can create a staging buffer and store the pixels there. This is almost the same as what we did in the last article when copying meshes to the GPU.
@@ -91,11 +91,11 @@ VkExtent3D imageExtent;
 	imageExtent.width = static_cast<uint32_t>(texWidth);
 	imageExtent.height = static_cast<uint32_t>(texHeight);
 	imageExtent.depth = 1;
-	
+
 	VkImageCreateInfo dimg_info = vkinit::image_create_info(image_format, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, imageExtent);
 
-	AllocatedImage newImage;	
-	
+	AllocatedImage newImage;
+
 	VmaAllocationCreateInfo dimg_allocinfo = {};
 	dimg_allocinfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
 
@@ -105,7 +105,7 @@ VkExtent3D imageExtent;
 ```
 
 This is similar to the time where we created the depth image. The main difference is the usage flags of the image, which will be Sampled and Transfer Destination, as we will use this as just a texture for the shaders.
-We use VMA with GPU_ONLY memory type so that the image is allocated on VRAM 
+We use VMA with GPU_ONLY memory type so that the image is allocated on VRAM
 
 With the image created and the buffer ready, we now can start the commands to copy the data into it.
 
@@ -167,7 +167,7 @@ With the image ready to receive pixel data, we can now transfer with a command. 
 	vkCmdCopyBufferToImage(cmd, stagingBuffer._buffer, newImage._image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copyRegion);
 ```
 
-Like when we copied the buffers, we need to fill a struct containing the information of what to copy. We have the buffer just at offset 0, and then what exact layer and mipmap we want to copy into, which is just level 0 and 1 layer. 
+Like when we copied the buffers, we need to fill a struct containing the information of what to copy. We have the buffer just at offset 0, and then what exact layer and mipmap we want to copy into, which is just level 0 and 1 layer.
 We also need to send imageExtent for the image size.
 
 We now execute the `VkCmdCopyBufferToImage()` command, where we also need to specify whats the layout of the image, which is `TRANSFER_DST_OPTIMAL`
@@ -180,7 +180,7 @@ The image now has the correct pixel data, so we can change its layout one more t
 
 	imageBarrier_toReadable.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 	imageBarrier_toReadable.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		
+
 	imageBarrier_toReadable.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 	imageBarrier_toReadable.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
@@ -205,13 +205,13 @@ bool vkutil::load_image_from_file(VulkanEngine& engine, const char* file, Alloca
 
 
     engine._mainDeletionQueue.push_function([=]() {
-	
+
 		vmaDestroyImage(engine._allocator, newImage._image, newImage._allocation);
 	});
 
 	vmaDestroyBuffer(engine._allocator, stagingBuffer._buffer, stagingBuffer._allocation);
 
-	std::cout << "Texture loaded succesfully " << file << std::endl;
+	std::cout << "Texture loaded successfully " << file << std::endl;
 
 	outImage = newImage;
 	return true;
@@ -245,9 +245,9 @@ vk_engine.cpp
 void VulkanEngine::load_images()
 {
 	Texture lostEmpire;
-	
+
 	vkutil::load_image_from_file(*this, "../../assets/lost_empire-RGBA.png", lostEmpire.image);
-	
+
 	VkImageViewCreateInfo imageinfo = vkinit::imageview_create_info(VK_FORMAT_R8G8B8A8_SRGB, lostEmpire.image._image, VK_IMAGE_ASPECT_COLOR_BIT);
 	vkCreateImageView(_device, &imageinfo, nullptr, &lostEmpire.imageView);
 

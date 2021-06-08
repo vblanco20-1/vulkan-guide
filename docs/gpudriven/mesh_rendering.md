@@ -28,7 +28,7 @@ A meshpass is composed of a set of flat arrays of the data inside it. Being full
     // final draw-indirect segments
     std::vector<RenderScene::Multibatch> multibatches;
     // draw indirect batches
-	std::vector<RenderScene::IndirectBatch> batches;	
+	std::vector<RenderScene::IndirectBatch> batches;
     // sorted list of objects in the pass
 	std::vector<RenderScene::RenderBatch> flat_batches;
 
@@ -87,7 +87,7 @@ struct PassObject {
 	};
 ```
 
-Pass Object array is a list of the objects handled by this meshpass. Each of them holds a simplified material (only material descriptor set + pass) and handles to the mesh and original render object. When the meshpass updates, it will use this array to build the actual drawcalls. 
+Pass Object array is a list of the objects handled by this meshpass. Each of them holds a simplified material (only material descriptor set + pass) and handles to the mesh and original render object. When the meshpass updates, it will use this array to build the actual drawcalls.
 The `objects` array will have holes, as when objects get deleted, they just get sent to null, and the indices will be reused later. We hold those indices into the `reusableObjects` array.
 
 To render a meshpass, first you have to execute the culling compute shader that will build its draw-indirect buffers, and then you can go over the `multibatch` array executing the drawcalls. This is shown in `vk_engine_scenerender.cpp` on the `execute_draw_commands()` function.
@@ -106,7 +106,7 @@ std::vector<vkutil::Material*> materials;
 
 std::vector<Handle<RenderObject>> dirtyObjects;
 ```
-It also keeps a dirtyObjects list to know which objects it has to reupload to the GPU. The RenderScene will handle keeping the object data in its proper buffers, as all the meshpasses will use the same object data for culling and object transform. 
+It also keeps a dirtyObjects list to know which objects it has to reupload to the GPU. The RenderScene will handle keeping the object data in its proper buffers, as all the meshpasses will use the same object data for culling and object transform.
 
 Objects are registered into the RenderScene by calling the `register_object_batch()` or `register_object` functions, giving them a MeshObject.
 ```cpp
@@ -124,7 +124,7 @@ struct MeshObject {
 };
 ```
 
-When an object is registered, it gets converted into a RenderObject and inserted into the `renderables` array. For the mesh and material, they will look up into a hashmap, and if the material isnt already in the array, it will get added there.
+When an object is registered, it gets converted into a RenderObject and inserted into the `renderables` array. For the mesh and material, they will look up into a hashmap, and if the material isn't already in the array, it will get added there.
 
 Registering an object will also add it to the relevant mesh passes.
 ```cpp
@@ -133,7 +133,7 @@ Handle<RenderObject> RenderScene::register_object(MeshObject* object)
     //convert it into a RenderObject
 	RenderObject newObj;
 	newObj.bounds = object->bounds;
-	newObj.transformMatrix = object->transformMatrix;	
+	newObj.transformMatrix = object->transformMatrix;
 	newObj.material = getMaterialHandle(object->material);
 	newObj.meshID = getMeshHandle(object->mesh);
 	newObj.updateIndex = (uint32_t)-1;
@@ -141,7 +141,7 @@ Handle<RenderObject> RenderScene::register_object(MeshObject* object)
 	newObj.passIndices.clear(-1);
 	Handle<RenderObject> handle;
 	handle.handle = static_cast<uint32_t>(renderables.size());
-	
+
 	renderables.push_back(newObj);
 
     //add to relevant mesh passes
@@ -183,7 +183,7 @@ The code in the repo for this part is still work in progress, and the optimizati
 
 For each object in the `unbatchedObjects` array, it gets converted and inserted into the `objects` array. The correct descriptorset is grabbed and stored as part of the PassObject conversion.
 
-Once the PassObject array is filled, we go over it, and calculate the draw hashes for each of the objects in there. This draw hashes are used so that we can sort the newly built (and unsorted) flat_batches array. 
+Once the PassObject array is filled, we go over it, and calculate the draw hashes for each of the objects in there. This draw hashes are used so that we can sort the newly built (and unsorted) flat_batches array.
 
 Once we have the flat_batches array sorted, we go over it, and compact the draws into the IndirectBatch array. Multiple draws in the flat_batches array will become a single IndirectBatch, which is an instanced draw.
 
@@ -215,7 +215,7 @@ AllocatedBuffer<GPUIndirectObject> clearIndirectBuffer;
 `drawIndirectBuffer` and `clearIndirectBuffer` are both created from the meshpass batches array,and they hold the draw-indirect commands.
 `clearIndirectBuffer` is a CPU-writeable buffer, and it has the correct data, but with `command.instanceCount` set to 0. From the culling shader we keep adding instances, so we use this one to "reset" `drawIndirectBuffer` every frame.
 
-`drawIndirectBuffer` is a GPU-side buffer, and it's the one we actually use for rendering. 
+`drawIndirectBuffer` is a GPU-side buffer, and it's the one we actually use for rendering.
 
 `passObjectsBuffer` is the main array used for the GPU compute pass. Each of the GPUInstance objects holds objectID and batchID. batchID will be used to access the proper draw-command if the cull passes, and object ID is just the global index of the object, to access its data.
 
@@ -229,7 +229,7 @@ For the `clearIndirectBuffer`, it is filled from the "batches" array in the mesh
 
 ```cpp
 void RenderScene::fill_indirectArray(GPUIndirectObject* data, MeshPass& pass)
-{	
+{
 	int dataIndex = 0;
 	for (int i = 0; i < pass.batches.size(); i++) {
 
@@ -255,11 +255,11 @@ void RenderScene::fill_instancesArray(GPUInstance* data, MeshPass& pass)
 {
 	int dataIndex = 0;
 	for (int i = 0; i < pass.batches.size(); i++) {
-		
+
 		auto batch = pass.batches[i];
-		
+
 		for (int b = 0; b < batch.count; b++)
-		{			
+		{
 			data[dataIndex].objectID = pass.get(pass.flat_batches[b + batch.first].object)->original.handle;
 			data[dataIndex].batchID = i;
 			dataIndex++;

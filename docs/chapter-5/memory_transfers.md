@@ -15,14 +15,14 @@ Because this is necessary when dealing with textures, we will implement this cop
 This will likely cause an immediate rendering speed-up if you have been trying to load heavy meshes.
 
 ## Upload Context
-As copying meshes from CPU buffer to GPU buffer won't be the only thing we are going to do, we are going to create a small abstraction for this sort of short-lived commands. 
+As copying meshes from CPU buffer to GPU buffer won't be the only thing we are going to do, we are going to create a small abstraction for this sort of short-lived commands.
 
 Let's begin by adding a new struct to VulkanEngine, and a function for immediate command execution.
 
 ```cpp
 struct UploadContext {
 	VkFence _uploadFence;
-	VkCommandPool _commandPool;	
+	VkCommandPool _commandPool;
 };
 ```
 ```cpp
@@ -34,10 +34,10 @@ public:
 }
 ```
 
-We are going to store the upload related structures in the struct, to keep the amount of objects in VulkanEngine class better organized. 
+We are going to store the upload related structures in the struct, to keep the amount of objects in VulkanEngine class better organized.
 The `immediate_submit()` function uses an `std::function` in a very similar way as we do in the deletion queue.
 
-Eventually we will add more instant-submit functions, but this one will be the default one. 
+Eventually we will add more instant-submit functions, but this one will be the default one.
 
 We need to initialize that command pool and fence in the upload context.
 In `init_sync_structures()`, we will initialize the fence alongside the rendering fences that we have.
@@ -111,7 +111,7 @@ This is done because eventually we will want to be able to upload multiple comma
 
 We first allocate command buffer, we then call the function between begin/end command buffer, and then we submit it. Then we wait for the submit to be finished, and reset the command pool.
 
-With this, we now have a way of instantly executing some commands to the GPU, without dealing with the render loop and other syncronization. This is great for compute calculations, and, if it submitted into a different queue, you could use this from a background thread, separated from the render loop.
+With this, we now have a way of instantly executing some commands to the GPU, without dealing with the render loop and other synchronization. This is great for compute calculations, and, if it submitted into a different queue, you could use this from a background thread, separated from the render loop.
 
 ## Transferring memory.
 Now that we have the system for instant commands, we will rewrite the function for `upload_mesh()` so that it uploads the mesh to a GPU local buffer, for best speed.
@@ -126,8 +126,8 @@ void VulkanEngine::upload_mesh(Mesh& mesh)
 	VkBufferCreateInfo stagingBufferInfo = {};
 	stagingBufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
 	stagingBufferInfo.pNext = nullptr;
-	
-	stagingBufferInfo.size = bufferSize;	
+
+	stagingBufferInfo.size = bufferSize;
 	stagingBufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 
 	//let the VMA library know that this data should be on CPU RAM
@@ -172,7 +172,7 @@ With the vertex buffer now in a Vulkan CPU side buffer, we need to create the ac
 	//this buffer is going to be used as a Vertex Buffer
 	vertexBufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
-	//let the VMA library know that this data should be GPU native	
+	//let the VMA library know that this data should be GPU native
 	vmaallocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
 
 	//allocate the buffer

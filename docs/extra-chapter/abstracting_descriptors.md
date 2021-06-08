@@ -56,7 +56,7 @@ Let's start with the class itself
 ```cpp
 class DescriptorAllocator {
 	public:
-		
+
 		struct PoolSizes {
 			std::vector<std::pair<VkDescriptorType,float>> sizes =
 			{
@@ -76,7 +76,7 @@ class DescriptorAllocator {
 
 		void reset_pools();
 		bool allocate(VkDescriptorSet* set, VkDescriptorSetLayout layout);
-		
+
 		void init(VkDevice newDevice);
 
 		void cleanup();
@@ -94,7 +94,7 @@ class DescriptorAllocator {
 
 We will store multipliers of descriptor types in the PoolSizes struct. The idea is that it's a multiplier on the number of descriptor sets allocated for the pools.
 
-For example, if you set `VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER` to `4.f` in there, it means that when a pool for 1000 descriptors is allocated, the pool will have space for 4000 combined image descriptors. The numbers in there as default are a reasonable default, but you can improve memory usage of this allocator significantly if you tweak it to what your project uses. 
+For example, if you set `VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER` to `4.f` in there, it means that when a pool for 1000 descriptors is allocated, the pool will have space for 4000 combined image descriptors. The numbers in there as default are a reasonable default, but you can improve memory usage of this allocator significantly if you tweak it to what your project uses.
 
 The rest of the functions are simple. We have a `init()` and `cleanup()` function to start and destroy the allocator, and `reset_pools()` and `allocate()` functions.
 
@@ -203,7 +203,7 @@ bool DescriptorAllocator::allocate(VkDescriptorSet* set, VkDescriptorSetLayout l
 		switch (allocResult) {
 		case VK_SUCCESS:
 			//all good, return
-			return true;			
+			return true;
 		case VK_ERROR_FRAGMENTED_POOL:
 		case VK_ERROR_OUT_OF_POOL_MEMORY:
 			//reallocate pool
@@ -213,7 +213,7 @@ bool DescriptorAllocator::allocate(VkDescriptorSet* set, VkDescriptorSetLayout l
 			//unrecoverable error
 			return false;
 		}
-		
+
 		if (needReallocate){
 			//allocate a new pool and retry
 			currentPool = grab_pool();
@@ -292,7 +292,7 @@ class DescriptorLayoutCache {
 			size_t hash() const;
 		};
 
-		
+
 
 	private:
 
@@ -355,13 +355,13 @@ VkDescriptorSetLayout DescriptorLayoutCache::create_descriptor_layout(VkDescript
 			isSorted = false;
 		}
 	}
-	//sort the bindings if they arent in order
+	//sort the bindings if they aren't in order
 	if (!isSorted){
 		std::sort(layoutinfo.bindings.begin(), layoutinfo.bindings.end(), [](VkDescriptorSetLayoutBinding& a, VkDescriptorSetLayoutBinding& b ){
 				return a.binding < b.binding;
 		});
 	}
-	
+
 	//try to grab from cache
 	auto it = layoutCache.find(layoutinfo);
 	if (it != layoutCache.end()){
@@ -380,7 +380,7 @@ VkDescriptorSetLayout DescriptorLayoutCache::create_descriptor_layout(VkDescript
 ```
 
 The first thing we do in the function is to copy the bindings from `VkDescriptorSetLayoutCreateInfo` into `DescriptorLayoutInfo` vector.
-We check if the bindings are in perfect ascending order, and if they arent, we use std::sort to sort them.
+We check if the bindings are in perfect ascending order, and if they aren't, we use std::sort to sort them.
 We want the bindings ordered because it makes equality check work much better.
 
 To use `std::sort` we need to include `<algorithm>`. std::sort uses `operator<` by default, but we can override that logic by using a lambda to implement a custom sorting.
@@ -441,7 +441,7 @@ size_t DescriptorLayoutCache::DescriptorLayoutInfo::hash() const{
 
 We will begin the hash by hashing the number of bindings that we have in the layout info. After that, we compress the data of each binding into a size_t, and xor that one with the hash. While the packing we do is not really the best, it doesn't matter that much.
 
-The descriptor cache is now live. You can use similar code to cache almost any other vulkan object. Some recomended ones are pipelines themselves and render passes.
+The descriptor cache is now live. You can use similar code to cache almost any other vulkan object. Some recommended ones are pipelines themselves and render passes.
 
 Last thing to implement is the descriptor builder itself.
 
@@ -462,9 +462,9 @@ public:
 	bool build(VkDescriptorSet& set, VkDescriptorSetLayout& layout);
 	bool build(VkDescriptorSet& set);
 private:
-	
+
 	std::vector<VkWriteDescriptorSet> writes;
-	std::vector<VkDescriptorSetLayoutBinding> bindings;		
+	std::vector<VkDescriptorSetLayoutBinding> bindings;
 
 	DescriptorLayoutCache* cache;
 	DescriptorAllocator* alloc;
@@ -481,7 +481,7 @@ The data in the class will be the cache and allocator that we store, alongside 2
 
 Lets start with the begin call.
 ```cpp
-vkutil::DescriptorBuilder DescriptorBuilder::begin(DescriptorLayoutCache* layoutCache, DescriptorAllocator* allocator){	
+vkutil::DescriptorBuilder DescriptorBuilder::begin(DescriptorLayoutCache* layoutCache, DescriptorAllocator* allocator){
 
 	DescriptorBuilder builder;
 

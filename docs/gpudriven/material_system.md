@@ -34,9 +34,9 @@ struct ShaderEffect {
 
 Implemented in `vk_shaders.h`, a shader effect is a struct that groups a set of shaders that would compose a pipeline, and takes care of handling its descriptor set layouts and pipeline layouts. In a way, a shader effect holds all of the shader related state that a pipeline needs to be built.
 
-To create a shader effect, we fill its shader stages, and then let it build the pipeline layouts and grab the required reflection data that we can then use for other features. 
+To create a shader effect, we fill its shader stages, and then let it build the pipeline layouts and grab the required reflection data that we can then use for other features.
 
-A given material will have multiple Shader Effects, according to the pipelines where it maps to. The shader effect for a depth-only shadow rendering isnt the same as the shader effect for a forward pass. And a textured material has a different effect than a untextured one.
+A given material will have multiple Shader Effects, according to the pipelines where it maps to. The shader effect for a depth-only shadow rendering isn't the same as the shader effect for a forward pass. And a textured material has a different effect than a untextured one.
 
 A Shader Pass is essentially the built version of a Shader Effect, where it stores the built pipeline
 
@@ -49,7 +49,7 @@ struct ShaderPass {
 ```
 
 ```cpp
-//default effects	
+//default effects
 ShaderEffect* texturedLit = build_effect(engine,  "tri_mesh_ssbo_instanced.vert.spv" ,"textured_lit.frag.spv" );
 ShaderEffect* defaultLit = build_effect(engine, "tri_mesh_ssbo_instanced.vert.spv" , "default_lit.frag.spv" );
 ShaderEffect* opaqueShadowcast = build_effect(engine, "tri_mesh_ssbo_instanced_shadowcast.vert.spv","");
@@ -65,7 +65,7 @@ ShaderPass* opaqueShadowcastPass = build_shader(engine->_shadowPass,shadowBuilde
 ```cpp
 struct EffectTemplate {
 	PerPassData<ShaderPass*> passShaders;
-		
+
 	ShaderParameters* defaultParameters;
 	assets::TransparencyMode transparency;
 };
@@ -103,10 +103,10 @@ A Effect Template also contains a ShaderParameters struct. This is so materials 
 	struct Material {
 		EffectTemplate* original;
 		PerPassData<VkDescriptorSet> passSets;
-		
+
 		std::vector<SampledTexture> textures;
 
-		ShaderParameters* parameters;		
+		ShaderParameters* parameters;
 	};
 ```
 Finally, we have the Material itself.
@@ -160,7 +160,7 @@ struct MaterialData {
 	}
 ```
 
-It's incredibly common with most GLTF and FBX files that you will have the same materials under different names. This is even more common when loading multiple prefabs, where it's likely that some materials are the same. 
+It's incredibly common with most GLTF and FBX files that you will have the same materials under different names. This is even more common when loading multiple prefabs, where it's likely that some materials are the same.
 To improve this, the material system is very heavily cached.
 The `build_material` function is a lie, and will first try to find if there is a material that is the same to what you want to create. It will only create the material and properly build the texture descriptors if it's a unique combination. This way, materials get merged constantly, which makes it much better to use from a draw indirect batching standpoint.
 
@@ -185,7 +185,7 @@ vkutil::Material* vkutil::MaterialSystem::build_material(const std::string& mate
 		//not handled yet
 		newMat->passSets[MeshpassType::DirectionalShadow] = VK_NULL_HANDLE;
 		newMat->textures = info.textures;
-	
+
         //build descriptor set
 		auto& db = vkutil::DescriptorBuilder::begin(engine->_descriptorLayoutCache, engine->_descriptorAllocator);
 
@@ -196,8 +196,8 @@ vkutil::Material* vkutil::MaterialSystem::build_material(const std::string& mate
 			imageBufferInfo.imageView = info.textures[i].view;
 			imageBufferInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 			db.bind_image(i, &imageBufferInfo, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT);
-		}		
-			
+		}
+
 		db.build(newMat->passSets[MeshpassType::Forward]);
 
 

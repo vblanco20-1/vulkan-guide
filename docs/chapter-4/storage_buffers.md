@@ -5,7 +5,7 @@ parent:  "4. Buffers, Shader input/output"
 nav_order: 20
 ---
 
-Uniform buffers are great for small, read only data. But what if you want data you don't know the size of in the shader? Or data that can be writeable. You use Storage buffers for that. 
+Uniform buffers are great for small, read only data. But what if you want data you don't know the size of in the shader? Or data that can be writeable. You use Storage buffers for that.
 Storage buffers are usually slightly slower than uniform buffers, but they can be much, much bigger. If you want to stuff your entire scene into one buffer, you have to use them. Make sure to profile it to know the performance.
 
 With storage buffers, you can have an unsized array in a shader with whatever data you want. A common use for them is to store the data of all the objects in the scene.
@@ -64,7 +64,7 @@ class VulkanEngine {
 ```
 We are going to follow a similar approach as the camera buffer, where we will have one descriptor pointing to one buffer. Because this is a new descriptor set, we need to also store its layout for hooking to the pipelines.
 
-Back on `init_descriptors()`, we are going to need to reserve space for it on the descriptor pool. 
+Back on `init_descriptors()`, we are going to need to reserve space for it on the descriptor pool.
 ```cpp
 	std::vector<VkDescriptorPoolSize> sizes =
 	{
@@ -125,7 +125,7 @@ for (int i = 0; i < FRAME_OVERLAP; i++)
 
 
 		VkWriteDescriptorSet cameraWrite = vkinit::write_descriptor_buffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, _frames[i].globalDescriptor,&cameraInfo,0);
-		
+
 		VkWriteDescriptorSet sceneWrite = vkinit::write_descriptor_buffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, _frames[i].globalDescriptor, &sceneInfo, 1);
 
 		VkWriteDescriptorSet objectWrite = vkinit::write_descriptor_buffer(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, _frames[i].objectDescriptor, &objectBufferInfo, 0);
@@ -150,7 +150,7 @@ layout (location = 2) in vec3 vColor;
 
 layout (location = 0) out vec3 outColor;
 
-layout(set = 0, binding = 0) uniform  CameraBuffer{   
+layout(set = 0, binding = 0) uniform  CameraBuffer{
     mat4 view;
     mat4 proj;
 	mat4 viewproj;
@@ -158,10 +158,10 @@ layout(set = 0, binding = 0) uniform  CameraBuffer{
 
 struct ObjectData{
 	mat4 model;
-}; 
+};
 
 //all object matrices
-layout(std140,set = 1, binding = 0) readonly buffer ObjectBuffer{   
+layout(std140,set = 1, binding = 0) readonly buffer ObjectBuffer{
 
 	ObjectData objects[];
 } objectBuffer;
@@ -173,8 +173,8 @@ layout( push_constant ) uniform constants
  mat4 render_matrix;
 } PushConstants;
 
-void main() 
-{	
+void main()
+{
 	mat4 modelMatrix = objectBuffer.objects[gl_BaseInstance].model;
 	mat4 transformMatrix = (cameraData.viewproj * modelMatrix);
 	gl_Position = transformMatrix * vec4(vPosition, 1.0f);
@@ -186,7 +186,7 @@ We are changing the GLSL version to 460 because we want to be able to use `gl_Ba
 
 Note the way we are declaring the ObjectBuffer
 ```glsl
-layout(std140,set = 1, binding = 0) readonly buffer ObjectBuffer{   
+layout(std140,set = 1, binding = 0) readonly buffer ObjectBuffer{
 
 	ObjectData objects[];
 } objectBuffer;
@@ -202,7 +202,7 @@ Another thing is the way we are accessing the correct object matrix. We are no l
 ```glsl
 mat4 modelMatrix = objectBuffer.objects[gl_BaseInstance].model;
 ```
-We are using `gl_BaseInstance` to access the object buffer. This is due to how Vulkan works on its normal draw calls. All the draw commands in Vulkan request "first Instance" and "instance count". We are not doing instanced rendering, so instance count is always 1. But we can still change the "first instance" parameter, and this way get `gl_BaseInstance` as a integer we can use for whatever use we want to in the shader. This gives us a simple way to send a single integer to the shader without setting up pushconstants or descriptors.
+We are using `gl_BaseInstance` to access the object buffer. This is due to how Vulkan works on its normal draw calls. All the draw commands in Vulkan request "first Instance" and "instance count". We are not doing instanced rendering, so instance count is always 1. But we can still change the "first instance" parameter, and this way get `gl_BaseInstance` as a integer we can use for whatever use we want to in the shader. This gives us a simple way to send a single integer to the shader without setting up push constants or descriptors.
 
 We now need to hook the descriptor layout to the pipeline.
 
@@ -236,7 +236,7 @@ for (int i = 0; i < count; i++)
 vmaUnmapMemory(_allocator, get_current_frame().objectBuffer._allocation);
 ```
 
-Instead of using `memcpy` here, we are doing a different trick. It is possible to cast the `void*` from mapping the buffer into another type, and write into it normally. This will work completely fine, and makes it easier to write complex types into a buffer. 
+Instead of using `memcpy` here, we are doing a different trick. It is possible to cast the `void*` from mapping the buffer into another type, and write into it normally. This will work completely fine, and makes it easier to write complex types into a buffer.
 
 The buffer is now filled, so we now need to bind the descriptor set and use the firstIndex parameter in the draw command to access the object data in the shader.
 
@@ -257,7 +257,7 @@ if (object.material != lastMaterial) {
 
 //more code ....
 
-//we can now draw	
+//we can now draw
 vkCmdDraw(cmd, object.mesh->_vertices.size(), 1,0 , i);
 ```
 

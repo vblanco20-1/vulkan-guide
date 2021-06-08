@@ -7,7 +7,7 @@ nav_order: 15
 
 When we created the renderpass in chapter 1, there is something we skipped to keep the code shorter, the depth buffer.
 
-In 3d graphics, to make sure that you don't render things that are behind other things on top, you use a depth buffer and use z-testing. 
+In 3d graphics, to make sure that you don't render things that are behind other things on top, you use a depth buffer and use z-testing.
 By having a depth buffer bound to the renderpass, you can enable ztesting which will allow proper rendering of 3d objects.
 
 We are going to refactor the code around the engine a little bit to enable this.
@@ -51,7 +51,7 @@ We are going to need a new initializer for our vk_initializers file for the imag
 vk_initializers.h
 ```cpp
 namespace vkinit {
-	//oother ..... 
+	//other .....
 VkImageCreateInfo image_create_info(VkFormat format, VkImageUsageFlags usageFlags, VkExtent3D extent);
 
 VkImageViewCreateInfo imageview_create_info(VkFormat format, VkImage image, VkImageAspectFlags aspectFlags);
@@ -94,7 +94,7 @@ Samples controls the MSAA behavior of the texture. This only makes sense for ren
 Tiling is very important. Tiling describes how the data for the texture is arranged in the GPU. For improved performance, GPUs do not store images as 2d arrays of pixels, but instead use complex custom formats, unique to the GPU brand and even models. `VK_IMAGE_TILING_OPTIMAL` tells vulkan to let the driver decide how the GPU arranges the memory of the image.
 If you use `VK_IMAGE_TILING_OPTIMAL`, it won't be possible to read the data from CPU or to write it without changing its tiling first (it's possible to change the tiling of a texture at any point, but this can be a costly operation). The other tiling we can care about is `VK_IMAGE_TILING_LINEAR`, which will store the image as a 2d array of pixels. While LINEAR tiling will be a lot slower, it will allow the cpu to safely write and read from that memory.
 
-Last thing is usage flags. In a similar way to the buffers, images need the usage flags to be set properly. It is very important that the usage flags are set correctly, and you only set the flags you are going to need, because this will control how the GPU handles the image memory. 
+Last thing is usage flags. In a similar way to the buffers, images need the usage flags to be set properly. It is very important that the usage flags are set correctly, and you only set the flags you are going to need, because this will control how the GPU handles the image memory.
 
 Next is the image-view
 
@@ -137,7 +137,7 @@ To allocate the depth image and create its imageview, we are going to add this c
 ```cpp
 void VulkanEngine::init_swapchain()
 {
-	// other code .... 
+	// other code ....
 
 	//depth image size will match the window
 	VkExtent3D depthImageExtent = {
@@ -301,7 +301,7 @@ Depth stencil create info is a bit more complicated than other initializers, so 
 depthTestEnable holds if we should do any z-culling at all. Set to `VK_FALSE` to draw on top of everything, and `VK_TRUE` to not draw on top of other objects.
 depthWriteEnable allows the depth to be written. While DepthTest and DepthWrite will both be true most of the time, there are cases where you might want to do depth write, but without doing depthtesting; it's sometimes used for some special effects.
 
-The depthCompareOp holds the depth-testing function. Set to `VK_COMPARE_OP_ALWAYS` to not do any depthtest at all. Other common depth compare OPs are `VK_COMPARE_OP_LESS` (Only draw if Z < whatever is on the depth buffer), or `VK_COMPARE_OP_EQUAL` (only draw if the depth z matches) 
+The depthCompareOp holds the depth-testing function. Set to `VK_COMPARE_OP_ALWAYS` to not do any depthtest at all. Other common depth compare OPs are `VK_COMPARE_OP_LESS` (Only draw if Z < whatever is on the depth buffer), or `VK_COMPARE_OP_EQUAL` (only draw if the depth z matches)
 
 min and max depth bounds lets us cap the depth test. If the depth is outside of bounds, the pixel will be skipped.
 And last, we won't be using stencil test, so that's set to VK_FALSE by default.
@@ -312,12 +312,12 @@ Now we go back to the PipelineBuilder, and we add the depth state to it.
 ```cpp
 class PipelineBuilder {
 	public:
-	//others 
+	//others
 	VkPipelineDepthStencilStateCreateInfo _depthStencil;
 }
 ```
 
-And of course, make sure that it's used when building the pipeline. On build_pipeline, we hook the depth stencil state into the `VkGraphicsPipelineCreateInfo` 
+And of course, make sure that it's used when building the pipeline. On build_pipeline, we hook the depth stencil state into the `VkGraphicsPipelineCreateInfo`
 
 ```cpp
 VkPipeline PipelineBuilder::build_pipeline(VkDevice device, VkRenderPass pass)
@@ -343,10 +343,10 @@ _trianglePipeline = pipelineBuilder.build_pipeline(_device, _renderPass);
 
 The pipelines now do depthtest, so only thing left is to make sure that the depth image is cleared every frame.
 
-In the same way we clear color when begining the main rendering renderpass, we clear depth.
+In the same way we clear color when beginning the main rendering renderpass, we clear depth.
 ```cpp
 VulkanEngine::draw(){
-	// other code .... 
+	// other code ....
 
 	//make a clear-color from frame number. This will flash with a 120 frame period.
 	VkClearValue clearValue;
@@ -357,19 +357,19 @@ VulkanEngine::draw(){
 	VkClearValue depthClear;
 	depthClear.depthStencil.depth = 1.f;
 
-	//start the main renderpass. 
+	//start the main renderpass.
 	//We will use the clear color from above, and the framebuffer of the index the swapchain gave us
 	VkRenderPassBeginInfo rpInfo = vkinit::renderpass_begin_info(_renderPass, _windowExtent, _framebuffers[swapchainImageIndex]);
 
 	//connect clear values
 	rpInfo.clearValueCount = 2;
-	
+
 	VkClearValue clearValues[] = { clearValue, depthClear };
 
 	rpInfo.pClearValues = &clearValues[0];
 
 	vkCmdBeginRenderPass(cmd, &rpInfo, VK_SUBPASS_CONTENTS_INLINE);
-	
+
 	//other code ...
 ```
 

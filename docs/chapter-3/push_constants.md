@@ -49,7 +49,7 @@ To make space for the push constants in the pipeline, we create it inside the `i
 
 	//we start from just the default empty pipeline layout info
 	VkPipelineLayoutCreateInfo mesh_pipeline_layout_info = vkinit::pipeline_layout_create_info();
-    
+
 	//setup push constants
 	VkPushConstantRange push_constant;
 	//this push constant range starts at the beginning
@@ -76,7 +76,7 @@ To make space for the push constants in the pipeline, we create it inside the `i
 
 Push constants are written in ranges. A important reason for that, is that you can have different push constants, at different ranges, in different stages.
 For example, you can reserve 64 bytes (1 `glm::mat4`) size on the vertex shader, and then start the pixel shader push constant from offset 64. This way you would have different push constants on different stages.
-Given that getting the ranges right is tricky, in this tutorial we are going to use a more monolithic approach of using the same push constants on both vertex and fragment shader. 
+Given that getting the ranges right is tricky, in this tutorial we are going to use a more monolithic approach of using the same push constants on both vertex and fragment shader.
 
 Now that we have the layout, we also need to modify the shaders. Let's add the push constant to the `tri_mesh.vert` shader.
 
@@ -97,8 +97,8 @@ layout( push_constant ) uniform constants
 	mat4 render_matrix;
 } PushConstants;
 
-void main() 
-{	
+void main()
+{
 	gl_Position = PushConstants.render_matrix * vec4(vPosition, 1.0f);
 	outColor = vColor;
 }
@@ -119,7 +119,7 @@ in `init_pipelines`, right before creating the mesh pipeline, we are going to ho
     _meshPipeline = pipelineBuilder.build_pipeline(_device, _renderPass);
 ```
 
-Now our mesh pipeline has the space for the pushconstants, so we can now execute the command to use them.
+Now our mesh pipeline has the space for the push constants, so we can now execute the command to use them.
 
 in `draw()` function, right before the `vkCmdDraw` call, we are going to compute and write the push constant.
 
@@ -141,18 +141,18 @@ in `draw()` function, right before the `vkCmdDraw` call, we are going to compute
     MeshPushConstants constants;
     constants.render_matrix = mesh_matrix;
 
-    //upload the matrix to the GPU via pushconstants
+    //upload the matrix to the GPU via push constants
     vkCmdPushConstants(cmd, _meshPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(MeshPushConstants), &constants);
 
     //we can now draw
     vkCmdDraw(cmd, _triangleMesh._vertices.size(), 1, 0, 0);
 
 ```
-You will also need to add 
+You will also need to add
 
 ```cpp
 #include <glm/gtx/transform.hpp>
-``` 
+```
 To the `vk_engine.cpp` file so that you can use the glm transformation matrix functions.
 
 In the push constant call, we need to set the pointer to the data and its size (similar to `memcpy`), and also `VK_PIPELINE_STAGE_VERTEX_BIT`, which matches the stage(s) where our data should be accessible. If we have the same push constant on both vertex and fragment shader, we would have both of those flags.

@@ -62,7 +62,7 @@ struct AllocatedBuffer {
 `AllocatedBuffer` is going to hold the buffer we allocate, alongside its allocation data. VkBuffer is a handle to a GPU side Vulkan buffer, and VmaAllocation holds the state that the VMA library uses, like the memory that buffer was allocated from, and its size. We use the VmaAllocation object to manage the buffer allocation itself.
 
 ## The Mesh class
-As we are going to have a lot of mesh-related code, we are going to create some new files, `vk_mesh.h` and `vk_mesh.cpp`, where we are going to put the mesh-related logic and structures. We are going to place those files alongside the rest of engine files. You can look at the Github code as example. 
+As we are going to have a lot of mesh-related code, we are going to create some new files, `vk_mesh.h` and `vk_mesh.cpp`, where we are going to put the mesh-related logic and structures. We are going to place those files alongside the rest of engine files. You can look at the Github code as example.
 Make sure to add it to the CMake and re-run it so that the project updates.
 
 `vk_mesh.h`
@@ -157,7 +157,7 @@ void VulkanEngine::load_meshes()
 	_triangleMesh._vertices[0].color = { 0.f, 1.f, 0.0f }; //pure green
 	_triangleMesh._vertices[1].color = { 0.f, 1.f, 0.0f }; //pure green
 	_triangleMesh._vertices[2].color = { 0.f, 1.f, 0.0f }; //pure green
-	
+
 	//we don't care about the vertex normals
 
 	upload_mesh(_triangleMesh);
@@ -183,9 +183,9 @@ void VulkanEngine::upload_mesh(Mesh& mesh)
 	vmaallocInfo.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
 
 	//allocate the buffer
-	VK_CHECK(vmaCreateBuffer(_allocator, &bufferInfo, &vmaallocInfo, 
-		&mesh._vertexBuffer._buffer, 
-		&mesh._vertexBuffer._allocation, 
+	VK_CHECK(vmaCreateBuffer(_allocator, &bufferInfo, &vmaallocInfo,
+		&mesh._vertexBuffer._buffer,
+		&mesh._vertexBuffer._allocation,
 		nullptr));
 
 	//add the destruction of triangle mesh buffer to the deletion queue
@@ -225,7 +225,7 @@ To push data into a `VkBuffer`, we need to map it first. Mapping a buffer will g
 When we are done with the writing, we unmap the data.
 It is possible to keep the pointer mapped and not unmap it immediately, but that is an advanced technique mostly used for streaming data, which we don't need right now. Mapping and then unmapping the pointer lets the driver know that the write is finished, and will be safer.
 
-To copy the data, we use `memcpy` directly. Note that it's not necesary to use memcpy, but in many implementations `memcpy` will be the fastest way to copy a chunk of memory.
+To copy the data, we use `memcpy` directly. Note that it's not necessary to use memcpy, but in many implementations `memcpy` will be the fastest way to copy a chunk of memory.
 
 Our `upload_mesh` function is finished (for now), and we are uploading the triangle.
 There should be no validation errors when you try to run the application.
@@ -320,8 +320,8 @@ layout (location = 2) in vec3 vColor;
 
 layout (location = 0) out vec3 outColor;
 
-void main() 
-{	
+void main()
+{
 	gl_Position = vec4(vPosition, 1.0f);
 	outColor = vColor;
 }
@@ -357,7 +357,7 @@ void VulkanEngine::init_pipelines()
 	pipelineBuilder._shaderStages.clear();
 
 	//compile mesh vertex shader
-    
+
 
 	VkShaderModule meshVertShader;
 	if (!load_shader_module("../../shaders/tri_mesh.vert.spv", &meshVertShader))
@@ -365,7 +365,7 @@ void VulkanEngine::init_pipelines()
 		std::cout << "Error when building the triangle vertex shader module" << std::endl;
 	}
 	else {
-		std::cout << "Red Triangle vertex shader succesfully loaded" << std::endl;
+		std::cout << "Red Triangle vertex shader successfully loaded" << std::endl;
 	}
 
 	//add the other shaders
@@ -399,12 +399,12 @@ void VulkanEngine::init_pipelines()
 
 There is not much here, other than connecting the vertex input info to the pipeline builder. With that and adding the `tri_mesh.vert` vertex shader, that's all we need. We also make sure that each shader module is correctly deleted at the end of the function.
 
-Now we are holding a `_meshPipeline` that knows how to render a colored mesh. Let's replace the inner loop of `draw()` function to use the new pipeline and draw the mesh. 
+Now we are holding a `_meshPipeline` that knows how to render a colored mesh. Let's replace the inner loop of `draw()` function to use the new pipeline and draw the mesh.
 
 ```cpp
 VulkanEngine::draw()
 {
-	//other code .... 
+	//other code ....
 	vkCmdBeginRenderPass(cmd, &rpInfo, VK_SUBPASS_CONTENTS_INLINE);
 
 	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _meshPipeline);
@@ -438,5 +438,5 @@ Next: [Push Constants]({{ site.baseurl }}{% link docs/chapter-3/push_constants.m
 
 
 {% include comments.html term="Chapter 3 Comments" %}
- 
+
 

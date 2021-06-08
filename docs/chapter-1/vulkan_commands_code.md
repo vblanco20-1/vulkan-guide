@@ -45,7 +45,7 @@ void VulkanEngine::init()
 
 Luckily, the VkBootstrap library does allow us to get the Queue and Family directly.
 
-Go to the end of the `init_vulkan()` function, where we initalized the core Vulkan structures. 
+Go to the end of the `init_vulkan()` function, where we initialized the core Vulkan structures.
 
 At the end of it, add this code
 
@@ -61,7 +61,7 @@ void VulkanEngine::init_vulkan(){
 	_device = vkbDevice.device;
 	_chosenGPU = physicalDevice.physical_device;
 
-	
+
 	// use vkbootstrap to get a Graphics queue
 	_graphicsQueue = vkbDevice.get_queue(vkb::QueueType::graphics).value();
 	_graphicsQueueFamily = vkbDevice.get_queue_index(vkb::QueueType::graphics).value();
@@ -79,7 +79,7 @@ For the pool, we start adding code into `init_commands()` unlike before, from no
 ```cpp
 void VulkanEngine::init_commands()
 {
-	//create a command pool for commands submitted to the graphics queue.	
+	//create a command pool for commands submitted to the graphics queue.
 	VkCommandPoolCreateInfo commandPoolInfo = {};
 	commandPoolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 	commandPoolInfo.pNext = nullptr;
@@ -100,7 +100,7 @@ With Vulkan structures, it is very important that we do this
 VkCommandPoolCreateInfo commandPoolInfo = {};
 ```
 
-By doing that ` = {}` thing, we are letting the compiler initialize the entire struct to zero. This is critical, as in general Vulkan structs will have their defaults set in a way that 0 is relatively safe. By doing that, we make sure we don't leave unitialized data in the struct.
+By doing that ` = {}` thing, we are letting the compiler initialize the entire struct to zero. This is critical, as in general Vulkan structs will have their defaults set in a way that 0 is relatively safe. By doing that, we make sure we don't leave uninitialized data in the struct.
 
 We set queueFamilyIndex to the _graphicsQueueFamily that we grabbed before. This means that the command pool will create commands that are compatible with any queue of that "graphics" family.
 
@@ -118,7 +118,7 @@ Now that we have the VkCommandPool created, and stored in the _commandPool membe
 
 void VulkanEngine::init_commands()
 {
-	
+
 	// --- other code ----
 
 	//allocate the default command buffer that we will use for rendering
@@ -142,7 +142,7 @@ As with the command pool, we need to fill the sType and pNext parameters, and th
 
 We let Vulkan know that the parent of our command will be the _commandPool we just created, and we want to create only one command buffer.
 
-The .commandBufferCount parameter allows you to allocate multiple buffers at once. Make sure that the pointer you send to VkAllocateCommandBuffer has space for those. 
+The .commandBufferCount parameter allows you to allocate multiple buffers at once. Make sure that the pointer you send to VkAllocateCommandBuffer has space for those.
 
 The .level is set to Primary . Command buffers can be Primary of Secondary level.
 Primary level are the ones that are sent into a VkQueue, and do all of the work. This is what we will use in the guide.
@@ -221,7 +221,7 @@ Same as before, what we have created, we have to delete
 
 ```cpp
 void VulkanEngine::cleanup()
-{	
+{
 	if (_isInitialized) {
 		vkDestroyCommandPool(_device, _commandPool, nullptr);
 

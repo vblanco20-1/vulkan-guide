@@ -12,7 +12,7 @@ Rendering triangles and parametric meshes is nice, but an engine loads 3d models
 
 The OBJ format is a very simple format, which is understood by almost all software that deals with 3d models. We will be using the library tiny_obj_loader to load a Blender monkey mesh (on the assets folder) and render it.
 
-The code that we have right now can render any arbitrary mesh as long as the vertices array is filled, and we can move that mesh in 3d space using the push-constants matrix. 
+The code that we have right now can render any arbitrary mesh as long as the vertices array is filled, and we can move that mesh in 3d space using the push-constants matrix.
 
 We will begin by adding a new Mesh object to VulkanEngine class, to hold the newly loaded monkey mesh.
 
@@ -35,7 +35,7 @@ struct Mesh {
 ```
 
 ```cpp
-//make sure that you are including the library 
+//make sure that you are including the library
 #include <tiny_obj_loader.h>
 #include <iostream>
 bool Mesh::load_from_obj(const char* filename)
@@ -71,7 +71,7 @@ bool Mesh::load_from_obj(const char* filename)
 	if (!warn.empty()) {
 		std::cout << "WARN: " << warn << std::endl;
 	}
-    //if we have any error, print it to the console, and break the mesh loading. 
+    //if we have any error, print it to the console, and break the mesh loading.
     //This happens if the file can't be found or is malformed
 	if (!err.empty()) {
 		std::cerr << err << std::endl;
@@ -80,7 +80,7 @@ bool Mesh::load_from_obj(const char* filename)
 }
 ```
 
-With that code, we use the library to load an obj file into structures that we can use to convert into our mesh format. 
+With that code, we use the library to load an obj file into structures that we can use to convert into our mesh format.
 There are some structures we have to declare that the LoadObj function uses, and then we error check.
 
 Continue with the load function, to put the meshes from the file into our vertex buffer
@@ -96,7 +96,7 @@ Continue with the load function, to put the meshes from the file into our vertex
 			int fv = 3;
 
 			// Loop over vertices in the face.
-			for (size_t v = 0; v < fv; v++) {                
+			for (size_t v = 0; v < fv; v++) {
 				// access to vertex
 				tinyobj::index_t idx = shapes[s].mesh.indices[index_offset + v];
 
@@ -108,7 +108,7 @@ Continue with the load function, to put the meshes from the file into our vertex
             	tinyobj::real_t nx = attrib.normals[3 * idx.normal_index + 0];
 				tinyobj::real_t ny = attrib.normals[3 * idx.normal_index + 1];
 				tinyobj::real_t nz = attrib.normals[3 * idx.normal_index + 2];
-				
+
                 //copy it into our vertex
 				Vertex new_vert;
 				new_vert.position.x = vx;
@@ -122,7 +122,7 @@ Continue with the load function, to put the meshes from the file into our vertex
                 //we are setting the vertex color as the vertex normal. This is just for display purposes
                 new_vert.color = new_vert.normal;
 
-				
+
 				_vertices.push_back(new_vert);
 			}
 			index_offset += fv;
@@ -134,7 +134,7 @@ Continue with the load function, to put the meshes from the file into our vertex
 
 The TinyOBJ conversion loop can be quite tricky to get right. This one is derived from their sample code and simplified a bit.
 You can see the original at: https://github.com/tinyobjloader/tinyobjloader README page.
-In here, we are hardcoding the number of vertices per face to 3. If you use this code with a model that hasnt been triangulated, you will have issues. Loading models that have faces with 4 or more vertices is something more complicated so we will leave it for other time.
+In here, we are hardcoding the number of vertices per face to 3. If you use this code with a model that hasn't been triangulated, you will have issues. Loading models that have faces with 4 or more vertices is something more complicated so we will leave it for other time.
 
 With the code added, we can now load objs into our Mesh struct, so let's load the monkey mesh into our triangle mesh, and see if something happens.
 
@@ -144,7 +144,7 @@ With the code added, we can now load objs into our Mesh struct, so let's load th
 on the load_meshes function of VulkanEngine, we are going to load the monkey mesh alongside the triangle
 ```cpp
 void VulkanEngine::load_meshes()
-{	
+{
 	_triangleMesh._vertices.resize(3);
 
 	_triangleMesh._vertices[0].position = { 1.f,1.f, 0.5f };
@@ -156,7 +156,7 @@ void VulkanEngine::load_meshes()
 	_triangleMesh._vertices[2].color = { 0.f,1.f, 0.0f }; //pure green
 
     //load the monkey
-	_monkeyMesh.load_from_obj("../../assets/monkey_smooth.obj");	
+	_monkeyMesh.load_from_obj("../../assets/monkey_smooth.obj");
 
     //make sure both meshes are sent to the GPU
     upload_mesh(_triangleMesh);
