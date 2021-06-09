@@ -5,14 +5,14 @@ parent:  "2. The graphics pipeline, Hello Triangle"
 nav_order: 20
 ---
 
-If you have run the triangle with layers enabled, you have probably seen that when you close the application, the layers complain about pipelines and other objects not being deleted. Given how far the amount of Vulkan objects we have is growning, it is time to do a small refactor, and implement a better system to take care of those deletions.
+If you have run the triangle with layers enabled, you have probably seen that when you close the application, the layers complain about pipelines and other objects not being deleted. Given how far the amount of Vulkan objects we have is growing, it is time to do a small refactor, and implement a better system to take care of those deletions.
 
 ## Deletion queue
-In Vulkan, we can't delete any object until we are sure that the GPU isnt using it. Deleting the objects out of order is also a big issue, as it will make the layers complain and might crash the drivers. For those reasons, using normal Cpp destructors is out of the question, and not doable. We need a better system to delete objects.
+In Vulkan, we can't delete any object until we are sure that the GPU isn't using it. Deleting the objects out of order is also a big issue, as it will make the layers complain and might crash the drivers. For those reasons, using normal Cpp destructors is out of the question, and not doable. We need a better system to delete objects.
 
-A very common implementation is to create a deletion queue. When creating objects, we will also add the objects to the queue, and then at some point in the application, once we are sure that the GPU is finished, we go through the queue deleting everything. 
+A very common implementation is to create a deletion queue. When creating objects, we will also add the objects to the queue, and then at some point in the application, once we are sure that the GPU is finished, we go through the queue deleting everything.
 
-One way of implementing said deletion queue is by having arrays with the Vulkan objects, and then deleting those in order. But we need something far more simple for now. 
+One way of implementing said deletion queue is by having arrays with the Vulkan objects, and then deleting those in order. But we need something far more simple for now.
 
 The way we are going to implement it is by having a queue of std::function lambdas, that will get called in order FIFO (first in, first out). This way is not the most efficient, but it is good enough for a small engine.
 
@@ -29,7 +29,7 @@ struct DeletionQueue
 	void flush() {
 		// reverse iterate the deletion queue to execute all the functions
 		for (auto it = deletors.rbegin(); it != deletors.rend(); it++) {
-			(*it)(); //call functors
+			(*it)(); //call the function
 		}
 
 		deletors.clear();
@@ -56,11 +56,11 @@ VkDeleteSomething(something);
 });
 ```
 
-And then, as part of our cleanup function, we `flush()` the deletion queue, which will call the lambdas in the order they were enqueued. 
-It's very important to keep in mind how cpp lambdas capture data. In here we are using `[=]` capture, which means that it will create a *copy* of the objects. Be very careful with this, and never capture anything by reference unless you know what you are doing. 
+And then, as part of our cleanup function, we `flush()` the deletion queue, which will call the lambdas in the order they were enqueued.
+It's very important to keep in mind how cpp lambdas capture data. In here we are using `[=]` capture, which means that it will create a *copy* of the objects. Be very careful with this, and never capture anything by reference unless you know what you are doing.
 In the example above, it will call the DestroyFence first, and then the DestroySemaphore calls, as it keeps order.
 
-Now that we have this, let's implement it over the current codebase so we can go back to a state where the validation layers don't complain. 
+Now that we have this, let's implement it over the current codebase so we can go back to a state where the validation layers don't complain.
 If you want to skip this step, you can look at the tutorial code, which already uses it.
 
 ## Refactoring the code
@@ -68,9 +68,9 @@ We will begin by changing the `VulkanEngine::Cleanup()` to use the deletion queu
 
 ```cpp
 void VulkanEngine::cleanup()
-{	
+{
 	if (_isInitialized) {
-		
+
 		//make sure the GPU has stopped doing its things
 		vkWaitForFences(_device, 1, &_renderFence, true, 1000000000);
 
@@ -101,7 +101,7 @@ void VulkanEngine::init_swapchain()
 	_swapchainImages = vkbSwapchain.get_images().value();
 	_swapchainImageViews = vkbSwapchain.get_image_views().value();
 
-	_swachainImageFormat = vkbSwapchain.image_format;
+	_swapchainImageFormat = vkbSwapchain.image_format;
 
 	_mainDeletionQueue.push_function([=]() {
 		vkDestroySwapchainKHR(_device, _swapchain, nullptr);
@@ -144,7 +144,7 @@ void VulkanEngine::init_framebuffers()
 		_mainDeletionQueue.push_function([=]() {
 			vkDestroyFramebuffer(_device, _framebuffers[i], nullptr);
 			vkDestroyImageView(_device, _swapchainImageViews[i], nullptr);
-    	});		
+    	});
 	}
 }
 ```
@@ -172,7 +172,7 @@ void VulkanEngine::init_commands()
 ```
 
 
-And sync structures 
+And sync structures
 ```cpp
 void VulkanEngine::init_sync_structures()
 {
@@ -193,7 +193,7 @@ void VulkanEngine::init_sync_structures()
     //enqueue the destruction of semaphores
     _mainDeletionQueue.push_function([=]() {
         vkDestroySemaphore(_device, _presentSemaphore, nullptr);
-        vkDestroySemaphore(_device, _renderSemaphore, nullptr);		
+        vkDestroySemaphore(_device, _renderSemaphore, nullptr);
     });
 }
 ```

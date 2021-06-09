@@ -23,14 +23,14 @@ The codebase continues from where Chapter 5 left off, but a lot of improvements 
 * vk_descriptors : Full abstraction for descriptor sets, explained [here]({{ site.baseurl }}{% link docs/extra-chapter/abstracting_descriptors.md %})
 * vk_shaders : shader compiling code. It uses spirv-reflect to automatically build Pipeline Layouts from the shaders and grab other info.
 * Asset System and baker: Coming from the one explained [here]({{ site.baseurl }}{% link docs/extra-chapter/asset_system.md %}). But it has support for more optimized mesh formats, and supports prefabs and materials. It can now load arbitrary GLTF files and FBX files. A prefab is a list of scenenodes, and gets converted into multiple renderable objects on load.
-* Compute Shaders : Logic for compute shaders was added into the main Vulkan Engine class. There is now a ComputePipelineBuilder and more features around memory syncronization.
+* Compute Shaders : Logic for compute shaders was added into the main Vulkan Engine class. There is now a ComputePipelineBuilder and more features around memory synchronization.
 * Improved buffer handling: Uniform Buffers and Storage Buffers now have a few improvements with things like a Reallocate function for growing buffers. Mostly on vk_engine.cpp
 
 # Render Flow
 
 The main engine render loop is similar to the one after the chapters, but a lot of things were added to it. First, the handling of renderable objects goes through vk_scene, and is loaded from prefabs.
 
-When the engine initializes, it loads some prefabs and spawns them into the world as MeshObjects, which it injects into the RenderScene that will then add the objects into the multiple mesh passes according to materials and configuration. 
+When the engine initializes, it loads some prefabs and spawns them into the world as MeshObjects, which it injects into the RenderScene that will then add the objects into the multiple mesh passes according to materials and configuration.
 
 There are 3 mesh passes handled. Forward pass handles the "opaque" rendering of objects, Transparent handles the translucent objects, and draws after the opaque objects are finished. Then there is the Shadow pass that will render a sun shadow. MeshObjects will register into these 3 passes according to their setup. Opaque objects will be added to Forward and Shadow passes, while translucent objects will only register into the Transparent pass, as we don't want the translucent objects to cast shadow.
 
@@ -38,7 +38,7 @@ Once the engine is loaded, `RenderScene::build_batches()` and `RenderScene::merg
 
 With the initialization done, we go into the frame loop.
 
-At the start of the frame loop, we flush the descriptor cache and frame deletion queue to make sure dynamic things are reset. 
+At the start of the frame loop, we flush the descriptor cache and frame deletion queue to make sure dynamic things are reset.
 Then it calls `ready_mesh_draw()` that will process the changes on object data and upload everything to the GPU. This is the main step that uploads the data processed in RenderScene to the GPU.
 
 Once that is finished, we start preparing the data for the compute culling pass. `ready_cull_data` is called for each of the mesh passes in the RenderScene, this will reset the gpu draw state to its "default" state, ready to then be written to by the cull compute shader.

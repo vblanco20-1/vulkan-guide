@@ -72,7 +72,7 @@ void VulkanEngine::init_default_renderpass()
 	// we keep the attachment stored when the renderpass ends
 	color_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 	//we don't care about stencil
-	color_attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;	
+	color_attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 	color_attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 
 	//we don't know or care about the starting layout of the attachment
@@ -110,7 +110,7 @@ The image life will go something like this:
 
 UNDEFINED -> RenderPass Begins -> Subpass 0 begins (Transition to Attachment Optimal)  -> Subpass 0 renders -> Subpass 0 ends -> Renderpass Ends (Transitions to Present Source)
 
-The Vulkan driver will perform the layout transitions for us when using the renderpass. If we werent using a renderpass (drawing from compute shaders) we would need to do the same transitions explicitly.
+The Vulkan driver will perform the layout transitions for us when using the renderpass. If we weren't using a renderpass (drawing from compute shaders) we would need to do the same transitions explicitly.
 
 Now that the main attachment and the subpass is done, we can create the renderpass
 
@@ -126,7 +126,7 @@ Now that the main attachment and the subpass is done, we can create the renderpa
 	render_pass_info.subpassCount = 1;
 	render_pass_info.pSubpasses = &subpass;
 
-	
+
 	VK_CHECK(vkCreateRenderPass(_device, &render_pass_info, nullptr, &_renderPass));
 ```
 We will have only 1 attachment, which will be the color_attachment defined above, for our main color target. Then we also connect the subpass into it.
@@ -163,7 +163,7 @@ void VulkanEngine::init_framebuffers()
 }
 ```
 
-We fill the VkFrameBufferCreateInfo with the parameters that are general, and then we create one framebuffer for each of the images of the swapchain. 
+We fill the VkFrameBufferCreateInfo with the parameters that are general, and then we create one framebuffer for each of the images of the swapchain.
 
 When rendering, the swapchain will give us the index of the image to render into, so we will use the framebuffer of the same index.
 

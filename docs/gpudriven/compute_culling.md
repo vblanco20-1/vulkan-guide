@@ -8,22 +8,22 @@ nav_order: 12
 ## Cull Compute Core
 
 With draw indirect explained and the entire engine explained, the last part that makes everything work is the compute-based culling.
-The entire thing is contained in `indirect_cull.comp` . 
+The entire thing is contained in `indirect_cull.comp` .
 
 As explained in the last article, we use the culling shader to build the final list for rendering. The shader looks like this (simplified).
 
 ```glsl
-void main() 
-{		
+void main()
+{
 	uint gID = gl_GlobalInvocationID.x;
 	if(gID < cullData.drawCount)
 	{
 		//grab object ID from the buffer
-		uint objectID = instanceBuffer.Instances[gID].objectID;		
-		
+		uint objectID = instanceBuffer.Instances[gID].objectID;
+
 		//check if object is visible
-		bool visible  = IsVisible(objectID);		
-		
+		bool visible  = IsVisible(objectID);
+
 		if(visible)
 		{
 			//get the index of the draw to insert into
@@ -46,7 +46,7 @@ From ObjectID we can calculate if said object ID is visible or not. Once we have
 
 At the start of the compute shader, the drawBuffer has all the draw data for vertex count and instance count, but instanceCount is set to 0. The compute shader does an atomic +1 to it, and uses it to "reserve" a slot, which it then stores in the `finalInstanceBuffer`. finalInstanceBuffer is then used in the vertex shaders to access ObjectID.
 
-This is a way to sidestep the fact that we arent using DrawIndirectCount.
+This is a way to sidestep the fact that we aren't using DrawIndirectCount.
 If we were using DrawIndirectCount, another possibility is that each object has its own draw indirect command, and then the commands array is compacted with the surviving objects. There are quite a few ways to structure this part, the best to use depends on what you are doing in the engine and your target hardware.
 
 
@@ -68,7 +68,7 @@ bool IsVisible(uint objectIndex)
 	vec3 center = sphereBounds.xyz;
 	center = (cullData.view * vec4(center,1.f)).xyz;
 	float radius = sphereBounds.w;
-	
+
 	bool visible = true;
 
 	//frustrum culling
@@ -78,7 +78,7 @@ bool IsVisible(uint objectIndex)
 	if(cullData.distCull != 0)
 	{// the near/far plane culling uses camera space Z directly
 		visible = visible && center.z + radius > cullData.znear && center.z - radius < cullData.zfar;
-	}	
+	}
 
 	visible = visible || cullData.cullingEnabled == 0;
 
@@ -88,12 +88,12 @@ bool IsVisible(uint objectIndex)
 
 For all of the `cullData`, that's written from the Cpp when calling the compute shader. It holds the frustrum data and the configuration for the culling.
 
-We begin by grabbing the object sphereBounds from the objectIndex. The spherebounds are calculated every time the object moves, or is initialized. 
+We begin by grabbing the object sphereBounds from the objectIndex. The spherebounds are calculated every time the object moves, or is initialized.
 
-Once we have a sphere, we translate it into view space, and then check it against the frustrum. 
+Once we have a sphere, we translate it into view space, and then check it against the frustrum.
 If the checks pass, then all is good, and we can return visible to use when writing the draw indirect commands.
 
-Frustrum culling will easily cut half the objects, but we can go much further. 
+Frustrum culling will easily cut half the objects, but we can go much further.
 
 ## Occlusion Culling
 We want to avoid rendering objects that won't be visible at all due to them being behind other objects. To do that, we are going to implement occlusion culling using the depth buffer from the last frame. This is a very common technique with the downside of having 1 frame of latency. Some engines instead render a few bigger objects, and then use that depth buffer to do culling.
@@ -203,9 +203,9 @@ The sampler will also be used in the cull shader, and it's created like this.
 
 	createInfoReduction.sType = VK_STRUCTURE_TYPE_SAMPLER_REDUCTION_MODE_CREATE_INFO_EXT
 	createInfoReduction.reductionMode = VK_SAMPLER_REDUCTION_MODE_MIN;
-	createInfo.pNext = &createInfoReduction;	
+	createInfo.pNext = &createInfoReduction;
 
-	
+
 	VK_CHECK(vkCreateSampler(_device, &createInfo, 0, &_depthSampler));
 ```
 
@@ -227,7 +227,7 @@ With the depth pyramid written, we can finally use it in the cull shader.
 		//project the cull sphere into screenspace coordinates
 		vec4 aabb;
 		if (projectSphere(center, radius, cullData.znear, cullData.P00, cullData.P11, aabb))
-		{	
+		{
 			float width = (aabb.z - aabb.x) * cullData.pyramidWidth;
 			float height = (aabb.w - aabb.y) * cullData.pyramidHeight;
 
@@ -245,11 +245,11 @@ With the depth pyramid written, we can finally use it in the cull shader.
 	}
 ```
 
-We are finding the AABB that covers the sphere in screen space, and then accessing the depth pyramid at that point, in the mipmap where the size of the AABB is similar to a pixel. 
+We are finding the AABB that covers the sphere in screen space, and then accessing the depth pyramid at that point, in the mipmap where the size of the AABB is similar to a pixel.
 
 This depth pyramid logic is very similar if not almost exactly the same as the cull system used in unreal engine. In there, they don't have draw indirect, so instead they do the cull in a shader, and output into an array of visible objects. This array is then read from the CPU to know what objects are visible or not.
 
-With this last piece of the puzzle, the engine can now render huge scenes at really high perf, because it will only render whatever is visible on the screen, but without a roundtrip to the CPU. 
+With this last piece of the puzzle, the engine can now render huge scenes at really high perf, because it will only render whatever is visible on the screen, but without a roundtrip to the CPU.
 
 There will be a single frame of latency on the depth pyramid, but it can be worked around it by making the culling spheres a bit bigger to account for the disconnect, like unreal engine does, where they have 3-4 frames of latency on the culling. Another possible implementation is that the depth from last frame is reprojected and combined with some very big objects from the new frame. Assassins Creed talks about that in their presentation, and Dragon Age inquisition does something similar.
 
@@ -261,6 +261,6 @@ The culling uses GPU atomics, whose order depends on how the threads are execute
 Even then, there are ways of working around it.
 If instead of doing the draw indirect using instancing we have 1 draw command per object, and set its instance count to 0 if culled, we can keep the order. But if we do that, we will have 0 sized draws which will still cost performance in the engine, so it's not that good of a solution.
 
-Another possibility is to sort in the gpu itself, but gpu sorting is a nontrivial operation, so we arent doing it in the tutorial due to it being off scope.
+Another possibility is to sort in the gpu itself, but gpu sorting is a nontrivial operation, so we aren't doing it in the tutorial due to it being off scope.
 
 The last possibility is that we could have order-independent transparency. This would mean that our transparent objects do not need any sorting at all, at the cost of a significantly more expensive rendering operation.

@@ -54,9 +54,9 @@ All assets will follow the format of json metadata + compressed binary blob. Thi
 
 # Texture asset
 For the textures, we will store their data in the json. Width, Depth, format, etc. The actual pixel data will go into the blob, compressed.
-The uncompressed pixel data is going to be exactly the same as vulkan expects to find in a buffer to then copy into a VkImage. 
+The uncompressed pixel data is going to be exactly the same as vulkan expects to find in a buffer to then copy into a VkImage.
 
-When loading a texture asset, we will first load the file as usual, but we will keep the texture in its uncompressed state. When copying the texture data into a VkBuffer for upload, we will decompress the data on the fly. 
+When loading a texture asset, we will first load the file as usual, but we will keep the texture in its uncompressed state. When copying the texture data into a VkBuffer for upload, we will decompress the data on the fly.
 
 For compression we still just use LZ4, but later down the line, we can also have the pixel data into a BCn format, which will also save us VRAM.
 
@@ -77,11 +77,11 @@ namespace assets {
 		int version;
 		std::string json;
 		std::vector<char> binaryBlob;
-	};	
+	};
 
 	bool save_binaryfile(const char* path, const AssetFile& file);
 
-	bool load_binaryfile(const char* path, AssetFile& outputFile);	
+	bool load_binaryfile(const char* path, AssetFile& outputFile);
 }
 ```
 
@@ -167,7 +167,7 @@ bool assets::load_binaryfile(const  char* path, assets::AssetFile& outputFile)
 We read version, type, and lenght of json and blob.
 Then we read the json string by using the lenght stored in the header, and same thing with the blob.
 
-We are not doing any version or type check yet here. The functions will just return false if the file isnt found, but there is no error checking.
+We are not doing any version or type check yet here. The functions will just return false if the file isn't found, but there is no error checking.
 
 That's all we needed for the asset file itself. It's just a very simple dump of the json string and the binary drop into a packed file.
 
@@ -180,9 +180,9 @@ namespace assets {
 	enum class TextureFormat : uint32_t
 	{
 		Unknown = 0,
-		RGBA8		
+		RGBA8
 	};
-	
+
 
 	struct TextureInfo {
 		uint64_t textureSize;
@@ -202,7 +202,7 @@ namespace assets {
 ```
 
 Like with the main asset file, we are going to keep the API very small and stateless.
-The `read_texture_info` will parse the metadata json in a file and convert it into the TextureInfo struct, which is the main data of the texture. 
+The `read_texture_info` will parse the metadata json in a file and convert it into the TextureInfo struct, which is the main data of the texture.
 
 `unpack_texture` will work with a texture info alongside the binary blob of pixel data, and will decompress the texture into the destination buffer. It's very important that the destination buffer is big enough, or it will overflow. This is meant to be used to unpack the blob directly into a buffer.
 
@@ -216,9 +216,9 @@ The `read_texture_info` will parse the metadata json in a file and convert it in
 	void* data;
 	vmaMapMemory(engine._allocator, stagingBuffer._allocation, &data);
 
-	assets::unpack_texture(&textureInfo, file.binaryBlob.data(), file.binaryBlob.size(), (char*)data);	
+	assets::unpack_texture(&textureInfo, file.binaryBlob.data(), file.binaryBlob.size(), (char*)data);
 
-	vmaUnmapMemory(engine._allocator, stagingBuffer._allocation);	
+	vmaUnmapMemory(engine._allocator, stagingBuffer._allocation);
 
 	//upload texture to gpu with commands
 ```
@@ -231,12 +231,12 @@ assets::AssetFile assets::pack_texture(assets::TextureInfo* info, void* pixelDat
 	texture_metadata["format"] = "RGBA8";
 	texture_metadata["width"] = info->pixelsize[0];
 	texture_metadata["height"] = info->pixelsize[1];
-	texture_metadata["buffer_size"] = info->textureSize;	
+	texture_metadata["buffer_size"] = info->textureSize;
 	texture_metadata["original_file"] = info->originalFile;
 
 
 	//core file header
-	AssetFile file;	
+	AssetFile file;
 	file.type[0] = 'T';
 	file.type[1] = 'E';
 	file.type[2] = 'X';
@@ -256,7 +256,7 @@ assets::AssetFile assets::pack_texture(assets::TextureInfo* info, void* pixelDat
 
 	std::string stringified = texture_metadata.dump();
 	file.json = stringified;
-	
+
 
 	return file;
 }
@@ -322,7 +322,7 @@ void assets::unpack_texture(TextureInfo* info, const char* sourcebuffer, size_t 
 }
 ```
 
-When unpacking, we just decompress directly into the target destination. If the file isnt compressed, we then just memcpy directly.
+When unpacking, we just decompress directly into the target destination. If the file isn't compressed, we then just memcpy directly.
 
 That's all for the texture asset logic. For the mesh logic, it works in a similar way, so you can look at the code.
 
@@ -342,9 +342,9 @@ The converter is using by giving it a target folder to process. It will then go 
 
 ```cpp
 fs::path path{ argv[1] };
-	
+
 fs::path directory = path;
-		
+
 std::cout << "loading asset directory at " << directory << std::endl;
 
 for (auto& p : fs::directory_iterator(directory))
@@ -389,17 +389,17 @@ bool convert_image(const fs::path& input, const fs::path& output)
 		std::cout << "Failed to load texture file " << input << std::endl;
 		return false;
 	}
-	
+
 	int texture_size = texWidth * texHeight * 4;
 
 	TextureInfo texinfo;
 	texinfo.textureSize = texture_size;
 	texinfo.pixelsize[0] = texWidth;
 	texinfo.pixelsize[1] = texHeight;
-	texinfo.textureFormat = TextureFormat::RGBA8;	
+	texinfo.textureFormat = TextureFormat::RGBA8;
 	texinfo.originalFile = input.string();
-	assets::AssetFile newImage = assets::pack_texture(&texinfo, pixels);	
-		
+	assets::AssetFile newImage = assets::pack_texture(&texinfo, pixels);
+
 
 	stbi_image_free(pixels);
 
@@ -417,7 +417,7 @@ We then pack the pixel data of the texture into a new AssetFile, and save the as
 With that, we can now convert `.png` files into a directly-loadable pixel format. The speed gain from this is quite big, as `.png` format is very slow to load.
 
 
-## Loading 
+## Loading
 With the files converted, last step is to be able to load this sort of asset to the engine.
 
 ```cpp
@@ -431,9 +431,9 @@ bool vkutil::load_image_from_asset(VulkanEngine& engine, const char* filename, A
 		std::cout << "Error when loading mesh ";
 		return false;
 	}
-	
+
 	assets::TextureInfo textureInfo = assets::read_texture_info(&file);
-	
+
 	VkDeviceSize imageSize = textureInfo.textureSize;
 	VkFormat image_format;
 	switch (textureInfo.textureFormat) {
@@ -449,14 +449,14 @@ bool vkutil::load_image_from_asset(VulkanEngine& engine, const char* filename, A
 	void* data;
 	vmaMapMemory(engine._allocator, stagingBuffer._allocation, &data);
 
-	assets::unpack_texture(&textureInfo, file.binaryBlob.data(), file.binaryBlob.size(), (char*)data);	
+	assets::unpack_texture(&textureInfo, file.binaryBlob.data(), file.binaryBlob.size(), (char*)data);
 
-	vmaUnmapMemory(engine._allocator, stagingBuffer._allocation);	
+	vmaUnmapMemory(engine._allocator, stagingBuffer._allocation);
 
 	outImage = upload_image(textureInfo.pixelsize[0], textureInfo.pixelsize[1], image_format, engine, stagingBuffer);
 
 	vmaDestroyBuffer(engine._allocator, stagingBuffer._buffer, stagingBuffer._allocation);
-	
+
 	return true;
 }
 ```

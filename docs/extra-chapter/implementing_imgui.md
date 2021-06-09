@@ -14,10 +14,10 @@ Imgui itself is a portable library, but it doesn't do any user interaction or re
 We are using Vulkan for rendering, and SDL for user input events. Those 2 are covered by the example implementations, so we are going to use those.
 
 ## Compiling
-If you are using the tutorial code, there is already an imgui Cmake target that will compile imgui. If you arent, you need to add it to your build system.
+If you are using the tutorial code, there is already an imgui Cmake target that will compile imgui. If you aren't, you need to add it to your build system.
 The files that we are going to need to compile are:
 ```cmake
-target_sources(imgui PRIVATE 
+target_sources(imgui PRIVATE
 "${CMAKE_CURRENT_SOURCE_DIR}/imgui/imgui.h"
 "${CMAKE_CURRENT_SOURCE_DIR}/imgui/imgui.cpp"
 
@@ -109,7 +109,7 @@ void VulkanEngine::init_imgui()
 
 ```
 
-We begin by creating a descriptor pool that imgui needs. Having a descriptor pool just for imgui is the easiest. While this descriptor pool with 1000 of everything is likely going to be oversized, it won't really matter. 
+We begin by creating a descriptor pool that imgui needs. Having a descriptor pool just for imgui is the easiest. While this descriptor pool with 1000 of everything is likely going to be oversized, it won't really matter.
 
 Then, we need to call the functions that initialize imgui itself, and the implementations for vulkan and for SDL
 On the Vulkan implementation, there are a few things that we have to hook. `VkInstance`, `VkPhysicalDevice`, `VkDevice`,the  `VkQueue` for graphics, and the descriptor pool we just created. Image count is for the overlapping of the commands. Use the same variables that you use when creating your swapchain.
@@ -117,12 +117,12 @@ On the Vulkan implementation, there are a few things that we have to hook. `VkIn
 Once imgui is initialized, the last thing is to execute a command to upload the fonts. In here we are using the immediate submit lambda that we did on chapter 5, but you can replace that with whatever way you have in your engine to execute a command in a blocking way. Once the command has fully finished execution (immediate submit blocks on fence), you can destroy the font upload objects to clear the staging buffers. Then you add the deletion of the descriptor pool and imgui vulkan itself.
 
 ## Hooking imgui
-With imgui initialized, we now hook it into the main loop of the engine. 
+With imgui initialized, we now hook it into the main loop of the engine.
 
 ```cpp
     //main loop
 	while (!bQuit)
-	{       
+	{
 		//Handle events on queue
 		while (SDL_PollEvent(&e) != 0)
 		{
@@ -131,11 +131,11 @@ With imgui initialized, we now hook it into the main loop of the engine.
 			//other event handling
 		}
 
-		 //imgui new frame 
+		 //imgui new frame
         ImGui_ImplVulkan_NewFrame();
 		ImGui_ImplSDL2_NewFrame(_window);
 
-		ImGui::NewFrame();        
+		ImGui::NewFrame();
 
 
         //imgui commands
@@ -150,9 +150,9 @@ We begin by calling the NewFrame functions for Vulkan, SDL, and base library, af
 
 Last thing is to render the imgui objects.
 
-On the `draw()` function, we call `ImGui::Render();` at the start. 
+On the `draw()` function, we call `ImGui::Render();` at the start.
 
-As part of your main renderpass, call `ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmd);` right before you end it. 
+As part of your main renderpass, call `ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmd);` right before you end it.
 This will make imgui render as part as your main pass. If you have an UI pass of some kind, that's a good place to put it.
 
 That's really all that was needed, so enjoy using imgui!

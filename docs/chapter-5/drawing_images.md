@@ -16,7 +16,7 @@ struct Vertex {
 	glm::vec3 color;
 	glm::vec2 uv;
 	static VertexInputDescription get_vertex_description();
-}; 
+};
 ```
 
 We just add a new `glm::vec2 uv;` to hold the UV coordinates in the Vertex struct.
@@ -57,21 +57,21 @@ bool Mesh::load_from_obj(const char* filename)
 		// Loop over faces(polygon)
 		size_t index_offset = 0;
 		for (size_t f = 0; f < shapes[s].mesh.num_face_vertices.size(); f++) {
-			
+
 			//other parameters
 
 
 			//vertex uv
 			tinyobj::real_t ux = attrib.texcoords[2 * idx.texcoord_index + 0];
 			tinyobj::real_t uy = attrib.texcoords[2 * idx.texcoord_index + 1];
-		
+
 			new_vert.uv.x = ux;
 			new_vert.uv.y = 1-uy;
 		}
 	}
 }
 ```
-We access the texcoords array in a similar way as we do with the other parameters. 
+We access the texcoords array in a similar way as we do with the other parameters.
 Now the obj load code will load texture coordinates. It's very important to do the 1-y on the uv.y because Vulkan UV coordinates work like that.
 
 Before we start changing the descriptors and descriptor layouts to point to the texture, we are going to create new shaders for the textured-lit shaders.
@@ -91,8 +91,8 @@ layout (location = 1) out vec2 texCoord;
 //uniforms and ssbos
 
 
-void main() 
-{	
+void main()
+{
 	mat4 modelMatrix = objectBuffer.objects[gl_InstanceIndex].model;
 	mat4 transformMatrix = (cameraData.viewproj * modelMatrix);
 	gl_Position = transformMatrix * vec4(vPosition, 1.0f);
@@ -114,7 +114,7 @@ layout (location = 1) in vec2 texCoord;
 //output write
 layout (location = 0) out vec4 outFragColor;
 
-layout(set = 0, binding = 1) uniform  SceneData{   
+layout(set = 0, binding = 1) uniform  SceneData{
     vec4 fogColor; // w is for exponent
 	vec4 fogDistances; //x for min, y for max, zw unused.
 	vec4 ambientColor;
@@ -123,8 +123,8 @@ layout(set = 0, binding = 1) uniform  SceneData{
 } sceneData;
 
 
-void main() 
-{	
+void main()
+{
 	outFragColor = vec4(texCoord.x,texCoord.y,0.5f,1.0f);
 }
 ```
@@ -160,7 +160,7 @@ void VulkanEngine::init_pipelines()
 	VkPipeline texPipeline = pipelineBuilder.build_pipeline(_device, _renderPass);
 	create_material(texPipeline, meshPipLayout, "texturedmesh");
 
-	//other code 
+	//other code
 }
 ```
 
@@ -172,9 +172,9 @@ void VulkanEngine::load_meshes()
 	//other meshes
 	Mesh lostEmpire{};
 	lostEmpire.load_from_obj("../../assets/lost_empire.obj");
-	
+
 	upload_mesh(lostEmpire);
-	
+
 	_meshes["empire"] = lostEmpire;
 }
 
@@ -184,10 +184,10 @@ void VulkanEngine::init_scene()
 	RenderObject map;
 	map.mesh = get_mesh("empire");
 	map.material = get_material("texturedmesh");
-	map.transformMatrix = glm::translate(glm::vec3{ 5,-10,0 }); 
+	map.transformMatrix = glm::translate(glm::vec3{ 5,-10,0 });
 
 	_renderables.push_back(map);
-```	
+```
 
 
 This should work now, giving us this image if we run it. Or similar
@@ -202,7 +202,7 @@ We will change `textured_lit.frag` so that it accesses a texture
 
 layout(set = 2, binding = 0) uniform sampler2D tex1;
 
-void main() 
+void main()
 {
 	vec3 color = texture(tex1,texCoord).xyz;
 	outFragColor = vec4(color,1.0f);
@@ -211,7 +211,7 @@ void main()
 
 We are binding the sampler2d texture into Set 2, binding 0.
 At the moment we are using sets 0 and 1, so this will be the 3rd descriptor set.
-As we have a new descriptor set, we need to create its layout and add it to the engine. 
+As we have a new descriptor set, we need to create its layout and add it to the engine.
 We will add a texture descriptor parameter into our Material struct, and we will also store the descriptor layout into the engine class
 
 
@@ -267,7 +267,7 @@ On `init_pipelines()`.
 	//create pipeline layout for the textured mesh, which has 3 descriptor sets
 	//we start from  the normal mesh layout
 	VkPipelineLayoutCreateInfo textured_pipeline_layout_info = mesh_pipeline_layout_info;
-		
+
 	VkDescriptorSetLayout texturedSetLayouts[] = { _globalSetLayout, _objectSetLayout,_singleTextureSetLayout };
 
 	textured_pipeline_layout_info.setLayoutCount = 3;
@@ -296,11 +296,11 @@ We now need to create the descriptor set in the `init_scene()` function, so that
 We add a new initializers to vk_initializers, for sampler creation and descriptor image write
 ```cpp
 //header
-VkSamplerCreateInfo sampler_create_info(VkFilter filters, VkSamplerAddressMode samplerAdressMode = VK_SAMPLER_ADDRESS_MODE_REPEAT);
+VkSamplerCreateInfo sampler_create_info(VkFilter filters, VkSamplerAddressMode samplerAddressMode = VK_SAMPLER_ADDRESS_MODE_REPEAT);
 VkWriteDescriptorSet write_descriptor_image(VkDescriptorType type, VkDescriptorSet dstSet, VkDescriptorImageInfo* imageInfo, uint32_t binding);
 
 //implementation
-VkSamplerCreateInfo vkinit::sampler_create_info(VkFilter filters, VkSamplerAddressMode samplerAdressMode /*= VK_SAMPLER_ADDRESS_MODE_REPEAT*/)
+VkSamplerCreateInfo vkinit::sampler_create_info(VkFilter filters, VkSamplerAddressMode samplerAddressMode /*= VK_SAMPLER_ADDRESS_MODE_REPEAT*/)
 {
 	VkSamplerCreateInfo info = {};
 	info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
@@ -308,9 +308,9 @@ VkSamplerCreateInfo vkinit::sampler_create_info(VkFilter filters, VkSamplerAddre
 
 	info.magFilter = filters;
 	info.minFilter = filters;
-	info.addressModeU = samplerAdressMode;
-	info.addressModeV = samplerAdressMode;
-	info.addressModeW = samplerAdressMode;
+	info.addressModeU = samplerAddressMode;
+	info.addressModeV = samplerAddressMode;
+	info.addressModeW = samplerAddressMode;
 
 	return info;
 }

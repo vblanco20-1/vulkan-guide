@@ -40,14 +40,14 @@ public:
 
 ```
 
-The pipeline builder is a class with all the needed Vulkan structs stored inside (this is a basic set, there are more, but for now these are the ones we will need to fill). And a build_pipeline function that will finalize it and build it. 
-If you want, you can put the builder in its own file (recomended vk_pipeline.h) but we aren't doing it to keep number of files low.
+The pipeline builder is a class with all the needed Vulkan structs stored inside (this is a basic set, there are more, but for now these are the ones we will need to fill). And a build_pipeline function that will finalize it and build it.
+If you want, you can put the builder in its own file (recommended vk_pipeline.h) but we aren't doing it to keep number of files low.
 
 We will now go to vk_initializers.h and start writing an initializer for each of those structs.
 
 ## Initializers
 
-### Shader Stage 
+### Shader Stage
 We are going to start with the initializer for `VkPipelineShaderStageCreateInfo`
 This CreateInfo will hold information about a single shader stage for the pipeline. We build it from a shader stage and a shader module.
 
@@ -102,7 +102,7 @@ VkPipelineInputAssemblyStateCreateInfo vkinit::input_assembly_create_info(VkPrim
 	}
 ```
 
-On the info we just have to set boilerplate plus what kind of topology we want. 
+On the info we just have to set boilerplate plus what kind of topology we want.
 Example topologies:
 - VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST : normal triangle drawing
 - VK_PRIMITIVE_TOPOLOGY_POINT_LIST : points
@@ -130,8 +130,8 @@ VkPipelineRasterizationStateCreateInfo vkinit::rasterization_state_create_info(V
 		//no depth bias
 		info.depthBiasEnable = VK_FALSE;
 		info.depthBiasConstantFactor = 0.0f;
-		info.depthBiasClamp = 0.0f; 
-		info.depthBiasSlopeFactor = 0.0f; 
+		info.depthBiasClamp = 0.0f;
+		info.depthBiasSlopeFactor = 0.0f;
 
 		return info;
 	}
@@ -241,14 +241,14 @@ VkPipeline PipelineBuilder::build_pipeline(VkDevice device, VkRenderPass pass) {
 	VkPipeline newPipeline;
 	if (vkCreateGraphicsPipelines(
 		device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &newPipeline) != VK_SUCCESS) {
-		std::cout << "failed to create pipline\n";
+		std::cout << "failed to create pipeline\n";
 		return VK_NULL_HANDLE; // failed to create graphics pipeline
 	}
 	else
 	{
 		return newPipeline;
 	}
-	
+
 ```
 
 ## Pipeline Layout
@@ -289,7 +289,7 @@ private:
 }
 ```
 
-Now we have to create it from our init_pipelines() function. 
+Now we have to create it from our init_pipelines() function.
 
 
 ```cpp
@@ -343,7 +343,7 @@ void VulkanEngine::init_pipelines()
 
 	//vertex input controls how to read vertices from vertex buffers. We aren't using it yet
 	pipelineBuilder._vertexInputInfo = vkinit::vertex_input_state_create_info();
-	
+
 	//input assembly is the configuration for drawing triangle lists, strips, or individual points.
 	//we are just going to draw triangle list
 	pipelineBuilder._inputAssembly = vkinit::input_assembly_create_info(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
@@ -355,7 +355,7 @@ void VulkanEngine::init_pipelines()
 	pipelineBuilder._viewport.height = (float)_windowExtent.height;
 	pipelineBuilder._viewport.minDepth = 0.0f;
 	pipelineBuilder._viewport.maxDepth = 1.0f;
-	
+
 	pipelineBuilder._scissor.offset = { 0, 0 };
 	pipelineBuilder._scissor.extent = _windowExtent;
 
@@ -366,7 +366,7 @@ void VulkanEngine::init_pipelines()
 	pipelineBuilder._multisampling = vkinit::multisampling_state_create_info();
 
 	//a single blend attachment with no blending and writing to RGBA
-	pipelineBuilder._colorBlendAttachment = vkinit::color_blend_attachment_state();		
+	pipelineBuilder._colorBlendAttachment = vkinit::color_blend_attachment_state();
 
 	//use the triangle layout we created
 	pipelineBuilder._pipelineLayout = _trianglePipelineLayout;
@@ -403,7 +403,7 @@ Run it, and you should see a red triangle with a flashing blue background.
 
 ![triangle]({{site.baseurl}}/diagrams/redTriangle.png)
 
-Congratulations on your first triangle! 
+Congratulations on your first triangle!
 We can now proceed to do interesting things with the shaders to make it more interesting.
 
 

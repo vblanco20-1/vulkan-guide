@@ -5,7 +5,7 @@ parent:  "1. Initialization and Render Loop"
 nav_order: 41
 ---
 
-We are going to need a couple more members in our VulkanEngine class, to hold the synchronization structures (Semaphore and Fence) that we will need for the main loop. Plus the function to initalize them.
+We are going to need a couple more members in our VulkanEngine class, to hold the synchronization structures (Semaphore and Fence) that we will need for the main loop. Plus the function to initialize them.
 
 
 ```cpp
@@ -39,8 +39,8 @@ We are going to need 2 semaphores and the main render fence. Let us begin creati
 ```cpp
 void VulkanEngine::init_sync_structures()
 {
-	//create syncronization structures
-	
+	//create synchronization structures
+
 	VkFenceCreateInfo fenceCreateInfo = {};
 	fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
 	fenceCreateInfo.pNext = nullptr;
@@ -132,7 +132,7 @@ With the command buffer recording started, let's add commands to it. We are goin
 	float flash = abs(sin(_frameNumber / 120.f));
 	clearValue.color = { { 0.0f, 0.0f, flash, 1.0f } };
 
-	//start the main renderpass. 
+	//start the main renderpass.
 	//We will use the clear color from above, and the framebuffer of the index the swapchain gave us
 	VkRenderPassBeginInfo rpInfo = {};
 	rpInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -142,7 +142,7 @@ With the command buffer recording started, let's add commands to it. We are goin
 	rpInfo.renderArea.offset.x = 0;
 	rpInfo.renderArea.offset.y = 0;
 	rpInfo.renderArea.extent = _windowExtent;
-	rpInfo.framebuffer = _framebuffers[swapchainImageIndex];	
+	rpInfo.framebuffer = _framebuffers[swapchainImageIndex];
 
 	//connect clear values
 	rpInfo.clearValueCount = 1;
@@ -176,7 +176,7 @@ With the buffer finished, we can execute it by submitting it into the GPU
 
 ```cpp
 
-	//prepare the submission to the queue. 
+	//prepare the submission to the queue.
 	//we want to wait on the _presentSemaphore, as that semaphore is signaled when the swapchain is ready
 	//we will signal the _renderSemaphore, to signal that rendering has finished
 
@@ -202,7 +202,7 @@ With the buffer finished, we can execute it by submitting it into the GPU
 	VK_CHECK(vkQueueSubmit(_graphicsQueue, 1, &submit, _renderFence));
 ```
 
-To execute a `vkQueueSubmit()` we need to setup the info structure. we are going to configure it to wait on the `_presentSemaphore`, and signal the `_renderSemaphore`. 
+To execute a `vkQueueSubmit()` we need to setup the info structure. we are going to configure it to wait on the `_presentSemaphore`, and signal the `_renderSemaphore`.
 By waiting on the `_presentSemaphore` that we were signaling from `vkAcquireNextImageKHR`, we make sure that the image for rendering is completely ready in the GPU.
 
 We then also set the command buffer we are going to submit.
@@ -212,7 +212,7 @@ the `.pWaitDstStageMask` is a complex parameter. We are not going to explain it 
 After the commands are submitted, we now display the image to the screen
 ```cpp
 	// this will put the image we just rendered into the visible window.
-	// we want to wait on the _renderSemaphore for that, 
+	// we want to wait on the _renderSemaphore for that,
 	// as it's necessary that drawing commands have finished before the image is displayed to the user
 	VkPresentInfoKHR presentInfo = {};
 	presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;

@@ -42,7 +42,7 @@ using namespace std;
 	} while (0)
 ```
 
-All Vulkan functions that can error out will return a VkResult. This is really just an integer error code. If the error code isnt 0, something is going badly and we just abort with an error message. 
+All Vulkan functions that can error out will return a VkResult. This is really just an integer error code. If the error code isn't 0, something is going badly and we just abort with an error message.
 
 With those two done, we can go forward with initialization of the basic structures for Vulkan.
 
@@ -56,7 +56,7 @@ vk_engine.h
 class VulkanEngine {
 public:
 
-    // --- ommited --- 
+    // --- omitted ---
     VkInstance _instance; // Vulkan library handle
 	VkDebugUtilsMessengerEXT _debug_messenger; // Vulkan debug output handle
 	VkPhysicalDevice _chosenGPU; // GPU chosen as the default device
@@ -64,7 +64,7 @@ public:
 	VkSurfaceKHR _surface; // Vulkan window surface
 
 private:
-		
+
 	void init_vulkan();
 ```
 
@@ -72,11 +72,11 @@ vk_engine.cpp
 ```cpp
 void VulkanEngine::init()
 {
-	// We initialize SDL and create a window with it. 
+	// We initialize SDL and create a window with it.
 	SDL_Init(SDL_INIT_VIDEO);
 
 	SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_VULKAN);
-	
+
 	_window = SDL_CreateWindow(
 		"Vulkan Engine",
 		SDL_WINDOWPOS_UNDEFINED,
@@ -113,15 +113,15 @@ Now that our new init_Vulkan function is added, we can start filling it.
 	auto inst_ret = builder.set_app_name("Example Vulkan Application")
 		.request_validation_layers(true)
 		.require_api_version(1, 1, 0)
-		.use_default_debug_messenger()		
+		.use_default_debug_messenger()
 		.build();
 
 	vkb::Instance vkb_inst = inst_ret.value();
 
-	//store the instance 
+	//store the instance
 	_instance = vkb_inst.instance;
 	//store the debug messenger
-	_debug_messenger = vkb_inst.debug_messenger; 
+	_debug_messenger = vkb_inst.debug_messenger;
 ```
 
 We are going to create a vkb::InstanceBuilder, which is from the VkBootstrap library, and simplifies the creation of a Vulkan VkInstance.
@@ -143,10 +143,10 @@ We store the VkDebugUtilsMessengerEXT so we can destroy it at program exit, othe
 ## Device
 
 ```cpp
-	// get the surface of the window we opened with SDL    
+	// get the surface of the window we opened with SDL
 	SDL_Vulkan_CreateSurface(_window, _instance, &_surface);
 
-	//use vkbootstrap to select a GPU. 
+	//use vkbootstrap to select a GPU.
 	//We want a GPU that can write to the SDL surface and supports Vulkan 1.1
 	vkb::PhysicalDeviceSelector selector{ vkb_inst };
 	vkb::PhysicalDevice physicalDevice = selector
@@ -192,8 +192,8 @@ public:
 	VkSwapchainKHR _swapchain; // from other articles
 
 	// image format expected by the windowing system
-	VkFormat _swapchainImageFormat; 	
-	
+	VkFormat _swapchainImageFormat;
+
 	//array of images from the swapchain
 	std::vector<VkImage> _swapchainImages;
 
@@ -203,14 +203,14 @@ public:
 	// --- other code ---
 private:
 	// --- other code ---
-	void init_swapchain();	
+	void init_swapchain();
 }
 
 ```
 
 We are storing the VkSwapchainKHR itself, alongside the format that the swapchain images use when rendering to them.
 
-We also store 2 arrays, one of Images, and another of ImageViews. 
+We also store 2 arrays, one of Images, and another of ImageViews.
 
 A VkImage is a handle to the actual image object to use as texture or to render into. A VkImageView is a wrapper for that image. It allows to do things like swap the colors. We will go into detail about it on chapter 5 when explaining textures.
 
@@ -259,7 +259,7 @@ void VulkanEngine::init_swapchain()
 	_swapchainImages = vkbSwapchain.get_images().value();
 	_swapchainImageViews = vkbSwapchain.get_image_views().value();
 
-	_swachainImageFormat = vkbSwapchain.image_format;
+	_swapchainImageFormat = vkbSwapchain.image_format;
 
 }
 ```
@@ -278,7 +278,7 @@ For that, go to the `VulkanEngine::cleanup()` function
 
 ```cpp
 void VulkanEngine::cleanup()
-{	
+{
 	if (_isInitialized) {
 
 		vkDestroySwapchainKHR(_device, _swapchain, nullptr);
@@ -306,7 +306,7 @@ Because our initialization order was SDL Window -> Instance -> Surface -> Device
 
 If you try to run the program now, it should do nothing, but that nothing also includes not emitting errors.
 
-There is no need to destroy the Images in this specific case, because the images are owned and destroyed with the swapchain. 
+There is no need to destroy the Images in this specific case, because the images are owned and destroyed with the swapchain.
 
 
 ## Validation layer errors
@@ -314,7 +314,7 @@ Just to check that our validation layers are working, let's try to call the dest
 
 ```cpp
 void VulkanEngine::cleanup()
-{	
+{
 	if (_isInitialized) {
 		//ERROR - Instance destroyed before others
 		vkDestroyInstance(_instance, nullptr);
