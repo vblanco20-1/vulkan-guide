@@ -66,7 +66,7 @@ The mesh asset will be similar to the textures, except that we will not copy the
 
 ## CODE
 We will begin by writing the core Asset logic. This will handle the generic "json + blob" structure which we will then process as different kinds of assets.
-On the code for the asset library, there are 2 incredibly important things to keep into account. We want to make absolutely sure that the headers do not include libraries such as nlohman json or lz4. Those libraries will be compiled into the AssetLib library, and will be invisible to the vulkan engine itself. Also, we are going to make the api completely stateless. No classes or state kept beetween function calls. This way we make sure that the library will be possible to use from multiple threads safely.
+On the code for the asset library, there are 2 incredibly important things to keep in mind. We want to make absolutely sure that the headers do not include libraries such as nlohman json or lz4. Those libraries will be compiled into the AssetLib library, and will be invisible to the vulkan engine itself. Also, we are going to make the api completely stateless. No classes or state kept beetween function calls. This way we make sure that the library will be possible to use from multiple threads safely.
 
 We only need 2 functions for the api of the "Core" asset file, and the AssetFile struct.
 
@@ -89,7 +89,7 @@ That will be our entire public API for the core asset system. Textures and meshe
 
 Loading a file will copy the json into the string, and will copy the compressed binary blob into the vector inside the asset. Be very careful with that, as the AssetFile structs will be really big, so do not store them anywhere to avoid bloating up RAM usage.
 
-Lets start by showing the code to save an asset to disk
+Let's start by showing the code to save an asset to disk
 ```cpp
 bool assets::save_binaryfile(const  char* path, const assets::AssetFile& file)
 {
@@ -101,16 +101,16 @@ bool assets::save_binaryfile(const  char* path, const assets::AssetFile& file)
 	//version
 	outfile.write((const char*)&version, sizeof(uint32_t));
 
-	//json lenght
-	uint32_t lenght = file.json.size();
-	outfile.write((const char*)&lenght, sizeof(uint32_t));
+	//json length
+	uint32_t length = file.json.size();
+	outfile.write((const char*)&length, sizeof(uint32_t));
 
-	//blob lenght
-	uint32_t bloblenght = file.binaryBlob.size();
-	outfile.write((const char*)&bloblenght, sizeof(uint32_t));
+	//blob length
+	uint32_t bloblength = file.binaryBlob.size();
+	outfile.write((const char*)&bloblength, sizeof(uint32_t));
 
 	//json stream
-	outfile.write(file.json.data(), lenght);
+	outfile.write(file.json.data(), length);
 	//blob data
 	outfile.write(file.binaryBlob.data(), file.binaryBlob.size());
 
@@ -124,27 +124,26 @@ We will be doing purely binary files.
 
 We begin by storing the 4 chars that are the asset type. For textures this will be `TEXI`, and for meshes it will be `MESH`. We can use this to easily identify if the binary file we are loading is a mesh or a texture, or some wrong format.
 
-Next, we store Version, which is a single uint32 number. We can use this if we change the format at some point, to give an error when trying to load it. It's critical to allways version your file formats.
+Next, we store Version, which is a single uint32 number. We can use this if we change the format at some point, to give an error when trying to load it. It's critical to always version your file formats.
 
-After the version, we store the lenght, in bytes, of the json string, and then the lenght of the binary blob.
+After the version, we store the length, in bytes, of the json string, and then the length of the binary blob.
 
 With the header written, now we just write the json and the blob directly to the file. We begin by writing the entire json string, and then directly the binary blob.
 
 To load the file from disk, we do the same, but in reverse.
 
 ```cpp
-bool assets::load_binaryfile(const  char* path, assets::AssetFile& outputFile)
+bool assets::load_binaryfile(const char* path, assets::AssetFile& outputFile)
 {
 	std::ifstream infile;
 	infile.open(path, std::ios::binary);
 
 	if (!infile.is_open()) return false;
 
-	//move file cursor to begining
+	//move file cursor to beginning
 	infile.seekg(0);
 
 	infile.read(outputFile.type, 4);
-	uint32_t vers;
 	infile.read((char*)&outputFile.version, sizeof(uint32_t));
 
 	uint32_t jsonlen = 0;
@@ -154,7 +153,6 @@ bool assets::load_binaryfile(const  char* path, assets::AssetFile& outputFile)
 	infile.read((char*)&bloblen, sizeof(uint32_t));
 
 	outputFile.json.resize(jsonlen);
-
 	infile.read(outputFile.json.data(), jsonlen);
 
 	outputFile.binaryBlob.resize(bloblen);
@@ -164,8 +162,8 @@ bool assets::load_binaryfile(const  char* path, assets::AssetFile& outputFile)
 }
 ```
 
-We read version, type, and lenght of json and blob.
-Then we read the json string by using the lenght stored in the header, and same thing with the blob.
+We read version, type, and length of json and blob.
+Then we read the json string by using the length stored in the header, and same thing with the blob.
 
 We are not doing any version or type check yet here. The functions will just return false if the file isn't found, but there is no error checking.
 
@@ -222,7 +220,7 @@ The `read_texture_info` will parse the metadata json in a file and convert it in
 
 	//upload texture to gpu with commands
 ```
-Lets look at the implementation to pack a texture into an AssetFile
+Let's look at the implementation to pack a texture into an AssetFile
 
 ```cpp
 assets::AssetFile assets::pack_texture(assets::TextureInfo* info, void* pixelData)
@@ -336,9 +334,9 @@ That's all for the texture asset logic. For the mesh logic, it works in a simila
 With the texture save/load logic implemented, we can now look at the converter itself.
 The converter will be a separate executable from the normal engine. This is to isolate all of the libs it will use so that they don't pollute the engine. This also means we can compile it in release mode and have it convert everything very fast, and then we load that from our debug mode engine.
 
-The entire codebase for the converted is here https://github.com/vblanco20-1/vulkan-guide/blob/engine/asset-baker/asset_main.cpp
+The entire codebase for the converter is here https://github.com/vblanco20-1/vulkan-guide/blob/engine/asset-baker/asset_main.cpp
 
-The converter is using by giving it a target folder to process. It will then go through the files in the folder and attempt to convert them.
+The converter is used by giving it a target folder to process. It will then go through the files in the folder and attempt to convert them.
 
 ```cpp
 fs::path path{ argv[1] };
@@ -428,7 +426,7 @@ bool vkutil::load_image_from_asset(VulkanEngine& engine, const char* filename, A
 	bool loaded = assets::load_binaryfile(filename, file);
 
 	if (!loaded) {
-		std::cout << "Error when loading mesh ";
+		std::cout << "Error when loading image\n";
 		return false;
 	}
 
