@@ -244,19 +244,21 @@ If we still have errors on the second reallocation, which is from a cleanly allo
 With the main allocation function written, only thing left is to implement the `reset()` function.
 ```cpp
 void DescriptorAllocator::reset_pools(){
-	//reset every pool
+	//reset all used pools and add them to the free pools
 	for (auto p : usedPools){
 		vkResetDescriptorPool(device, p, 0);
+		freePools.push_back(p);
 	}
-	//move all pools to the reusable vector
-	freePools = usedPools;
+
+	//clear the used pools, since we've put them all in the free pools
 	usedPools.clear();
+
 	//reset the current pool handle back to null
 	currentPool = VK_NULL_HANDLE;
 }
 ```
 
-On the reset, we call `vkResetDescriptorPool` on every pool, and then move them to the `freePools` array for reuse. We also set the currentPool handle to null so that the allocation function tries to grab a pool on the next allocation.
+On the reset, we call `vkResetDescriptorPool` on every used pool, and then move them to the `freePools` array for reuse. We also set the currentPool handle to null so that the allocation function tries to grab a pool on the next allocation.
 
 This simple allocator won't be the most optimal, but if you use it right by setting the proper size multipliers, it will be optimal.
 If you have common descriptor set shapes, it might be a good idea to have an allocator just for those descriptors. For example an allocator only for sets that hold textures.
