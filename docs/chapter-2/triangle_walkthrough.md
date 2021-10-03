@@ -133,7 +133,7 @@ In cpp, the file operations are done on streams, and it has a cursor that we wil
 size_t fileSize = (size_t)file.tellg();
 
 //spirv expects the buffer to be on uint32, so make sure to reserve an int vector big enough for the entire file
-std::vector<uint32_t> buffer(fileSize / sizeof(uint32_t));
+std::vector<uint32_t> buffer((fileSize + sizeof(uint32_t) - 1) / sizeof(uint32_t));
 
 //put file cursor at beginning
 file.seekg(0);
