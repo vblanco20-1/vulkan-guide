@@ -9,6 +9,10 @@ There are a few things we have to modify to get textures working in the shaders.
 The first of them is modifying the vertex format so that we store UV coordinates.
 
 ```cpp
+#include <glm/vec2.hpp> //now needed for the Vertex struct
+
+// other code ....
+
 struct Vertex {
 
 	glm::vec3 position;
