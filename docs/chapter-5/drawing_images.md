@@ -119,7 +119,7 @@ layout (location = 1) in vec2 texCoord;
 layout (location = 0) out vec4 outFragColor;
 
 layout(set = 0, binding = 1) uniform  SceneData{
-    vec4 fogColor; // w is for exponent
+	vec4 fogColor; // w is for exponent
 	vec4 fogDistances; //x for min, y for max, zw unused.
 	vec4 ambientColor;
 	vec4 sunlightDirection; //w for sun power
@@ -164,7 +164,16 @@ void VulkanEngine::init_pipelines()
 	VkPipeline texPipeline = pipelineBuilder.build_pipeline(_device, _renderPass);
 	create_material(texPipeline, texturedPipeLayout, "texturedmesh");
 
-	//other code
+	// other code ....
+	vkDestroyShaderModule(_device, texturedMeshShader, nullptr);
+
+	// add pipeline and pipeline layout to deletion code
+	_mainDeletionQueue.push_function([=]() {
+		vkDestroyPipeline(_device, texPipeline, nullptr);
+		vkDestroyPipelineLayout(_device, texturedPipeLayout, nullptr);
+
+		// other code ....
+	}
 }
 ```
 
