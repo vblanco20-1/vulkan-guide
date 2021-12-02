@@ -125,7 +125,7 @@ void VulkanEngine::load_meshes()
 	_triangleMesh._vertices[2].color = { 0.f,1.f, 0.0f }; //pure green
 
 
-	_monkeyMesh.load_from_obj("../../assets/monkey.obj");
+	_monkeyMesh.load_from_obj("../../assets/monkey_smooth.obj");
 
 
     upload_mesh(_triangleMesh);
