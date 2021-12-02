@@ -28,9 +28,9 @@ struct UploadContext {
 ```cpp
 class VulkanEngine {
 public:
-    UploadContext _uploadContext;
+	UploadContext _uploadContext;
 
-    void immediate_submit(std::function<void(VkCommandBuffer cmd)>&& function);
+	void immediate_submit(std::function<void(VkCommandBuffer cmd)>&& function);
 }
 ```
 
@@ -44,7 +44,7 @@ In `init_sync_structures()`, we will initialize the fence alongside the renderin
 
 ```cpp
 
-    VkFenceCreateInfo uploadFenceCreateInfo = vkinit::fence_create_info();
+	VkFenceCreateInfo uploadFenceCreateInfo = vkinit::fence_create_info();
 
 	VK_CHECK(vkCreateFence(_device, &uploadFenceCreateInfo, nullptr, &_uploadContext._uploadFence));
 	_mainDeletionQueue.push_function([=]() {
@@ -68,7 +68,43 @@ The other thing is the command pool, which we create in `init_commands`
 
 Right now we are creating the pool using the graphics queue family. This is because we will submit the commands to the same queue as the graphics one.
 
-Now that the structure is initialized, let's write the code for the `immediate_submit` function
+Before we go further, lets define helpful initializers for beginning a command buffer and filling out VkSubmitInfo
+```cpp
+// header
+	VkCommandBufferBeginInfo command_buffer_begin_info(VkCommandBufferUsageFlags flags = 0);
+	VkSubmitInfo submit_info(VkCommandBuffer* cmd);
+
+// implementation
+VkCommandBufferBeginInfo vkinit::command_buffer_begin_info(VkCommandBufferUsageFlags flags /*= 0*/)
+{
+	VkCommandBufferBeginInfo info = {};
+	info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+	info.pNext = nullptr;
+
+	info.pInheritanceInfo = nullptr;
+	info.flags = flags;
+	return info;
+}
+
+VkSubmitInfo vkinit::submit_info(VkCommandBuffer* cmd)
+{
+	VkSubmitInfo info = {};
+	info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	info.pNext = nullptr;
+
+	info.waitSemaphoreCount = 0;
+	info.pWaitSemaphores = nullptr;
+	info.pWaitDstStageMask = nullptr;
+	info.commandBufferCount = 1;
+	info.pCommandBuffers = cmd;
+	info.signalSemaphoreCount = 0;
+	info.pSignalSemaphores = nullptr;
+
+	return info;
+}
+```
+
+Now that the command pool and fence are initialized, let's write the code for the `immediate_submit` function
 
 ```cpp
 
@@ -77,7 +113,7 @@ void VulkanEngine::immediate_submit(std::function<void(VkCommandBuffer cmd)>&& f
 	//allocate the default command buffer that we will use for the instant commands
 	VkCommandBufferAllocateInfo cmdAllocInfo = vkinit::command_buffer_allocate_info(_uploadContext._commandPool, 1);
 
-    VkCommandBuffer cmd;
+	VkCommandBuffer cmd;
 	VK_CHECK(vkAllocateCommandBuffers(_device, &cmdAllocInfo, &cmd));
 
 	//begin the command buffer recording. We will use this command buffer exactly once, so we want to let vulkan know that
@@ -85,7 +121,7 @@ void VulkanEngine::immediate_submit(std::function<void(VkCommandBuffer cmd)>&& f
 
 	VK_CHECK(vkBeginCommandBuffer(cmd, &cmdBeginInfo));
 
-    //execute the function
+	//execute the function
 	function(cmd);
 
 	VK_CHECK(vkEndCommandBuffer(cmd));
@@ -100,7 +136,7 @@ void VulkanEngine::immediate_submit(std::function<void(VkCommandBuffer cmd)>&& f
 	vkWaitForFences(_device, 1, &_uploadContext._uploadFence, true, 9999999999);
 	vkResetFences(_device, 1, &_uploadContext._uploadFence);
 
-    //clear the command pool. This will free the command buffer too
+	//clear the command pool. This will free the command buffer too
 	vkResetCommandPool(_device, _uploadContext._commandPool, 0);
 }
 ```
@@ -163,7 +199,7 @@ Similar map/unmap buffer logic as always. This is unchanged from the last versio
 With the vertex buffer now in a Vulkan CPU side buffer, we need to create the actual GPU-side buffer.
 
 ```cpp
-    //allocate vertex buffer
+	//allocate vertex buffer
 	VkBufferCreateInfo vertexBufferInfo = {};
 	vertexBufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
 	vertexBufferInfo.pNext = nullptr;
