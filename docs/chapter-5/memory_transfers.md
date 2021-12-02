@@ -23,6 +23,7 @@ Let's begin by adding a new struct to VulkanEngine, and a function for immediate
 struct UploadContext {
 	VkFence _uploadFence;
 	VkCommandPool _commandPool;
+	VkCommandBuffer _commandBuffer;
 };
 ```
 ```cpp
@@ -53,20 +54,6 @@ In `init_sync_structures()`, we will initialize the fence alongside the renderin
 ```
 
 On this fence we won't set the `VK_FENCE_CREATE_SIGNALED_BIT` flag, as we will not try to wait on it before sending commands like we do in the render loop.
-
-The other thing is the command pool, which we create in `init_commands`
-
-```cpp
-	VkCommandPoolCreateInfo uploadCommandPoolInfo = vkinit::command_pool_create_info(_graphicsQueueFamily);
-	//create pool for upload context
-	VK_CHECK(vkCreateCommandPool(_device, &uploadCommandPoolInfo, nullptr, &_uploadContext._commandPool));
-
-	_mainDeletionQueue.push_function([=]() {
-		vkDestroyCommandPool(_device, _uploadContext._commandPool, nullptr);
-	});
-```
-
-Right now we are creating the pool using the graphics queue family. This is because we will submit the commands to the same queue as the graphics one.
 
 Before we go further, lets define helpful initializers for beginning a command buffer and filling out VkSubmitInfo
 ```cpp
@@ -104,19 +91,35 @@ VkSubmitInfo vkinit::submit_info(VkCommandBuffer* cmd)
 }
 ```
 
-Now that the command pool and fence are initialized, let's write the code for the `immediate_submit` function
+Now we create the command pool and allocate a command buffer from it, which we do in `init_commands`
+
+```cpp
+	VkCommandPoolCreateInfo uploadCommandPoolInfo = vkinit::command_pool_create_info(_graphicsQueueFamily);
+	//create pool for upload context
+	VK_CHECK(vkCreateCommandPool(_device, &uploadCommandPoolInfo, nullptr, &_uploadContext._commandPool));
+
+	_mainDeletionQueue.push_function([=]() {
+		vkDestroyCommandPool(_device, _uploadContext._commandPool, nullptr);
+	});
+
+	//allocate the default command buffer that we will use for the instant commands
+	VkCommandBufferAllocateInfo cmdAllocInfo = vkinit::command_buffer_allocate_info(_uploadContext._commandPool, 1);
+
+	VkCommandBuffer cmd;
+	VK_CHECK(vkAllocateCommandBuffers(_device, &cmdAllocInfo, &_uploadContext._commandBuffer));
+```
+
+Right now we are creating the pool using the graphics queue family. This is because we will submit the commands to the same queue as the graphics one.
+
+With that the command pool and fence initialized, let's write the code for the `immediate_submit` function
 
 ```cpp
 
 void VulkanEngine::immediate_submit(std::function<void(VkCommandBuffer cmd)>&& function)
 {
-	//allocate the default command buffer that we will use for the instant commands
-	VkCommandBufferAllocateInfo cmdAllocInfo = vkinit::command_buffer_allocate_info(_uploadContext._commandPool, 1);
+	VkCommandBuffer cmd = _uploadContext._commandBuffer;
 
-	VkCommandBuffer cmd;
-	VK_CHECK(vkAllocateCommandBuffers(_device, &cmdAllocInfo, &cmd));
-
-	//begin the command buffer recording. We will use this command buffer exactly once, so we want to let vulkan know that
+	//begin the command buffer recording. We will use this command buffer exactly once before resetting, so we tell vulkan that
 	VkCommandBufferBeginInfo cmdBeginInfo = vkinit::command_buffer_begin_info(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 
 	VK_CHECK(vkBeginCommandBuffer(cmd, &cmdBeginInfo));
@@ -136,14 +139,13 @@ void VulkanEngine::immediate_submit(std::function<void(VkCommandBuffer cmd)>&& f
 	vkWaitForFences(_device, 1, &_uploadContext._uploadFence, true, 9999999999);
 	vkResetFences(_device, 1, &_uploadContext._uploadFence);
 
-	//clear the command pool. This will free the command buffer too
+	// reset the command buffers inside the command pool
 	vkResetCommandPool(_device, _uploadContext._commandPool, 0);
 }
 ```
 
-This is very similar to the logic that we do in the render loop, but with some key differences.
-The most important one is that we aren't reusing the same command buffer from frame to frame. Instead, we are allocating it from the pool, and then resetting the pool.
-This is done because eventually we will want to be able to upload multiple command buffers per submit, so resetting the entire pool will work well. It also shows that it's perfectly fine to allocate and then free the pool every time.
+This is very similar to the logic that we do in the render loop.
+The most important one is that we are reusing the same command buffer from frame to frame. If we wanted to submit multiple command buffers, it would simply require allocating as many command buffers as we want ahead of time and reusing them.
 
 We first allocate command buffer, we then call the function between begin/end command buffer, and then we submit it. Then we wait for the submit to be finished, and reset the command pool.
 
