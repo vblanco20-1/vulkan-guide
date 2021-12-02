@@ -38,6 +38,14 @@ void VulkanEngine::init_descriptors()
 
 		//other code ....
 	}
+
+	// add storage buffers to deletion queues
+	for (int i = 0; i < FRAME_OVERLAP; i++)
+	{
+		vmaDestroyBuffer(_allocator, _frames[i].objectBuffer._buffer, _frames[i].objectBuffer._allocation);
+
+		//other code ....
+	}
 }
 ```
 Shader Storage buffers are created in the same way as uniform buffers. They also work in mostly the same way, they just have different properties like increased maximum size, and being writeable in shaders.
@@ -90,6 +98,14 @@ A bit below, we are going to initialize the set layout, which will only have 1 b
 ```
 
 Same as with the other set, we create a layout for the new set that will point to 1 storage buffer.
+
+We shouldn't forget to add this new layout to the deletion queue
+```cpp
+	_mainDeletionQueue.push_function([&]() {
+		// other code ....
+		vkDestroyDescriptorSetLayout(_device, _objectSetLayout, nullptr);
+	}
+```
 
 Now we need to create the descriptor sets to point to the buffer.
 ```cpp
@@ -151,8 +167,8 @@ layout (location = 2) in vec3 vColor;
 layout (location = 0) out vec3 outColor;
 
 layout(set = 0, binding = 0) uniform  CameraBuffer{
-    mat4 view;
-    mat4 proj;
+	mat4 view;
+	mat4 proj;
 	mat4 viewproj;
 } cameraData;
 

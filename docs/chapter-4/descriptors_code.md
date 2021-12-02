@@ -101,6 +101,12 @@ void VulkanEngine::init_descriptors()
 	{
 		_frames[i].cameraBuffer = create_buffer(sizeof(GPUCameraData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
 	}
+
+	// add buffers to deletion queues
+	for (int i = 0; i < FRAME_OVERLAP; i++)
+	{
+		vmaDestroyBuffer(_allocator,_frames[i].cameraBuffer._buffer, _frames[i].cameraBuffer._allocation);
+	}
 }
 ```
 For creating the buffers, we are to use the Uniform Buffer usage, and `CPU_TO_GPU` memory type.
@@ -193,6 +199,11 @@ void VulkanEngine::init_descriptors()
 	vkCreateDescriptorSetLayout(_device, &setInfo, nullptr, &_globalSetLayout);
 
 	// other code ....
+
+	// add descriptor set layout to deletion queues
+	_mainDeletionQueue.push_function([&]() {
+		vkDestroyDescriptorSetLayout(_device, _globalSetLayout, nullptr);
+	}
 }
 ```
 
@@ -245,6 +256,12 @@ void VulkanEngine::init_descriptors()
 	vkCreateDescriptorPool(_device, &pool_info, nullptr, &_descriptorPool);
 
 	// other code ....
+
+	// add descriptor set layout to deletion queues
+	_mainDeletionQueue.push_function([&]() {
+		vkDestroyDescriptorSetLayout(_device, _globalSetLayout, nullptr);
+		vkDestroyDescriptorPool(_device, _descriptorPool, nullptr);
+	}
 }
 ```
 
