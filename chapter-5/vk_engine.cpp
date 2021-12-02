@@ -474,6 +474,11 @@ void VulkanEngine::init_commands()
 	_mainDeletionQueue.push_function([=]() {
 		vkDestroyCommandPool(_device, _uploadContext._commandPool, nullptr);
 	});
+
+	//allocate the default command buffer that we will use for rendering
+	VkCommandBufferAllocateInfo cmdAllocInfo = vkinit::command_buffer_allocate_info(_uploadContext._commandPool, 1);
+
+	VK_CHECK(vkAllocateCommandBuffers(_device, &cmdAllocInfo, &_uploadContext._commandBuffer));
 }
 
 void VulkanEngine::init_sync_structures()
@@ -1115,13 +1120,7 @@ size_t VulkanEngine::pad_uniform_buffer_size(size_t originalSize)
 
 void VulkanEngine::immediate_submit(std::function<void(VkCommandBuffer cmd)>&& function)
 {
-	VkCommandBuffer cmd;
-
-	//allocate the default command buffer that we will use for rendering
-	VkCommandBufferAllocateInfo cmdAllocInfo = vkinit::command_buffer_allocate_info(_uploadContext._commandPool, 1);
-
-	VK_CHECK(vkAllocateCommandBuffers(_device, &cmdAllocInfo, &cmd));
-
+	VkCommandBuffer cmd =_uploadContext._commandBuffer;
 	//begin the command buffer recording. We will use this command buffer exactly once, so we want to let vulkan know that
 	VkCommandBufferBeginInfo cmdBeginInfo = vkinit::command_buffer_begin_info(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 
