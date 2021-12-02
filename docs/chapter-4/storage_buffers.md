@@ -24,7 +24,7 @@ struct FrameData {
 
 struct GPUObjectData{
 	glm::mat4 modelMatrix;
-}
+};
 ```
 
 ```cpp
