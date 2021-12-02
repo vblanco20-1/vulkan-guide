@@ -185,18 +185,18 @@ void VulkanEngine::init_descriptors()
 	camBufferBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 
 
-	VkDescriptorSetLayoutCreateInfo setInfo = {};
-	setInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-	setInfo.pNext = nullptr;
+	VkDescriptorSetLayoutCreateInfo setinfo = {};
+	setinfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+	setinfo.pNext = nullptr;
 
 	//we are going to have 1 binding
-	setInfo.bindingCount = 1;
+	setinfo.bindingCount = 1;
 	//no flags
-	setInfo.flags = 0;
+	setinfo.flags = 0;
 	//point to the camera buffer binding
-	setInfo.pBindings = &camBufferBinding;
+	setinfo.pBindings = &camBufferBinding;
 
-	vkCreateDescriptorSetLayout(_device, &setInfo, nullptr, &_globalSetLayout);
+	vkCreateDescriptorSetLayout(_device, &setinfo, nullptr, &_globalSetLayout);
 
 	// other code ....
 
