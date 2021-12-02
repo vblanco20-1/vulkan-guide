@@ -49,7 +49,7 @@ Now, we are going to add a variable to hold the camera buffer to our FrameData s
 
 struct GPUCameraData{
 	glm::mat4 view;
-	glm::mat4 projection;
+	glm::mat4 proj;
 	glm::mat4 viewproj;
 };
 
