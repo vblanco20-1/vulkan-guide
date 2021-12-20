@@ -236,7 +236,7 @@ We need to hook this attachment to the subpass, so change it to this
 ```
 
 This will connect the depth attachment to our main subpass of rendering.
-Last thing we need is to add the depth attachment to the attachment list in the renderpass itself, which is done like this
+We also need to add the depth attachment to the attachment list in the renderpass itself, which is done like this
 ```cpp
 
 	//array of 2 attachments, one for the color, and other for depth
@@ -252,6 +252,32 @@ Last thing we need is to add the depth attachment to the attachment list in the 
 ```
 
 Instead of storing only the color attachment in pAttachments, we add the depth attachment there too.
+
+Now we have to adjust the renderpass synchronization. Previously, it was possible that multiple frames were rendered simultaneously by the GPU. This is a problem when using depth buffers, because one frame could overwrite the depth buffer while a previous frame is still rendering to it.
+
+We add a new subpass dependency on the `init_default_renderpass()` function that synchronizes accesses to depth attachments.
+
+```cpp
+VkSubpassDependency depth_dependency = {};
+depth_dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+depth_dependency.dstSubpass = 0;
+depth_dependency.srcStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+depth_dependency.srcAccessMask = 0;
+depth_dependency.dstStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+depth_dependency.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+```
+
+This dependency tells Vulkan that the depth attachment in a renderpass cannot be used before previous renderpasses have finished using it.
+
+Finally, we need to include both dependencies in the `VkRenderPassCreateInfo`:
+
+```cpp
+VkSubpassDependency dependencies[2] = { dependency, depth_dependency };
+
+//other code...
+render_pass_info.dependencyCount = 2;
+render_pass_info.pDependencies = &dependencies[0];
+```
 
 With that, the renderpass now supports depth attachments. Now we need to modify our framebuffers so that they point to the depth image.
 
@@ -271,32 +297,6 @@ for (int i = 0; i < swapchain_imagecount; i++) {
 }
 ```
 Note how we are using the same depth image on each of the swapchain framebuffers. This is because we do not need to change the depth image between frames, we can just keep clearing and reusing the same depth image for every frame.
-
-Now we have to adjust the renderpass synchronization. Previously, it was possible that multiple frames were rendered simultaneously by the GPU. This is a problem when using depth buffers, because one frame could overwrite the depth buffer while a previous frame is still rendering to it.
-
-We add a new subpass dependency on the `init_default_renderpass()` function that synchronizes accesses to depth attachments.
-
-```cpp
-VkSubpassDependency depth_dependency = {};
-depth_dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-depth_dependency.dstSubpass = 0;
-depth_dependency.srcStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
-depth_dependency.srcAccessMask = 0;
-depth_dependency.dstStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
-depth_dependency.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-```
-
-This dependency tells Vulkan that using the depth attachment in a renderpass cannot be done before previous renderpasses have finished using it.
-
-Now we need to include both dependencies in the `VkRenderPassCreateInfo`:
-
-```cpp
-VkSubpassDependency dependencies[2] = { dependency, depth_dependency };
-
-//other code...
-render_pass_info.dependencyCount = 2;
-render_pass_info.pDependencies = &dependencies[0];
-```
 
 The renderpass initialization for depth buffer is now done, so the last thing needed is to add depth-testing to our pipeline for the mesh.
 
