@@ -278,32 +278,45 @@ We add two new subpass dependencies on the `init_default_renderpass()` function 
 
 ```cpp
 VkSubpassDependency depth_in_dependency = {};
-dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-dependency.dstSubpass = 0;
-dependency.srcStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
-dependency.srcAccessMask = 0;
-dependency.dstStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
-dependency.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+depth_in_dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+depth_in_dependency.dstSubpass = 0;
+depth_in_dependency.srcStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+depth_in_dependency.srcAccessMask = 0;
+depth_in_dependency.dstStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+depth_in_dependency.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 
 
 VkSubpassDependency depth_out_dependency = {};
-dependency.srcSubpass = 0;
-dependency.dstSubpass = VK_SUBPASS_EXTERNAL;
-dependency.srcStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
-dependency.srcAccessMask = 0;
-dependency.dstStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
-dependency.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+depth_out_dependency.srcSubpass = 0;
+depth_out_dependency.dstSubpass = VK_SUBPASS_EXTERNAL;
+depth_out_dependency.srcStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+depth_out_dependency.srcAccessMask = 0;
+depth_out_dependency.dstStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+depth_out_dependency.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 ```
 
 These dependencies tell Vulkan that using the depth attachment in a renderpass cannot be done before previous renderpasses have finished using it.
 
-Now we need to include all three dependencies in the `VkRenderPassCreateInfo`:
+However, now that we explicitly have a dependency from subpass 0 to "outside", we also need to explicitly synchronize the layout transition of the color attachment that happens at the end of each subpass.
+
+We add another barrier accomplishing this job:
+```cpp
+VkSubpassDependency color_transition_dependency = {};
+color_transition_dependency.srcSubpass = 0;
+color_transition_dependency.dstSubpass = VK_SUBPASS_EXTERNAL;
+color_transition_dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+color_transition_dependency.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+color_transition_dependency.dstStageMask = 0;
+color_transition_dependency.dstAccessMask = 0;
+```
+
+Now we need to include all four dependencies in the `VkRenderPassCreateInfo`:
 
 ```cpp
-VkSubpassDependency dependencies[3] = { dependency, depth_in_dependency, depth_out_dependency };
+VkSubpassDependency dependencies[4] = { dependency, color_transition_dependency, depth_in_dependency, depth_out_dependency };
 
 //other code...
-render_pass_info.dependencyCount = 3;
+render_pass_info.dependencyCount = 4;
 render_pass_info.pDependencies = &dependencies[0];
 ```
 
