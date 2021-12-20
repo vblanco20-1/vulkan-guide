@@ -405,15 +405,6 @@ void VulkanEngine::init_default_renderpass()
 	dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 	dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 
-	//dependency synchronizing the color attachment layout transition
-	VkSubpassDependency color_transition_dependency = {};
-	color_transition_dependency.srcSubpass = 0;
-	color_transition_dependency.dstSubpass = VK_SUBPASS_EXTERNAL;
-	color_transition_dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-	color_transition_dependency.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-	color_transition_dependency.dstStageMask = 0;
-	color_transition_dependency.dstAccessMask = 0;
-
 	//dependency from outside to the subpass, making this subpass dependent on the previous renderpasses
 	VkSubpassDependency depth_in_dependency = {};
 	depth_in_dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
@@ -423,17 +414,8 @@ void VulkanEngine::init_default_renderpass()
 	depth_in_dependency.dstStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
 	depth_in_dependency.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 
-	//dependency from the subpass to "outside", because the next render pass depends on the depth attachments from this pass
-	VkSubpassDependency depth_out_dependency = {};
-	depth_out_dependency.srcSubpass = 0;
-	depth_out_dependency.dstSubpass = VK_SUBPASS_EXTERNAL;
-	depth_out_dependency.srcStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
-	depth_out_dependency.srcAccessMask = 0;
-	depth_out_dependency.dstStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
-	depth_out_dependency.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-
-	//array of four dependencies, two for color, two for depth
-	VkSubpassDependency dependencies[4] = { dependency, color_transition_dependency, depth_in_dependency, depth_out_dependency };
+	//array of 2 dependencies, one for color, two for depth
+	VkSubpassDependency dependencies[2] = { dependency, depth_in_dependency };
 
 	//array of 2 attachments, one for the color, and other for depth
 	VkAttachmentDescription attachments[2] = { color_attachment,depth_attachment };
@@ -445,8 +427,8 @@ void VulkanEngine::init_default_renderpass()
 	render_pass_info.pAttachments = &attachments[0];
 	render_pass_info.subpassCount = 1;
 	render_pass_info.pSubpasses = &subpass;
-	//4 dependencies from dependency array
-	render_pass_info.dependencyCount = 4;
+	//2 dependencies from dependency array
+	render_pass_info.dependencyCount = 2;
 	render_pass_info.pDependencies = &dependencies[0];
 	
 	VK_CHECK(vkCreateRenderPass(_device, &render_pass_info, nullptr, &_renderPass));
