@@ -272,6 +272,48 @@ for (int i = 0; i < swapchain_imagecount; i++) {
 ```
 Note how we are using the same depth image on each of the swapchain framebuffers. This is because we do not need to change the depth image between frames, we can just keep clearing and reusing the same depth image for every frame.
 
+Now we have to adjust the renderpass synchronization. Previously, it was possible that multiple frames were rendered simultaneously by the GPU. This is a problem when using depth buffers, because one frame could overwrite the depth buffer while a previous frame is still rendering to it.
+
+Firstly, we adjust the existing dependency so it includes early fragment tests. These are fast depth tests happening before the fragment stage that also read from the depth buffer, so they must be included in the synchronization.
+
+The modified subpass dependency looks like this:
+
+```cpp
+VkSubpassDependency dependency = {};
+dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+dependency.dstSubpass = 0;
+dependency.srcStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+dependency.srcAccessMask = 0;
+dependency.dstStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+```
+
+We add another subpass dependency on the `init_default_renderpass()` function. This dependency makes Vulkan recognize that renderpasses of subsequent frames depend on this renderpass and can't be executed at the same time.
+
+This is done as follows:
+
+```cpp
+VkSubpassDependency outDependency = {};
+dependency.srcSubpass = 0;
+dependency.dstSubpass = VK_SUBPASS_EXTERNAL;
+dependency.srcStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+dependency.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+dependency.dstStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+dependency.dstAccessMask = 0;
+```
+
+Note that the dependencies are similar, just the source and destination members are swapped.
+
+Now we need to include the second dependency in the `VkRenderPassCreateInfo`:
+
+```cpp
+VkSubpassDependency dependencies[2] = { dependency, outDependency };
+
+//other code...
+render_pass_info.dependencyCount = 2;
+render_pass_info.pDependencies = &dependencies[0];
+```
+
 The renderpass initialization for depth buffer is now done, so the last thing needed is to add depth-testing to our pipeline for the mesh.
 
 We are going to add yet another initializer to the list, this time for `VkPipelineDepthStencilStateCreateInfo`, which holds the information about how to use depth-testing on a render pipeline.
