@@ -274,7 +274,7 @@ Note how we are using the same depth image on each of the swapchain framebuffers
 
 Now we have to adjust the renderpass synchronization. Previously, it was possible that multiple frames were rendered simultaneously by the GPU. This is a problem when using depth buffers, because one frame could overwrite the depth buffer while a previous frame is still rendering to it.
 
-We add two new subpass dependencies on the `init_default_renderpass()` function that synchronize accesses to depth attachments.
+We add a new subpass dependency on the `init_default_renderpass()` function that synchronizes accesses to depth attachments.
 
 ```cpp
 VkSubpassDependency depth_dependency = {};
