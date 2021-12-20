@@ -274,43 +274,36 @@ Note how we are using the same depth image on each of the swapchain framebuffers
 
 Now we have to adjust the renderpass synchronization. Previously, it was possible that multiple frames were rendered simultaneously by the GPU. This is a problem when using depth buffers, because one frame could overwrite the depth buffer while a previous frame is still rendering to it.
 
-Firstly, we adjust the existing dependency so it includes early fragment tests. These are fast depth tests happening before the fragment stage that also read from the depth buffer, so they must be included in the synchronization.
-
-The modified subpass dependency looks like this:
+We add two new subpass dependencies on the `init_default_renderpass()` function that synchronize accesses to depth attachments.
 
 ```cpp
-VkSubpassDependency dependency = {};
+VkSubpassDependency depth_in_dependency = {};
 dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
 dependency.dstSubpass = 0;
-dependency.srcStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+dependency.srcStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
 dependency.srcAccessMask = 0;
-dependency.dstStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-```
+dependency.dstStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+dependency.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 
-We add another subpass dependency on the `init_default_renderpass()` function. This dependency makes Vulkan recognize that renderpasses of subsequent frames depend on this renderpass and can't be executed at the same time.
 
-This is done as follows:
-
-```cpp
-VkSubpassDependency outDependency = {};
+VkSubpassDependency depth_out_dependency = {};
 dependency.srcSubpass = 0;
 dependency.dstSubpass = VK_SUBPASS_EXTERNAL;
-dependency.srcStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-dependency.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-dependency.dstStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-dependency.dstAccessMask = 0;
+dependency.srcStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+dependency.srcAccessMask = 0;
+dependency.dstStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+dependency.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 ```
 
-Note that the dependencies are similar, just the source and destination members are swapped.
+These dependencies tell Vulkan that using the depth attachment in a renderpass cannot be done before previous renderpasses have finished using it.
 
-Now we need to include the second dependency in the `VkRenderPassCreateInfo`:
+Now we need to include all three dependencies in the `VkRenderPassCreateInfo`:
 
 ```cpp
-VkSubpassDependency dependencies[2] = { dependency, outDependency };
+VkSubpassDependency dependencies[3] = { dependency, depth_in_dependency, depth_out_dependency };
 
 //other code...
-render_pass_info.dependencyCount = 2;
+render_pass_info.dependencyCount = 3;
 render_pass_info.pDependencies = &dependencies[0];
 ```
 
