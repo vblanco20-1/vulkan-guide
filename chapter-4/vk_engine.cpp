@@ -389,35 +389,53 @@ void VulkanEngine::init_default_renderpass()
 	VkSubpassDependency dependency = {};
 	dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
 	dependency.dstSubpass = 0;
-	dependency.srcStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+	dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 	dependency.srcAccessMask = 0;
-	dependency.dstStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+	dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 	dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 
-	//dependency fronm the subpass to "outside", because the next render pass depends on the depth attachments from this pass
-	VkSubpassDependency outDependency = {};
-	dependency.srcSubpass = 0;
-	dependency.dstSubpass = VK_SUBPASS_EXTERNAL;
-	dependency.srcStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-	dependency.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-	dependency.dstStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-	dependency.dstAccessMask = 0;
+	//dependency synchronizing the color attachment layout transition
+	VkSubpassDependency color_transition_dependency = {};
+	color_transition_dependency.srcSubpass = 0;
+	color_transition_dependency.dstSubpass = VK_SUBPASS_EXTERNAL;
+	color_transition_dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+	color_transition_dependency.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+	color_transition_dependency.dstStageMask = 0;
+	color_transition_dependency.dstAccessMask = 0;
 
-	//array of two dependencies, one from "outside", one to "outside"
-	VkSubpassDependency dependencies[2] = { dependency, outDependency };
+	//dependency from outside to the subpass, making this subpass dependent on the previous renderpasses
+	VkSubpassDependency depth_in_dependency = {};
+	depth_in_dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+	depth_in_dependency.dstSubpass = 0;
+	depth_in_dependency.srcStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+	depth_in_dependency.srcAccessMask = 0;
+	depth_in_dependency.dstStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+	depth_in_dependency.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+
+	//dependency from the subpass to "outside", because the next render pass depends on the depth attachments from this pass
+	VkSubpassDependency depth_out_dependency = {};
+	depth_out_dependency.srcSubpass = 0;
+	depth_out_dependency.dstSubpass = VK_SUBPASS_EXTERNAL;
+	depth_out_dependency.srcStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+	depth_out_dependency.srcAccessMask = 0;
+	depth_out_dependency.dstStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+	depth_out_dependency.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+
+	//array of four dependencies, two for color, two for depth
+	VkSubpassDependency dependencies[4] = { dependency, color_transition_dependency, depth_in_dependency, depth_out_dependency };
 
 	//array of 2 attachments, one for the color, and other for depth
 	VkAttachmentDescription attachments[2] = { color_attachment,depth_attachment };
 
 	VkRenderPassCreateInfo render_pass_info = {};
 	render_pass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-	//2 attachments from said array
+	//2 attachments from attachment array
 	render_pass_info.attachmentCount = 2;
 	render_pass_info.pAttachments = &attachments[0];
 	render_pass_info.subpassCount = 1;
 	render_pass_info.pSubpasses = &subpass;
-	//2 dependencies from dependency array
-	render_pass_info.dependencyCount = 2;
+	//4 dependencies from dependency array
+	render_pass_info.dependencyCount = 4;
 	render_pass_info.pDependencies = &dependencies[0];
 	
 	VK_CHECK(vkCreateRenderPass(_device, &render_pass_info, nullptr, &_renderPass));
