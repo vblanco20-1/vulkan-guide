@@ -183,6 +183,21 @@ void main()
 ```
 We are changing the GLSL version to 460 because we want to be able to use `gl_BaseInstance` for indexing into the transforms array.
 
+And adding `shader draw parameters` extension in `init_vulkan()`:
+```cpp
+void VulkanEngine::init_vulkan(){
+	// initialize vulkan instance and surface ...
+	
+	// select a GPU
+	vkb::PhysicalDeviceSelector selector{vkb_inst};
+	// in order to use gl_BaseInstance, we need to enable shader draw parameters extension
+    	selector.add_required_extension("VK_KHR_shader_draw_parameters");
+	vkb::PhysicalDevice physicalDevice = selector.set_minimum_version(1, 1).set_surface(_surface).select().value();
+
+	// other code ...
+}
+```
+
 
 Note the way we are declaring the ObjectBuffer
 ```glsl
