@@ -105,36 +105,36 @@ The Render loop looks like this by the end of chapter 4 (pseudocode)
     //initial global setup omitted
 
     //write object matrices
-	GPUObjectData* objectSSBO = map_buffer(get_current_frame().objectBuffer);
+    GPUObjectData* objectSSBO = map_buffer(get_current_frame().objectBuffer);
 	
-	for (int i = 0; i < count; i++)
-	{
-		RenderObject& object = objects[i];
-		objectSSBO[i].modelMatrix = object.transformMatrix;
-	}
+    for (int i = 0; i < count; i++)
+    {
+	RenderObject& object = objects[i];
+	objectSSBO[i].modelMatrix = object.transformMatrix;
+    }
 	
-	Mesh* lastMesh = nullptr;
-	Material* lastMaterial = nullptr;
+    Mesh* lastMesh = nullptr;
+    Material* lastMaterial = nullptr;
 	
-	for (int i = 0; i < count; i++)
-	{
-		RenderObject& object = objects[i];
+    for (int i = 0; i < count; i++)
+    {
+	RenderObject& object = objects[i];
 
-		//only bind the pipeline if it doesn't match with the already bound one
-		if (object.material != lastMaterial) {
-
-			bind_descriptors(object.material);
+	//only bind the pipeline if it doesn't match with the already bound one
+	if (object.material != lastMaterial) {
+	    bind_descriptors(object.material);
             lastMaterial = object.material;
-		}	
+	}	
 
-		//only bind the mesh if its a different one from last bind
-		if (object.mesh != lastMesh) {
-			bind_mesh(object.mesh)
+	//only bind the mesh if its a different one from last bind
+	if (object.mesh != lastMesh) {
+	    bind_mesh(object.mesh)
             lastMesh = object.mesh;
-		}
-		//we can now draw
-		vkCmdDraw(cmd, object.mesh->_vertices.size(), 1,0 , i /*using i to access matrix in the shader */   );
 	}
+	
+	//we can now draw
+	vkCmdDraw(cmd, object.mesh->_vertices.size(), 1,0 , i /*using i to access matrix in the shader */   );
+    }
 }
 ```
 
@@ -157,18 +157,18 @@ std::vector<IndirectBatch> compact_draws(RenderObject* objects, int count)
     std::vector<IndirectBatch> draws;
 
     IndirectBatch firstDraw;
-    firstDraw.mesh = objects[0]->mesh;
-    firstDraw.material = objects[0]->material;
+    firstDraw.mesh = objects[0].mesh;
+    firstDraw.material = objects[0].material;
     firstDraw.first = 0;
     firstDraw.count = 1;
 
     draws.push_back(firstDraw);
 
-    for (int i = i; i < count; i++)
+    for (int i = 0; i < count; i++)
     {
         //compare the mesh and material with the end of the vector of draws
-        bool sameMesh = objects[i]->mesh == draws.back().mesh;
-        bool sameMaterial = objects[i]->material ==draws.back().material;
+        bool sameMesh = objects[i].mesh == draws.back().mesh;
+        bool sameMaterial = objects[i].material ==draws.back().material;
 
         if(sameMesh && sameMaterial)
         {
@@ -179,8 +179,8 @@ std::vector<IndirectBatch> compact_draws(RenderObject* objects, int count)
         {
             //add new draw
             IndirectBatch newDraw;
-            newDraw.mesh = objects[i]->mesh;
-            newDraw.material = objects[i]->material;
+            newDraw.mesh = objects[i].mesh;
+            newDraw.material = objects[i].material;
             newDraw.first = i;
             newDraw.count = 1;
 
@@ -198,18 +198,18 @@ With the draws compacted in this way, we can rewrite the draw loop into this, wh
 
     std::vector<IndirectBatch> draws = compact_draws(objects, count);
 
-	for (IndirectBatch& draw : draws)
-	{
-		bind_descriptors(draw.material);      
+    for (IndirectBatch& draw : draws)
+    {
+	bind_descriptors(draw.material);      
 
-		bind_mesh(draw.mesh)
-        
-		//we can now draw
-        for(int i = draw.first ;i < draw.count;i++)
+	bind_mesh(draw.mesh)
+
+	//we can now draw
+        for(int i = draw.first; i < draw.count;i++)
         {       
-		    vkCmdDraw(cmd, draw.mesh->_vertices.size(), 1,0 , i /*using i to access matrix in the shader */   );
+	    vkCmdDraw(cmd, draw.mesh->_vertices.size(), 1,0 , i /*using i to access matrix in the shader */   );
         }
-	}
+    }
 }
 ```
 
@@ -229,11 +229,11 @@ VkDrawIndirectCommand* drawCommands = map_buffer(get_current_frame().indirectBuf
 //encode the draw data of each object into the indirect draw buffer
 for (int i = 0; i < count; i++)
 {
-	RenderObject& object = objects[i];
-	VkDrawIndirectCommand[i].vertexCount = object.mesh->_vertices.size();
-    VkDrawIndirectCommand[i].instanceCount = 1;
-    VkDrawIndirectCommand[i].firstVertex = 0;
-    VkDrawIndirectCommand[i].firstInstance = i; //used to access object matrix in the shader
+    RenderObject& object = objects[i];
+    drawCommands[i].vertexCount = object.mesh->_vertices.size();
+    drawCommands[i].instanceCount = 1;
+    drawCommands[i].firstVertex = 0;
+    drawCommands[i].firstInstance = i; //used to access object matrix in the shader
 }
 	
 
@@ -249,7 +249,7 @@ for (IndirectBatch& draw : draws)
     uint32_t draw_stride = sizeof(VkDrawIndirectCommand);
 
     //execute the draw command buffer on each section as defined by the array of draws
-    vkCmdDrawIndirect(cmd,get_current_frame().indirectBuffer,indirect_offset, draw.count,draw_stride);
+    vkCmdDrawIndirect(cmd, get_current_frame().indirectBuffer, indirect_offset, draw.count,draw_stride);
 }
 ```
 That's it, now the render loop is indirect and should go a bit faster. But the most important think to take into account here, is that the draw commands buffer can be cached and written/read from compute shaders. If you wanted, you can just write it once at load, and just do the loop of vkCmdDrawIndirect every frame. This is also a design where adding culling is extremelly simple.
