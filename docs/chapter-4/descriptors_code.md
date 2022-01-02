@@ -49,7 +49,7 @@ Now, we are going to add a variable to hold the camera buffer to our FrameData s
 
 struct GPUCameraData{
 	glm::mat4 view;
-	glm::mat4 projection;
+	glm::mat4 proj;
 	glm::mat4 viewproj;
 };
 
@@ -100,6 +100,12 @@ void VulkanEngine::init_descriptors()
 	for (int i = 0; i < FRAME_OVERLAP; i++)
 	{
 		_frames[i].cameraBuffer = create_buffer(sizeof(GPUCameraData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+	}
+
+	// add buffers to deletion queues
+	for (int i = 0; i < FRAME_OVERLAP; i++)
+	{
+		vmaDestroyBuffer(_allocator,_frames[i].cameraBuffer._buffer, _frames[i].cameraBuffer._allocation);
 	}
 }
 ```
@@ -179,20 +185,25 @@ void VulkanEngine::init_descriptors()
 	camBufferBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 
 
-	VkDescriptorSetLayoutCreateInfo setInfo = {};
-	setInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-	setInfo.pNext = nullptr;
+	VkDescriptorSetLayoutCreateInfo setinfo = {};
+	setinfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+	setinfo.pNext = nullptr;
 
 	//we are going to have 1 binding
-	setInfo.bindingCount = 1;
+	setinfo.bindingCount = 1;
 	//no flags
-	setInfo.flags = 0;
+	setinfo.flags = 0;
 	//point to the camera buffer binding
-	setInfo.pBindings = &camBufferBinding;
+	setinfo.pBindings = &camBufferBinding;
 
-	vkCreateDescriptorSetLayout(_device, &setInfo, nullptr, &_globalSetLayout);
+	vkCreateDescriptorSetLayout(_device, &setinfo, nullptr, &_globalSetLayout);
 
 	// other code ....
+
+	// add descriptor set layout to deletion queues
+	_mainDeletionQueue.push_function([&]() {
+		vkDestroyDescriptorSetLayout(_device, _globalSetLayout, nullptr);
+	}
 }
 ```
 
@@ -245,6 +256,12 @@ void VulkanEngine::init_descriptors()
 	vkCreateDescriptorPool(_device, &pool_info, nullptr, &_descriptorPool);
 
 	// other code ....
+
+	// add descriptor set layout to deletion queues
+	_mainDeletionQueue.push_function([&]() {
+		vkDestroyDescriptorSetLayout(_device, _globalSetLayout, nullptr);
+		vkDestroyDescriptorPool(_device, _descriptorPool, nullptr);
+	}
 }
 ```
 

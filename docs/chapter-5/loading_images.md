@@ -49,7 +49,7 @@ bool vkutil::load_image_from_file(VulkanEngine& engine, const char* file, Alloca
 		return false;
 	}
 
-    return true;
+	return true;
 }
 ```
 
@@ -60,23 +60,23 @@ With the texture file loaded into the pixels array, we can create a staging buff
 
 
 ```cpp
-    void* pixel_ptr = pixels;
+	void* pixel_ptr = pixels;
 	VkDeviceSize imageSize = texWidth * texHeight * 4;
 
-    //the format R8G8B8A8 matches exactly with the pixels loaded from stb_image lib
+	//the format R8G8B8A8 matches exactly with the pixels loaded from stb_image lib
 	VkFormat image_format = VK_FORMAT_R8G8B8A8_SRGB;
 
-    //allocate temporary buffer for holding texture data to upload
+	//allocate temporary buffer for holding texture data to upload
 	AllocatedBuffer stagingBuffer = engine.create_buffer(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
 
-    //copy data to buffer
+	//copy data to buffer
 	void* data;
 	vmaMapMemory(engine._allocator, stagingBuffer._allocation, &data);
 
 	memcpy(data, pixel_ptr, static_cast<size_t>(imageSize));
 
 	vmaUnmapMemory(engine._allocator, stagingBuffer._allocation);
-    //we no longer need the loaded data, so we can free the pixels as they are now in the staging buffer
+	//we no longer need the loaded data, so we can free the pixels as they are now in the staging buffer
 	stbi_image_free(pixels);
 ```
 
@@ -152,7 +152,7 @@ We will not need to know the specific details here for what we are doing.
 With the image ready to receive pixel data, we can now transfer with a command. We continue filling the `immediate_submit()` call
 
 ```cpp
-    VkBufferImageCopy copyRegion = {};
+	VkBufferImageCopy copyRegion = {};
 	copyRegion.bufferOffset = 0;
 	copyRegion.bufferRowLength = 0;
 	copyRegion.bufferImageHeight = 0;
@@ -176,7 +176,7 @@ The image now has the correct pixel data, so we can change its layout one more t
 
 
 ```cpp
-    VkImageMemoryBarrier imageBarrier_toReadable = imageBarrier_toTransfer;
+	VkImageMemoryBarrier imageBarrier_toReadable = imageBarrier_toTransfer;
 
 	imageBarrier_toReadable.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 	imageBarrier_toReadable.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -195,16 +195,16 @@ We now finish the load function by releasing the resources we don't need and add
 ```cpp
 bool vkutil::load_image_from_file(VulkanEngine& engine, const char* file, AllocatedImage & outImage)
 {
-    // file load code
+	// file load code
 
-    // staging buffer copy
+	// staging buffer copy
 
-    engine.immediate_submit([&](VkCommandBuffer cmd) {
-        //transitions and copy commands
-    });
+	engine.immediate_submit([&](VkCommandBuffer cmd) {
+		//transitions and copy commands
+	});
 
 
-    engine._mainDeletionQueue.push_function([=]() {
+	engine._mainDeletionQueue.push_function([=]() {
 
 		vmaDestroyImage(engine._allocator, newImage._image, newImage._allocation);
 	});
@@ -254,7 +254,22 @@ void VulkanEngine::load_images()
 	_loadedTextures["empire_diffuse"] = lostEmpire;
 }
 ```
-Make sure you call load_images before setup_scene in the `init` function
+
+Make sure to call `load_images()` before `init_scene()` in the `VulkanEngine::init()` function.
+
+```cpp
+void VulkanEngine::init()
+{
+	// other code ....
+
+	load_images();
+
+	load_meshes();
+
+	init_scene();
+	//everything went fine
+	_isInitialized = true;
+```
 
 With the texture now loaded, we need to display it into the shader, refactoring a few things.
 

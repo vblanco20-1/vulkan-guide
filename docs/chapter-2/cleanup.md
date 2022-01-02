@@ -198,6 +198,32 @@ void VulkanEngine::init_sync_structures()
 }
 ```
 
+We add new initializers to vk_initializers, for fence and semaphore creation
+```cpp
+//header
+VkFenceCreateInfo fence_create_info(VkFenceCreateFlags flags = 0);
+VkSemaphoreCreateInfo semaphore_create_info(VkSemaphoreCreateFlags flags = 0);
+
+//implementation
+VkFenceCreateInfo vkinit::fence_create_info(VkFenceCreateFlags flags)
+{
+    VkFenceCreateInfo fenceCreateInfo = {};
+    fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    fenceCreateInfo.pNext = nullptr;
+    fenceCreateInfo.flags = flags;
+    return fenceCreateInfo;
+}
+
+VkSemaphoreCreateInfo vkinit::semaphore_create_info(VkSemaphoreCreateFlags flags)
+{
+    VkSemaphoreCreateInfo semCreateInfo = {};
+    semCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    semCreateInfo.pNext = nullptr;
+    semCreateInfo.flags = flags;
+    return semCreateInfo;
+}
+```
+
 Lastly, we add the deletion for the new objects from this chapter. For the shader modules, we aren't going to use the queue.
 When a pipeline is created from a shader module, you can then delete the shader module and it will be ok.
 ```cpp
