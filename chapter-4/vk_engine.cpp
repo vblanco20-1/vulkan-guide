@@ -251,11 +251,14 @@ void VulkanEngine::init_vulkan()
 		.select()
 		.value();
 
-	//create the final vulkan device
-
+	// create the final vulkan device
 	vkb::DeviceBuilder deviceBuilder{ physicalDevice };
-
-	vkb::Device vkbDevice = deviceBuilder.build().value();
+	// enable shader draw parameters feature to use gl_BaseInstance
+    	VkPhysicalDeviceShaderDrawParametersFeatures shader_draw_parameters_features = {};
+    	shader_draw_parameters_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_DRAW_PARAMETERS_FEATURES;
+    	shader_draw_parameters_features.pNext = nullptr;
+    	shader_draw_parameters_features.shaderDrawParameters = VK_TRUE;
+    	vkb::Device vkbDevice = deviceBuilder.add_pNext(&shader_draw_parameters_features).build().value();
 
 	// Get the VkDevice handle used in the rest of a vulkan application
 	_device = vkbDevice.device;
