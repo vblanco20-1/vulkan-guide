@@ -76,11 +76,10 @@ void VulkanEngine::cleanup()
 
 		_mainDeletionQueue.flush();
 
-		vkDestroySurfaceKHR(_instance, _surface, nullptr);
-
 		vkDestroyDevice(_device, nullptr);
+		vkDestroySurfaceKHR(_instance, _surface, nullptr);
+		vkb::destroy_debug_utils_messenger(_instance, _debug_messenger);
 		vkDestroyInstance(_instance, nullptr);
-
 		SDL_DestroyWindow(_window);
 	}
 }
