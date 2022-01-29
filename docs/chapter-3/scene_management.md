@@ -5,7 +5,7 @@ parent:  "3. Drawing meshes"
 nav_order: 20
 ---
 
-We have arbitrary mesh rendering with depth buffers and materials, but at the moment, each object is hardcoded.
+We have arbitrary mesh rendering with depth attachments and materials, but at the moment, each object is hardcoded.
 We are going to refactor the rendering a little bit to render an array of objects. While it's a very simple way of setting up a scene, it will allow you to start making interesting things, like simple 3d games.
 
 The way it's going to work is that we are going to have a RenderObject struct, which holds the data needed for a single draw. Mesh, Matrix, and Material. We will have an array of those, and just render each of them in order.
