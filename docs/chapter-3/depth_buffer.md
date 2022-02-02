@@ -255,7 +255,19 @@ Instead of storing only the color attachment in pAttachments, we add the depth a
 
 Now we have to adjust the renderpass synchronization. Previously, it was possible that multiple frames were rendered simultaneously by the GPU. This is a problem when using depth buffers, because one frame could overwrite the depth buffer while a previous frame is still rendering to it.
 
-We add a new subpass dependency on the `init_default_renderpass()` function that synchronizes accesses to depth attachments.
+We keep the subpass dependency for the color attachment we were already using:
+
+```cpp
+VkSubpassDependency dependency = {};
+dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+dependency.dstSubpass = 0;
+dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+dependency.srcAccessMask = 0;
+dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+```
+
+We also add a new subpass dependency that synchronizes accesses to depth attachments.
 
 ```cpp
 VkSubpassDependency depth_dependency = {};
