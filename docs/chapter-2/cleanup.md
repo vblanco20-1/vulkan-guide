@@ -79,6 +79,9 @@ void VulkanEngine::cleanup()
 		vkDestroySurfaceKHR(_instance, _surface, nullptr);
 
 		vkDestroyDevice(_device, nullptr);
+
+		vkb::destroy_debug_utils_messenger(_instance, _debug_messenger);
+		
 		vkDestroyInstance(_instance, nullptr);
 
 		SDL_DestroyWindow(_window);
