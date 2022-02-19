@@ -105,7 +105,9 @@ void VulkanEngine::init_descriptors()
 	// add buffers to deletion queues
 	for (int i = 0; i < FRAME_OVERLAP; i++)
 	{
-		vmaDestroyBuffer(_allocator,_frames[i].cameraBuffer._buffer, _frames[i].cameraBuffer._allocation);
+		_mainDeletionQueue.push_function([&]() {
+			vmaDestroyBuffer(_allocator, _frames[i].cameraBuffer._buffer, _frames[i].cameraBuffer._allocation);
+		}
 	}
 }
 ```
