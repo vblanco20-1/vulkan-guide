@@ -8,7 +8,7 @@
 #include <vk_initializers.h>
 
 #include "VkBootstrap.h"
-
+#include <array>
 #include <iostream>
 
 
@@ -48,10 +48,6 @@ void VulkanEngine::init()
 
 	init_swapchain();
 
-	init_default_renderpass();
-
-	init_framebuffers();
-
 	init_commands();
 
 	init_sync_structures();
@@ -76,11 +72,8 @@ void VulkanEngine::cleanup()
 
 		vkDestroySwapchainKHR(_device, _swapchain, nullptr);
 
-		vkDestroyRenderPass(_device, _renderPass, nullptr);
-
 		//destroy swapchain resources
-		for (int i = 0; i < _framebuffers.size(); i++) {
-			vkDestroyFramebuffer(_device, _framebuffers[i], nullptr);
+		for (int i = 0; i < _swapchainImageViews.size(); i++) {
 
 			vkDestroyImageView(_device, _swapchainImageViews[i], nullptr);
 		}
@@ -114,27 +107,44 @@ void VulkanEngine::draw()
 	//begin the command buffer recording. We will use this command buffer exactly once, so we want to let vulkan know that
 	VkCommandBufferBeginInfo cmdBeginInfo = vkinit::command_buffer_begin_info(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 
-	VK_CHECK(vkBeginCommandBuffer(cmd, &cmdBeginInfo));
-
+	VK_CHECK(vkBeginCommandBuffer(cmd, &cmdBeginInfo));	
+	
 	//make a clear-color from frame number. This will flash with a 120 frame period.
 	VkClearValue clearValue;
 	float flash = abs(sin(_frameNumber / 120.f));
 	clearValue.color = { { 0.0f, 0.0f, flash, 1.0f } };
 
-	//start the main renderpass. 
-	//We will use the clear color from above, and the framebuffer of the index the swapchain gave us
-	VkRenderPassBeginInfo rpInfo = vkinit::renderpass_begin_info(_renderPass, _windowExtent, _framebuffers[swapchainImageIndex]);
+	VkRenderingAttachmentInfo colorAttachment{}; 
+	colorAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+	colorAttachment.pNext = nullptr;
+	colorAttachment.imageView = _swapchainImageViews[swapchainImageIndex];
+	colorAttachment.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+	colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+	colorAttachment.clearValue = clearValue;
 
-	//connect clear values
-	rpInfo.clearValueCount = 1;
-	rpInfo.pClearValues = &clearValue;
+	VkRenderingInfo renderInfo{};
+	renderInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
+	renderInfo.pNext = nullptr;
+	renderInfo.flags = 0;
+	renderInfo.renderArea = VkRect2D{VkOffset2D{0,0},VkExtent2D{_windowExtent.width,_windowExtent.height}};
+	renderInfo.layerCount = 1;
+	renderInfo.viewMask = 0;
+	renderInfo.colorAttachmentCount = 1;
+	renderInfo.pColorAttachments = &colorAttachment;
+	renderInfo.pDepthAttachment = nullptr;
+	renderInfo.pStencilAttachment = nullptr;
 
-	vkCmdBeginRenderPass(cmd, &rpInfo, VK_SUBPASS_CONTENTS_INLINE);
+	//make the swapchain image into writeable mode before rendering
+	transition_image(cmd, _swapchainImages[swapchainImageIndex], ImageTransitionMode::IntoAttachment);
 
-	//once we start adding rendering commands, they will go here
+	vkCmdBeginRendering(cmd, &renderInfo);
+	
+	vkCmdEndRendering(cmd);
 
-	//finalize the render pass
-	vkCmdEndRenderPass(cmd);
+	//make the swapchain image into presentable mode
+	transition_image(cmd, _swapchainImages[swapchainImageIndex], ImageTransitionMode::AttachmentToPresent);
+
 	//finalize the command buffer (we can no longer add commands, but it can now be executed)
 	VK_CHECK(vkEndCommandBuffer(cmd));
 
@@ -204,7 +214,7 @@ void VulkanEngine::init_vulkan()
 	auto inst_ret = builder.set_app_name("Example Vulkan Application")
 		.request_validation_layers(bUseValidationLayers)
 		.use_default_debug_messenger()
-		.require_api_version(1, 1, 0)
+		.require_api_version(1, 3, 0)
 		.build();
 
 	vkb::Instance vkb_inst = inst_ret.value();
@@ -215,15 +225,20 @@ void VulkanEngine::init_vulkan()
 
 	SDL_Vulkan_CreateSurface(_window, _instance, &_surface);
 
+	VkPhysicalDeviceVulkan13Features features{};
+	features.dynamicRendering = true;
+
 	//use vkbootstrap to select a gpu. 
 	//We want a gpu that can write to the SDL surface and supports vulkan 1.2
 	vkb::PhysicalDeviceSelector selector{ vkb_inst };
 	vkb::PhysicalDevice physicalDevice = selector
-		.set_minimum_version(1, 1)
+		.set_minimum_version(1, 3)
+		.set_required_features_13(features)
 		.set_surface(_surface)
 		.select()
 		.value();
 
+		//physicalDevice.features.
 	//create the final vulkan device
 
 	vkb::DeviceBuilder deviceBuilder{ physicalDevice };
@@ -260,73 +275,6 @@ void VulkanEngine::init_swapchain()
 	_swachainImageFormat = vkbSwapchain.image_format;
 }
 
-void VulkanEngine::init_default_renderpass()
-{
-	//we define an attachment description for our main color image
-	//the attachment is loaded as "clear" when renderpass start
-	//the attachment is stored when renderpass ends
-	//the attachment layout starts as "undefined", and transitions to "Present" so its possible to display it
-	//we dont care about stencil, and dont use multisampling
-
-	VkAttachmentDescription color_attachment = {};
-	color_attachment.format = _swachainImageFormat;
-	color_attachment.samples = VK_SAMPLE_COUNT_1_BIT;
-	color_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-	color_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-	color_attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-	color_attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-	color_attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-	color_attachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-
-	VkAttachmentReference color_attachment_ref = {};
-	color_attachment_ref.attachment = 0;
-	color_attachment_ref.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-	//we are going to create 1 subpass, which is the minimum you can do
-	VkSubpassDescription subpass = {};
-	subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-	subpass.colorAttachmentCount = 1;
-	subpass.pColorAttachments = &color_attachment_ref;
-
-	//1 dependency, which is from "outside" into the subpass. And we can read or write color
-	VkSubpassDependency dependency = {};
-	dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-	dependency.dstSubpass = 0;
-	dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-	dependency.srcAccessMask = 0;
-	dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-	dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-
-
-	VkRenderPassCreateInfo render_pass_info = {};
-	render_pass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-	render_pass_info.attachmentCount = 1;
-	render_pass_info.pAttachments = &color_attachment;
-	render_pass_info.subpassCount = 1;
-	render_pass_info.pSubpasses = &subpass;
-	render_pass_info.dependencyCount = 1;
-	render_pass_info.pDependencies = &dependency;
-
-	
-	VK_CHECK(vkCreateRenderPass(_device, &render_pass_info, nullptr, &_renderPass));
-	
-}
-
-void VulkanEngine::init_framebuffers()
-{
-	//create the framebuffers for the swapchain images. This will connect the render-pass to the images for rendering
-	VkFramebufferCreateInfo fb_info = vkinit::framebuffer_create_info(_renderPass, _windowExtent);
-
-	const uint32_t swapchain_imagecount = _swapchainImages.size();
-	_framebuffers = std::vector<VkFramebuffer>(swapchain_imagecount);
-
-	for (int i = 0; i < swapchain_imagecount; i++) {
-
-		fb_info.pAttachments = &_swapchainImageViews[i];
-		VK_CHECK(vkCreateFramebuffer(_device, &fb_info, nullptr, &_framebuffers[i]));
-	}
-}
-
 void VulkanEngine::init_commands()
 {
 	//create a command pool for commands submitted to the graphics queue.
@@ -355,4 +303,36 @@ void VulkanEngine::init_sync_structures()
 
 	VK_CHECK(vkCreateSemaphore(_device, &semaphoreCreateInfo, nullptr, &_presentSemaphore));
 	VK_CHECK(vkCreateSemaphore(_device, &semaphoreCreateInfo, nullptr, &_renderSemaphore));
+}
+
+void VulkanEngine::transition_image(VkCommandBuffer cmd, VkImage image, ImageTransitionMode transitionMode)
+{
+	VkImageMemoryBarrier imageBarrier{};
+	imageBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+	imageBarrier.pNext = nullptr;
+
+	switch (transitionMode)
+	{
+		case ImageTransitionMode::IntoAttachment:
+			imageBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+			imageBarrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+			break;
+
+		case ImageTransitionMode::AttachmentToPresent:
+			imageBarrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+			imageBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+			break;
+	}
+	imageBarrier.image = image;
+
+	VkImageSubresourceRange subImage{};
+	subImage.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	subImage.baseMipLevel = 0;
+	subImage.levelCount = 1;
+	subImage.baseArrayLayer = 0;
+	subImage.layerCount = 1;
+
+	imageBarrier.subresourceRange = subImage;
+
+	vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier);
 }

@@ -6,6 +6,11 @@
 #include <vk_types.h>
 #include <vector>
 
+enum class ImageTransitionMode {
+	IntoAttachment,
+	AttachmentToPresent
+};
+
 class VulkanEngine {
 public:
 
@@ -65,4 +70,6 @@ private:
 	void init_commands();
 
 	void init_sync_structures();
+
+	void transition_image(VkCommandBuffer cmd ,VkImage image, ImageTransitionMode transitionMode);
 };
