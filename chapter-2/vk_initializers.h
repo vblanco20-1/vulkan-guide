@@ -38,5 +38,11 @@ namespace vkinit {
 	VkPipelineColorBlendAttachmentState color_blend_attachment_state();
 
 	VkPipelineLayoutCreateInfo pipeline_layout_create_info();
+
+	VkPipelineRenderingCreateInfo pipeline_render_info(VkFormat* colorFormat);
+
+	VkRenderingAttachmentInfo color_attachment_info(VkImageView view, VkClearValue clearValue, VkImageLayout layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+
+	VkRenderingInfo rendering_info(VkExtent2D viewport, VkRenderingAttachmentInfo* colorAttachment);
 }
 

@@ -13,8 +13,6 @@ namespace vkinit {
 
 	VkCommandBufferBeginInfo command_buffer_begin_info(VkCommandBufferUsageFlags flags = 0);
 
-	VkFramebufferCreateInfo framebuffer_create_info(VkRenderPass renderPass, VkExtent2D extent);
-
 	VkFenceCreateInfo fence_create_info(VkFenceCreateFlags flags = 0);
 
 	VkSemaphoreCreateInfo semaphore_create_info(VkSemaphoreCreateFlags flags = 0);
@@ -23,7 +21,7 @@ namespace vkinit {
 
 	VkPresentInfoKHR present_info();
 
-	VkRenderPassBeginInfo renderpass_begin_info(VkRenderPass renderPass, VkExtent2D windowExtent, VkFramebuffer framebuffer);
+	VkRenderingAttachmentInfo color_attachment_info(VkImageView view, VkClearValue clearValue, VkImageLayout layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
+	VkRenderingInfo rendering_info(VkExtent2D viewport, VkRenderingAttachmentInfo* colorAttachment);
 }
-

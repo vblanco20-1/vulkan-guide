@@ -20,7 +20,13 @@ public:
 	VkPipelineMultisampleStateCreateInfo _multisampling;
 	VkPipelineLayout _pipelineLayout;
 
-	VkPipeline build_pipeline(VkDevice device, VkRenderPass pass);
+	VkPipelineRenderingCreateInfo _renderInfo;
+
+	VkPipeline build_pipeline(VkDevice device);
+};
+enum class ImageTransitionMode {
+	IntoAttachment,
+	AttachmentToPresent
 };
 
 
@@ -68,14 +74,11 @@ public:
 
 	VkCommandPool _commandPool;
 	VkCommandBuffer _mainCommandBuffer;
-	
-	VkRenderPass _renderPass;
 
 	VkSurfaceKHR _surface;
 	VkSwapchainKHR _swapchain;
 	VkFormat _swachainImageFormat;
 
-	std::vector<VkFramebuffer> _framebuffers;
 	std::vector<VkImage> _swapchainImages;
 	std::vector<VkImageView> _swapchainImageViews;
 
@@ -104,10 +107,6 @@ private:
 
 	void init_swapchain();
 
-	void init_default_renderpass();
-
-	void init_framebuffers();
-
 	void init_commands();
 
 	void init_sync_structures();
@@ -116,4 +115,8 @@ private:
 
 	//loads a shader module from a spir-v file. Returns false if it errors
 	bool load_shader_module(const char* filePath, VkShaderModule* outShaderModule);
+
+
+	void transition_image(VkCommandBuffer cmd, VkImage image, ImageTransitionMode transitionMode);
+
 };

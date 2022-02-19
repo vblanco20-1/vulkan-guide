@@ -71,5 +71,6 @@ private:
 
 	void init_sync_structures();
 
-	void transition_image(VkCommandBuffer cmd ,VkImage image, ImageTransitionMode transitionMode);
+	void transition_image(VkCommandBuffer cmd, VkImage image, ImageTransitionMode transitionMode);
+
 };

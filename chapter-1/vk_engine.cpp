@@ -52,7 +52,6 @@ void VulkanEngine::init()
 
 	init_sync_structures();
 
-
 	//everything went fine
 	_isInitialized = true;
 }
@@ -114,26 +113,9 @@ void VulkanEngine::draw()
 	float flash = abs(sin(_frameNumber / 120.f));
 	clearValue.color = { { 0.0f, 0.0f, flash, 1.0f } };
 
-	VkRenderingAttachmentInfo colorAttachment{}; 
-	colorAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
-	colorAttachment.pNext = nullptr;
-	colorAttachment.imageView = _swapchainImageViews[swapchainImageIndex];
-	colorAttachment.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-	colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-	colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-	colorAttachment.clearValue = clearValue;
+	VkRenderingAttachmentInfo colorAttachment = vkinit::color_attachment_info(_swapchainImageViews[swapchainImageIndex],clearValue);
 
-	VkRenderingInfo renderInfo{};
-	renderInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
-	renderInfo.pNext = nullptr;
-	renderInfo.flags = 0;
-	renderInfo.renderArea = VkRect2D{VkOffset2D{0,0},VkExtent2D{_windowExtent.width,_windowExtent.height}};
-	renderInfo.layerCount = 1;
-	renderInfo.viewMask = 0;
-	renderInfo.colorAttachmentCount = 1;
-	renderInfo.pColorAttachments = &colorAttachment;
-	renderInfo.pDepthAttachment = nullptr;
-	renderInfo.pStencilAttachment = nullptr;
+	VkRenderingInfo renderInfo = vkinit::rendering_info(_windowExtent,&colorAttachment);
 
 	//make the swapchain image into writeable mode before rendering
 	transition_image(cmd, _swapchainImages[swapchainImageIndex], ImageTransitionMode::IntoAttachment);

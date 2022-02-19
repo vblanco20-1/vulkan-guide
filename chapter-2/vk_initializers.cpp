@@ -210,3 +210,49 @@ VkPipelineLayoutCreateInfo vkinit::pipeline_layout_create_info() {
 	info.pPushConstantRanges = nullptr;
 	return info;
 }
+
+VkPipelineRenderingCreateInfo vkinit::pipeline_render_info(VkFormat* colorFormat)
+{
+	VkPipelineRenderingCreateInfo info{};
+	info.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
+	info.pNext = nullptr;
+
+	info.viewMask = 0;
+	info.colorAttachmentCount = 1;
+	info.pColorAttachmentFormats = colorFormat;
+	info.depthAttachmentFormat = VK_FORMAT_UNDEFINED;
+	info.stencilAttachmentFormat = VK_FORMAT_UNDEFINED;
+
+	return info;
+}
+
+VkRenderingAttachmentInfo vkinit::color_attachment_info(VkImageView view, VkClearValue clearValue, VkImageLayout layout /*= VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL*/)
+{
+	VkRenderingAttachmentInfo colorAttachment{};
+	colorAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+	colorAttachment.pNext = nullptr;
+
+	colorAttachment.imageView = view;
+	colorAttachment.imageLayout = layout;
+	colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+	colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+	colorAttachment.clearValue = clearValue;
+
+	return colorAttachment;
+}
+
+VkRenderingInfo vkinit::rendering_info(VkExtent2D renderExtent, VkRenderingAttachmentInfo* colorAttachment)
+{
+	VkRenderingInfo renderInfo{};
+	renderInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
+	renderInfo.pNext = nullptr;
+
+	renderInfo.renderArea = VkRect2D{ VkOffset2D{0,0},renderExtent };
+	renderInfo.layerCount = 1;
+	renderInfo.colorAttachmentCount = 1;
+	renderInfo.pColorAttachments = colorAttachment;
+	renderInfo.pDepthAttachment = nullptr;
+	renderInfo.pStencilAttachment = nullptr;
+
+	return renderInfo;
+}

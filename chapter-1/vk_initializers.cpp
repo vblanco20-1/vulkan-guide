@@ -33,21 +33,6 @@ VkCommandBufferBeginInfo vkinit::command_buffer_begin_info(VkCommandBufferUsageF
 	return info;
 }
 
-VkFramebufferCreateInfo vkinit::framebuffer_create_info(VkRenderPass renderPass, VkExtent2D extent)
-{
-	VkFramebufferCreateInfo info = {};
-	info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-	info.pNext = nullptr;
-
-	info.renderPass = renderPass;
-	info.attachmentCount = 1;
-	info.width = extent.width;
-	info.height = extent.height;
-	info.layers = 1;
-
-	return info;
-}
-
 VkFenceCreateInfo vkinit::fence_create_info(VkFenceCreateFlags flags /*= 0*/)
 {
 	VkFenceCreateInfo info = {};
@@ -100,19 +85,33 @@ VkPresentInfoKHR vkinit::present_info()
 	return info;
 }
 
-VkRenderPassBeginInfo vkinit::renderpass_begin_info(VkRenderPass renderPass, VkExtent2D windowExtent, VkFramebuffer framebuffer)
+VkRenderingAttachmentInfo vkinit::color_attachment_info(VkImageView view, VkClearValue clearValue, VkImageLayout layout /*= VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL*/)
 {
-	VkRenderPassBeginInfo info = {};
-	info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-	info.pNext = nullptr;
+	VkRenderingAttachmentInfo colorAttachment{};
+	colorAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+	colorAttachment.pNext = nullptr;
 
-	info.renderPass = renderPass;
-	info.renderArea.offset.x = 0;
-	info.renderArea.offset.y = 0;
-	info.renderArea.extent = windowExtent;
-	info.clearValueCount = 1;
-	info.pClearValues = nullptr;
-	info.framebuffer = framebuffer;
+	colorAttachment.imageView = view;
+	colorAttachment.imageLayout = layout;
+	colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+	colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+	colorAttachment.clearValue = clearValue;
 
-	return info;
+	return colorAttachment;
+}
+
+VkRenderingInfo vkinit::rendering_info(VkExtent2D renderExtent, VkRenderingAttachmentInfo* colorAttachment)
+{
+	VkRenderingInfo renderInfo{};
+	renderInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
+	renderInfo.pNext = nullptr;
+
+	renderInfo.renderArea = VkRect2D{ VkOffset2D{0,0},renderExtent };
+	renderInfo.layerCount = 1;
+	renderInfo.colorAttachmentCount = 1;
+	renderInfo.pColorAttachments = colorAttachment;
+	renderInfo.pDepthAttachment = nullptr;
+	renderInfo.pStencilAttachment = nullptr;
+
+	return renderInfo;
 }
