@@ -97,6 +97,10 @@ void VulkanEngine::cleanup()
 
 void VulkanEngine::draw()
 {
+	//check if window is minimized and skip drawing
+	if (SDL_GetWindowFlags(_window) & SDL_WINDOW_MINIMIZED)
+		return;
+
 	//wait until the gpu has finished rendering the last frame. Timeout of 1 second
 	VK_CHECK(vkWaitForFences(_device, 1, &_renderFence, true, 1000000000));
 	VK_CHECK(vkResetFences(_device, 1, &_renderFence));
