@@ -4,10 +4,10 @@
 #pragma once
 
 #include <vk_types.h>
+#include <vk_mesh.h>
 #include <vector>
 #include <functional>
 #include <deque>
-#include <vk_mesh.h>
 
 #include <glm/glm.hpp>
 #include <glm/gtx/transform.hpp>
@@ -25,10 +25,20 @@ public:
 	VkPipelineMultisampleStateCreateInfo _multisampling;
 	VkPipelineLayout _pipelineLayout;
 	VkPipelineDepthStencilStateCreateInfo _depthStencil;
-	VkPipeline build_pipeline(VkDevice device, VkRenderPass pass);
+	VkPipelineRenderingCreateInfo _renderInfo;
+
+	VkPipeline build_pipeline(VkDevice device);
+};
+enum class ImageTransitionMode {
+	IntoAttachment,
+	AttachmentToPresent,
+	IntoDepthTest
 };
 
-
+struct MeshPushConstants {
+	glm::vec4 data;
+	glm::mat4 render_matrix;
+};
 
 struct DeletionQueue
 {
@@ -48,10 +58,6 @@ struct DeletionQueue
     }
 };
 
-struct MeshPushConstants {
-	glm::vec4 data;
-	glm::mat4 render_matrix;
-};
 
 class VulkanEngine {
 public:
@@ -77,29 +83,13 @@ public:
 
 	VkCommandPool _commandPool;
 	VkCommandBuffer _mainCommandBuffer;
-	
-	VkRenderPass _renderPass;
 
 	VkSurfaceKHR _surface;
 	VkSwapchainKHR _swapchain;
 	VkFormat _swachainImageFormat;
 
-	std::vector<VkFramebuffer> _framebuffers;
 	std::vector<VkImage> _swapchainImages;
 	std::vector<VkImageView> _swapchainImageViews;
-
-	VkPipelineLayout _trianglePipelineLayout;
-
-	VkPipeline _trianglePipeline;
-	VkPipeline _redTrianglePipeline;
-
-    DeletionQueue _mainDeletionQueue;
-
-	VkPipeline _meshPipeline;
-	Mesh _triangleMesh;
-	Mesh _monkeyMesh;
-
-	VkPipelineLayout _meshPipelineLayout;
 
 	VmaAllocator _allocator; //vma lib allocator
 
@@ -109,6 +99,19 @@ public:
 
 	//the format for the depth image
 	VkFormat _depthFormat;
+
+	VkPipelineLayout _trianglePipelineLayout;
+
+	VkPipeline _trianglePipeline;
+	VkPipeline _redTrianglePipeline;
+
+    DeletionQueue _mainDeletionQueue;
+
+	VkPipeline _meshPipeline;
+	VkPipelineLayout _meshPipelineLayout;
+
+	Mesh _triangleMesh;
+	Mesh _monkeyMesh;
 
 	//initializes everything in the engine
 	void init();
@@ -128,10 +131,6 @@ private:
 
 	void init_swapchain();
 
-	void init_default_renderpass();
-
-	void init_framebuffers();
-
 	void init_commands();
 
 	void init_sync_structures();
@@ -140,6 +139,9 @@ private:
 
 	//loads a shader module from a spir-v file. Returns false if it errors
 	bool load_shader_module(const char* filePath, VkShaderModule* outShaderModule);
+
+
+	void transition_image(VkCommandBuffer cmd, VkImage image, ImageTransitionMode transitionMode);
 
 	void load_meshes();
 

@@ -39,6 +39,15 @@ namespace vkinit {
 
 	VkPipelineLayoutCreateInfo pipeline_layout_create_info();
 
+	VkPipelineRenderingCreateInfo pipeline_render_info(VkFormat* colorFormat, VkFormat* depthFormat);
+
+	VkRenderingAttachmentInfo color_attachment_info(VkImageView view, VkClearValue clearValue, VkImageLayout layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+
+	VkRenderingAttachmentInfo depth_attachment_info(VkImageView view, VkClearDepthStencilValue clearValue, VkImageLayout layout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
+
+
+	VkRenderingInfo rendering_info(VkExtent2D viewport, VkRenderingAttachmentInfo* colorAttachment, VkRenderingAttachmentInfo* depthAttachment);
+
 	VkImageCreateInfo image_create_info(VkFormat format, VkImageUsageFlags usageFlags, VkExtent3D extent);
 
 	VkImageViewCreateInfo imageview_create_info(VkFormat format, VkImage image, VkImageAspectFlags aspectFlags);
