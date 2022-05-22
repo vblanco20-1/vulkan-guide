@@ -26,7 +26,9 @@ public:
 	VkPipelineMultisampleStateCreateInfo _multisampling;
 	VkPipelineLayout _pipelineLayout;
 	VkPipelineDepthStencilStateCreateInfo _depthStencil;
-	VkPipeline build_pipeline(VkDevice device, VkRenderPass pass);
+	VkPipelineRenderingCreateInfo _renderInfo;
+
+	VkPipeline build_pipeline(VkDevice device);
 };
 
 
@@ -47,6 +49,12 @@ struct DeletionQueue
 
         deletors.clear();
     }
+};
+
+enum class ImageTransitionMode {
+	IntoAttachment,
+	AttachmentToPresent,
+	IntoDepthTest
 };
 
 struct MeshPushConstants {
@@ -128,8 +136,6 @@ public:
 	
 	VkQueue _graphicsQueue;
 	uint32_t _graphicsQueueFamily;
-	
-	VkRenderPass _renderPass;
 
 	VkSurfaceKHR _surface;
 	VkSwapchainKHR _swapchain;
@@ -201,10 +207,6 @@ private:
 
 	void init_swapchain();
 
-	void init_default_renderpass();
-
-	void init_framebuffers();
-
 	void init_commands();
 
 	void init_sync_structures();
@@ -221,4 +223,7 @@ private:
 	void load_meshes();
 
 	void upload_mesh(Mesh& mesh);
+
+	void transition_image(VkCommandBuffer cmd, VkImage image, ImageTransitionMode transitionMode);
+
 };
