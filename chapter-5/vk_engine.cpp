@@ -250,15 +250,19 @@ void VulkanEngine::init_vulkan()
 	SDL_Vulkan_CreateSurface(_window, _instance, &_surface);
 
 
-	VkPhysicalDeviceVulkan13Features features{};
-	features.dynamicRendering = true;
-	features.synchronization2 = true;
+	VkPhysicalDeviceVulkan11Features features11{};
+	features11.shaderDrawParameters = true;
+
+	VkPhysicalDeviceVulkan13Features features13{};
+	features13.dynamicRendering = true;
+	features13.synchronization2 = true;
 	//use vkbootstrap to select a gpu. 
 	//We want a gpu that can write to the SDL surface and supports vulkan 1.2
 	vkb::PhysicalDeviceSelector selector{ vkb_inst };
 	vkb::PhysicalDevice physicalDevice = selector
 		.set_minimum_version(1, 3)
-		.set_required_features_13(features)
+		.set_required_features_11(features11)
+		.set_required_features_13(features13)
 		.set_surface(_surface)
 		.select()
 		.value();
