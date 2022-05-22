@@ -226,7 +226,7 @@ void VulkanEngine::init_vulkan()
 
 	VkPhysicalDeviceVulkan13Features features{};
 	features.dynamicRendering = true;
-
+	features.synchronization2 = true;
 	//use vkbootstrap to select a gpu. 
 	//We want a gpu that can write to the SDL surface and supports vulkan 1.2
 	vkb::PhysicalDeviceSelector selector{ vkb_inst };
@@ -551,24 +551,34 @@ VkPipeline PipelineBuilder::build_pipeline(VkDevice device)
 
 void VulkanEngine::transition_image(VkCommandBuffer cmd, VkImage image, ImageTransitionMode transitionMode)
 {
-	VkImageMemoryBarrier imageBarrier{};
-	imageBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+	VkImageMemoryBarrier2 imageBarrier{};
+	imageBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
 	imageBarrier.pNext = nullptr;
 
 	switch (transitionMode)
 	{
 	case ImageTransitionMode::IntoAttachment:
 		imageBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-		imageBarrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		imageBarrier.newLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL;
+
+		imageBarrier.srcStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+		imageBarrier.srcAccessMask = VK_ACCESS_2_NONE;
+		imageBarrier.dstStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+		imageBarrier.dstAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT;
+
 		break;
 
 	case ImageTransitionMode::AttachmentToPresent:
-		imageBarrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		imageBarrier.oldLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL;
 		imageBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+		imageBarrier.srcStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+		imageBarrier.srcAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT;
+		imageBarrier.dstStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+		imageBarrier.dstAccessMask = VK_ACCESS_2_MEMORY_READ_BIT_KHR;
+
 		break;
 	}
-	imageBarrier.image = image;
-
 	VkImageSubresourceRange subImage{};
 	subImage.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 	subImage.baseMipLevel = 0;
@@ -577,6 +587,15 @@ void VulkanEngine::transition_image(VkCommandBuffer cmd, VkImage image, ImageTra
 	subImage.layerCount = 1;
 
 	imageBarrier.subresourceRange = subImage;
+	imageBarrier.image = image;
 
-	vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier);
+
+	VkDependencyInfo depInfo{};
+	depInfo.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+	depInfo.pNext = nullptr;
+
+	depInfo.imageMemoryBarrierCount = 1;
+	depInfo.pImageMemoryBarriers = &imageBarrier;
+
+	vkCmdPipelineBarrier2(cmd, &depInfo);
 }

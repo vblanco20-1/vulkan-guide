@@ -743,7 +743,6 @@ void VulkanEngine::transition_image(VkCommandBuffer cmd, VkImage image, ImageTra
 	vkCmdPipelineBarrier2(cmd, &depInfo);
 }
 
-
 void VulkanEngine::upload_mesh(Mesh& mesh)
 {
 	//allocate vertex buffer
