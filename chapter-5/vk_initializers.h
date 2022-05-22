@@ -51,5 +51,13 @@ namespace vkinit {
 	VkWriteDescriptorSet write_descriptor_image(VkDescriptorType type, VkDescriptorSet dstSet, VkDescriptorImageInfo* imageInfo, uint32_t binding);
 
 	VkSamplerCreateInfo sampler_create_info(VkFilter filters, VkSamplerAddressMode samplerAdressMode = VK_SAMPLER_ADDRESS_MODE_REPEAT);
+
+	VkPipelineRenderingCreateInfo pipeline_render_info(VkFormat* colorFormat, VkFormat* depthFormat);
+
+	VkRenderingAttachmentInfo color_attachment_info(VkImageView view, VkClearValue clearValue, VkImageLayout layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+
+	VkRenderingAttachmentInfo depth_attachment_info(VkImageView view, VkClearDepthStencilValue clearValue, VkImageLayout layout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
+
+	VkRenderingInfo rendering_info(VkExtent2D viewport, VkRenderingAttachmentInfo* colorAttachment, VkRenderingAttachmentInfo* depthAttachment);
 }
 

@@ -26,9 +26,10 @@ public:
 	VkPipelineMultisampleStateCreateInfo _multisampling;
 	VkPipelineLayout _pipelineLayout;
 	VkPipelineDepthStencilStateCreateInfo _depthStencil;
-	VkPipeline build_pipeline(VkDevice device, VkRenderPass pass);
-};
+	VkPipelineRenderingCreateInfo _renderInfo;
 
+	VkPipeline build_pipeline(VkDevice device);
+};
 
 
 struct DeletionQueue
@@ -54,6 +55,13 @@ struct MeshPushConstants {
 	glm::mat4 render_matrix;
 };
 
+enum class ImageTransitionMode {
+	IntoAttachment,
+	IntoTransferDestination,
+	TransferToReadable,
+	AttachmentToPresent,
+	IntoDepthTest
+};
 
 struct Material {
 	VkDescriptorSet textureSet{VK_NULL_HANDLE};
@@ -141,14 +149,11 @@ public:
 	
 	VkQueue _graphicsQueue;
 	uint32_t _graphicsQueueFamily;
-	
-	VkRenderPass _renderPass;
 
 	VkSurfaceKHR _surface;
 	VkSwapchainKHR _swapchain;
 	VkFormat _swachainImageFormat;
 
-	std::vector<VkFramebuffer> _framebuffers;
 	std::vector<VkImage> _swapchainImages;
 	std::vector<VkImageView> _swapchainImageViews;	
 
@@ -213,15 +218,14 @@ public:
 	size_t pad_uniform_buffer_size(size_t originalSize);
 
 	void immediate_submit(std::function<void(VkCommandBuffer cmd)>&& function);
+
+	void transition_image(VkCommandBuffer cmd, VkImage image, ImageTransitionMode transitionMode);
+
 private:
 
 	void init_vulkan();
 
 	void init_swapchain();
-
-	void init_default_renderpass();
-
-	void init_framebuffers();
 
 	void init_commands();
 

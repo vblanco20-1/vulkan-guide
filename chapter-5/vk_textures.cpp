@@ -52,27 +52,9 @@ bool vkutil::load_image_from_file(VulkanEngine& engine, const char* file, Alloca
 	
 	//transition image to transfer-receiver	
 	engine.immediate_submit([&](VkCommandBuffer cmd) {
-		VkImageSubresourceRange range;
-		range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		range.baseMipLevel = 0;
-		range.levelCount = 1;
-		range.baseArrayLayer = 0;
-		range.layerCount = 1;
 
-		VkImageMemoryBarrier imageBarrier_toTransfer = {};
-		imageBarrier_toTransfer.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-
-		imageBarrier_toTransfer.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-		imageBarrier_toTransfer.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-		imageBarrier_toTransfer.image = newImage._image;
-		imageBarrier_toTransfer.subresourceRange = range;
-
-		imageBarrier_toTransfer.srcAccessMask = 0;
-		imageBarrier_toTransfer.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-
-		//barrier the image into the transfer-receive layout
-		vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier_toTransfer);
-		
+		engine.transition_image(cmd, newImage._image,ImageTransitionMode::IntoTransferDestination);
+	
 		VkBufferImageCopy copyRegion = {};
 		copyRegion.bufferOffset = 0;
 		copyRegion.bufferRowLength = 0;
@@ -87,16 +69,7 @@ bool vkutil::load_image_from_file(VulkanEngine& engine, const char* file, Alloca
 		//copy the buffer into the image
 		vkCmdCopyBufferToImage(cmd, stagingBuffer._buffer, newImage._image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copyRegion);
 
-		VkImageMemoryBarrier imageBarrier_toReadable = imageBarrier_toTransfer;
-
-		imageBarrier_toReadable.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-		imageBarrier_toReadable.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		
-		imageBarrier_toReadable.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-		imageBarrier_toReadable.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-
-		//barrier the image into the shader readable layout
-		vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier_toReadable);
+		engine.transition_image(cmd, newImage._image, ImageTransitionMode::TransferToReadable);
 	});
 
 
