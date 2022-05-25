@@ -59,8 +59,10 @@ enum class ImageTransitionMode {
 	IntoAttachment,
 	IntoTransferDestination,
 	TransferToReadable,
+	TransferToPresent,
 	AttachmentToPresent,
-	IntoDepthTest
+	IntoDepthTest,
+	AttachmentToTransferSrc
 };
 
 struct Material {
@@ -165,8 +167,14 @@ public:
 	VkImageView _depthImageView;
 	AllocatedImage _depthImage;
 
+	//draw resources
+	VkImageView _drawImageView;
+	AllocatedImage _drawImage;
+
 	//the format for the depth image
 	VkFormat _depthFormat;
+	//the format for the draw image
+	VkFormat _drawFormat;
 
 	VkDescriptorPool _descriptorPool;
 

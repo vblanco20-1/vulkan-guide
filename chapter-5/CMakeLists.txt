@@ -20,3 +20,5 @@ target_include_directories(chapter_5 PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 target_link_libraries(chapter_5 vkbootstrap vma glm tinyobjloader imgui stb_image)
 
 target_link_libraries(chapter_5 Vulkan::Vulkan sdl2)
+
+target_precompile_headers(chapter_5 PUBLIC <iostream> <functional> <deque> <vector> <unordered_map> <glm/glm.hpp> <glm/glm.hpp> <glm/gtx/transform.hpp> <SDL.h>  <vulkan/vulkan.h> <vk_mem_alloc.h>)

@@ -122,7 +122,7 @@ void VulkanEngine::draw()
 	depthClear.depthStencil.depth = 1.f;
 
 
-	VkRenderingAttachmentInfo colorAttachment = vkinit::color_attachment_info(_swapchainImageViews[swapchainImageIndex], clearValue);
+	VkRenderingAttachmentInfo colorAttachment = vkinit::color_attachment_info(_drawImageView, clearValue);
 	VkRenderingAttachmentInfo depthAttachment = vkinit::depth_attachment_info(_depthImageView, depthClear.depthStencil);
 
 
@@ -130,7 +130,9 @@ void VulkanEngine::draw()
 	VkRenderingInfo renderInfo = vkinit::rendering_info(_windowExtent, &colorAttachment, &depthAttachment);
 
 	//make the swapchain image into writeable mode before rendering
-	transition_image(cmd, _swapchainImages[swapchainImageIndex], ImageTransitionMode::IntoAttachment);
+	transition_image(cmd, _swapchainImages[swapchainImageIndex], ImageTransitionMode::IntoTransferDestination);
+
+	transition_image(cmd, _drawImage._image, ImageTransitionMode::IntoAttachment);
 
 	transition_image(cmd, _depthImage._image, ImageTransitionMode::IntoDepthTest);
 
@@ -141,8 +143,60 @@ void VulkanEngine::draw()
 
 	vkCmdEndRendering(cmd);
 
+
+	transition_image(cmd, _drawImage._image, ImageTransitionMode::AttachmentToTransferSrc);
+
+	//vkimageregion
+
+	//depth image size will match the window
+	VkExtent3D depthImageExtent = {
+		_windowExtent.width,
+		_windowExtent.height,
+		1
+	};
+
+	VkImageSubresourceRange subImage{};
+	subImage.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	subImage.baseMipLevel = 0;
+	subImage.levelCount = 1;
+	subImage.baseArrayLayer = 0;
+	subImage.layerCount = 1;
+	
+
+	VkImageCopy2 copyregion{};
+	copyregion.sType = VK_STRUCTURE_TYPE_IMAGE_COPY_2;
+	copyregion.pNext = nullptr;
+	copyregion.extent = VkExtent3D{
+		_windowExtent.width,
+		_windowExtent.height,
+		1
+	};
+	copyregion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	copyregion.srcSubresource.baseArrayLayer = 0;
+	copyregion.srcSubresource.layerCount = 1;
+	copyregion.srcSubresource.mipLevel = 0;
+
+	copyregion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	copyregion.dstSubresource.baseArrayLayer = 0;
+	copyregion.dstSubresource.layerCount = 1;
+	copyregion.dstSubresource.mipLevel = 0;
+	
+
+	VkCopyImageInfo2 copyInfo{};
+	copyInfo.sType = VK_STRUCTURE_TYPE_COPY_IMAGE_INFO_2;
+	copyInfo.pNext = nullptr;
+	copyInfo.dstImage = _swapchainImages[swapchainImageIndex];
+	copyInfo.dstImageLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+	copyInfo.srcImage = _drawImage._image;
+	copyInfo.srcImageLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+
+	copyInfo.regionCount = 1;
+	copyInfo.pRegions = &copyregion;
+
+	vkCmdCopyImage2(cmd,&copyInfo);
+
 	//make the swapchain image into presentable mode
-	transition_image(cmd, _swapchainImages[swapchainImageIndex], ImageTransitionMode::AttachmentToPresent);
+	transition_image(cmd, _swapchainImages[swapchainImageIndex], ImageTransitionMode::TransferToPresent);
 
 	//finalize the command buffer (we can no longer add commands, but it can now be executed)
 	VK_CHECK(vkEndCommandBuffer(cmd));
@@ -308,6 +362,7 @@ void VulkanEngine::init_swapchain()
 		//use vsync present mode
 		.set_desired_present_mode(VK_PRESENT_MODE_FIFO_KHR)
 		.set_desired_extent(_windowExtent.width, _windowExtent.height)
+		.add_image_usage_flags(VK_IMAGE_USAGE_TRANSFER_DST_BIT)
 		.build()
 		.value();
 
@@ -328,6 +383,35 @@ void VulkanEngine::init_swapchain()
 		_windowExtent.height,
 		1
 	};
+
+	//hardcoding the depth format to 32 bit float
+	_drawFormat = VK_FORMAT_B8G8R8A8_SRGB;
+	
+	VkImageUsageFlags drawImageUsages{};
+	drawImageUsages |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+	drawImageUsages |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+
+	VkImageCreateInfo rimg_info = vkinit::image_create_info(_drawFormat, drawImageUsages, depthImageExtent);
+
+	//for the depth image, we want to allocate it from gpu local memory
+	VmaAllocationCreateInfo rimg_allocinfo = {};
+	rimg_allocinfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+	rimg_allocinfo.requiredFlags = VkMemoryPropertyFlags(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+	//allocate and create the image
+	vmaCreateImage(_allocator, &rimg_info, &rimg_allocinfo, &_drawImage._image, &_drawImage._allocation, nullptr);
+
+	//build a image-view for the depth image to use for rendering
+	VkImageViewCreateInfo rview_info = vkinit::imageview_create_info(_drawFormat, _drawImage._image, VK_IMAGE_ASPECT_COLOR_BIT);
+
+	VK_CHECK(vkCreateImageView(_device, &rview_info, nullptr, &_drawImageView));
+
+	//add to deletion queues
+	_mainDeletionQueue.push_function([=]() {
+		vkDestroyImageView(_device, _drawImageView, nullptr);
+		vmaDestroyImage(_allocator, _drawImage._image, _drawImage._allocation);
+	});
+
 
 	//hardcoding the depth format to 32 bit float
 	_depthFormat = VK_FORMAT_D32_SFLOAT;
@@ -530,7 +614,7 @@ void VulkanEngine::init_pipelines()
 	pipelineBuilder._colorBlendAttachment = vkinit::color_blend_attachment_state();
 
 	//render format
-	pipelineBuilder._renderInfo = vkinit::pipeline_render_info(&_swachainImageFormat, &_depthFormat);
+	pipelineBuilder._renderInfo = vkinit::pipeline_render_info(&_drawFormat, &_depthFormat);
 
 	//default depthtesting
 	pipelineBuilder._depthStencil = vkinit::depth_stencil_create_info(true, true, VK_COMPARE_OP_LESS_OR_EQUAL);
@@ -1213,7 +1297,16 @@ void VulkanEngine::transition_image(VkCommandBuffer cmd, VkImage image, ImageTra
 		imageBarrier.dstAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT;
 
 		break;
+	case ImageTransitionMode::AttachmentToTransferSrc:
+		imageBarrier.oldLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL;
+		imageBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
 
+		imageBarrier.srcStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+		imageBarrier.srcAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT;
+		imageBarrier.dstStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+		imageBarrier.dstAccessMask = VK_ACCESS_2_MEMORY_READ_BIT_KHR;
+
+		break;
 	case ImageTransitionMode::IntoTransferDestination:
 		imageBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 		imageBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
@@ -1236,6 +1329,16 @@ void VulkanEngine::transition_image(VkCommandBuffer cmd, VkImage image, ImageTra
 		break;
 	case ImageTransitionMode::AttachmentToPresent:
 		imageBarrier.oldLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL;
+		imageBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+		imageBarrier.srcStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+		imageBarrier.srcAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT;
+		imageBarrier.dstStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+		imageBarrier.dstAccessMask = VK_ACCESS_2_MEMORY_READ_BIT_KHR;
+
+		break;
+	case ImageTransitionMode::TransferToPresent:
+		imageBarrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 		imageBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
 		imageBarrier.srcStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
