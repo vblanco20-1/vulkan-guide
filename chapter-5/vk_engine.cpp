@@ -125,78 +125,26 @@ void VulkanEngine::draw()
 	VkRenderingAttachmentInfo colorAttachment = vkinit::color_attachment_info(_drawImageView, clearValue);
 	VkRenderingAttachmentInfo depthAttachment = vkinit::depth_attachment_info(_depthImageView, depthClear.depthStencil);
 
-
-
 	VkRenderingInfo renderInfo = vkinit::rendering_info(_windowExtent, &colorAttachment, &depthAttachment);
 
-	//make the swapchain image into writeable mode before rendering
-	transition_image(cmd, _swapchainImages[swapchainImageIndex], ImageTransitionMode::IntoTransferDestination);
-
-	transition_image(cmd, _drawImage._image, ImageTransitionMode::IntoAttachment);
-
-	transition_image(cmd, _depthImage._image, ImageTransitionMode::IntoDepthTest);
+	//transition the 2 render images to their needed attachment layout
+	vkutil::transition_image(cmd, _depthImage._image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
+	vkutil::transition_image(cmd, _drawImage._image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
 	vkCmdBeginRendering(cmd, &renderInfo);
-
 
 	draw_objects(cmd, _renderables.data(), _renderables.size());
 
 	vkCmdEndRendering(cmd);
 
+	//prepare the layouts for copying
+	vkutil::transition_image(cmd, _swapchainImages[swapchainImageIndex], VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+	vkutil::transition_image(cmd, _drawImage._image, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 
-	transition_image(cmd, _drawImage._image, ImageTransitionMode::AttachmentToTransferSrc);
-
-	//vkimageregion
-
-	//depth image size will match the window
-	VkExtent3D depthImageExtent = {
-		_windowExtent.width,
-		_windowExtent.height,
-		1
-	};
-
-	VkImageSubresourceRange subImage{};
-	subImage.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-	subImage.baseMipLevel = 0;
-	subImage.levelCount = 1;
-	subImage.baseArrayLayer = 0;
-	subImage.layerCount = 1;
-	
-
-	VkImageCopy2 copyregion{};
-	copyregion.sType = VK_STRUCTURE_TYPE_IMAGE_COPY_2;
-	copyregion.pNext = nullptr;
-	copyregion.extent = VkExtent3D{
-		_windowExtent.width,
-		_windowExtent.height,
-		1
-	};
-	copyregion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-	copyregion.srcSubresource.baseArrayLayer = 0;
-	copyregion.srcSubresource.layerCount = 1;
-	copyregion.srcSubresource.mipLevel = 0;
-
-	copyregion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-	copyregion.dstSubresource.baseArrayLayer = 0;
-	copyregion.dstSubresource.layerCount = 1;
-	copyregion.dstSubresource.mipLevel = 0;
-	
-
-	VkCopyImageInfo2 copyInfo{};
-	copyInfo.sType = VK_STRUCTURE_TYPE_COPY_IMAGE_INFO_2;
-	copyInfo.pNext = nullptr;
-	copyInfo.dstImage = _swapchainImages[swapchainImageIndex];
-	copyInfo.dstImageLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-	copyInfo.srcImage = _drawImage._image;
-	copyInfo.srcImageLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-
-	copyInfo.regionCount = 1;
-	copyInfo.pRegions = &copyregion;
-
-	vkCmdCopyImage2(cmd,&copyInfo);
+	vkutil::copy_image_to_image(cmd, _drawImage._image,_swapchainImages[swapchainImageIndex], VkExtent3D{ _windowExtent.width, _windowExtent.height, 1});
 
 	//make the swapchain image into presentable mode
-	transition_image(cmd, _swapchainImages[swapchainImageIndex], ImageTransitionMode::TransferToPresent);
+	vkutil::transition_image(cmd, _swapchainImages[swapchainImageIndex], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR );
 
 	//finalize the command buffer (we can no longer add commands, but it can now be executed)
 	VK_CHECK(vkEndCommandBuffer(cmd));
@@ -240,6 +188,8 @@ void VulkanEngine::draw()
 	_frameNumber++;
 }
 
+
+
 void VulkanEngine::run()
 {
 	SDL_Event e;
@@ -269,7 +219,16 @@ void VulkanEngine::run()
 			}
 		}
 
-		draw();
+		//to avoid rendering while the window is minimized, we are going to stop drawing completely.
+		uint32_t flags = SDL_GetWindowFlags(_window);
+		if ((flags &= SDL_WINDOW_MINIMIZED))
+		{
+			SDL_WaitEvent(nullptr);
+		}
+		else 
+		{
+			draw();
+		}
 	}
 }
 
@@ -446,7 +405,6 @@ void VulkanEngine::init_commands()
 	//we also want the pool to allow for resetting of individual command buffers
 	VkCommandPoolCreateInfo commandPoolInfo = vkinit::command_pool_create_info(_graphicsQueueFamily, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
 
-	
 	for (int i = 0; i < FRAME_OVERLAP; i++) {
 
 	
@@ -1279,103 +1237,3 @@ void VulkanEngine::init_descriptors()
 	});
 }
 
-void VulkanEngine::transition_image(VkCommandBuffer cmd, VkImage image, ImageTransitionMode transitionMode)
-{
-	VkImageMemoryBarrier2 imageBarrier{};
-	imageBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
-	imageBarrier.pNext = nullptr;
-
-	switch (transitionMode)
-	{
-	case ImageTransitionMode::IntoAttachment:
-		imageBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-		imageBarrier.newLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL;
-
-		imageBarrier.srcStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
-		imageBarrier.srcAccessMask = VK_ACCESS_2_NONE;
-		imageBarrier.dstStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
-		imageBarrier.dstAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT;
-
-		break;
-	case ImageTransitionMode::AttachmentToTransferSrc:
-		imageBarrier.oldLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL;
-		imageBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-
-		imageBarrier.srcStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
-		imageBarrier.srcAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT;
-		imageBarrier.dstStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
-		imageBarrier.dstAccessMask = VK_ACCESS_2_MEMORY_READ_BIT_KHR;
-
-		break;
-	case ImageTransitionMode::IntoTransferDestination:
-		imageBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-		imageBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-
-		imageBarrier.srcStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
-		imageBarrier.srcAccessMask = VK_ACCESS_2_NONE;
-		imageBarrier.dstStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
-		imageBarrier.dstAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT;
-
-		break;
-	case ImageTransitionMode::TransferToReadable:
-		imageBarrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-		imageBarrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-
-		imageBarrier.srcStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
-		imageBarrier.srcAccessMask = VK_ACCESS_2_NONE;
-		imageBarrier.dstStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
-		imageBarrier.dstAccessMask = VK_ACCESS_2_MEMORY_READ_BIT;
-
-		break;
-	case ImageTransitionMode::AttachmentToPresent:
-		imageBarrier.oldLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL;
-		imageBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-
-		imageBarrier.srcStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
-		imageBarrier.srcAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT;
-		imageBarrier.dstStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
-		imageBarrier.dstAccessMask = VK_ACCESS_2_MEMORY_READ_BIT_KHR;
-
-		break;
-	case ImageTransitionMode::TransferToPresent:
-		imageBarrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-		imageBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-
-		imageBarrier.srcStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
-		imageBarrier.srcAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT;
-		imageBarrier.dstStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
-		imageBarrier.dstAccessMask = VK_ACCESS_2_MEMORY_READ_BIT_KHR;
-
-		break;
-
-	case ImageTransitionMode::IntoDepthTest:
-		imageBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-		imageBarrier.newLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
-
-		imageBarrier.srcStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
-		imageBarrier.srcAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT;
-		imageBarrier.dstStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
-		imageBarrier.dstAccessMask = VK_ACCESS_2_MEMORY_READ_BIT_KHR;
-
-		break;
-	}
-	VkImageSubresourceRange subImage{};
-	subImage.aspectMask = (transitionMode == ImageTransitionMode::IntoDepthTest) ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
-	subImage.baseMipLevel = 0;
-	subImage.levelCount = 1;
-	subImage.baseArrayLayer = 0;
-	subImage.layerCount = 1;
-
-	imageBarrier.subresourceRange = subImage;
-	imageBarrier.image = image;
-
-
-	VkDependencyInfo depInfo{};
-	depInfo.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
-	depInfo.pNext = nullptr;
-
-	depInfo.imageMemoryBarrierCount = 1;
-	depInfo.pImageMemoryBarriers = &imageBarrier;
-
-	vkCmdPipelineBarrier2(cmd, &depInfo);
-}

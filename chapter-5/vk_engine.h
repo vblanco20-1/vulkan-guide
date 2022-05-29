@@ -62,7 +62,9 @@ enum class ImageTransitionMode {
 	TransferToPresent,
 	AttachmentToPresent,
 	IntoDepthTest,
-	AttachmentToTransferSrc
+	AttachmentToTransferSrc,
+	IntoGeneral,
+	GeneralToPresent,
 };
 
 struct Material {
@@ -226,8 +228,6 @@ public:
 	size_t pad_uniform_buffer_size(size_t originalSize);
 
 	void immediate_submit(std::function<void(VkCommandBuffer cmd)>&& function);
-
-	void transition_image(VkCommandBuffer cmd, VkImage image, ImageTransitionMode transitionMode);
 
 private:
 
