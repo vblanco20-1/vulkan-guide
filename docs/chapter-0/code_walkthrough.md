@@ -107,7 +107,7 @@ We have a flag to know if the engine is initialized, a frame number integer (ver
 
 The declaration `struct SDL_Window* _window;` is of special interest. Note the `struct` at the beginning. This is called a forward-declaration, and it's what allows us to have the `SDL_Window `pointer in the class, without including SDL on the Vulkan engine header. This variable holds the window that we create for the application.
 
-With the header seen, let's go to the cpp files.
+With the headers seen, let's go to the cpp files.
 
 vk_engine.cpp line 1
 ```cpp
