@@ -541,19 +541,19 @@ void VulkanEngine::init_pipelines()
 	VkShaderModule colorMeshShader;
 	if (!load_shader_module("../../shaders/default_lit.frag.spv", &colorMeshShader))
 	{
-		std::cout << "Error when building the colored mesh shader" << std::endl;
+		std::cout << "Error when building the default_lit shader" << std::endl;
 	}
 
 	VkShaderModule texturedMeshShader;
 	if (!load_shader_module("../../shaders/textured_lit.frag.spv", &texturedMeshShader))
 	{
-		std::cout << "Error when building the colored mesh shader" << std::endl;
+		std::cout << "Error when building the textured_lit shader" << std::endl;
 	}
 
 	VkShaderModule meshVertShader;
 	if (!load_shader_module("../../shaders/tri_mesh_ssbo.vert.spv", &meshVertShader))
 	{
-		std::cout << "Error when building the mesh vertex shader module" << std::endl;
+		std::cout << "Error when building the tri_mesh_ssbo shader module" << std::endl;
 	}
 
 	

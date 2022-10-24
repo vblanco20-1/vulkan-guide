@@ -5,7 +5,7 @@ cmake_minimum_required (VERSION 3.8)
 
 project ("vulkan_guide")
 
-
+find_package(SDL2 CONFIG REQUIRED)
 find_package(Vulkan REQUIRED)
 
 add_subdirectory(third_party)
