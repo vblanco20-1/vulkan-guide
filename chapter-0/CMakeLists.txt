@@ -15,4 +15,4 @@ target_include_directories(chapter_0 PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 
 target_link_libraries(chapter_0 vkbootstrap vma glm tinyobjloader imgui stb_image)
 
-target_link_libraries(chapter_0 Vulkan::Vulkan sdl2)
+target_link_libraries(chapter_0 Vulkan::Vulkan  SDL2::SDL2 SDL2::SDL2main)
