@@ -1,2 +1,8 @@
 /build
 /bin
+/out
+/.vs
+CMakeSettings.json
+*.frag.spv
+*.comp.spv
+*.vert.spv
