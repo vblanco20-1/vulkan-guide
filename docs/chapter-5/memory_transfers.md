@@ -104,8 +104,6 @@ Now we create the command pool and allocate a command buffer from it, which we d
 
 	//allocate the default command buffer that we will use for the instant commands
 	VkCommandBufferAllocateInfo cmdAllocInfo = vkinit::command_buffer_allocate_info(_uploadContext._commandPool, 1);
-
-	VkCommandBuffer cmd;
 	VK_CHECK(vkAllocateCommandBuffers(_device, &cmdAllocInfo, &_uploadContext._commandBuffer));
 ```
 
