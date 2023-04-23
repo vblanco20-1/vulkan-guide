@@ -11,7 +11,7 @@ This article does not try to be fully in-depth, but act as a overview and starti
 
 
 ## CPU Basics
-The heart of a computer is a CPU (Central Processing Unit). Its the one that will run your programs and operating systems. Modern CPUs are marvels of engineering and are highly complex devices with tons of features and tricks to go fast. By going through the timeline of how cpus have evolved over the time we can understand how those features were implemented over time and have a general idea of the insanity of a modern CPU and what matters to them when running code. 
+The heart of a computer is a CPU (Central Processing Unit). Its the thing that will run your programs and operating system. Modern CPUs are marvels of engineering and are highly complex devices with tons of features and tricks to go fast. By going through the timeline of how CPUs have evolved over the time we can understand how those features were implemented and get a general idea of the insanity of a modern CPU and what matters to them when running code. 
 
 A CPU core is a set of logic gates and circuits that performs an operation, then loops and continues on the next. The simplest CPUs can be expressed in barely a few hundreds lines of Verilog (hardware design language), see this [1] small cpu sourcecode . The core is comprised of a set of parts that all work in sync to execute programs.
 
