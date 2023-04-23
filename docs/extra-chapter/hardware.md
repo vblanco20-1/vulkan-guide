@@ -6,7 +6,7 @@ nav_order: 40
 ---
 
 ## Know your hardware
-When we program a game engine, or any other kind of high performance system, knowing how the hardware works is critical to be able to do a good performant design. Computers are complex devices, and only getting more complex over time. The way CPUs work has evolved over decades, and it has changed the way software is designed with it. 
+When we program a game engine, or any other kind of high performance system, knowing how the hardware works is critical to be able to do a good performant design. Computers are complex devices, and only getting more complex over time. The way CPUs work has evolved over decades, which requires changing the way software is written for it. 
 This article does not try to be fully in-depth, but act as a overview and starting point to the way modern hardware works. In the case you are working on high performance code, knowing this is important to reach maximum performance, and you can find the specific details of these things on the developer site of whatever console you are targetting, or in the documentation websites of your hardware vendor.
 
 
