@@ -21,10 +21,22 @@ To store more data, RAM (Random Access Memory) is used, which is also called mem
 The CPU core is controlled from the Decoder, also known as the Frontend, or many other names. This is the part of a CPU controls the main execution of the core. When running an instruction, this part of the CPU will read the binary code of the instruction, then trigger the different sections of the CPU core to do their work. This part will often have a special register commonly known as PC (Program Counter) which stores the address of the next instruction to load from memory. In the case the program uses branches or jumps, this program counter can be directly addressed and modified. 
 
 Modern cpus will also have multiple of these cores to be able to do more work at once. A set of instructions is generally known as a "thread" of execution, and each of the CPU cores is independent from the others. There are ways of synchronizing information between the cores using atomic instructions, and there are also ways of synchronizing memory across the cores. 
-For more in-depth information, check the other article
+For more in-depth information, check the other article [Multithreading for Game Engines]({{ site.baseurl }}{% link docs/extra-chapter/multithreading.md %}) .
 
 ## Pipelining
-The amount of work that can be done within a clock cycle depends on how many logic gates and wires the signals have to go through. It is possible to design a CPU that does 1 instruction per clock, but the clock rate of such a CPU is going to be quite slow. To improve that, CPU designers split the CPU execution steps into different "stages", with each of them doing one part of an instruction, and having one section of the core active at a time. For example, it will begin by having a Fetch stage which grabs the instruction from memory, then a Decode stage that reads the instruction and sets up the signals that control the execution unit, then a Execute stage (that can be multiple clock cycles) where the operation is calculated, for example doing a math operation, and then a Writeback stage where the results of the operation are either stored into memory or into a register. After that, it begins with the Fetch stage again to continue execution. These stages vary dramatically between CPU designs, and some of them can take more or less time depending on the instruction. See [2] for more details.
+The amount of work that can be done within a clock cycle depends on how many logic gates and wires the instructions have to go through. It is possible to design a CPU that does 1 instruction per clock, but that makes the clock rate of such a CPU quite slow. To improve that, CPU designers split the instruction execution into different "stages", with each of them doing one part of the instruction, and only needing one section of the core at a time. 
+
+For example, the various stages of executing an instruction roughly follow this pattern
+* Fetch: Grabs the next instruction to execute from memory
+* Decode: Reads the instruction and sets up the signals to control what the next step will do
+* Execute: Do the required operation. This may take multiple clock cycles. CPUs support many kinds of operations, some of the most common ones are:
+   * Math operation - Tell the ALU to do math using the registers
+   * Comparison - Compare registers
+   * Load/Store - Move data between registers and memory
+   * Control Flow - Change the PC to a specific instruction in the code
+* Writeback: Push the results of the operation into a register or store it in memory
+
+After all that, it begins with the Fetch stage again to continue execution. These stages vary dramatically between CPU designs, and some of them can take more or less time depending on the instruction. See [2] for more details.
 
 Lets look at some very simple example of adding 2 numbers and storing the result.
 ```
