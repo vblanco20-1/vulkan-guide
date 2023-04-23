@@ -75,10 +75,10 @@ As there are so many incompatible SIMD feature sets, creating intrinsics manuall
 A good video on intrinsics is "The art of SIMD programming"[6] . If you don't want to use intrinsics and prefer a library, xSimd[12] can be a good one, where it uses templates to abstract multiple types of intrinsics.
 
 ## Materials
-A lot of what is talked here is taken into account by the programming style known as data oriented programming. In that style of programming, developers generally write the code with things like the cache and branch predictor in mind, often placing their data into arrays and processing them in batches. The main book that talks about it is Data Oriented Design[7], and talks "Data oriented design and C++" [8] and "OOP is dead, long live data oriented design"[9] are classic ones about it. 
+A lot of what is talked here is taken into account by the programming style known as data oriented programming. In that style of programming, developers generally write the code with things like the cache and branch predictors in mind, often placing their data into arrays and processing them in batches. The main book that talks about it is Data Oriented Design[7], and the talks "Data oriented design and C++" [8] and "OOP is dead, long live data oriented design"[9] are classic ones about it. 
 
-For information on the hardware details specifically, a great source of information is the Agner Fog manuals [10]. The first one is a must read, and the microarchitecture ones talk about a lot of the topics explained here. 
-Other source is Wikichip which can have good information on the details of different processors. The digital book "Algorithms for Modern Hardware" [15] is also great read that goes in depth on many of these concepts, with specific focus on programming around them and code examples for high performance algorithms.  
+For information on specific hardware details, a great source of information is the Agner Fog manuals [10]. The first one is a must read, and the microarchitecture ones talk about a lot of the topics explained here. 
+Other source is Wikichip which has good information on the details of different processors. The digital book "Algorithms for Modern Hardware" [15] is also great read that goes in depth on many of these concepts, with specific focus on programming around them and code examples for high performance algorithms.  
 
 ## Links
 * [1] ["Small Riscv CPU"](https://github.com/YosysHQ/picorv32)
