@@ -107,7 +107,7 @@ void VulkanEngine::init_descriptors()
 	{
 		_mainDeletionQueue.push_function([&]() {
 			vmaDestroyBuffer(_allocator, _frames[i].cameraBuffer._buffer, _frames[i].cameraBuffer._allocation);
-		}
+		});
 	}
 }
 ```
