@@ -21,6 +21,7 @@
 #include <cstring>
 
 #include <vector>
+#include <string>
 #include <system_error>
 
 #include <vulkan/vulkan.h>
@@ -28,30 +29,28 @@
 #include "VkBootstrapDispatch.h"
 
 #ifdef VK_MAKE_API_VERSION
-	#define VKB_MAKE_VK_VERSION(variant, major, minor, patch) VK_MAKE_API_VERSION(variant, major, minor, patch)
-#elif VK_API_VERSION
-	#define VKB_MAKE_VK_VERSION(variant, major, minor, patch) VK_API_VERSION(major, minor, patch)
+#define VKB_MAKE_VK_VERSION(variant, major, minor, patch) VK_MAKE_API_VERSION(variant, major, minor, patch)
+#elif defined(VK_MAKE_VERSION)
+#define VKB_MAKE_VK_VERSION(variant, major, minor, patch) VK_MAKE_VERSION(major, minor, patch)
 #endif
 
 #if defined(VK_API_VERSION_1_3) || defined(VK_VERSION_1_3)
-	#define VKB_VK_API_VERSION_1_3 VKB_MAKE_VK_VERSION(0, 1, 3, 0)
+#define VKB_VK_API_VERSION_1_3 VKB_MAKE_VK_VERSION(0, 1, 3, 0)
 #endif
 
 #if defined(VK_API_VERSION_1_2) || defined(VK_VERSION_1_2)
-	#define VKB_VK_API_VERSION_1_2 VKB_MAKE_VK_VERSION(0, 1, 2, 0)
+#define VKB_VK_API_VERSION_1_2 VKB_MAKE_VK_VERSION(0, 1, 2, 0)
 #endif
 
 #if defined(VK_API_VERSION_1_1) || defined(VK_VERSION_1_1)
-	#define VKB_VK_API_VERSION_1_1 VKB_MAKE_VK_VERSION(0, 1, 1, 0)
+#define VKB_VK_API_VERSION_1_1 VKB_MAKE_VK_VERSION(0, 1, 1, 0)
 #endif
 
 #if defined(VK_API_VERSION_1_0) || defined(VK_VERSION_1_0)
-	#define VKB_VK_API_VERSION_1_0 VKB_MAKE_VK_VERSION(0, 1, 0, 0)
+#define VKB_VK_API_VERSION_1_0 VKB_MAKE_VK_VERSION(0, 1, 0, 0)
 #endif
 
 namespace vkb {
-
-namespace detail {
 
 struct Error {
 	std::error_code type;
@@ -60,76 +59,76 @@ struct Error {
 
 template <typename T> class Result {
 	public:
-	Result(const T& value) : m_value{ value }, m_init{ true } {}
-	Result(T&& value) : m_value{ std::move(value) }, m_init{ true } {}
+	Result(const T& value) noexcept : m_value{ value }, m_init{ true } {}
+	Result(T&& value) noexcept : m_value{ std::move(value) }, m_init{ true } {}
 
-	Result(Error error) : m_error{ error }, m_init{ false } {}
+	Result(Error error) noexcept : m_error{ error }, m_init{ false } {}
 
-	Result(std::error_code error_code, VkResult result = VK_SUCCESS)
+	Result(std::error_code error_code, VkResult result = VK_SUCCESS) noexcept
 	: m_error{ error_code, result }, m_init{ false } {}
 
-	~Result() { destroy(); }
-	Result(Result const& expected) : m_init(expected.m_init) {
+	~Result() noexcept { destroy(); }
+	Result(Result const& expected) noexcept : m_init(expected.m_init) {
 		if (m_init)
 			new (&m_value) T{ expected.m_value };
 		else
 			m_error = expected.m_error;
 	}
-	Result& operator=(Result const& result) {
+	Result& operator=(Result const& result) noexcept {
 		m_init = result.m_init;
 		if (m_init)
 			new (&m_value) T{ result.m_value };
 		else
 			m_error = result.m_error;
 	}
-	Result(Result&& expected) : m_init(expected.m_init) {
+	Result(Result&& expected) noexcept : m_init(expected.m_init) {
 		if (m_init)
 			new (&m_value) T{ std::move(expected.m_value) };
 		else
 			m_error = std::move(expected.m_error);
 		expected.destroy();
 	}
-	Result& operator=(Result&& result) {
+	Result& operator=(Result&& result) noexcept {
 		m_init = result.m_init;
 		if (m_init)
 			new (&m_value) T{ std::move(result.m_value) };
 		else
 			m_error = std::move(result.m_error);
 	}
-	Result& operator=(const T& expect) {
+	Result& operator=(const T& expect) noexcept {
 		destroy();
 		m_init = true;
 		new (&m_value) T{ expect };
 		return *this;
 	}
-	Result& operator=(T&& expect) {
+	Result& operator=(T&& expect) noexcept {
 		destroy();
 		m_init = true;
 		new (&m_value) T{ std::move(expect) };
 		return *this;
 	}
-	Result& operator=(const Error& error) {
+	Result& operator=(const Error& error) noexcept {
 		destroy();
 		m_init = false;
 		m_error = error;
 		return *this;
 	}
-	Result& operator=(Error&& error) {
+	Result& operator=(Error&& error) noexcept {
 		destroy();
 		m_init = false;
 		m_error = error;
 		return *this;
 	}
 	// clang-format off
-	const T* operator-> () const { assert (m_init); return &m_value; }
-	T*       operator-> ()       { assert (m_init); return &m_value; }
-	const T& operator* () const& { assert (m_init);	return m_value; }
-	T&       operator* () &      { assert (m_init); return m_value; }
-	T&&      operator* () &&	 { assert (m_init); return std::move (m_value); }
-	const T&  value () const&    { assert (m_init); return m_value; }
-	T&        value () &         { assert (m_init); return m_value; }
-	const T&& value () const&&   { assert (m_init); return std::move (m_value); }
-	T&&       value () &&        { assert (m_init); return std::move (m_value); }
+	const T* operator-> () const noexcept { assert (m_init); return &m_value; }
+	T*       operator-> ()       noexcept { assert (m_init); return &m_value; }
+	const T& operator* () const& noexcept { assert (m_init);	return m_value; }
+	T&       operator* () &      noexcept { assert (m_init); return m_value; }
+	T&&      operator* () &&	 noexcept { assert (m_init); return std::move (m_value); }
+	const T&  value () const&    noexcept { assert (m_init); return m_value; }
+	T&        value () &         noexcept { assert (m_init); return m_value; }
+	const T&& value () const&&   noexcept { assert (m_init); return std::move (m_value); }
+	T&&       value () &&        noexcept { assert (m_init); return std::move (m_value); }
 
     // std::error_code associated with the error
     std::error_code error() const { assert (!m_init); return m_error.type; }
@@ -138,6 +137,11 @@ template <typename T> class Result {
     // Returns the struct that holds the std::error_code and VkResult
     Error full_error() const { assert (!m_init); return m_error; }
 	// clang-format on
+
+	// check if the result has an error that matches a specific error case
+	template <typename E> bool matches_error(E error_enum_value) const {
+		return !m_init && static_cast<E>(m_error.type.value()) == error_enum_value;
+	}
 
 	bool has_value() const { return m_init; }
 	explicit operator bool() const { return m_init; }
@@ -153,6 +157,7 @@ template <typename T> class Result {
 	bool m_init;
 };
 
+namespace detail {
 struct GenericFeaturesPNextNode {
 
 	static const uint32_t field_capacity = 256;
@@ -200,6 +205,7 @@ enum class QueueError {
 };
 enum class DeviceError {
 	failed_create_device,
+	VkPhysicalDeviceFeatures2_in_pNext_chain_while_using_add_required_extension_features,
 };
 enum class SwapchainError {
 	surface_handle_not_provided,
@@ -207,6 +213,8 @@ enum class SwapchainError {
 	failed_create_swapchain,
 	failed_get_swapchain_images,
 	failed_create_swapchain_image_views,
+	required_min_image_count_too_low,
+	required_usage_not_supported
 };
 
 std::error_code make_error_code(InstanceError instance_error);
@@ -233,8 +241,8 @@ struct SystemInfo {
 
 	public:
 	// Use get_system_info to create a SystemInfo struct. This is because loading vulkan could fail.
-	static detail::Result<SystemInfo> get_system_info();
-	static detail::Result<SystemInfo> get_system_info(PFN_vkGetInstanceProcAddr fp_vkGetInstanceProcAddr);
+	static Result<SystemInfo> get_system_info();
+	static Result<SystemInfo> get_system_info(PFN_vkGetInstanceProcAddr fp_vkGetInstanceProcAddr);
 
 	// Returns true if a layer is available
 	bool is_layer_available(const char* layer_name) const;
@@ -280,8 +288,9 @@ struct Instance {
 
 	private:
 	bool headless = false;
-	bool supports_properties2_ext = false;
+	bool properties2_ext_enabled = false;
 	uint32_t instance_version = VKB_VK_API_VERSION_1_0;
+	uint32_t api_version = VKB_VK_API_VERSION_1_0;
 
 	friend class InstanceBuilder;
 	friend class PhysicalDeviceSelector;
@@ -319,7 +328,7 @@ class InstanceBuilder {
 	explicit InstanceBuilder(PFN_vkGetInstanceProcAddr fp_vkGetInstanceProcAddr);
 
 	// Create a VkInstance. Return an error if it failed.
-	detail::Result<Instance> build() const;
+	Result<Instance> build() const;
 
 	// Sets the name of the application. Defaults to "" if none is provided.
 	InstanceBuilder& set_app_name(const char* app_name);
@@ -338,17 +347,26 @@ class InstanceBuilder {
 	// Sets the (major, minor, patch) version of the engine.
 	InstanceBuilder& set_engine_version(uint32_t major, uint32_t minor, uint32_t patch = 0);
 
-	// Require a vulkan instance API version. Will fail to create if this version isn't available.
+	// Require a vulkan API version. Will fail to create if this version isn't available.
 	// Should be constructed with VK_MAKE_VERSION or VK_MAKE_API_VERSION.
 	InstanceBuilder& require_api_version(uint32_t required_api_version);
-	// Require a vulkan instance API version. Will fail to create if this version isn't available.
+	// Require a vulkan API version. Will fail to create if this version isn't available.
 	InstanceBuilder& require_api_version(uint32_t major, uint32_t minor, uint32_t patch = 0);
+
+	// Overrides required API version for instance creation. Will fail to create if this version isn't available.
+	// Should be constructed with VK_MAKE_VERSION or VK_MAKE_API_VERSION.
+	InstanceBuilder& set_minimum_instance_version(uint32_t minimum_instance_version);
+	// Overrides required API version for instance creation. Will fail to create if this version isn't available.
+	InstanceBuilder& set_minimum_instance_version(uint32_t major, uint32_t minor, uint32_t patch = 0);
 
 	// Prefer a vulkan instance API version. If the desired version isn't available, it will use the
 	// highest version available. Should be constructed with VK_MAKE_VERSION or VK_MAKE_API_VERSION.
-	InstanceBuilder& desire_api_version(uint32_t preferred_vulkan_version);
+	[[deprecated("Use require_api_version + set_minimum_instance_version instead.")]] InstanceBuilder&
+	desire_api_version(uint32_t preferred_vulkan_version);
+
 	// Prefer a vulkan instance API version. If the desired version isn't available, it will use the highest version available.
-	InstanceBuilder& desire_api_version(uint32_t major, uint32_t minor, uint32_t patch = 0);
+	[[deprecated("Use require_api_version + set_minimum_instance_version instead.")]] InstanceBuilder&
+	desire_api_version(uint32_t major, uint32_t minor, uint32_t patch = 0);
 
 	// Adds a layer to be enabled. Will fail to create an instance if the layer isn't available.
 	InstanceBuilder& enable_layer(const char* layer_name);
@@ -400,6 +418,7 @@ class InstanceBuilder {
 		const char* engine_name = nullptr;
 		uint32_t application_version = 0;
 		uint32_t engine_version = 0;
+		uint32_t minimum_instance_version = 0;
 		uint32_t required_api_version = VKB_VK_API_VERSION_1_0;
 		uint32_t desired_api_version = VKB_VK_API_VERSION_1_0;
 
@@ -413,9 +432,9 @@ class InstanceBuilder {
 		PFN_vkDebugUtilsMessengerCallbackEXT debug_callback = default_debug_callback;
 		VkDebugUtilsMessageSeverityFlagsEXT debug_message_severity =
 		    VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
-		VkDebugUtilsMessageTypeFlagsEXT debug_message_type =
-		    VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
-		    VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+		VkDebugUtilsMessageTypeFlagsEXT debug_message_type = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
+		                                                     VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
+		                                                     VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
 		void* debug_user_data_pointer = nullptr;
 
 		// validation features
@@ -440,15 +459,15 @@ VKAPI_ATTR VkBool32 VKAPI_CALL default_debug_callback(VkDebugUtilsMessageSeverit
     const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
     void* pUserData);
 
-void destroy_debug_utils_messenger(VkInstance const instance,
-    VkDebugUtilsMessengerEXT const messenger,
-    VkAllocationCallbacks* allocation_callbacks = nullptr);
+void destroy_debug_utils_messenger(
+    VkInstance const instance, VkDebugUtilsMessengerEXT const messenger, VkAllocationCallbacks* allocation_callbacks = nullptr);
 
 // ---- Physical Device ---- //
 class PhysicalDeviceSelector;
 class DeviceBuilder;
 
 struct PhysicalDevice {
+	std::string name;
 	VkPhysicalDevice physical_device = VK_NULL_HANDLE;
 	VkSurfaceKHR surface = VK_NULL_HANDLE;
 
@@ -471,7 +490,7 @@ struct PhysicalDevice {
 	std::vector<VkQueueFamilyProperties> get_queue_families() const;
 
 	// Query the list of extensions which should be enabled
-	std::vector<const char*> get_extensions() const;
+	std::vector<std::string> get_extensions() const;
 
 	// A conversion function which allows this PhysicalDevice to be used
 	// in places where VkPhysicalDevice would have been used.
@@ -479,31 +498,56 @@ struct PhysicalDevice {
 
 	private:
 	uint32_t instance_version = VKB_VK_API_VERSION_1_0;
-	std::vector<const char*> extensions_to_enable;
+	std::vector<std::string> extensions;
 	std::vector<VkQueueFamilyProperties> queue_families;
 	std::vector<detail::GenericFeaturesPNextNode> extended_features_chain;
+	VkPhysicalDeviceFeatures2 features2{};
+
 	bool defer_surface_initialization = false;
+	bool properties2_ext_enabled = false;
+	enum class Suitable { yes, partial, no };
+	Suitable suitable = Suitable::yes;
 	friend class PhysicalDeviceSelector;
 	friend class DeviceBuilder;
 };
 
-enum class PreferredDeviceType {
-	other = 0,
-	integrated = 1,
-	discrete = 2,
-	virtual_gpu = 3,
-	cpu = 4
+enum class PreferredDeviceType { other = 0, integrated = 1, discrete = 2, virtual_gpu = 3, cpu = 4 };
+
+enum class DeviceSelectionMode {
+	// return all suitable and partially suitable devices
+	partially_and_fully_suitable,
+	// return only physical devices which are fully suitable
+	only_fully_suitable
 };
 
+// Enumerates the physical devices on the system, and based on the added criteria, returns a physical device or list of physical devies
+// A device is considered suitable if it meets all the 'required' and 'desired' criteria.
+// A device is considered partially suitable if it meets only the 'required' criteria.
 class PhysicalDeviceSelector {
 	public:
 	// Requires a vkb::Instance to construct, needed to pass instance creation info.
 	explicit PhysicalDeviceSelector(Instance const& instance);
+	// Requires a vkb::Instance to construct, needed to pass instance creation info, optionally specify the surface here
+	explicit PhysicalDeviceSelector(Instance const& instance, VkSurfaceKHR surface);
 
-	detail::Result<PhysicalDevice> select() const;
+	// Return the first device which is suitable
+	// use the `selection` parameter to configure if partially
+	Result<PhysicalDevice> select(DeviceSelectionMode selection = DeviceSelectionMode::partially_and_fully_suitable) const;
+
+	// Return all devices which are considered suitable - intended for applications which want to let the user pick the physical device
+	Result<std::vector<PhysicalDevice>> select_devices(
+	    DeviceSelectionMode selection = DeviceSelectionMode::partially_and_fully_suitable) const;
+
+	// Return the names of all devices which are considered suitable - intended for applications which want to let the user pick the physical device
+	Result<std::vector<std::string>> select_device_names(
+	    DeviceSelectionMode selection = DeviceSelectionMode::partially_and_fully_suitable) const;
 
 	// Set the surface in which the physical device should render to.
+	// Be sure to set it if swapchain functionality is to be used.
 	PhysicalDeviceSelector& set_surface(VkSurfaceKHR surface);
+
+	// Set the name of the device to select.
+	PhysicalDeviceSelector& set_name(std::string const& name);
 	// Set the desired physical device type to select. Defaults to PreferredDeviceType::discrete.
 	PhysicalDeviceSelector& prefer_gpu_device_type(PreferredDeviceType type = PreferredDeviceType::discrete);
 	// Allow selection of a gpu device type that isn't the preferred physical device type. Defaults to true.
@@ -538,18 +582,24 @@ class PhysicalDeviceSelector {
 	PhysicalDeviceSelector& add_desired_extensions(std::vector<const char*> extensions);
 
 	// Prefer a physical device that supports a (major, minor) version of vulkan.
-	PhysicalDeviceSelector& set_desired_version(uint32_t major, uint32_t minor);
+	[[deprecated("Use set_minimum_version + InstanceBuilder::require_api_version.")]] PhysicalDeviceSelector&
+	set_desired_version(uint32_t major, uint32_t minor);
+
 	// Require a physical device that supports a (major, minor) version of vulkan.
 	PhysicalDeviceSelector& set_minimum_version(uint32_t major, uint32_t minor);
 
+	// By default PhysicalDeviceSelector enables the portability subset if available
+	// This function disables that behavior
+	PhysicalDeviceSelector& disable_portability_subset();
+
 	// Require a physical device which supports a specific set of general/extension features.
-#if defined(VKB_VK_API_VERSION_1_1)
-	template <typename T>
-	PhysicalDeviceSelector& add_required_extension_features(T const& features) {
+	// If this function is used, the user should not put their own VkPhysicalDeviceFeatures2 in
+	// the pNext chain of VkDeviceCreateInfo.
+	template <typename T> PhysicalDeviceSelector& add_required_extension_features(T const& features) {
 		criteria.extended_features_chain.push_back(features);
 		return *this;
 	}
-#endif
+
 	// Require a physical device which supports the features in VkPhysicalDeviceFeatures.
 	PhysicalDeviceSelector& set_required_features(VkPhysicalDeviceFeatures const& features);
 #if defined(VKB_VK_API_VERSION_1_2)
@@ -580,33 +630,14 @@ class PhysicalDeviceSelector {
 		VkSurfaceKHR surface = VK_NULL_HANDLE;
 		uint32_t version = VKB_VK_API_VERSION_1_0;
 		bool headless = false;
-		bool supports_properties2_ext = false;
+		bool properties2_ext_enabled = false;
 	} instance_info;
-
-	struct PhysicalDeviceDesc {
-		VkPhysicalDevice phys_device = VK_NULL_HANDLE;
-		std::vector<VkQueueFamilyProperties> queue_families;
-
-		VkPhysicalDeviceFeatures device_features{};
-		VkPhysicalDeviceProperties device_properties{};
-		VkPhysicalDeviceMemoryProperties mem_properties{};
-
-// Because the KHR version is a typedef in Vulkan 1.1, it is safe to define one or the other.
-#if defined(VKB_VK_API_VERSION_1_1)
-		VkPhysicalDeviceFeatures2 device_features2{};
-#else
-		VkPhysicalDeviceFeatures2KHR device_features2{};
-#endif
-		std::vector<detail::GenericFeaturesPNextNode> extended_features_chain;
-	};
 
 	// We copy the extension features stored in the selector criteria under the prose of a
 	// "template" to ensure that after fetching everything is compared 1:1 during a match.
 
-	PhysicalDeviceDesc populate_device_details(VkPhysicalDevice phys_device,
-	    std::vector<detail::GenericFeaturesPNextNode> const& src_extended_features_chain) const;
-
 	struct SelectionCriteria {
+		std::string name;
 		PreferredDeviceType preferred_type = PreferredDeviceType::discrete;
 		bool allow_any_type = true;
 		bool require_present = true;
@@ -617,24 +648,27 @@ class PhysicalDeviceSelector {
 		VkDeviceSize required_mem_size = 0;
 		VkDeviceSize desired_mem_size = 0;
 
-		std::vector<const char*> required_extensions;
-		std::vector<const char*> desired_extensions;
+		std::vector<std::string> required_extensions;
+		std::vector<std::string> desired_extensions;
 
 		uint32_t required_version = VKB_VK_API_VERSION_1_0;
 		uint32_t desired_version = VKB_VK_API_VERSION_1_0;
 
 		VkPhysicalDeviceFeatures required_features{};
-#if defined(VKB_VK_API_VERSION_1_1)
 		VkPhysicalDeviceFeatures2 required_features2{};
+
 		std::vector<detail::GenericFeaturesPNextNode> extended_features_chain;
-#endif
 		bool defer_surface_initialization = false;
 		bool use_first_gpu_unconditionally = false;
+		bool enable_portability_subset = true;
 	} criteria;
 
-	enum class Suitable { yes, partial, no };
+	PhysicalDevice populate_device_details(VkPhysicalDevice phys_device,
+	    std::vector<detail::GenericFeaturesPNextNode> const& src_extended_features_chain) const;
 
-	Suitable is_device_suitable(PhysicalDeviceDesc phys_device) const;
+	PhysicalDevice::Suitable is_device_suitable(PhysicalDevice const& phys_device) const;
+
+	Result<std::vector<PhysicalDevice>> select_impl(DeviceSelectionMode selection) const;
 };
 
 // ---- Queue ---- //
@@ -654,14 +688,15 @@ struct Device {
 	std::vector<VkQueueFamilyProperties> queue_families;
 	VkAllocationCallbacks* allocation_callbacks = VK_NULL_HANDLE;
 	PFN_vkGetDeviceProcAddr fp_vkGetDeviceProcAddr = nullptr;
+	uint32_t instance_version = VKB_VK_API_VERSION_1_0;
 
-	detail::Result<uint32_t> get_queue_index(QueueType type) const;
+	Result<uint32_t> get_queue_index(QueueType type) const;
 	// Only a compute or transfer queue type is valid. All other queue types do not support a 'dedicated' queue index
-	detail::Result<uint32_t> get_dedicated_queue_index(QueueType type) const;
+	Result<uint32_t> get_dedicated_queue_index(QueueType type) const;
 
-	detail::Result<VkQueue> get_queue(QueueType type) const;
+	Result<VkQueue> get_queue(QueueType type) const;
 	// Only a compute or transfer queue type is valid. All other queue types do not support a 'dedicated' queue
-	detail::Result<VkQueue> get_dedicated_queue(QueueType type) const;
+	Result<VkQueue> get_dedicated_queue(QueueType type) const;
 
 	// Return a loaded dispatch table
 	DispatchTable make_table() const;
@@ -694,7 +729,7 @@ class DeviceBuilder {
 	// Any features and extensions that are requested/required in PhysicalDeviceSelector are automatically enabled.
 	explicit DeviceBuilder(PhysicalDevice physical_device);
 
-	detail::Result<Device> build() const;
+	Result<Device> build() const;
 
 	// For Advanced Users: specify the exact list of VkDeviceQueueCreateInfo's needed for the application.
 	// If a custom queue setup is provided, getting the queues and queue indexes is up to the application.
@@ -725,16 +760,24 @@ struct Swapchain {
 	VkDevice device = VK_NULL_HANDLE;
 	VkSwapchainKHR swapchain = VK_NULL_HANDLE;
 	uint32_t image_count = 0;
-	VkFormat image_format = VK_FORMAT_UNDEFINED;
+	VkFormat image_format = VK_FORMAT_UNDEFINED; // The image format actually used when creating the swapchain.
+	VkColorSpaceKHR color_space = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR; // The color space actually used when creating the swapchain.
+	VkImageUsageFlags image_usage_flags = 0;
 	VkExtent2D extent = { 0, 0 };
+	// The value of minImageCount actually used when creating the swapchain; note that the presentation engine is always free to create more images than that.
+	uint32_t requested_min_image_count = 0;
+	VkPresentModeKHR present_mode = VK_PRESENT_MODE_IMMEDIATE_KHR; // The present mode actually used when creating the swapchain.
+	uint32_t instance_version = VKB_VK_API_VERSION_1_0;
 	VkAllocationCallbacks* allocation_callbacks = VK_NULL_HANDLE;
 
 	// Returns a vector of VkImage handles to the swapchain.
-	detail::Result<std::vector<VkImage>> get_images();
+	Result<std::vector<VkImage>> get_images();
 
 	// Returns a vector of VkImageView's to the VkImage's of the swapchain.
-	// VkImageViews must be destroyed.
-	detail::Result<std::vector<VkImageView>> get_image_views();
+	// VkImageViews must be destroyed.  The pNext chain must be a nullptr or a valid
+	// structure.
+	Result<std::vector<VkImageView>> get_image_views();
+	Result<std::vector<VkImageView>> get_image_views(const void* pNext);
 	void destroy_image_views(std::vector<VkImageView> const& image_views);
 
 	// A conversion function which allows this Swapchain to be used
@@ -769,7 +812,7 @@ class SwapchainBuilder {
 	    uint32_t graphics_queue_index = detail::QUEUE_INDEX_MAX_VALUE,
 	    uint32_t present_queue_index = detail::QUEUE_INDEX_MAX_VALUE);
 
-	detail::Result<Swapchain> build() const;
+	Result<Swapchain> build() const;
 
 	// Set the oldSwapchain member of VkSwapchainCreateInfoKHR.
 	// For use in rebuilding a swapchain.
@@ -798,6 +841,7 @@ class SwapchainBuilder {
 	SwapchainBuilder& use_default_present_mode_selection();
 
 	// Set the bitmask of the image usage for acquired swapchain images.
+	// If the surface capabilities cannot allow it, building the swapchain will result in the `SwapchainError::required_usage_not_supported` error.
 	SwapchainBuilder& set_image_usage_flags(VkImageUsageFlags usage_flags);
 	// Add a image usage to the bitmask for acquired swapchain images.
 	SwapchainBuilder& add_image_usage_flags(VkImageUsageFlags usage_flags);
@@ -805,16 +849,29 @@ class SwapchainBuilder {
 	// are provided. The default is VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT
 	SwapchainBuilder& use_default_image_usage_flags();
 
-	// Set the bitmask of the format feature flag for acquired swapchain images.
-	SwapchainBuilder& set_format_feature_flags(VkFormatFeatureFlags feature_flags);
-	// Add a format feature to the bitmask for acquired swapchain images.
-	SwapchainBuilder& add_format_feature_flags(VkFormatFeatureFlags feature_flags);
-	// Use the default format feature bitmask values. This is the default if no format features
-	// are provided. The default is VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT
-	SwapchainBuilder& use_default_format_feature_flags();
-
 	// Set the number of views in for multiview/stereo surface
 	SwapchainBuilder& set_image_array_layer_count(uint32_t array_layer_count);
+
+	// Convenient named constants for passing to set_desired_min_image_count().
+	// Note that it is not an `enum class`, so its constants can be passed as an integer value without casting
+	// In other words, these might as well be `static const int`, but they benefit from being grouped together this way.
+	enum BufferMode {
+		SINGLE_BUFFERING = 1,
+		DOUBLE_BUFFERING = 2,
+		TRIPLE_BUFFERING = 3,
+	};
+
+	// Sets the desired minimum image count for the swapchain.
+	// Note that the presentation engine is always free to create more images than requested.
+	// You may pass one of the values specified in the BufferMode enum, or any integer value.
+	// For instance, if you pass DOUBLE_BUFFERING, the presentation engine is allowed to give you a double buffering setup, triple buffering, or more. This is up to the drivers.
+	SwapchainBuilder& set_desired_min_image_count(uint32_t min_image_count);
+
+	// Sets a required minimum image count for the swapchain.
+	// If the surface capabilities cannot allow it, building the swapchain will result in the `SwapchainError::required_min_image_count_too_low` error.
+	// Otherwise, the same observations from set_desired_min_image_count() apply.
+	// A value of 0 is specially interpreted as meaning "no requirement", and is the behavior by default.
+	SwapchainBuilder& set_required_min_image_count(uint32_t required_min_image_count);
 
 	// Set whether the Vulkan implementation is allowed to discard rendering operations that
 	// affect regions of the surface that are not visible. Default is true.
@@ -851,15 +908,21 @@ class SwapchainBuilder {
 		VkSwapchainCreateFlagBitsKHR create_flags = static_cast<VkSwapchainCreateFlagBitsKHR>(0);
 		VkSurfaceKHR surface = VK_NULL_HANDLE;
 		std::vector<VkSurfaceFormatKHR> desired_formats;
+		uint32_t instance_version = VKB_VK_API_VERSION_1_0;
 		uint32_t desired_width = 256;
 		uint32_t desired_height = 256;
 		uint32_t array_layer_count = 1;
+		uint32_t min_image_count = 0;
+		uint32_t required_min_image_count = 0;
 		VkImageUsageFlags image_usage_flags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-		VkFormatFeatureFlags format_feature_flags = VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
 		uint32_t graphics_queue_index = 0;
 		uint32_t present_queue_index = 0;
 		VkSurfaceTransformFlagBitsKHR pre_transform = static_cast<VkSurfaceTransformFlagBitsKHR>(0);
+#if defined(__ANDROID__)
+		VkCompositeAlphaFlagBitsKHR composite_alpha = VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR;
+#else
 		VkCompositeAlphaFlagBitsKHR composite_alpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+#endif
 		std::vector<VkPresentModeKHR> desired_present_modes;
 		bool clipped = true;
 		VkSwapchainKHR old_swapchain = VK_NULL_HANDLE;

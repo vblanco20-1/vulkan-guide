@@ -109,23 +109,19 @@ void VulkanEngine::draw()
 	VK_CHECK(vkBeginCommandBuffer(cmd, &cmdBeginInfo));	
 	
 	//make a clear-color from frame number. This will flash with a 120 frame period.
-	VkClearValue clearValue;
+	VkClearColorValue clearValue;
 	float flash = abs(sin(_frameNumber / 120.f));
-	clearValue.color = { { 0.0f, 0.0f, flash, 1.0f } };
-
-	VkRenderingAttachmentInfo colorAttachment = vkinit::color_attachment_info(_swapchainImageViews[swapchainImageIndex],clearValue);
-
-	VkRenderingInfo renderInfo = vkinit::rendering_info(_windowExtent,&colorAttachment);
-
-	//make the swapchain image into writeable mode before rendering
-	transition_image(cmd, _swapchainImages[swapchainImageIndex], ImageTransitionMode::IntoAttachment);
-
-	vkCmdBeginRendering(cmd, &renderInfo);
+	clearValue = { { 0.0f, 0.0f, flash, 1.0f } };
 	
-	vkCmdEndRendering(cmd);
+	//make the swapchain image into writeable mode before rendering
+	transition_image(cmd, _swapchainImages[swapchainImageIndex], ImageTransitionMode::IntoGeneral);
+
+	VkImageSubresourceRange clearRange = vkinit::image_subresource_range(VK_IMAGE_ASPECT_COLOR_BIT);
+
+	vkCmdClearColorImage(cmd, _swapchainImages[swapchainImageIndex],VK_IMAGE_LAYOUT_GENERAL,&clearValue,1,&clearRange);
 
 	//make the swapchain image into presentable mode
-	transition_image(cmd, _swapchainImages[swapchainImageIndex], ImageTransitionMode::AttachmentToPresent);
+	transition_image(cmd, _swapchainImages[swapchainImageIndex], ImageTransitionMode::GeneralToPresent);
 
 	//finalize the command buffer (we can no longer add commands, but it can now be executed)
 	VK_CHECK(vkEndCommandBuffer(cmd));
@@ -134,20 +130,16 @@ void VulkanEngine::draw()
 	//we want to wait on the _presentSemaphore, as that semaphore is signaled when the swapchain is ready
 	//we will signal the _renderSemaphore, to signal that rendering has finished
 
-	VkSubmitInfo submit = vkinit::submit_info(&cmd);
-	VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-
-	submit.pWaitDstStageMask = &waitStage;
-
-	submit.waitSemaphoreCount = 1;
-	submit.pWaitSemaphores = &_presentSemaphore;
-
-	submit.signalSemaphoreCount = 1;
-	submit.pSignalSemaphores = &_renderSemaphore;
+	VkCommandBufferSubmitInfo cmdinfo = vkinit::command_buffer_submit_info(cmd);	
+	
+	VkSemaphoreSubmitInfo waitInfo = vkinit::semaphore_submit_info(VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR,_presentSemaphore);
+	VkSemaphoreSubmitInfo signalInfo = vkinit::semaphore_submit_info(VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT, _renderSemaphore);	
+	
+	VkSubmitInfo2 submit = vkinit::submit_info(&cmdinfo,&signalInfo,&waitInfo);	
 
 	//submit command buffer to the queue and execute it.
 	// _renderFence will now block until the graphic commands finish execution
-	VK_CHECK(vkQueueSubmit(_graphicsQueue, 1, &submit, _renderFence));
+	VK_CHECK(vkQueueSubmit2(_graphicsQueue, 1, &submit, _renderFence));
 
 	//prepare present
 	// this will put the image we just rendered to into the visible window.
@@ -209,6 +201,7 @@ void VulkanEngine::init_vulkan()
 
 	VkPhysicalDeviceVulkan13Features features{};
 	features.dynamicRendering = true;
+	features.synchronization2 = true;
 
 	//use vkbootstrap to select a gpu. 
 	//We want a gpu that can write to the SDL surface and supports vulkan 1.2
@@ -242,10 +235,11 @@ void VulkanEngine::init_swapchain()
 	vkb::SwapchainBuilder swapchainBuilder{_chosenGPU,_device,_surface };
 
 	vkb::Swapchain vkbSwapchain = swapchainBuilder
-		.use_default_format_selection()
+		.set_desired_format({ VK_FORMAT_B8G8R8A8_SRGB, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR })
 		//use vsync present mode
 		.set_desired_present_mode(VK_PRESENT_MODE_FIFO_KHR)
 		.set_desired_extent(_windowExtent.width, _windowExtent.height)
+		.add_image_usage_flags(VK_IMAGE_USAGE_TRANSFER_DST_BIT)
 		.build()
 		.value();
 
@@ -289,32 +283,45 @@ void VulkanEngine::init_sync_structures()
 
 void VulkanEngine::transition_image(VkCommandBuffer cmd, VkImage image, ImageTransitionMode transitionMode)
 {
-	VkImageMemoryBarrier imageBarrier{};
-	imageBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+	VkImageMemoryBarrier2 imageBarrier{};
+	imageBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
 	imageBarrier.pNext = nullptr;
+
+	imageBarrier.srcStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT_KHR;
+	imageBarrier.dstStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT_KHR;
+	imageBarrier.srcAccessMask = VK_ACCESS_2_NONE_KHR;
+	imageBarrier.dstAccessMask = VK_ACCESS_2_NONE_KHR;
+
 
 	switch (transitionMode)
 	{
 		case ImageTransitionMode::IntoAttachment:
 			imageBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-			imageBarrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+			imageBarrier.newLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL;
 			break;
 
 		case ImageTransitionMode::AttachmentToPresent:
-			imageBarrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+			imageBarrier.oldLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL;
+			imageBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+			break;
+		case ImageTransitionMode::IntoGeneral:
+			imageBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+			imageBarrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
+			break;
+		case ImageTransitionMode::GeneralToPresent:
+			imageBarrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
 			imageBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 			break;
 	}
+
 	imageBarrier.image = image;
+	imageBarrier.subresourceRange = vkinit::image_subresource_range(VK_IMAGE_ASPECT_COLOR_BIT);
 
-	VkImageSubresourceRange subImage{};
-	subImage.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-	subImage.baseMipLevel = 0;
-	subImage.levelCount = 1;
-	subImage.baseArrayLayer = 0;
-	subImage.layerCount = 1;
+	VkDependencyInfo info{};
+	info.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+	info.pNext = nullptr;
+	info.imageMemoryBarrierCount = 1;
+	info.pImageMemoryBarriers = &imageBarrier;
 
-	imageBarrier.subresourceRange = subImage;
-
-	vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier);
+	vkCmdPipelineBarrier2(cmd, &info);
 }

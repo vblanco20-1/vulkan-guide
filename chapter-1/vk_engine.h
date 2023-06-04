@@ -8,6 +8,8 @@
 
 enum class ImageTransitionMode {
 	IntoAttachment,
+	IntoGeneral,
+	GeneralToPresent,
 	AttachmentToPresent
 };
 

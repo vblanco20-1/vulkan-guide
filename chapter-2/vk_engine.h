@@ -5,57 +5,40 @@
 
 #include <vk_types.h>
 #include <vector>
-#include <functional>
+#include "vk_mem_alloc.h"
 #include <deque>
-class PipelineBuilder {
-public:
+#include <functional>
 
-	std::vector<VkPipelineShaderStageCreateInfo> _shaderStages;
-	VkPipelineVertexInputStateCreateInfo _vertexInputInfo;
-	VkPipelineInputAssemblyStateCreateInfo _inputAssembly;
-	VkViewport _viewport;
-	VkRect2D _scissor;
-	VkPipelineRasterizationStateCreateInfo _rasterizer;
-	VkPipelineColorBlendAttachmentState _colorBlendAttachment;
-	VkPipelineMultisampleStateCreateInfo _multisampling;
-	VkPipelineLayout _pipelineLayout;
-
-	VkPipelineRenderingCreateInfo _renderInfo;
-
-	VkPipeline build_pipeline(VkDevice device);
-};
 enum class ImageTransitionMode {
 	IntoAttachment,
+	IntoGeneral,
+	GeneralToPresent,
 	AttachmentToPresent
 };
 
-
-
 struct DeletionQueue
 {
-    std::deque<std::function<void()>> deletors;
+	std::deque<std::function<void()>> deletors;
 
-    void push_function(std::function<void()>&& function) {
-        deletors.push_back(function);
-    }
+	void push_function(std::function<void()>&& function) {
+		deletors.push_back(function);
+	}
 
-    void flush() {
-        // reverse iterate the deletion queue to execute all the functions
-        for (auto it = deletors.rbegin(); it != deletors.rend(); it++) {
-            (*it)(); //call functors
-        }
+	void flush() {
+		// reverse iterate the deletion queue to execute all the functions
+		for (auto it = deletors.rbegin(); it != deletors.rend(); it++) {
+			(*it)(); //call functors
+		}
 
-        deletors.clear();
-    }
+		deletors.clear();
+	}
 };
-
 
 class VulkanEngine {
 public:
 
 	bool _isInitialized{ false };
 	int _frameNumber {0};
-	int _selectedShader{ 0 };
 
 	VkExtent2D _windowExtent{ 1700 , 900 };
 
@@ -74,20 +57,36 @@ public:
 
 	VkCommandPool _commandPool;
 	VkCommandBuffer _mainCommandBuffer;
+	
+	VkRenderPass _renderPass;
 
 	VkSurfaceKHR _surface;
 	VkSwapchainKHR _swapchain;
 	VkFormat _swachainImageFormat;
 
+	VkDescriptorPool _descriptorPool;
+
+	VkPipeline _gradientPipeline;
+	VkPipelineLayout _gradientPipelineLayout;
+
+	std::vector<VkFramebuffer> _framebuffers;
 	std::vector<VkImage> _swapchainImages;
 	std::vector<VkImageView> _swapchainImageViews;
 
-	VkPipelineLayout _trianglePipelineLayout;
+	VkDescriptorSet _drawImageDescriptors;
 
-	VkPipeline _trianglePipeline;
-	VkPipeline _redTrianglePipeline;
+	VkDescriptorSetLayout _swapchainImageDescriptorLayout;
 
-    DeletionQueue _mainDeletionQueue;
+	DeletionQueue _mainDeletionQueue;
+
+	VmaAllocator _allocator; //vma lib allocator
+
+	//draw resources
+	VkImageView _drawImageView;
+	AllocatedImage _drawImage;
+
+	//the format for the draw image
+	VkFormat _drawFormat;
 
 	//initializes everything in the engine
 	void init();
@@ -107,16 +106,20 @@ private:
 
 	void init_swapchain();
 
-	void init_commands();
+	void init_default_renderpass();
 
-	void init_sync_structures();
+	void init_framebuffers();
+
+	void init_commands();
 
 	void init_pipelines();
 
-	//loads a shader module from a spir-v file. Returns false if it errors
-	bool load_shader_module(const char* filePath, VkShaderModule* outShaderModule);
+	void init_descriptors();
 
+	void init_sync_structures();
 
 	void transition_image(VkCommandBuffer cmd, VkImage image, ImageTransitionMode transitionMode);
 
+	
+	bool load_shader_module(const char* filePath, VkShaderModule* outShaderModule);
 };

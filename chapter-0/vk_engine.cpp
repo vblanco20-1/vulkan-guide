@@ -1,4 +1,6 @@
-﻿
+﻿//> includes
+
+
 #include "vk_engine.h"
 
 #include <SDL.h>
@@ -6,7 +8,9 @@
 
 #include <vk_types.h>
 #include <vk_initializers.h>
+//< includes
 
+//> init
 void VulkanEngine::init()
 {
 	// We initialize SDL and create a window with it. 
@@ -26,6 +30,9 @@ void VulkanEngine::init()
 	//everything went fine
 	_isInitialized = true;
 }
+//< init
+
+//> extras
 void VulkanEngine::cleanup()
 {	
 	if (_isInitialized) {
@@ -38,7 +45,9 @@ void VulkanEngine::draw()
 {
 	//nothing yet
 }
+//< extras
 
+//> drawloop
 void VulkanEngine::run()
 {
 	SDL_Event e;
@@ -57,4 +66,4 @@ void VulkanEngine::run()
 		draw();
 	}
 }
-
+//< drawloop
