@@ -8,6 +8,8 @@ add_library(stb_image INTERFACE)
 
 add_library(tinyobjloader STATIC)
 
+add_subdirectory(fastgltf)
+
 target_sources(vkbootstrap PRIVATE 
   vkbootstrap/VkBootstrap.h
   vkbootstrap/VkBootstrap.cpp

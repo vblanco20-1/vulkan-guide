@@ -5,16 +5,23 @@ add_executable (chapter_4
   vk_engine.cpp
   vk_engine.h
   vk_types.h
-  vk_mesh.cpp
-  vk_mesh.h
   vk_initializers.cpp
-  vk_initializers.h)
+  vk_initializers.h
+  vk_images.h
+  vk_images.cpp
+  vk_mesh.h
+  vk_mesh.cpp
+  vk_loader.h
+  vk_loader.cpp
+  vk_descriptors.h
+  vk_descriptors.cpp
+)
 
 
-set_property(TARGET chapter_4 PROPERTY VS_DEBUGGER_WORKING_DIRECTORY $<TARGET_FILE_DIR:chapter_4>)
+set_property(TARGET chapter_4 PROPERTY VS_DEBUGGER_WORKING_DIRECTORY $<TARGET_FILE_DIR:chapter_1>)
 
 target_include_directories(chapter_4 PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 
 target_link_libraries(chapter_4 vkbootstrap vma glm tinyobjloader imgui stb_image)
 
-target_link_libraries(chapter_4 Vulkan::Vulkan sdl2)
+target_link_libraries(chapter_4 Vulkan::Vulkan sdl2 fastgltf::fastgltf)

@@ -2,29 +2,23 @@
 
 #include <vk_types.h>
 #include <vector>
+#include <glm/vec4.hpp>
 #include <glm/vec3.hpp>
-
-struct VertexInputDescription {
-	std::vector<VkVertexInputBindingDescription> bindings;
-	std::vector<VkVertexInputAttributeDescription> attributes;
-
-	VkPipelineVertexInputStateCreateFlags flags = 0;
-};
-
+#include <glm/vec2.hpp>
 
 struct Vertex {
 
 	glm::vec3 position;
+	float uv_x;
 	glm::vec3 normal;
-	glm::vec3 color;
-
-	static VertexInputDescription get_vertex_description();
+	float uv_y;
+	glm::vec4 color;
 }; 
 
-struct Mesh {
-	std::vector<Vertex> _vertices;
+struct Surface {
 
+	size_t indexCount;
+	AllocatedBuffer _indexBuffer;
 	AllocatedBuffer _vertexBuffer;
-
-	bool load_from_obj(const char* filename);
+	VkDescriptorSet bufferBinding;
 };

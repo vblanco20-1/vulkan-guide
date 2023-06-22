@@ -15,6 +15,8 @@ set (CMAKE_RUNTIME_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/bin")
 add_subdirectory(chapter-0)
 add_subdirectory(chapter-1)
 add_subdirectory(chapter-2)
+add_subdirectory(chapter-3)
+add_subdirectory(chapter-4)
 
 find_program(GLSL_VALIDATOR glslangValidator HINTS /usr/bin /usr/local/bin $ENV{VULKAN_SDK}/Bin/ $ENV{VULKAN_SDK}/Bin32/)
 

@@ -2,16 +2,18 @@
 // or project specific include files.
 
 #pragma once
-
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <vulkan/vulkan.h>
-#include <vk_mem_alloc.h>
+#include "vk_mem_alloc.h"
 
-struct AllocatedBuffer {
-	VkBuffer _buffer;
+//we will add our main reusable types here
+struct AllocatedImage {
+	VkImage _image;
+	VkImageView _imageView;
 	VmaAllocation _allocation;
 };
 
-struct AllocatedImage {
-	VkImage _image;
+struct AllocatedBuffer {
+	VkBuffer _buffer;
 	VmaAllocation _allocation;
 };

@@ -5,13 +5,16 @@
 
 #include <vk_types.h>
 #include <vector>
-#include <functional>
+#include "vk_mem_alloc.h"
 #include <deque>
-#include <vk_mesh.h>
+#include <functional>
+#include "vk_mesh.h"
 #include <unordered_map>
+#include <string>
+#include <glm/mat4x4.hpp>
+#include "vk_descriptors.h"
 
-#include <glm/glm.hpp>
-#include <glm/gtx/transform.hpp>
+struct GLTFMesh;
 
 class PipelineBuilder {
 public:
@@ -31,95 +34,50 @@ public:
 	VkPipeline build_pipeline(VkDevice device);
 };
 
-
+enum class ImageTransitionMode {
+	IntoAttachment,
+	IntoGeneral,
+	GeneralToPresent,
+	AttachmentToPresent
+};
 
 struct DeletionQueue
 {
-    std::deque<std::function<void()>> deletors;
+	std::deque<std::function<void()>> deletors;
 
-    void push_function(std::function<void()>&& function) {
-        deletors.push_back(function);
-    }
+	void push_function(std::function<void()>&& function) {
+		deletors.push_back(function);
+	}
 
-    void flush() {
-        // reverse iterate the deletion queue to execute all the functions
-        for (auto it = deletors.rbegin(); it != deletors.rend(); it++) {
-            (*it)(); //call functors
-        }
+	void flush() {
+		// reverse iterate the deletion queue to execute all the functions
+		for (auto it = deletors.rbegin(); it != deletors.rend(); it++) {
+			(*it)(); //call functors
+		}
 
-        deletors.clear();
-    }
+		deletors.clear();
+	}
 };
-
-enum class ImageTransitionMode {
-	IntoAttachment,
-	AttachmentToPresent,
-	IntoDepthTest
-};
-
-struct MeshPushConstants {
-	glm::vec4 data;
-	glm::mat4 render_matrix;
-};
-
 
 struct Material {
 	VkPipeline pipeline;
-	VkPipelineLayout pipelineLayout;
+	VkPipelineLayout layout;
 };
 
 struct RenderObject {
-	Mesh* mesh;
-
+	Surface* mesh;
 	Material* material;
 
-	glm::mat4 transformMatrix;
+	VkDescriptorSet bindSet;
+
+	glm::mat4 transform;
 };
-
-
-struct FrameData {
-	VkSemaphore _presentSemaphore, _renderSemaphore;
-	VkFence _renderFence;
-
-	DeletionQueue _frameDeletionQueue;
-
-	VkCommandPool _commandPool;
-	VkCommandBuffer _mainCommandBuffer;
-
-	AllocatedBuffer cameraBuffer;
-	VkDescriptorSet globalDescriptor;
-
-	AllocatedBuffer objectBuffer;
-	VkDescriptorSet objectDescriptor;
-};
-
-struct GPUCameraData{
-	glm::mat4 view;
-	glm::mat4 proj;
-	glm::mat4 viewproj;
-};
-
-
-struct GPUSceneData {
-	glm::vec4 fogColor; // w is for exponent
-	glm::vec4 fogDistances; //x for min, y for max, zw unused.
-	glm::vec4 ambientColor;
-	glm::vec4 sunlightDirection; //w for sun power
-	glm::vec4 sunlightColor;
-};
-
-struct GPUObjectData {
-	glm::mat4 modelMatrix;
-};
-
-constexpr unsigned int FRAME_OVERLAP = 2;
 
 class VulkanEngine {
 public:
 
 	bool _isInitialized{ false };
 	int _frameNumber {0};
-	int _selectedShader{ 0 };
 
 	VkExtent2D _windowExtent{ 1700 , 900 };
 
@@ -130,39 +88,55 @@ public:
 	VkPhysicalDevice _chosenGPU;
 	VkDevice _device;
 
-	VkPhysicalDeviceProperties _gpuProperties;
+	VkSemaphore _presentSemaphore, _renderSemaphore;
+	VkFence _renderFence;
 
-	FrameData _frames[FRAME_OVERLAP];
-	
 	VkQueue _graphicsQueue;
 	uint32_t _graphicsQueueFamily;
+
+	VkCommandPool _commandPool;
+	VkCommandBuffer _mainCommandBuffer;
+	
+	VkRenderPass _renderPass;
 
 	VkSurfaceKHR _surface;
 	VkSwapchainKHR _swapchain;
 	VkFormat _swachainImageFormat;
 
-	std::vector<VkFramebuffer> _framebuffers;
-	std::vector<VkImage> _swapchainImages;
-	std::vector<VkImageView> _swapchainImageViews;	
-
-    DeletionQueue _mainDeletionQueue;
-	
-	VmaAllocator _allocator; //vma lib allocator
-
-	//depth resources
-	VkImageView _depthImageView;
-	AllocatedImage _depthImage;
-
-	//the format for the depth image
-	VkFormat _depthFormat;
-
 	VkDescriptorPool _descriptorPool;
 
-	VkDescriptorSetLayout _globalSetLayout;
-	VkDescriptorSetLayout _objectSetLayout;
+	DescriptorAllocator globalDescriptorAllocator;
 
-	GPUSceneData _sceneParameters;
-	AllocatedBuffer _sceneParameterBuffer;
+	VkPipeline _gradientPipeline;
+	VkPipelineLayout _gradientPipelineLayout;
+
+	std::vector<VkFramebuffer> _framebuffers;
+	std::vector<VkImage> _swapchainImages;
+	std::vector<VkImageView> _swapchainImageViews;
+
+	VkDescriptorSet _drawImageDescriptors;
+
+	VkDescriptorSetLayout _swapchainImageDescriptorLayout;
+
+	DeletionQueue _mainDeletionQueue;
+
+	VmaAllocator _allocator; //vma lib allocator
+
+
+	VkDescriptorSetLayout _meshBufferDescriptorLayout;
+
+	VkPipelineLayout _trianglePipelineLayout;
+
+	VkPipeline _trianglePipeline;
+
+	Material _defaultMat;
+
+	//draw resources
+	AllocatedImage _drawImage;
+	AllocatedImage _depthImage;
+
+	//the format for the draw image
+	VkFormat _drawFormat;
 
 	//initializes everything in the engine
 	void init();
@@ -173,57 +147,42 @@ public:
 	//draw loop
 	void draw();
 
+	void draw_geometry(VkCommandBuffer cmd);
+
 	//run main loop
 	void run();
-	
-	FrameData& get_current_frame();
-	FrameData& get_last_frame();
 
-	//default array of renderable objects
-	std::vector<RenderObject> _renderables;
+	void uploadMesh(GLTFMesh* mesh);
 
-	std::unordered_map<std::string, Material> _materials;
-	std::unordered_map<std::string, Mesh> _meshes;
-	//functions
+private:
 
-	//create material and add it to the map
-	Material* create_material(VkPipeline pipeline, VkPipelineLayout layout, const std::string& name);
+	std::vector<RenderObject> renderables;
 
-	//returns nullptr if it cant be found
-	Material* get_material(const std::string& name);
-
-	//returns nullptr if it cant be found
-	Mesh* get_mesh(const std::string& name);
-
-	//our draw function
-	void draw_objects(VkCommandBuffer cmd, RenderObject* first, int count);
+	std::unordered_map<std::string, Surface> loadedSurfaces;
 
 	AllocatedBuffer create_buffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage);
-
-	size_t pad_uniform_buffer_size(size_t originalSize);
-private:
+	AllocatedImage create_image(VkExtent3D size, VkFormat format, VkImageUsageFlags usage);
 
 	void init_vulkan();
 
 	void init_swapchain();
 
-	void init_commands();
+	void init_default_renderpass();
 
-	void init_sync_structures();
+	void init_framebuffers();
+
+	void init_commands();
 
 	void init_pipelines();
 
-	void init_scene();
-
 	void init_descriptors();
 
-	//loads a shader module from a spir-v file. Returns false if it errors
-	bool load_shader_module(const char* filePath, VkShaderModule* outShaderModule);
+	void init_sync_structures();
 
-	void load_meshes();
-
-	void upload_mesh(Mesh& mesh);
+	void init_renderables();
 
 	void transition_image(VkCommandBuffer cmd, VkImage image, ImageTransitionMode transitionMode);
 
+	
+	bool load_shader_module(const char* filePath, VkShaderModule* outShaderModule);
 };
