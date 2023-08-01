@@ -7,6 +7,7 @@ VkCommandPoolCreateInfo vkinit::command_pool_create_info(uint32_t queueFamilyInd
 	info.pNext = nullptr;
 
 	info.flags = flags;
+	info.queueFamilyIndex = queueFamilyIndex;
 	return info;
 }
 
