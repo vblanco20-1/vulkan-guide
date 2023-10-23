@@ -11,9 +11,12 @@ struct AllocatedImage {
 	VkImage _image;
 	VkImageView _imageView;
 	VmaAllocation _allocation;
+	VkExtent3D _imageExtent;
+	VkFormat _imageFormat;
 };
 
 struct AllocatedBuffer {
 	VkBuffer _buffer;
 	VmaAllocation _allocation;
+	VmaAllocationInfo _info;
 };

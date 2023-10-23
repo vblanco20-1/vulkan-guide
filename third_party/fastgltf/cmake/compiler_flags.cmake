@@ -4,9 +4,9 @@ macro(compiler_flags TARGET)
         # cpuid, meaning no architecture flags or other compile flags need to be passed.
         # See https://github.com/simdjson/simdjson/blob/master/doc/implementation-selection.md.
         if (MSVC)
-            target_compile_options(${TARGET} PRIVATE /EHsc $<$<CONFIG:RELEASE>:/O2 /Ob3 /Ot>)
+            target_compile_options(${TARGET} PRIVATE /EHsc /utf-8 $<$<CONFIG:RELEASE>:/O2 /Ob3 /Ot>)
             if (MSVC_VERSION GREATER 1929)
-                target_compile_options(${TARGET} PRIVATE /external:anglebrackets)
+                target_compile_options(${TARGET} PRIVATE /external:W0 /external:anglebrackets)
             endif()
         elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
             target_compile_options(${TARGET} PRIVATE $<$<CONFIG:RELEASE>:-O3>)

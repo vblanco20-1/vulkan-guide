@@ -39,3 +39,8 @@ tests/gltf-rs/Cargo.lock
 # Example files
 *.ngfx-proj
 SpirvTemp/
+
+# Docs
+docs/xml/
+docs/Doxyfile
+docs/conf.py

@@ -31,13 +31,10 @@ TEST_CASE("Test accessor", "[gltf-tools]") {
     REQUIRE(jsonData.loadFromFile(lightsLamp / "LightsPunctualLamp.gltf"));
 
     fastgltf::Parser parser(fastgltf::Extensions::KHR_lights_punctual);
-    auto model = parser.loadGLTF(&jsonData, lightsLamp, fastgltf::Options::LoadExternalBuffers);
-    REQUIRE(parser.getError() == fastgltf::Error::None);
-    REQUIRE(model->parse(fastgltf::Category::Buffers | fastgltf::Category::BufferViews
-			| fastgltf::Category::Accessors) == fastgltf::Error::None);
-    REQUIRE(model->validate() == fastgltf::Error::None);
+    auto asset = parser.loadGLTF(&jsonData, lightsLamp, fastgltf::Options::LoadExternalBuffers,
+								 fastgltf::Category::Buffers | fastgltf::Category::BufferViews | fastgltf::Category::Accessors);
+    REQUIRE(asset.error() == fastgltf::Error::None);
 
-    auto asset = model->getParsedAsset();
     REQUIRE(asset->accessors.size() == 15);
     auto& accessors = asset->accessors;
 
@@ -55,7 +52,7 @@ TEST_CASE("Test accessor", "[gltf-tools]") {
 		auto* checkData = reinterpret_cast<const std::uint16_t*>(bufferData + view.byteOffset
 				+ firstAccessor.byteOffset);
 
-		REQUIRE(*checkData == fastgltf::getAccessorElement<std::uint16_t>(*asset, firstAccessor, 0));
+		REQUIRE(*checkData == fastgltf::getAccessorElement<std::uint16_t>(asset.get(), firstAccessor, 0));
     }
 
 	{
@@ -73,14 +70,14 @@ TEST_CASE("Test accessor", "[gltf-tools]") {
 				+ secondAccessor.byteOffset);
 
 		SECTION("getAccessorElement<glm::vec3>") {
-			REQUIRE(*checkData == fastgltf::getAccessorElement<glm::vec3>(*asset, secondAccessor, 0));
+			REQUIRE(*checkData == fastgltf::getAccessorElement<glm::vec3>(asset.get(), secondAccessor, 0));
 		}
 
 		SECTION("iterateAccessor") {
 			auto dstCopy = std::make_unique<glm::vec3[]>(secondAccessor.count);
 			std::size_t i = 0;
 
-			fastgltf::iterateAccessor<glm::vec3>(*asset, secondAccessor, [&](auto&& v3) {
+			fastgltf::iterateAccessor<glm::vec3>(asset.get(), secondAccessor, [&](auto&& v3) {
 				dstCopy[i++] = std::forward<glm::vec3>(v3);
 			});
 
@@ -89,7 +86,16 @@ TEST_CASE("Test accessor", "[gltf-tools]") {
 
 		SECTION("copyFromAccessor") {
 			auto dstCopy = std::make_unique<glm::vec3[]>(secondAccessor.count);
-			fastgltf::copyFromAccessor<glm::vec3>(*asset, secondAccessor, dstCopy.get());
+			fastgltf::copyFromAccessor<glm::vec3>(asset.get(), secondAccessor, dstCopy.get());
+			REQUIRE(std::memcmp(dstCopy.get(), checkData, secondAccessor.count * sizeof(glm::vec3)) == 0);
+		}
+
+		SECTION("Iterator test") {
+			auto dstCopy = std::make_unique<glm::vec3[]>(secondAccessor.count);
+			auto accessor = fastgltf::iterateAccessor<glm::vec3>(asset.get(), secondAccessor);
+			for (auto it = accessor.begin(); it != accessor.end(); ++it) {
+				dstCopy[std::distance(accessor.begin(), it)] = *it;
+			}
 			REQUIRE(std::memcmp(dstCopy.get(), checkData, secondAccessor.count * sizeof(glm::vec3)) == 0);
 		}
 	}
@@ -101,14 +107,10 @@ TEST_CASE("Test sparse accessor", "[gltf-tools]") {
     REQUIRE(jsonData->loadFromFile(simpleSparseAccessor / "SimpleSparseAccessor.gltf"));
 
     fastgltf::Parser parser;
-    auto model = parser.loadGLTF(jsonData.get(), simpleSparseAccessor, fastgltf::Options::LoadExternalBuffers);
-    REQUIRE(model != nullptr);
-    REQUIRE(parser.getError() == fastgltf::Error::None);
-    REQUIRE(model->parse(fastgltf::Category::Buffers | fastgltf::Category::BufferViews
-			| fastgltf::Category::Accessors) == fastgltf::Error::None);
-    REQUIRE(model->validate() == fastgltf::Error::None);
+    auto asset = parser.loadGLTF(jsonData.get(), simpleSparseAccessor, fastgltf::Options::LoadExternalBuffers,
+								 fastgltf::Category::Buffers | fastgltf::Category::BufferViews | fastgltf::Category::Accessors);
+    REQUIRE(asset.error() == fastgltf::Error::None);
 
-    auto asset = model->getParsedAsset();
     REQUIRE(asset->accessors.size() == 2);
     REQUIRE(!asset->accessors[0].sparse.has_value());
     REQUIRE(asset->accessors[1].sparse.has_value());
@@ -148,7 +150,7 @@ TEST_CASE("Test sparse accessor", "[gltf-tools]") {
 
 	SECTION("getAccessorElement") {
 		for (std::size_t i = 0; i < secondAccessor.count; ++i) {
-			REQUIRE(checkValues[i] == fastgltf::getAccessorElement<glm::vec3>(*asset, secondAccessor, i));
+			REQUIRE(checkValues[i] == fastgltf::getAccessorElement<glm::vec3>(asset.get(), secondAccessor, i));
 		}
 	}
 
@@ -156,8 +158,18 @@ TEST_CASE("Test sparse accessor", "[gltf-tools]") {
 		auto dstCopy = std::make_unique<glm::vec3[]>(secondAccessor.count);
 		std::size_t i = 0;
 
-		fastgltf::iterateAccessor<glm::vec3>(*asset, secondAccessor, [&](auto&& v3) {
+		fastgltf::iterateAccessor<glm::vec3>(asset.get(), secondAccessor, [&](auto&& v3) {
 			dstCopy[i++] = std::forward<glm::vec3>(v3);
+		});
+
+		REQUIRE(std::memcmp(dstCopy.get(), checkValues.get(), secondAccessor.count * sizeof(glm::vec3)) == 0);
+	}
+
+	SECTION("iterateAccessor with idx") {
+		auto dstCopy = std::make_unique<glm::vec3[]>(secondAccessor.count);
+
+		fastgltf::iterateAccessorWithIndex<glm::vec3>(asset.get(), secondAccessor, [&](auto&& v3, std::size_t i) {
+			dstCopy[i] = std::forward<glm::vec3>(v3);
 		});
 
 		REQUIRE(std::memcmp(dstCopy.get(), checkValues.get(), secondAccessor.count * sizeof(glm::vec3)) == 0);
@@ -165,7 +177,16 @@ TEST_CASE("Test sparse accessor", "[gltf-tools]") {
 
 	SECTION("copyFromAccessor") {
 		auto dstCopy = std::make_unique<glm::vec3[]>(secondAccessor.count);
-		fastgltf::copyFromAccessor<glm::vec3>(*asset, secondAccessor, dstCopy.get());
+		fastgltf::copyFromAccessor<glm::vec3>(asset.get(), secondAccessor, dstCopy.get());
+		REQUIRE(std::memcmp(dstCopy.get(), checkValues.get(), secondAccessor.count * sizeof(glm::vec3)) == 0);
+	}
+
+	SECTION("Iterator test") {
+		auto dstCopy = std::make_unique<glm::vec3[]>(secondAccessor.count);
+		auto accessor = fastgltf::iterateAccessor<glm::vec3>(asset.get(), secondAccessor);
+		for (auto it = accessor.begin(); it != accessor.end(); ++it) {
+			dstCopy[std::distance(accessor.begin(), it)] = *it;
+		}
 		REQUIRE(std::memcmp(dstCopy.get(), checkValues.get(), secondAccessor.count * sizeof(glm::vec3)) == 0);
 	}
 }

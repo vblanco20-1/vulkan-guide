@@ -38,8 +38,8 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
-#include <fastgltf_parser.hpp>
-#include <fastgltf_types.hpp>
+#include <fastgltf/parser.hpp>
+#include <fastgltf/types.hpp>
 
 constexpr std::string_view vertexShaderSource = R"(
     #version 460 core
@@ -166,7 +166,7 @@ struct MaterialUniforms {
 };
 
 struct Viewer {
-    std::unique_ptr<fastgltf::Asset> asset;
+    fastgltf::Asset asset;
 
     std::vector<GLuint> buffers;
     std::vector<GLuint> bufferAllocations;
@@ -281,7 +281,6 @@ bool loadGltf(Viewer* viewer, std::string_view cPath) {
         fastgltf::Parser parser(fastgltf::Extensions::KHR_mesh_quantization);
 
         auto path = std::filesystem::path{cPath};
-        std::unique_ptr<fastgltf::glTF> gltf;
 
         constexpr auto gltfOptions =
             fastgltf::Options::DontRequireValidAssetMember |
@@ -294,33 +293,28 @@ bool loadGltf(Viewer* viewer, std::string_view cPath) {
         data.loadFromFile(path);
 
         auto type = fastgltf::determineGltfFileType(&data);
+		fastgltf::Expected<fastgltf::Asset> asset(fastgltf::Error::None);
         if (type == fastgltf::GltfType::glTF) {
-            gltf = parser.loadGLTF(&data, path.parent_path(), gltfOptions);
+	        asset = parser.loadGLTF(&data, path.parent_path(), gltfOptions);
         } else if (type == fastgltf::GltfType::GLB) {
-            gltf = parser.loadBinaryGLTF(&data, path.parent_path(), gltfOptions);
+	        asset = parser.loadBinaryGLTF(&data, path.parent_path(), gltfOptions);
         } else {
             std::cerr << "Failed to determine glTF container" << std::endl;
             return false;
         }
 
-        if (parser.getError() != fastgltf::Error::None) {
-            std::cerr << "Failed to load glTF: " << fastgltf::to_underlying(parser.getError()) << std::endl;
+        if (asset.error() != fastgltf::Error::None) {
+            std::cerr << "Failed to load glTF: " << fastgltf::getErrorMessage(asset.error()) << std::endl;
             return false;
         }
 
-        auto error = gltf->parse(fastgltf::Category::Scenes);
-        if (error != fastgltf::Error::None) {
-            std::cerr << "Failed to parse glTF: " << fastgltf::to_underlying(error) << std::endl;
-            return false;
-        }
-
-        viewer->asset = gltf->getParsedAsset();
+        viewer->asset = std::move(asset.get());
     }
 
     // Some buffers are already allocated during parsing of the glTF, like e.g. base64 buffers
     // through our callback functions. Therefore, we only resize our output buffer vector, but
     // create our buffer handles later on.
-    auto& buffers = viewer->asset->buffers;
+    auto& buffers = viewer->asset.buffers;
     viewer->buffers.reserve(buffers.size());
 
     for (auto& buffer : buffers) {
@@ -349,9 +343,11 @@ bool loadMesh(Viewer* viewer, fastgltf::Mesh& mesh) {
     auto& asset = viewer->asset;
     Mesh outMesh = {};
     outMesh.primitives.resize(mesh.primitives.size());
+
     for (auto it = mesh.primitives.begin(); it != mesh.primitives.end(); ++it) {
-        if (it->attributes.find("POSITION") == it->attributes.end())
-            continue;
+		auto* positionIt = it->findAttribute("POSITION");
+		// A mesh primitive is required to hold the POSITION attribute.
+		assert(positionIt != it->attributes.end());
 
         // We only support indexed geometry.
         if (!it->indicesAccessor.has_value()) {
@@ -369,9 +365,9 @@ bool loadMesh(Viewer* viewer, fastgltf::Mesh& mesh) {
         primitive.vertexArray = vao;
         if (it->materialIndex.has_value()) {
             primitive.materialUniformsIndex = it->materialIndex.value();
-            auto& material = viewer->asset->materials[it->materialIndex.value()];
-            if (material.pbrData.has_value() && material.pbrData->baseColorTexture.has_value()) {
-                auto& texture = viewer->asset->textures[material.pbrData->baseColorTexture->textureIndex];
+            auto& material = viewer->asset.materials[it->materialIndex.value()];
+            if (material.pbrData.baseColorTexture.has_value()) {
+                auto& texture = viewer->asset.textures[material.pbrData.baseColorTexture->textureIndex];
                 if (!texture.imageIndex.has_value())
                     return false;
                 primitive.albedoTexture = viewer->textures[texture.imageIndex.value()].texture;
@@ -380,7 +376,7 @@ bool loadMesh(Viewer* viewer, fastgltf::Mesh& mesh) {
 
         {
             // Position
-            auto& positionAccessor = asset->accessors[it->attributes["POSITION"]];
+            auto& positionAccessor = asset.accessors[positionIt->second];
             if (!positionAccessor.bufferViewIndex.has_value())
                 continue;
 
@@ -391,7 +387,7 @@ bool loadMesh(Viewer* viewer, fastgltf::Mesh& mesh) {
                                       GL_FALSE, 0);
             glVertexArrayAttribBinding(vao, 0, 0);
 
-            auto& positionView = asset->bufferViews[positionAccessor.bufferViewIndex.value()];
+            auto& positionView = asset.bufferViews[positionAccessor.bufferViewIndex.value()];
             auto offset = positionView.byteOffset + positionAccessor.byteOffset;
             if (positionView.byteStride.has_value()) {
                 glVertexArrayVertexBuffer(vao, 0, viewer->buffers[positionView.bufferIndex],
@@ -406,7 +402,8 @@ bool loadMesh(Viewer* viewer, fastgltf::Mesh& mesh) {
 
         {
             // Tex coord
-            auto& texCoordAccessor = asset->accessors[it->attributes["TEXCOORD_0"]];
+			auto texcoord0 = it->findAttribute("TEXCOORD_0");
+			auto& texCoordAccessor = asset.accessors[texcoord0->second];
             if (!texCoordAccessor.bufferViewIndex.has_value())
                 continue;
 
@@ -416,7 +413,7 @@ bool loadMesh(Viewer* viewer, fastgltf::Mesh& mesh) {
                                       GL_FALSE, 0);
             glVertexArrayAttribBinding(vao, 1, 1);
 
-            auto& texCoordView = asset->bufferViews[texCoordAccessor.bufferViewIndex.value()];
+            auto& texCoordView = asset.bufferViews[texCoordAccessor.bufferViewIndex.value()];
             auto offset = texCoordView.byteOffset + texCoordAccessor.byteOffset;
             if (texCoordView.byteStride.has_value()) {
                 glVertexArrayVertexBuffer(vao, 1, viewer->buffers[texCoordView.bufferIndex],
@@ -435,12 +432,12 @@ bool loadMesh(Viewer* viewer, fastgltf::Mesh& mesh) {
         draw.baseInstance = 0;
         draw.baseVertex = 0;
 
-        auto& indices = asset->accessors[it->indicesAccessor.value()];
+        auto& indices = asset.accessors[it->indicesAccessor.value()];
         if (!indices.bufferViewIndex.has_value())
             return false;
         draw.count = static_cast<uint32_t>(indices.count);
 
-        auto& indicesView = asset->bufferViews[indices.bufferViewIndex.value()];
+        auto& indicesView = asset.bufferViews[indices.bufferViewIndex.value()];
         draw.firstIndex = static_cast<uint32_t>(indices.byteOffset + indicesView.byteOffset) / fastgltf::getElementByteSize(indices.type, indices.componentType);
         primitive.indexType = getGLComponentType(indices.componentType);
         glVertexArrayElementBuffer(vao, viewer->buffers[indicesView.bufferIndex]);
@@ -501,8 +498,8 @@ bool loadImage(Viewer* viewer, fastgltf::Image& image) {
             stbi_image_free(data);
         },
         [&](fastgltf::sources::BufferView& view) {
-            auto& bufferView = viewer->asset->bufferViews[view.bufferViewIndex];
-            auto& buffer = viewer->asset->buffers[bufferView.bufferIndex];
+            auto& bufferView = viewer->asset.bufferViews[view.bufferViewIndex];
+            auto& buffer = viewer->asset.buffers[bufferView.bufferIndex];
             // Yes, we've already loaded every buffer into some GL buffer. However, with GL it's simpler
             // to just copy the buffer data again for the texture. Besides, this is just an example.
             std::visit(fastgltf::visitor {
@@ -530,13 +527,9 @@ bool loadMaterial(Viewer* viewer, fastgltf::Material& material) {
     MaterialUniforms uniforms = {};
     uniforms.alphaCutoff = material.alphaCutoff;
 
-    if (material.pbrData.has_value()) {
-        uniforms.baseColorFactor = glm::make_vec4(material.pbrData->baseColorFactor.data());
-        if (material.pbrData->baseColorTexture.has_value()) {
-            uniforms.flags |= MaterialUniformFlags::HasBaseColorTexture;
-        }
-    } else {
-        uniforms.baseColorFactor = glm::fvec4(1.0f);
+    uniforms.baseColorFactor = glm::make_vec4(material.pbrData.baseColorFactor.data());
+    if (material.pbrData.baseColorTexture.has_value()) {
+        uniforms.flags |= MaterialUniformFlags::HasBaseColorTexture;
     }
 
     viewer->materials.emplace_back(uniforms);
@@ -564,7 +557,7 @@ void drawMesh(Viewer* viewer, size_t meshIndex, glm::mat4 matrix) {
 }
 
 void drawNode(Viewer* viewer, size_t nodeIndex, glm::mat4 matrix) {
-    auto& node = viewer->asset->nodes[nodeIndex];
+    auto& node = viewer->asset.nodes[nodeIndex];
     matrix = getTransformMatrix(node, matrix);
 
     if (node.meshIndex.has_value()) {
@@ -665,13 +658,13 @@ int main(int argc, char* argv[]) {
 
     // We load images first.
     auto& asset = viewer.asset;
-    for (auto& image : asset->images) {
+    for (auto& image : asset.images) {
         loadImage(&viewer, image);
     }
-    for (auto& material : asset->materials) {
+    for (auto& material : asset.materials) {
         loadMaterial(&viewer, material);
     }
-    for (auto& mesh : asset->meshes) {
+    for (auto& mesh : asset.meshes) {
         loadMesh(&viewer, mesh);
     }
     auto diff = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start);
@@ -726,7 +719,10 @@ int main(int argc, char* argv[]) {
 
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-        auto& scene = viewer.asset->scenes[0];
+		std::size_t sceneIndex = 0;
+		if (viewer.asset.defaultScene.has_value())
+			sceneIndex = viewer.asset.defaultScene.value();
+        auto& scene = viewer.asset.scenes[sceneIndex];
         for (auto& node : scene.nodeIndices) {
             drawNode(&viewer, node, glm::mat4(1.0f));
         }

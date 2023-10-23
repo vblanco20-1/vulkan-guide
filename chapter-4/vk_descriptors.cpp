@@ -47,6 +47,12 @@ void DescriptorAllocator::init_pool(VkDevice device, uint32_t maxSets, std::vect
 	vkCreateDescriptorPool(device, &pool_info, nullptr, &pool);
 }
 
+void DescriptorAllocator::clear_descriptors(VkDevice device)
+{
+
+	vkResetDescriptorPool(device,pool, 0);
+}
+
 VkDescriptorSet DescriptorAllocator::allocate(VkDevice device, VkDescriptorSetLayout layout)
 {
 	VkDescriptorSetAllocateInfo allocInfo = {};

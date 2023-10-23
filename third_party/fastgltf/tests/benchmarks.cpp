@@ -99,8 +99,7 @@ TEST_CASE("Benchmark loading of NewSponza", "[gltf-benchmark]") {
     REQUIRE(jsonData->fromByteView(bytes.data(), bytes.size() - fastgltf::getGltfBufferPadding(), bytes.size()));
 
     BENCHMARK("Parse NewSponza") {
-        auto sponza = parser.loadGLTF(jsonData.get(), intelSponza, benchmarkOptions);
-        return sponza->parse();
+        return parser.loadGLTF(jsonData.get(), intelSponza, benchmarkOptions);
     };
 
 #ifdef HAS_TINYGLTF
@@ -144,8 +143,7 @@ TEST_CASE("Benchmark base64 decoding from glTF file", "[gltf-benchmark]") {
     REQUIRE(jsonData->fromByteView(bytes.data(), bytes.size() - fastgltf::getGltfBufferPadding(), bytes.size()));
 
     BENCHMARK("Parse 2CylinderEngine and decode base64") {
-        auto engine = parser.loadGLTF(jsonData.get(), cylinderEngine, benchmarkOptions);
-        return engine->parse();
+        return parser.loadGLTF(jsonData.get(), cylinderEngine, benchmarkOptions);
     };
 
 #ifdef HAS_TINYGLTF
@@ -191,8 +189,7 @@ TEST_CASE("Benchmark raw JSON parsing", "[gltf-benchmark]") {
     REQUIRE(jsonData->fromByteView(bytes.data(), bytes.size() - fastgltf::getGltfBufferPadding(), bytes.size()));
 
     BENCHMARK("Parse Buggy.gltf") {
-        auto buggy = parser.loadGLTF(jsonData.get(), buggyPath, benchmarkOptions);
-        return buggy->parse();
+        return parser.loadGLTF(jsonData.get(), buggyPath, benchmarkOptions);
     };
 
 #ifdef HAS_TINYGLTF
@@ -241,8 +238,7 @@ TEST_CASE("Benchmark massive gltf file", "[gltf-benchmark]") {
     REQUIRE(jsonData->fromByteView(bytes.data(), bytes.size() - fastgltf::getGltfBufferPadding(), bytes.size()));
 
     BENCHMARK("Parse Bistro") {
-        auto engine = parser.loadGLTF(jsonData.get(), bistroPath, benchmarkOptions | fastgltf::Options::MinimiseJsonBeforeParsing);
-        return engine->parse();
+		return parser.loadGLTF(jsonData.get(), bistroPath, benchmarkOptions);
     };
 
 #ifdef HAS_TINYGLTF
@@ -300,17 +296,15 @@ TEST_CASE("Compare parsing performance with minified documents", "[gltf-benchmar
 
     fastgltf::Parser parser;
     BENCHMARK("Parse Buggy.gltf with normal JSON") {
-        auto buggy = parser.loadGLTF(jsonData.get(), buggyPath, benchmarkOptions);
-        return buggy->parse();
+        return parser.loadGLTF(jsonData.get(), buggyPath, benchmarkOptions);
     };
 
     BENCHMARK("Parse Buggy.gltf with minified JSON") {
-        auto buggy = parser.loadGLTF(minifiedJsonData.get(), buggyPath, benchmarkOptions);
-        return buggy->parse();
+        return parser.loadGLTF(minifiedJsonData.get(), buggyPath, benchmarkOptions);
     };
 }
 
-#if defined(__x86_64__) || defined(_M_AMD64) || defined(_M_IX86)
+#if defined(FASTGLTF_IS_X86)
 TEST_CASE("Small CRC32-C benchmark", "[gltf-benchmark]") {
     static constexpr std::string_view test = "abcdefghijklmnopqrstuvwxyz";
     BENCHMARK("Default 1-byte tabular algorithm") {

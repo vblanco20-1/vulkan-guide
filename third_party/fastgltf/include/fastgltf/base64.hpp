@@ -84,7 +84,7 @@ namespace fastgltf::base64 {
 
     [[nodiscard]] std::vector<std::uint8_t> fallback_decode(std::string_view encoded);
     [[nodiscard]] std::vector<std::uint8_t> decode(std::string_view encoded);
-}
+} // namespace fastgltf::base64
 
 #ifdef _MSC_VER
 #pragma warning(pop)

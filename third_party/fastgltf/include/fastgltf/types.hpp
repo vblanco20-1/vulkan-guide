@@ -27,10 +27,13 @@
 #pragma once
 
 #include <cassert>
+#include <cstddef>
+#include <cstring>
 #include <cstdint>
 #include <filesystem>
+#include <memory_resource>
 #include <optional>
-#include <unordered_map>
+#include <utility>
 #include <variant>
 #include <vector>
 
@@ -327,66 +330,74 @@ namespace fastgltf {
 #pragma endregion
 
 #pragma region Containers
-#ifndef FASTGLTF_USE_CUSTOM_SMALLVECTOR
-#define FASTGLTF_USE_CUSTOM_SMALLVECTOR 0
-#endif
+	/*
+	 * The amount of items that the SmallVector can initially store in the storage
+	 * allocated within the object itself.
+	 */
+	static constexpr auto initialSmallVectorStorage = 8;
 
-#if FASTGLTF_USE_CUSTOM_SMALLVECTOR
     /**
-     * A custom small vector class for fastgltf, as there often only are 1-3 node children and mesh
-     * primitives. Therefore, this is a quite basic implementation of a small vector which is mostly
-     * standard (C++17) conforming.
+     * A custom vector class for fastgltf, which can store up to N objects within itself.
+     * This is useful for cases where the vector is expected to only ever hold a tiny amount of small objects,
+     * such as a node's children.
+     * SmallVector is also mostly conformant to C++17's std::vector, and can therefore be used as a drop-in replacement.
+     * @note It is also available with polymorphic allocators in the fastgltf::pmr namespace.
      */
-    template <typename T, std::size_t N = 8>
+    template <typename T, std::size_t N = initialSmallVectorStorage, typename Allocator = std::allocator<T>>
     class SmallVector final {
         static_assert(N != 0, "Cannot create a SmallVector with 0 initial capacity");
 
-        alignas(T) std::array<T, N> storage;
+        alignas(T) std::array<std::byte, N * sizeof(T)> storage = {};
+
+		Allocator allocator;
 
         T* _data;
         std::size_t _size = 0, _capacity = N;
 
-        template<typename Input, typename Output>
-        void copy(Input first, std::size_t count, Output result) {
+        void copy(const T* first, std::size_t count, T* result) {
             if (count > 0) {
-                *result++ = *first;
-                for (std::size_t i = 1; i < count; ++i) {
-                    *result++ = *++first;
-                }
+				if constexpr (std::is_trivially_copyable_v<T>) {
+					std::memcpy(result, first, count * sizeof(T));
+				} else {
+					*result++ = *first;
+					for (std::size_t i = 1; i < count; ++i) {
+						*result++ = *++first;
+					}
+				}
             }
         }
 
     public:
-        SmallVector() : _data(this->storage.data()) {}
+		using iterator = T*;
+		using const_iterator = const T*;
 
-        explicit SmallVector(std::size_t size) : _data(this->storage.data()) {
-            assign(size);
+        SmallVector() : _data(reinterpret_cast<T*>(storage.data())) {}
+
+		explicit SmallVector(const Allocator& allocator) noexcept : allocator(allocator), _data(reinterpret_cast<T*>(storage.data())) {}
+
+        explicit SmallVector(std::size_t size, const Allocator& allocator = Allocator()) : allocator(allocator), _data(reinterpret_cast<T*>(storage.data())) {
+            resize(size);
         }
 
-        explicit SmallVector(std::size_t size, const T& value) : _data(this->storage.data()) {
+        SmallVector(std::size_t size, const T& value, const Allocator& allocator = Allocator()) : allocator(allocator), _data(reinterpret_cast<T*>(storage.data())) {
             assign(size, value);
         }
 
-        SmallVector(std::initializer_list<T> init) : _data(this->storage.data()) {
+        SmallVector(std::initializer_list<T> init, const Allocator& allocator = Allocator()) : allocator(allocator), _data(reinterpret_cast<T*>(storage.data())) {
             assign(init);
         }
 
-        SmallVector(const SmallVector& other) noexcept : _data(this->storage.data()) {
-            if (!isSmallVector() && _data) {
-                std::free(_data);
-                _data = nullptr;
-                _size = _capacity = 0;
-            }
+        SmallVector(const SmallVector& other) noexcept : _data(reinterpret_cast<T*>(storage.data())) {
             resize(other.size());
             copy(other.begin(), other.size(), begin());
         }
 
-        SmallVector(SmallVector&& other) noexcept : _data(this->storage.data()) {
-            if (other.isSmallVector()) {
+        SmallVector(SmallVector&& other) noexcept : _data(reinterpret_cast<T*>(storage.data())) {
+            if (other.isUsingStack()) {
                 if (!other.empty()) {
                     resize(other.size());
                     copy(other.begin(), other.size(), begin());
-                    other._data = other.storage.data(); // Reset pointer
+                    other._data = reinterpret_cast<T*>(other.storage.data()); // Reset pointer
                     _size = std::exchange(other._size, 0);
                     _capacity = std::exchange(other._capacity, N);
                 }
@@ -399,9 +410,10 @@ namespace fastgltf {
 
         SmallVector& operator=(const SmallVector& other) {
             if (std::addressof(other) != this) {
-                if (!isSmallVector() && _data) {
-                    std::free(_data);
-                    _data = nullptr;
+                if (!isUsingStack() && _data) {
+	                std::destroy(begin(), end());
+					allocator.deallocate(_data, _capacity);
+                    _data = reinterpret_cast<T*>(storage.data());
                     _size = _capacity = 0;
                 }
 
@@ -413,11 +425,11 @@ namespace fastgltf {
 
         SmallVector& operator=(SmallVector&& other) noexcept {
             if (std::addressof(other) != this) {
-                if (other.isSmallVector()) {
+                if (other.isUsingStack()) {
                     if (!other.empty()) {
                         resize(other.size());
                         copy(other.begin(), other.size(), begin());
-                        other._data = other.storage.data(); // Reset pointer
+                        other._data = reinterpret_cast<T*>(other.storage.data()); // Reset pointer
                         _size = std::exchange(other._size, 0);
                         _capacity = std::exchange(other._capacity, N);
                     }
@@ -431,49 +443,48 @@ namespace fastgltf {
         }
 
         ~SmallVector() {
-            if (!isSmallVector() && _data) {
-                // The stack data gets destructed automatically, but the heap data does not.
-                for (auto it = begin(); it != end(); ++it) {
-                    it->~T();
-                }
+			// As we use an array of std::byte for the stack storage, we have to destruct those manually too.
+			std::destroy(begin(), end());
 
+            if (!isUsingStack() && _data) {
                 // Not using the stack, we'll have to free.
-                std::free(_data);
-                _data = nullptr;
+	            allocator.deallocate(_data, _capacity);
             }
         }
 
-        inline T* begin() noexcept { return _data; }
-        inline const T* begin() const noexcept { return _data; }
-        inline const T* cbegin() const noexcept { return _data; }
-        inline T* end() noexcept { return begin() + size(); }
-        inline const T* end() const noexcept { return begin() + size(); }
-        inline const T* cend() const noexcept { return begin() + size(); }
+	    [[nodiscard]] iterator begin() noexcept { return _data; }
+        [[nodiscard]] const_iterator begin() const noexcept { return _data; }
+	    [[nodiscard]] const_iterator cbegin() const noexcept { return _data; }
+	    [[nodiscard]] iterator end() noexcept { return begin() + size(); }
+	    [[nodiscard]] const_iterator end() const noexcept { return begin() + size(); }
+	    [[nodiscard]] const_iterator cend() const noexcept { return begin() + size(); }
 
-        [[nodiscard]] inline std::reverse_iterator<T*> rbegin() { return end(); }
-        [[nodiscard]] inline std::reverse_iterator<const T*> rbegin() const { return end(); }
-        [[nodiscard]] inline std::reverse_iterator<const T*> crbegin() const { return end(); }
-        [[nodiscard]] inline std::reverse_iterator<T*> rend() { return begin(); }
-        [[nodiscard]] inline std::reverse_iterator<const T*> rend() const { return begin(); }
-        [[nodiscard]] inline std::reverse_iterator<const T*> crend() const { return begin(); }
+        [[nodiscard]] std::reverse_iterator<T*> rbegin() { return end(); }
+        [[nodiscard]] std::reverse_iterator<const T*> rbegin() const { return end(); }
+        [[nodiscard]] std::reverse_iterator<const T*> crbegin() const { return end(); }
+        [[nodiscard]] std::reverse_iterator<T*> rend() { return begin(); }
+        [[nodiscard]] std::reverse_iterator<const T*> rend() const { return begin(); }
+        [[nodiscard]] std::reverse_iterator<const T*> crend() const { return begin(); }
 
-        [[nodiscard]] inline T* data() noexcept { return _data; }
-        [[nodiscard]] inline const T* data() const noexcept { return _data; }
-        [[nodiscard]] inline std::size_t size() const noexcept { return _size; }
-        [[nodiscard]] inline std::size_t size_in_bytes() const noexcept { return _size * sizeof(T); }
-        [[nodiscard]] inline std::size_t capacity() const noexcept { return _capacity; }
+        [[nodiscard]] T* data() noexcept { return _data; }
+        [[nodiscard]] const T* data() const noexcept { return _data; }
+        [[nodiscard]] std::size_t size() const noexcept { return _size; }
+        [[nodiscard]] std::size_t size_in_bytes() const noexcept { return _size * sizeof(T); }
+        [[nodiscard]] std::size_t capacity() const noexcept { return _capacity; }
 
-        [[nodiscard]] inline bool empty() const noexcept { return _size == 0; }
-        [[nodiscard]] inline bool isSmallVector() const noexcept { return data() == this->storage.data(); }
+        [[nodiscard]] bool empty() const noexcept { return _size == 0; }
+        [[nodiscard]] bool isUsingStack() const noexcept { return data() == reinterpret_cast<const T*>(storage.data()); }
 
-        inline void reserve(std::size_t newCapacity) {
+        void reserve(std::size_t newCapacity) {
+	        static_assert(std::is_move_constructible_v<T> || std::is_copy_constructible_v<T>, "T needs to be copy constructible.");
+
             // We don't want to reduce capacity with reserve, only with shrink_to_fit.
             if (newCapacity <= capacity()) {
                 return;
             }
 
             // If the new capacity is lower than what we can hold on the stack, we ignore this request.
-            if (newCapacity <= N) {
+            if (newCapacity <= N && isUsingStack()) {
                 _capacity = newCapacity;
                 if (_size > _capacity) {
                     _size = _capacity;
@@ -484,31 +495,41 @@ namespace fastgltf {
             // We use geometric growth, similarly to std::vector.
             newCapacity = std::size_t(1) << (std::numeric_limits<decltype(newCapacity)>::digits - clz(newCapacity));
 
-            // If we don't hold any items yet, we can use realloc to expand. If we do hold any
-            // items, we can't use realloc because it'll invalidate the previous allocation and we
-            // can't copy the data into the new allocation.
-            T* alloc;
-            if (size() == 0 && !isSmallVector()) {
-                alloc = static_cast<T*>(std::realloc(_data, newCapacity * sizeof(T)));
-            } else {
-                alloc = static_cast<T*>(std::malloc(newCapacity * sizeof(T)));
-                copy(begin(), size(), alloc);
-            }
+			T* alloc = allocator.allocate(newCapacity);
 
-            if (!isSmallVector() && _data) {
-                std::free(_data); // Free our previous allocation.
+			// Copy/Move the old data into the new memory
+			for (std::size_t i = 0; i < size(); ++i) {
+				auto& x = (*this)[i];
+				if constexpr (std::is_nothrow_move_constructible_v<T>) {
+					new(alloc + i) T(std::move(x));
+				} else if constexpr (std::is_copy_constructible_v<T>) {
+					new(alloc + i) T(x);
+				} else {
+					new(alloc + i) T(std::move(x));
+				}
+			}
+
+			// Destroy all objects in the old allocation
+			std::destroy(begin(), end());
+
+            if (!isUsingStack() && _data && size() != 0) {
+				allocator.deallocate(_data, _capacity);
             }
 
             _data = alloc;
             _capacity = newCapacity;
         }
 
-        inline void resize(std::size_t newSize) {
-            if (newSize == size()) {
-                return;
-            }
+        void resize(std::size_t newSize) {
+			static_assert(std::is_constructible_v<T>, "T has to be constructible");
+			if (newSize == size()) {
+				return;
+			}
 
-            if (newSize > size()) {
+			if (newSize < size()) {
+				// Just destroy the "overflowing" elements.
+				std::destroy(begin() + newSize, end());
+			} else {
                 // Reserve enough capacity and copy the new value over.
                 auto oldSize = _size;
                 reserve(newSize);
@@ -516,162 +537,573 @@ namespace fastgltf {
                     new (it) T();
                 }
             }
-            // Else, the user wants the vector to be smaller. We'll not reallocate but just change the size.
+
             _size = newSize;
         }
 
-        inline void resize(std::size_t newSize, const T& value) {
-            if (newSize == size()) {
-                return;
-            }
+		void resize(std::size_t newSize, const T& value) {
+			static_assert(std::is_copy_constructible_v<T>, "T needs to be copy constructible.");
+			if (newSize == size()) {
+				return;
+			}
 
-            if (newSize > size()) {
-                // Reserve enough capacity and copy the new value over.
-                auto oldSize = _size;
-                reserve(newSize);
-                for (auto it = begin() + oldSize; it != begin() + newSize; ++it) {
-                    if (it == nullptr)
-                        break;
-                    if constexpr (std::is_nothrow_move_constructible_v<T>) {
-                        new (it) T(std::move(value));
-                    } else {
-                        new (it) T(value);
-                    }
-                }
-            }
-            // Else, the user wants the vector to be smaller. We'll not reallocate but just change the size.
-            _size = newSize;
-        }
+			if (newSize < size()) {
+				// Just destroy the "overflowing" elements.
+				std::destroy(begin() + newSize, end());
+			} else {
+				// Reserve enough capacity and copy the new value over.
+				auto oldSize = _size;
+				reserve(newSize);
+				for (auto it = begin() + oldSize; it != begin() + newSize; ++it) {
+					if (it == nullptr)
+						break;
 
-        inline void assign(std::size_t count) {
-            resize(count);
-            for (auto it = begin(); it != end(); ++it) {
-                new (it) T();
-            }
-        }
+					if constexpr (std::is_move_constructible_v<T>) {
+						new (it) T(std::move(value));
+					} else if constexpr (std::is_trivially_copyable_v<T>) {
+						std::memcpy(it, std::addressof(value), sizeof(T));
+					} else {
+						new (it) T(value);
+					}
+				}
+			}
 
-        inline void assign(std::size_t count, const T& value) {
-            resize(count);
-            for (auto it = begin(); it != end(); ++it) {
-                *it = value;
-            }
-        }
+			_size = newSize;
+		}
 
-        inline void assign(std::initializer_list<T> init) {
-            resize(init.size());
-            for (auto it = init.begin(); it != init.end(); ++it) {
-                at(std::distance(init.begin(), it)) = *it;
-            }
-        }
+		void shrink_to_fit() {
+			// Only have to shrink if there's any unused capacity.
+			if (capacity() == size() || size() == 0) {
+				return;
+			}
+
+			// If we can use the object's memory again, we'll copy everything over.
+			if (size() <= N) {
+				copy(begin(), size(), reinterpret_cast<T*>(storage.data()));
+				_data = reinterpret_cast<T*>(storage.data());
+			} else {
+				// We have to use heap allocated memory.
+				auto* alloc = allocator.allocate(size());
+				for (std::size_t i = 0; i < size(); ++i) {
+					new(alloc + i) T((*this)[i]);
+				}
+
+				if (_data && !isUsingStack()) {
+					std::destroy(begin(), end());
+					allocator.deallocate(_data, _capacity);
+				}
+
+				_data = alloc;
+			}
+
+			_capacity = _size;
+		}
+
+		void assign(std::size_t count, const T& value) {
+			clear();
+			resize(count, value);
+		}
+
+		void assign(std::initializer_list<T> init) {
+			static_assert(std::is_trivially_copyable_v<T> || std::is_copy_constructible_v<T>, "T needs to be trivially copyable or be copy constructible");
+			clear();
+			reserve(init.size());
+			_size = init.size();
+
+			if constexpr (std::is_trivially_copyable_v<T>) {
+				std::memcpy(begin(), init.begin(), init.size() * sizeof(T));
+			} else if constexpr (std::is_copy_constructible_v<T>) {
+				for (auto it = init.begin(); it != init.end(); ++it) {
+					new (_data + std::distance(init.begin(), it)) T(*it);
+				}
+			}
+		}
+
+		void clear() noexcept {
+			std::destroy(begin(), end());
+
+			if (!isUsingStack() && size() != 0) {
+				allocator.deallocate(_data, _capacity);
+				_data = reinterpret_cast<T*>(storage.data());
+			}
+
+			_size = 0;
+		}
 
         template <typename... Args>
-        inline decltype(auto) emplace_back(Args&&... args) {
-            resize(_size + 1);
+        decltype(auto) emplace_back(Args&&... args) {
+            // We reserve enough capacity for the new element, and then just increment the size.
+			reserve(_size + 1);
+			++_size;
             T& result = *(new (std::addressof(back())) T(std::forward<Args>(args)...));
             return (result);
         }
 
-        [[nodiscard]] inline T& at(std::size_t idx) {
+        [[nodiscard]] T& at(std::size_t idx) {
             if (idx >= size()) {
+#ifdef __cpp_exceptions
                 throw std::out_of_range("Index is out of range for SmallVector");
+#else
+				std::abort();
+#endif
             }
             return begin()[idx];
         }
-        [[nodiscard]] inline const T& at(std::size_t idx) const {
+        [[nodiscard]] const T& at(std::size_t idx) const {
             if (idx >= size()) {
+#ifdef __cpp_exceptions
                 throw std::out_of_range("Index is out of range for SmallVector");
+#else
+	            std::abort();
+#endif
             }
             return begin()[idx];
         }
 
-        [[nodiscard]] inline T& operator[](std::size_t idx) {
+        [[nodiscard]] T& operator[](std::size_t idx) {
             assert(idx < size());
             return begin()[idx];
         }
-        [[nodiscard]] inline const T& operator[](std::size_t idx) const {
+        [[nodiscard]] const T& operator[](std::size_t idx) const {
             assert(idx < size());
             return begin()[idx];
         }
 
-        [[nodiscard]]  inline T& front() {
+        [[nodiscard]] T& front() {
             assert(!empty());
             return begin()[0];
         }
-        [[nodiscard]] inline const T& front() const {
+        [[nodiscard]] const T& front() const {
             assert(!empty());
             return begin()[0];
         }
 
-        [[nodiscard]] inline T& back() {
+        [[nodiscard]] T& back() {
             assert(!empty());
             return end()[-1];
         }
-        [[nodiscard]] inline const T& back() const {
+        [[nodiscard]] const T& back() const {
             assert(!empty());
             return end()[-1];
         }
     };
-#else
-    template <typename T, std::size_t N = 0>
-    using SmallVector = std::vector<T>;
+
+	namespace pmr {
+		template<typename T, std::size_t N>
+		using SmallVector = SmallVector<T, N, std::pmr::polymorphic_allocator<T>>;
+	} // namespace pmr
+
+#ifndef FASTGLTF_USE_CUSTOM_SMALLVECTOR
+#define FASTGLTF_USE_CUSTOM_SMALLVECTOR 0
 #endif
+
+#if FASTGLTF_USE_CUSTOM_SMALLVECTOR
+	template <typename T, std::size_t N = initialSmallVectorStorage>
+	using MaybeSmallVector = SmallVector<T, N>;
+#else
+	template <typename T, std::size_t N = 0>
+	using MaybeSmallVector = std::vector<T>;
+#endif
+
+	namespace pmr {
+#if FASTGLTF_USE_CUSTOM_SMALLVECTOR
+		template <typename T, std::size_t N = initialSmallVectorStorage>
+		using MaybeSmallVector = pmr::SmallVector<T, N>;
+#else
+		template <typename T, std::size_t N = 0>
+		using MaybeSmallVector = std::pmr::vector<T>;
+#endif
+	} // namespace pmr
+
+	template<typename, typename = void>
+	struct OptionalFlagValue {
+		static constexpr std::nullopt_t missing_value = std::nullopt;
+	};
+
+	template<>
+	struct OptionalFlagValue<std::size_t> {
+		static constexpr auto missing_value = std::numeric_limits<std::size_t>::max();
+	};
+
+	template<>
+	struct OptionalFlagValue<float, std::enable_if_t<std::numeric_limits<float>::is_iec559>> {
+		// This float is a quiet NaN with a specific bit pattern to be able to differentiate
+		// between this flag value and any result from FP operations.
+		static constexpr auto missing_value = static_cast<float>(0x7fedb6db);
+	};
+
+	template<>
+	struct OptionalFlagValue<double, std::enable_if_t<std::numeric_limits<double>::is_iec559>> {
+		static constexpr auto missing_value = static_cast<double>(0x7ffdb6db6db6db6d);
+	};
+
+	template<>
+	struct OptionalFlagValue<Filter> {
+		static constexpr auto missing_value = static_cast<Filter>(std::numeric_limits<std::underlying_type_t<Filter>>::max());
+	};
+
+	template<>
+	struct OptionalFlagValue<BufferTarget> {
+		static constexpr auto missing_value = static_cast<BufferTarget>(std::numeric_limits<std::underlying_type_t<BufferTarget>>::max());
+	};
+
+	/**
+	 * A custom optional class for fastgltf,
+	 * which uses so-called "flag values" which are specific values of T that will never be present as an actual value.
+	 * We can therefore use those values as flags for whether there is an actual value stored,
+	 * instead of the additional bool used by std::optional.
+	 *
+	 * These flag values are obtained from the specializations of OptionalFlagValue.
+	 * If no specialization for T of OptionalFlagValue is provided, a static assert will be triggered.
+	 * In those cases, use std::optional or fastgltf::Optional instead.
+	 */
+	template<typename T>
+	class OptionalWithFlagValue final {
+		static_assert(!std::is_same_v<std::nullopt_t, std::remove_const_t<decltype(OptionalFlagValue<T>::missing_value)>>,
+			"OptionalWithFlagValue can only be used when there is an appropriate specialization of OptionalFlagValue<T>.");
+
+		struct NonTrivialDummy {
+			constexpr NonTrivialDummy() noexcept {}
+		};
+
+		union {
+			NonTrivialDummy dummy;
+			std::remove_const_t<T> _value;
+		};
+
+	public:
+		OptionalWithFlagValue() noexcept {
+			reset();
+		}
+
+		OptionalWithFlagValue(std::nullopt_t) noexcept {
+			reset();
+		}
+
+		template <typename U = T, std::enable_if_t<std::is_copy_constructible_v<T>, int> = 0>
+		OptionalWithFlagValue(const OptionalWithFlagValue<U>& other) {
+			if (other.has_value()) {
+				new (std::addressof(_value)) T(*other);
+			} else {
+				reset();
+			}
+		}
+
+		template <typename U = T, std::enable_if_t<std::is_move_constructible_v<T>, int> = 0>
+		OptionalWithFlagValue(OptionalWithFlagValue<U>&& other) {
+			if (other.has_value()) {
+				new (std::addressof(_value)) T(std::move(*other));
+			} else {
+				reset();
+			}
+		}
+
+		template<typename... Args, std::enable_if_t<std::is_constructible_v<T, Args...>, int> = 0>
+		explicit OptionalWithFlagValue(std::in_place_t, Args&& ... args) noexcept(std::is_nothrow_constructible_v<T, Args...>)
+			: _value(std::forward<Args>(args)...) {}
+
+		template <typename U = T, std::enable_if_t<std::is_constructible_v<T, U&&>, int> = 0>
+		OptionalWithFlagValue(U&& _new) noexcept(std::is_nothrow_assignable_v<T&, U> && std::is_nothrow_constructible_v<T, U>) {
+			new (std::addressof(_value)) T(std::forward<U>(_new));
+		}
+
+		~OptionalWithFlagValue() {
+			reset();
+		}
+
+		OptionalWithFlagValue& operator=(std::nullopt_t) noexcept {
+			reset();
+			return *this;
+		}
+
+		template<typename U = T, std::enable_if_t<std::is_constructible_v<T, U&&>, int> = 0>
+		OptionalWithFlagValue& operator=(U&& _new) noexcept(std::is_nothrow_assignable_v<T&, U> && std::is_nothrow_constructible_v<T, U>) {
+			if (has_value()) {
+				_value = std::forward<U>(_new);
+			} else {
+				new(std::addressof(_value)) T(std::forward<U>(_new));
+			}
+			return *this;
+		}
+
+		template <typename U, std::enable_if_t<std::conjunction_v<std::is_constructible<T, const U&>, std::is_assignable<T&, const U&>>, int> = 0>
+		OptionalWithFlagValue& operator=(const OptionalWithFlagValue<U>& other) {
+			if (other.has_value()) {
+				if (has_value()) {
+					_value = other._value;
+				} else {
+					new(std::addressof(_value)) T(other._value);
+				}
+			} else {
+				reset();
+			}
+			return *this;
+		}
+
+		template <typename U, std::enable_if_t<std::conjunction_v<std::is_constructible<T, U>, std::is_assignable<T&, U>>, int> = 0>
+		OptionalWithFlagValue& operator=(OptionalWithFlagValue<U>&& other) noexcept(std::is_nothrow_assignable_v<T&, T> && std::is_nothrow_constructible_v<T, T>) {
+			if (other.has_value()) {
+				if (has_value()) {
+					_value = std::move(other._value);
+				} else {
+					new(std::addressof(_value)) T(other._value);
+				}
+			} else {
+				reset();
+			}
+			return *this;
+		}
+
+		[[nodiscard]] bool has_value() const {
+			return this->_value != OptionalFlagValue<T>::missing_value;
+		}
+
+		[[nodiscard]] T& value()& {
+			if (!has_value()) {
+				throw std::bad_optional_access();
+			}
+			return _value;
+		}
+
+		[[nodiscard]] const T& value() const& {
+			if (!has_value()) {
+				throw std::bad_optional_access();
+			}
+			return _value;
+		}
+
+		[[nodiscard]] T&& value()&& {
+			if (!has_value()) {
+				throw std::bad_optional_access();
+			}
+			return std::move(_value);
+		}
+
+		[[nodiscard]] const T&& value() const&& {
+			if (!has_value()) {
+				throw std::bad_optional_access();
+			}
+			return std::move(_value);
+		}
+
+		template<typename U>
+		[[nodiscard]] T value_or(U&& default_value) const& {
+			return has_value() ? **this : static_cast<T>(std::forward<U>(default_value));
+		}
+
+		template<typename U>
+		[[nodiscard]] T value_or(U&& default_value)&& {
+			return has_value() ? std::move(**this) : static_cast<T>(std::forward<U>(default_value));
+		}
+
+		void swap(OptionalWithFlagValue<T>& other) noexcept(std::is_nothrow_move_constructible_v<T> &&
+		                                                    std::is_nothrow_swappable_v<T>) {
+			static_assert(std::is_move_constructible_v<T>);
+			if (has_value() && other.has_value()) {
+				std::swap(_value, other._value);
+			} else if (has_value() && !other.has_value()) {
+				other._value = std::move(_value);
+			} else if (!has_value() && other.has_value()) {
+				_value = std::move(other._value);
+			}
+		}
+
+		void reset() noexcept {
+			this->_value = OptionalFlagValue<T>::missing_value;
+		}
+
+		template <typename... Args>
+		T& emplace(Args&&... args) {
+			new (std::addressof(_value)) T(std::forward<Args>(args)...);
+		}
+
+		template <typename U, typename... Args>
+		T& emplace(std::initializer_list<U> list, Args&&... args) {
+			static_assert(std::is_constructible_v<T, std::initializer_list<U>&, Args&&...>);
+			new (std::addressof(_value)) T(list, std::forward<Args>(args)...);
+		}
+
+		explicit operator bool() const noexcept {
+			return has_value();
+		}
+
+		T* operator->() noexcept {
+			return std::addressof(_value);
+		}
+
+		const T* operator->() const noexcept {
+			return std::addressof(_value);
+		}
+
+		T& operator*()& noexcept {
+			return _value;
+		}
+
+		const T& operator*() const& noexcept {
+			return _value;
+		}
+
+		T&& operator*()&& noexcept {
+			return std::move(_value);
+		}
+
+		const T&& operator*() const&& noexcept {
+			return std::move(_value);
+		}
+	};
+
+	template <typename T, typename U>
+	bool operator==(const OptionalWithFlagValue<T>& opt, const U& value) {
+		return opt.has_value() && (*opt) == value;
+	}
+
+	template <typename T, typename U>
+	bool operator!=(const OptionalWithFlagValue<T>& opt, const U& value) {
+		return !(opt == value);
+	}
+
+	template <typename T, typename U>
+	bool operator<(const OptionalWithFlagValue<T>& opt, const U& value) {
+		return opt.has_value() && (*opt) < value;
+	}
+
+	template <typename T, typename U>
+	bool operator<=(const OptionalWithFlagValue<T>& opt, const U& value) {
+		return opt.has_value() && (*opt) <= value;
+	}
+
+	template <typename T, typename U>
+	bool operator>(const OptionalWithFlagValue<T>& opt, const U& value) {
+		return opt.has_value() && (*opt) > value;
+	}
+
+	template <typename T, typename U>
+	bool operator>=(const OptionalWithFlagValue<T>& opt, const U& value) {
+		return opt.has_value() && (*opt) >= value;
+	}
+
+	/**
+	 * A type alias which checks if there is a specialization of OptionalFlagValue for T and "switches"
+	 * between fastgltf::OptionalWithFlagValue and std::optional.
+	 */
+	template <typename T>
+	using Optional = std::conditional_t<
+		!std::is_same_v<std::nullopt_t, std::remove_const_t<decltype(OptionalFlagValue<T>::missing_value)>>,
+		OptionalWithFlagValue<T>,
+		std::optional<T>>;
 #pragma endregion
 
 #pragma region Structs
-    /**
-     * Custom URI class for fastgltf's needs. glTF 2.0 only allows two types of URIs:
-     *  (1) Data URIs as specified in RFC 2397.
-     *  (2) Relative paths as specified in RFC 3986.
-     *
-     * See https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#uris for details.
-     * However, the glTF spec allows more broader URIs in client implementations. Therefore,
-     * this supports all types of URIs as defined in RFC 3986.
-     */
-    class URI {
-        std::string uri;
+	class URI;
 
-        std::string_view _scheme;
-        std::string_view _path;
+	/**
+	 * Custom URI class for fastgltf's needs. glTF 2.0 only allows two types of URIs:
+	 *  (1) Data URIs as specified in RFC 2397.
+	 *  (2) Relative paths as specified in RFC 3986.
+	 *
+	 * See https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#uris for details.
+	 * However, the glTF spec allows more broader URIs in client implementations. Therefore,
+	 * this supports all types of URIs as defined in RFC 3986.
+	 *
+	 * This class, unlike fastgltf::URI, only holds a std::string_view to the URI and therefore
+	 * doesn't own the allocation.
+	 */
+	class URIView {
+		friend class URI;
 
-        std::string_view _userinfo;
-        std::string_view _host;
-        std::string_view _port;
+		std::string_view view;
 
-        std::string_view _query;
-        std::string_view _fragment;
+		std::string_view _scheme;
+		std::string_view _path;
 
-        bool _valid = true;
+		std::string_view _userinfo;
+		std::string_view _host;
+		std::string_view _port;
 
-        void readjustViews(const fastgltf::URI& other, std::string_view otherUri);
-        void parse();
+		std::string_view _query;
+		std::string_view _fragment;
 
-    public:
-        explicit URI() noexcept;
-        explicit URI(std::string uri) noexcept;
-        explicit URI(std::string_view uri) noexcept;
+		bool _valid = true;
 
-        URI(const URI& other);
-        URI(URI&& other) noexcept;
+		void parse();
 
-        URI& operator=(const URI& other);
-        URI& operator=(URI&& other) noexcept;
+		[[nodiscard]] auto data() const noexcept -> const char*;
 
-        static void decodePercents(std::string& x) noexcept;
+	public:
+		explicit URIView() noexcept;
+		explicit URIView(std::string_view uri) noexcept;
+		URIView(const URIView& other) noexcept;
 
-        [[nodiscard]] auto raw() const noexcept -> std::string_view;
+		URIView& operator=(const URIView& other);
+		URIView& operator=(std::string_view other);
 
-        [[nodiscard]] auto scheme() const noexcept -> std::string_view;
-        [[nodiscard]] auto userinfo() const noexcept -> std::string_view;
-        [[nodiscard]] auto host() const noexcept -> std::string_view;
-        [[nodiscard]] auto port() const noexcept -> std::string_view;
-        [[nodiscard]] auto path() const noexcept -> std::string_view;
-        [[nodiscard]] auto query() const noexcept -> std::string_view;
-        [[nodiscard]] auto fragment() const noexcept -> std::string_view;
+		[[nodiscard]] auto string() const noexcept -> std::string_view;
 
-        [[nodiscard]] auto fspath() const -> std::filesystem::path;
-        [[nodiscard]] bool valid() const noexcept;
-        [[nodiscard]] bool isLocalPath() const noexcept;
-        [[nodiscard]] bool isDataUri() const noexcept;
+		[[nodiscard]] auto scheme() const noexcept -> std::string_view;
+		[[nodiscard]] auto userinfo() const noexcept -> std::string_view;
+		[[nodiscard]] auto host() const noexcept -> std::string_view;
+		[[nodiscard]] auto port() const noexcept -> std::string_view;
+		[[nodiscard]] auto path() const noexcept -> std::string_view;
+		[[nodiscard]] auto query() const noexcept -> std::string_view;
+		[[nodiscard]] auto fragment() const noexcept -> std::string_view;
+
+		[[nodiscard]] auto fspath() const -> std::filesystem::path;
+		[[nodiscard]] bool valid() const noexcept;
+		[[nodiscard]] bool isLocalPath() const noexcept;
+		[[nodiscard]] bool isDataUri() const noexcept;
+	};
+
+	/**
+	 * Custom URI class for fastgltf's needs. glTF 2.0 only allows two types of URIs:
+	 *  (1) Data URIs as specified in RFC 2397.
+	 *  (2) Relative paths as specified in RFC 3986.
+	 *
+	 * See https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#uris for details.
+	 * However, the glTF spec allows more broader URIs in client implementations. Therefore,
+	 * this supports all types of URIs as defined in RFC 3986.
+	 *
+	 * This class, unlike fastgltf::URIView, holds a std::string which contains the URI. It
+	 * also decodes any percent-encoded characters.
+	 */
+	class URI {
+		std::pmr::string uri;
+		URIView view;
+
+		void readjustViews(const URIView& other);
+
+	public:
+		explicit URI() noexcept;
+
+		explicit URI(std::string uri) noexcept;
+		explicit URI(std::pmr::string uri) noexcept;
+		explicit URI(std::string_view uri) noexcept;
+		explicit URI(URIView view) noexcept;
+
+		URI(const URI& other);
+		URI(URI&& other) noexcept;
+
+		URI& operator=(const URI& other);
+		URI& operator=(const URIView& other);
+		URI& operator=(URI&& other) noexcept;
+
+		operator URIView() const noexcept;
+
+		static void decodePercents(std::pmr::string& x) noexcept;
+
+		[[nodiscard]] auto string() const noexcept -> std::string_view;
+
+		[[nodiscard]] auto scheme() const noexcept -> std::string_view;
+		[[nodiscard]] auto userinfo() const noexcept -> std::string_view;
+		[[nodiscard]] auto host() const noexcept -> std::string_view;
+		[[nodiscard]] auto port() const noexcept -> std::string_view;
+		[[nodiscard]] auto path() const noexcept -> std::string_view;
+		[[nodiscard]] auto query() const noexcept -> std::string_view;
+		[[nodiscard]] auto fragment() const noexcept -> std::string_view;
+
+		[[nodiscard]] auto fspath() const -> std::filesystem::path;
+		[[nodiscard]] bool valid() const noexcept;
+		[[nodiscard]] bool isLocalPath() const noexcept;
+		[[nodiscard]] bool isDataUri() const noexcept;
     };
 
     inline constexpr std::size_t dynamic_extent = std::numeric_limits<std::size_t>::max();
@@ -769,11 +1201,13 @@ namespace fastgltf {
 
     /**
      * Represents the data source of a buffer or image. These could be a buffer view, a file path
-     * (including offsets), a ordinary vector (if Options::LoadExternalBuffers or Options::LoadGLBBuffers
-     * was specified), or the ID of a custom buffer. Note that you, as a user, should never encounter
-     * this variant holding the std::monostate, as that would be a ill-formed glTF, which fastgltf
-     * already checks for while parsing. Note that for buffers, this variant will never hold a BufferView,
-     * as only images are able to reference buffer views as a source.
+     * (including offsets), a ordinary vector (if #Options::LoadExternalBuffers or #Options::LoadGLBBuffers
+     * was specified), or the ID of a custom buffer.
+     *
+     * @note As a user, you should never encounter this variant holding the std::monostate, as that would be a ill-formed glTF,
+     * which fastgltf already checks for while parsing.
+     *
+     * @note For buffers, this variant will never hold a sources::BufferView, as only images are able to reference buffer views as a source.
      */
     using DataSource = std::variant<std::monostate, sources::BufferView, sources::URI, sources::Vector, sources::CustomBuffer, sources::ByteView>;
 
@@ -790,16 +1224,16 @@ namespace fastgltf {
     };
 
     struct Animation {
-        SmallVector<AnimationChannel> channels;
-        SmallVector<AnimationSampler> samplers;
+	    pmr::MaybeSmallVector<AnimationChannel> channels;
+	    pmr::MaybeSmallVector<AnimationSampler> samplers;
 
-        std::string name;
+        std::pmr::string name;
     };
 
     struct AssetInfo {
-        std::string gltfVersion;
-        std::string copyright;
-        std::string generator;
+        std::pmr::string gltfVersion;
+        std::pmr::string copyright;
+        std::pmr::string generator;
     };
 
     struct Camera {
@@ -810,10 +1244,10 @@ namespace fastgltf {
             float znear;
         };
         struct Perspective {
-            std::optional<float> aspectRatio;
+            Optional<float> aspectRatio;
             float yfov;
             // If omitted, use an infinite projection matrix.
-            std::optional<float> zfar;
+            Optional<float> zfar;
             float znear;
         };
 
@@ -822,44 +1256,44 @@ namespace fastgltf {
          * and/or std::get_if to figure out which camera type is being used.
          */
         std::variant<Perspective, Orthographic> camera;
-        std::string name;
+        std::pmr::string name;
     };
 
     struct Skin {
-        SmallVector<std::size_t> joints;
-        std::optional<std::size_t> skeleton;
-        std::optional<std::size_t> inverseBindMatrices;
+	    pmr::MaybeSmallVector<std::size_t> joints;
+	    Optional<std::size_t> skeleton;
+	    Optional<std::size_t> inverseBindMatrices;
 
-        std::string name;
+        std::pmr::string name;
     };
 
     struct Sampler {
-        std::optional<Filter> magFilter;
-        std::optional<Filter> minFilter;
+	    Optional<Filter> magFilter;
+	    Optional<Filter> minFilter;
         Wrap wrapS;
         Wrap wrapT;
 
-        std::string name;
+        std::pmr::string name;
     };
 
     struct Scene {
-        SmallVector<std::size_t> nodeIndices;
+	    pmr::MaybeSmallVector<std::size_t> nodeIndices;
 
-        std::string name;
+        std::pmr::string name;
     };
 
     struct Node {
-        std::optional<std::size_t> meshIndex;
-        std::optional<std::size_t> skinIndex;
-        std::optional<std::size_t> cameraIndex;
+        Optional<std::size_t> meshIndex;
+	    Optional<std::size_t> skinIndex;
+	    Optional<std::size_t> cameraIndex;
 
         /**
-         * Only ever empty when KHR_lights_punctual is enabled and used by the asset.
+         * Only ever non-empty when KHR_lights_punctual is enabled and used by the asset.
          */
-        std::optional<std::size_t> lightsIndex;
+        Optional<std::size_t> lightIndex;
 
-        SmallVector<std::size_t> children;
-        SmallVector<float> weights;
+	    pmr::MaybeSmallVector<std::size_t> children;
+	    pmr::MaybeSmallVector<float> weights;
 
         struct TRS {
             std::array<float, 3> translation;
@@ -875,24 +1309,62 @@ namespace fastgltf {
          */
         std::variant<TRS, TransformMatrix> transform;
 
-        std::string name;
+        std::pmr::string name;
     };
 
     struct Primitive {
-        std::unordered_map<std::string, std::size_t> attributes;
+		using attribute_type = std::pair<std::pmr::string, std::size_t>;
+
+		// Instead of a map, we have a list of attributes here. Each pair contains
+		// the name of the attribute and the corresponding accessor index.
+		pmr::SmallVector<attribute_type, 4> attributes;
         PrimitiveType type;
 
-        std::vector<std::unordered_map<std::string, std::size_t>> targets;
+        std::pmr::vector<pmr::SmallVector<attribute_type, 4>> targets;
 
-        std::optional<std::size_t> indicesAccessor;
-        std::optional<std::size_t> materialIndex;
-    };
+        Optional<std::size_t> indicesAccessor;
+        Optional<std::size_t> materialIndex;
+
+		[[nodiscard]] auto findAttribute(std::string_view name) {
+			for (decltype(attributes)::iterator it = attributes.begin(); it != attributes.end(); ++it) {
+				if (it->first == name)
+					return it;
+			}
+			return attributes.end();
+		}
+
+		[[nodiscard]] auto findAttribute(std::string_view name) const {
+			for (decltype(attributes)::const_iterator it = attributes.cbegin(); it != attributes.cend(); ++it) {
+				if (it->first == name)
+					return it;
+			}
+			return attributes.cend();
+		}
+
+		[[nodiscard]] auto findTargetAttribute(std::size_t targetIndex, std::string_view name) {
+			auto& targetAttributes = targets[targetIndex];
+			for (std::remove_reference_t<decltype(targetAttributes)>::iterator it = targetAttributes.begin(); it != targetAttributes.end(); ++it) {
+				if (it->first == name)
+					return it;
+			}
+			return targetAttributes.end();
+		}
+
+		[[nodiscard]] auto findTargetAttribute(std::size_t targetIndex, std::string_view name) const {
+			const auto& targetAttributes = targets[targetIndex];
+			for (std::remove_reference_t<decltype(targetAttributes)>::const_iterator it = targetAttributes.cbegin(); it != targetAttributes.cend(); ++it) {
+				if (it->first == name)
+					return it;
+			}
+			return targetAttributes.cend();
+		}
+	};
 
     struct Mesh {
-        SmallVector<Primitive, 2> primitives;
-        SmallVector<float> weights;
+		pmr::MaybeSmallVector<Primitive, 2> primitives;
+		pmr::MaybeSmallVector<float> weights;
 
-        std::string name;
+        std::pmr::string name;
     };
 
     /**
@@ -917,7 +1389,7 @@ namespace fastgltf {
         /**
          * Overrides the textureInfo texCoord value if supplied.
          */
-        std::optional<std::size_t> texCoordIndex;
+        Optional<std::size_t> texCoordIndex;
     };
 
     struct TextureInfo {
@@ -933,32 +1405,38 @@ namespace fastgltf {
 
     struct PBRData {
         /**
-         * The factors for the base color of then material. Defaults to 1,1,1,1
+         * The factors for the base color of then material.
          */
-        std::array<float, 4> baseColorFactor;
+        std::array<float, 4> baseColorFactor = {{ 1, 1, 1, 1 }};
 
         /**
-         * The factor fot eh metalness of the material. Defaults to 1
+         * The factor for the metalness of the material.
          */
-        float metallicFactor;
+        float metallicFactor = 1.0f;
 
         /**
-         * The factor fot eh roughness of the material. Defaults to 1
+         * The factor for the roughness of the material.
          */
-        float roughnessFactor;
+        float roughnessFactor = 1.0f;
 
-        std::optional<TextureInfo> baseColorTexture;
-        std::optional<TextureInfo> metallicRoughnessTexture;
+        Optional<TextureInfo> baseColorTexture;
+        Optional<TextureInfo> metallicRoughnessTexture;
     };
+
+	struct MaterialAnisotropy {
+		float anisotropyStrength;
+		float anisotropyRotation;
+		Optional<TextureInfo> anisotropyTexture;
+	};
 
     /**
      * Specular information from KHR_materials_specular.
      */
     struct MaterialSpecular {
         float specularFactor;
-        std::optional<TextureInfo> specularTexture;
+        Optional<TextureInfo> specularTexture;
         std::array<float, 3> specularColorFactor;
-        std::optional<TextureInfo> specularColorTexture;
+        Optional<TextureInfo> specularColorTexture;
     };
 
     /**
@@ -966,11 +1444,11 @@ namespace fastgltf {
      */
     struct MaterialIridescence {
         float iridescenceFactor;
-        std::optional<TextureInfo> iridescenceTexture;
+        Optional<TextureInfo> iridescenceTexture;
         float iridescenceIor;
         float iridescenceThicknessMinimum;
         float iridescenceThicknessMaximum;
-        std::optional<TextureInfo> iridescenceThicknessTexture;
+        Optional<TextureInfo> iridescenceThicknessTexture;
     };
 
     /**
@@ -978,45 +1456,44 @@ namespace fastgltf {
      */
     struct MaterialVolume {
         float thicknessFactor;
-        std::optional<TextureInfo> thicknessTexture;
+        Optional<TextureInfo> thicknessTexture;
         float attenuationDistance;
         std::array<float, 3> attenuationColor;
     };
 
     struct MaterialTransmission {
         float transmissionFactor;
-        std::optional<TextureInfo> transmissionTexture;
+        Optional<TextureInfo> transmissionTexture;
     };
 
     struct MaterialClearcoat {
         float clearcoatFactor;
-        std::optional<TextureInfo> clearcoatTexture;
+        Optional<TextureInfo> clearcoatTexture;
         float clearcoatRoughnessFactor;
-        std::optional<TextureInfo> clearcoatRoughnessTexture;
-        std::optional<TextureInfo> clearcoatNormalTexture;
+        Optional<TextureInfo> clearcoatRoughnessTexture;
+        Optional<TextureInfo> clearcoatNormalTexture;
     };
 
     struct MaterialSheen {
         std::array<float, 3> sheenColorFactor;
-        std::optional<TextureInfo> sheenColorTexture;
+        Optional<TextureInfo> sheenColorTexture;
         float sheenRoughnessFactor;
-        std::optional<TextureInfo> sheenRoughnessTexture;
+        Optional<TextureInfo> sheenRoughnessTexture;
     };
 
     struct Material {
         /**
          * A set of parameter values that are used to define the metallic-roughness material model
-         * from Physically Based Rendering (PBR) methodology. When undefined, all the default
-         * values of pbrMetallicRoughness MUST apply.
+         * from Physically Based Rendering (PBR) methodology.
          */
-        std::optional<PBRData> pbrData;
+        PBRData pbrData;
 
         /**
          * The tangent space normal texture.
          */
-        std::optional<TextureInfo> normalTexture;
-        std::optional<TextureInfo> occlusionTexture;
-        std::optional<TextureInfo> emissiveTexture;
+        Optional<TextureInfo> normalTexture;
+        Optional<TextureInfo> occlusionTexture;
+        Optional<TextureInfo> emissiveTexture;
 
         /**
          * The factors for the emissive color of the material. Defaults to 0,0,0
@@ -1025,15 +1502,22 @@ namespace fastgltf {
 
         /**
          * The values used to determine the transparency of the material.
-         * Defaults to Opaque, and 0.5 for alpha cutoff.
+         * Defaults to #AlphaMode::Opaque.
          */
         AlphaMode alphaMode;
+
+		/**
+		 * The alpha value that determines the upper limit for fragments that
+		 * should be discarded for transparency. Defaults to 0.5.
+		 */
         float alphaCutoff;
 
         /**
          * Determines whether back-face culling should be disabled when using this material.
          */
         bool doubleSided;
+
+		std::unique_ptr<MaterialAnisotropy> anisotropy;
 
         std::unique_ptr<MaterialClearcoat> clearcoat;
 
@@ -1062,19 +1546,19 @@ namespace fastgltf {
         /**
          * The emissive strength from the KHR_materials_emissive_strength extension.
          */
-        std::optional<float> emissiveStrength;
+        Optional<float> emissiveStrength;
 
         /**
          * The index of refraction as specified through KHR_materials_ior.
          */
-        std::optional<float> ior;
+        Optional<float> ior;
 
         /**
          * Only applicable if KHR_materials_unlit is enabled.
          */
         bool unlit;
 
-        std::string name;
+        std::pmr::string name;
     };
 
     struct Texture {
@@ -1082,26 +1566,26 @@ namespace fastgltf {
          * When empty, an extension or other mechanism SHOULD supply an alternate texture source,
          * otherwise behavior is undefined.
          */
-        std::optional<std::size_t> imageIndex;
+        Optional<std::size_t> imageIndex;
 
         /**
          * If the imageIndex is specified by the KTX2 or DDS glTF extensions, this is supposed to
          * be used as a fallback if those file containers are not supported.
          */
-        std::optional<std::size_t> fallbackImageIndex;
+        Optional<std::size_t> fallbackImageIndex;
 
         /**
          * If no sampler is specified, use a default sampler with repeat wrap and auto filter.
          */
-        std::optional<std::size_t> samplerIndex;
+        Optional<std::size_t> samplerIndex;
 
-        std::string name;
+        std::pmr::string name;
     };
 
     struct Image {
         DataSource data;
 
-        std::string name;
+        std::pmr::string name;
     };
 
     struct SparseAccessor {
@@ -1118,17 +1602,17 @@ namespace fastgltf {
         std::size_t count;
         AccessorType type;
         ComponentType componentType;
-        bool normalized = false;
+        bool normalized;
         
-        std::variant<std::monostate, std::vector<double>, std::vector<std::int64_t>> max;
-        std::variant<std::monostate, std::vector<double>, std::vector<std::int64_t>> min;
+        std::variant<std::monostate, std::pmr::vector<double>, std::pmr::vector<std::int64_t>> max;
+        std::variant<std::monostate, std::pmr::vector<double>, std::pmr::vector<std::int64_t>> min;
 
         // Could have no value for sparse morph targets
-        std::optional<std::size_t> bufferViewIndex;
+        Optional<std::size_t> bufferViewIndex;
 
-        std::optional<SparseAccessor> sparse;
+        Optional<SparseAccessor> sparse;
 
-        std::string name;
+        std::pmr::string name;
     };
 
     struct CompressedBufferView {
@@ -1147,15 +1631,15 @@ namespace fastgltf {
         std::size_t byteOffset;
         std::size_t byteLength;
 
-        std::optional<std::size_t> byteStride;
-        std::optional<BufferTarget> target;
+        Optional<std::size_t> byteStride;
+        Optional<BufferTarget> target;
 
         /**
          * Data from EXT_meshopt_compression, and nullptr if the extension was not enabled or used.
          */
         std::unique_ptr<CompressedBufferView> meshoptCompression;
 
-        std::string name;
+        std::pmr::string name;
     };
 
     struct Buffer {
@@ -1163,7 +1647,7 @@ namespace fastgltf {
 
         DataSource data;
 
-        std::string name;
+        std::pmr::string name;
     };
 
     struct Light {
@@ -1174,20 +1658,30 @@ namespace fastgltf {
         /** Point and spot lights use candela (lm/sr) while directional use lux (lm/m^2) */
         float intensity;
         /** Range for point and spot lights. If not present, range is infinite. */
-        std::optional<float> range;
+        Optional<float> range;
 
-        std::optional<float> innerConeAngle;
-        std::optional<float> outerConeAngle;
+        Optional<float> innerConeAngle;
+        Optional<float> outerConeAngle;
 
-        std::string name;
+        std::pmr::string name;
     };
 
-    struct Asset {
+	class ChunkMemoryResource;
+	class Parser;
+
+	class Asset {
+		friend class Parser;
+
+		// This has to be first in this struct so that it gets destroyed last, leaving all allocations
+		// alive until the end.
+		std::shared_ptr<ChunkMemoryResource> memoryResource;
+
+	public:
         /**
-         * This will only ever have no value if Options::DontRequireValidAssetMember was specified.
+         * This will only ever have no value if #Options::DontRequireValidAssetMember was specified.
          */
-        std::optional<AssetInfo> assetInfo;
-        std::optional<std::size_t> defaultScene;
+        Optional<AssetInfo> assetInfo;
+        Optional<std::size_t> defaultScene;
         std::vector<Accessor> accessors;
         std::vector<Animation> animations;
         std::vector<Buffer> buffers;
@@ -1207,8 +1701,49 @@ namespace fastgltf {
         Category availableCategories = Category::None;
 
         explicit Asset() = default;
-        explicit Asset(const Asset& scene) = delete;
-        Asset& operator=(const Asset& scene) = delete;
+        explicit Asset(const Asset& other) = delete;
+        Asset(Asset&& other) noexcept :
+				memoryResource(std::move(other.memoryResource)),
+				assetInfo(std::move(other.assetInfo)),
+				defaultScene(other.defaultScene),
+				accessors(std::move(other.accessors)),
+				animations(std::move(other.animations)),
+				buffers(std::move(other.buffers)),
+				bufferViews(std::move(other.bufferViews)),
+				cameras(std::move(other.cameras)),
+				images(std::move(other.images)),
+				lights(std::move(other.lights)),
+				materials(std::move(other.materials)),
+				meshes(std::move(other.meshes)),
+				nodes(std::move(other.nodes)),
+				samplers(std::move(other.samplers)),
+				scenes(std::move(other.scenes)),
+				skins(std::move(other.skins)),
+				textures(std::move(other.textures)),
+				availableCategories(other.availableCategories) {}
+
+		Asset& operator=(const Asset& other) = delete;
+		Asset& operator=(Asset&& other) noexcept {
+			memoryResource = std::move(other.memoryResource);
+			assetInfo = std::move(other.assetInfo);
+			defaultScene = other.defaultScene;
+			accessors = std::move(other.accessors);
+			animations = std::move(other.animations);
+			buffers = std::move(other.buffers);
+			bufferViews = std::move(other.bufferViews);
+			cameras = std::move(other.cameras);
+			images = std::move(other.images);
+			lights = std::move(other.lights);
+			materials = std::move(other.materials);
+			meshes = std::move(other.meshes);
+			nodes = std::move(other.nodes);
+			samplers = std::move(other.samplers);
+			scenes = std::move(other.scenes);
+			skins = std::move(other.skins);
+			textures = std::move(other.textures);
+			availableCategories = other.availableCategories;
+			return *this;
+		}
     };
 #pragma endregion
 } // namespace fastgltf

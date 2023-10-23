@@ -13,12 +13,10 @@ TEST_CASE("Load basic GLB file", "[gltf-loader]") {
     REQUIRE(jsonData.loadFromFile(folder / "Box.glb"));
 
     SECTION("Load basic Box.glb") {
-        auto box = parser.loadBinaryGLTF(&jsonData, folder, fastgltf::Options::None);
-        REQUIRE(parser.getError() == fastgltf::Error::None);
+        auto asset = parser.loadBinaryGLTF(&jsonData, folder, fastgltf::Options::None, fastgltf::Category::Buffers);
+        REQUIRE(asset.error() == fastgltf::Error::None);
+		REQUIRE(parser.validate(asset.get()) == fastgltf::Error::None);
 
-        REQUIRE(box->parse(fastgltf::Category::Buffers) == fastgltf::Error::None);
-
-        auto asset = box->getParsedAsset();
         REQUIRE(asset->buffers.size() == 1);
 
         auto& buffer = asset->buffers.front();
@@ -30,12 +28,10 @@ TEST_CASE("Load basic GLB file", "[gltf-loader]") {
     }
 
     SECTION("Load basic Box.glb and load buffers") {
-        auto box = parser.loadBinaryGLTF(&jsonData, folder, fastgltf::Options::LoadGLBBuffers);
-        REQUIRE(parser.getError() == fastgltf::Error::None);
+        auto asset = parser.loadBinaryGLTF(&jsonData, folder, fastgltf::Options::LoadGLBBuffers, fastgltf::Category::Buffers);
+        REQUIRE(asset.error() == fastgltf::Error::None);
+		REQUIRE(parser.validate(asset.get()) == fastgltf::Error::None);
 
-        REQUIRE(box->parse(fastgltf::Category::Buffers) == fastgltf::Error::None);
-
-        auto asset = box->getParsedAsset();
         REQUIRE(asset->buffers.size() == 1);
 
         auto& buffer = asset->buffers.front();
@@ -55,11 +51,7 @@ TEST_CASE("Load basic GLB file", "[gltf-loader]") {
         fastgltf::GltfDataBuffer byteBuffer;
         REQUIRE(byteBuffer.fromByteView(bytes.data(), length, length + fastgltf::getGltfBufferPadding()));
 
-        auto box = parser.loadBinaryGLTF(&byteBuffer, folder, fastgltf::Options::LoadGLBBuffers);
-        REQUIRE(parser.getError() == fastgltf::Error::None);
-
-        REQUIRE(box->parse(fastgltf::Category::Buffers) == fastgltf::Error::None);
-
-        auto asset = box->getParsedAsset();
+        auto asset = parser.loadBinaryGLTF(&byteBuffer, folder, fastgltf::Options::LoadGLBBuffers, fastgltf::Category::Buffers);
+        REQUIRE(asset.error() == fastgltf::Error::None);
     }
 }

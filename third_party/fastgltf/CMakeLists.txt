@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.11)
+cmake_minimum_required(VERSION 3.12)
 
 cmake_policy(SET CMP0077 NEW)
 
@@ -12,6 +12,7 @@ option(FASTGLTF_DOWNLOAD_SIMDJSON "Downloads a copy of simdjson itself to satisf
 option(FASTGLTF_USE_CUSTOM_SMALLVECTOR "Uses a custom SmallVector type optimised for small arrays" OFF)
 option(FASTGLTF_ENABLE_TESTS "Enables test targets for fastlgtf" OFF)
 option(FASTGLTF_ENABLE_EXAMPLES "Enables example targets for fastgltf" OFF)
+option(FASTGLTF_ENABLE_DOCS "Enables the configuration of targets that build/generate documentation" OFF)
 option(FASTGLTF_ENABLE_GLTF_RS "Enables the benchmark usage of gltf-rs" OFF)
 
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/add_source_directory.cmake)
@@ -19,7 +20,7 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/compiler_flags.cmake)
 
 if (FASTGLTF_DOWNLOAD_SIMDJSON)
     # Download and configure simdjson
-    set(SIMDJSON_TARGET_VERSION "3.1.6")
+    set(SIMDJSON_TARGET_VERSION "3.2.3")
     set(SIMDJSON_DL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/deps/simdjson")
     file(MAKE_DIRECTORY ${SIMDJSON_DL_DIR})
 
@@ -80,7 +81,7 @@ endif()
 # Create the library target
 add_library(fastgltf
     "src/fastgltf.cpp" "src/base64.cpp"
-    "include/fastgltf/base64.hpp" "include/fastgltf/parser.hpp" "include/fastgltf/tools.hpp" "include/fastgltf/types.hpp" "include/fastgltf/util.hpp")
+    "include/fastgltf/base64.hpp" "include/fastgltf/glm_element_traits.hpp" "include/fastgltf/parser.hpp" "include/fastgltf/tools.hpp" "include/fastgltf/types.hpp" "include/fastgltf/util.hpp")
 add_library(fastgltf::fastgltf ALIAS fastgltf)
 
 compiler_flags(fastgltf)
@@ -108,7 +109,7 @@ if (ANDROID)
 endif()
 
 install(
-    FILES "include/fastgltf/base64.hpp" "include/fastgltf/parser.hpp" "include/fastgltf/tools.hpp" "include/fastgltf/types.hpp" "include/fastgltf/util.hpp"
+    FILES "include/fastgltf/base64.hpp" "include/fastgltf/glm_element_traits.hpp" "include/fastgltf/parser.hpp" "include/fastgltf/tools.hpp" "include/fastgltf/types.hpp" "include/fastgltf/util.hpp"
     DESTINATION include/fastgltf
 )
 
@@ -142,4 +143,7 @@ if (FASTGLTF_ENABLE_EXAMPLES)
 endif()
 if (FASTGLTF_ENABLE_TESTS)
     add_subdirectory(tests)
+endif()
+if (FASTGLTF_ENABLE_DOCS)
+    add_subdirectory(docs)
 endif()
