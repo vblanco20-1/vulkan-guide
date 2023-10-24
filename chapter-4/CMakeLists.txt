@@ -30,3 +30,5 @@ target_include_directories(chapter_4 PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 target_link_libraries(chapter_4 vkbootstrap vma glm tinyobjloader imgui stb_image)
 
 target_link_libraries(chapter_4 Vulkan::Vulkan sdl2 fastgltf::fastgltf)
+
+target_precompile_headers(chapter_4 PUBLIC <optional> <vector> <iostream> <memory> <string> <vector> <unordered_map> <filesystem> )

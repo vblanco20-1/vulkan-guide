@@ -136,10 +136,6 @@ public:
 	VkDescriptorSetLayout _meshBufferDescriptorLayout;
 	VkDescriptorSetLayout _gltfMatDescriptorLayout;
 
-	VkPipelineLayout _trianglePipelineLayout;
-
-	VkPipeline _trianglePipeline;
-
 	MaterialData _gltfDefaultOpaque;
 	MaterialData _gltfDefaultTranslucent;
 
