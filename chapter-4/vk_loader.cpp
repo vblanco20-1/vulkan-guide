@@ -341,7 +341,7 @@ std::optional<std::shared_ptr<LoadedGLTF>> loadGltf(std::string_view filePath)
 			newmesh->surfaces.push_back(newSurface);
 		}
 		
-		newmesh->meshBuffers = engine->uploadMesh(indices,vertices);
+		newmesh->meshBuffers = engine->uploadMesh(indices,vertices, &file.descriptorPool);
 	}
 
 

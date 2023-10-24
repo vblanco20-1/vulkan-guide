@@ -15,7 +15,8 @@ add_executable (chapter_4
   vk_loader.cpp
   vk_descriptors.h
   vk_descriptors.cpp
-
+ vk_pipelines.h
+  vk_pipelines.cpp
  camera.cpp
 camera.h
 )

@@ -4,47 +4,26 @@
 #pragma once
 
 #include <vk_types.h>
+
 #include <vector>
-#include "vk_mem_alloc.h"
 #include <deque>
 #include <functional>
-#include "vk_mesh.h"
 #include <unordered_map>
 #include <string>
-#include "vk_descriptors.h"
-//#include <chrono>
-#include "fastgltf/types.hpp"
-#include "vk_loader.h"
 #include <span>
-#include "camera.h"
 
+#include <vk_mem_alloc.h>
+
+#include <vk_descriptors.h>
+#include <fastgltf/types.hpp>
+#include <vk_loader.h>
+#include <vk_mesh.h>
+#include <camera.h>
+#include <vk_pipelines.h>
 struct GLTFMesh;
 namespace fastgltf { struct Mesh; }
 
-class PipelineBuilder {
-public:
 
-	std::vector<VkPipelineShaderStageCreateInfo> _shaderStages;
-	VkPipelineVertexInputStateCreateInfo _vertexInputInfo;
-	VkPipelineInputAssemblyStateCreateInfo _inputAssembly;
-	VkViewport _viewport;
-	VkRect2D _scissor;
-	VkPipelineRasterizationStateCreateInfo _rasterizer;
-	VkPipelineColorBlendAttachmentState _colorBlendAttachment;
-	VkPipelineMultisampleStateCreateInfo _multisampling;
-	VkPipelineLayout _pipelineLayout;
-	VkPipelineDepthStencilStateCreateInfo _depthStencil;
-	VkPipelineRenderingCreateInfo _renderInfo;
-
-	VkPipeline build_pipeline(VkDevice device);
-};
-
-enum class ImageTransitionMode {
-	IntoAttachment,
-	IntoGeneral,
-	GeneralToPresent,
-	AttachmentToPresent
-};
 
 struct DeletionQueue
 {
@@ -202,7 +181,8 @@ public:
 	//run main loop
 	void run();
 
-	GPUMesh uploadMesh(std::span<uint32_t> indices, std::span<Vertex> vertices);
+	//upload a mesh into a pair of gpu buffers. If descriptor allocator is not null, it will also create a descriptor that points to the vertex buffer
+	GPUMesh uploadMesh(std::span<uint32_t> indices, std::span<Vertex> vertices, DescriptorAllocator* alloc);
 
 	FrameData& get_current_frame();
 	FrameData& get_last_frame();
@@ -242,8 +222,6 @@ private:
 	void init_sync_structures();
 
 	void init_renderables();
-
-	void transition_image(VkCommandBuffer cmd, VkImage image, ImageTransitionMode transitionMode);
 	
 	bool load_shader_module(const char* filePath, VkShaderModule* outShaderModule);
 };

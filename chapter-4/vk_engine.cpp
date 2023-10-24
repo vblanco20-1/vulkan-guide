@@ -321,14 +321,16 @@ void VulkanEngine::run()
 			if (e.type == SDL_QUIT) bQuit = true;
 			
 			mainCamera.processSDLEvent(e);
-		}		
+		}
 
-		mainCamera.update(1.f);
+		mainCamera.update();
 
 		glm::mat4 view = mainCamera.getViewMatrix();
 
 		//camera projection
 		glm::mat4 projection = glm::perspective(glm::radians(70.f), 1700.f / 900.f, 10000.f, 0.1f);
+
+		//invert the Y direction on projection matrix so that we are more similar to opengl and gltf axis
 		projection[1][1] *= -1;
 		
 		sceneData.view = view;
@@ -430,7 +432,7 @@ AllocatedImage VulkanEngine:: create_image(void* data, VkExtent3D size, VkFormat
 	return new_image;
 }
 
-GPUMesh VulkanEngine::uploadMesh(std::span<uint32_t> indices, std::span<Vertex> vertices)
+GPUMesh VulkanEngine::uploadMesh(std::span<uint32_t> indices, std::span<Vertex> vertices, DescriptorAllocator* alloc)
 {
 	const size_t vertexBufferSize = vertices.size() * sizeof(Vertex);
 	const size_t indexBufferSize = indices.size() * sizeof(uint32_t);
@@ -467,13 +469,16 @@ GPUMesh VulkanEngine::uploadMesh(std::span<uint32_t> indices, std::span<Vertex> 
 
 	destroy_buffer(staging);
 
-	newSurface.bufferBinding = globalDescriptorAllocator.allocate(_device, _meshBufferDescriptorLayout);
+	if (alloc) {
+		//create a descriptor set that refers to this mesh buffer
+		newSurface.bufferBinding = alloc->allocate(_device, _meshBufferDescriptorLayout);
 
-	VkDescriptorBufferInfo binfo = vkinit::buffer_info(newSurface.vertexBuffer.buffer, 0, vertexBufferSize);
+		VkDescriptorBufferInfo binfo = vkinit::buffer_info(newSurface.vertexBuffer.buffer, 0, vertexBufferSize);
+		VkWriteDescriptorSet bufferMeshWrite = vkinit::write_descriptor_buffer(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, newSurface.bufferBinding, &binfo, 0);
 
-	VkWriteDescriptorSet cameraWrite = vkinit::write_descriptor_buffer(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, newSurface.bufferBinding, &binfo, 0);
-
-	vkUpdateDescriptorSets(_device, 1, &cameraWrite, 0, nullptr);
+		vkUpdateDescriptorSets(_device, 1, &bufferMeshWrite, 0, nullptr);
+	}
+	
 
 	return newSurface;
 }
@@ -513,8 +518,7 @@ void VulkanEngine::immediate_submit(std::function<void(VkCommandBuffer cmd)>&& f
 	// _renderFence will now block until the graphic commands finish execution
 	VK_CHECK(vkQueueSubmit2(_graphicsQueue, 1, &submit, _immFence));
 
-	VK_CHECK(vkWaitForFences(_device, 1, &_immFence, true, 9999999999));
-	
+	VK_CHECK(vkWaitForFences(_device, 1, &_immFence, true, 9999999999));	
 }
 
 
@@ -613,8 +617,7 @@ void VulkanEngine::init_swapchain()
 		_windowExtent.height,
 		1
 	};
-
-	//hardcoding the depth format to 32 bit float
+	
 	_drawFormat = _swachainImageFormat;	
 
 	_drawImage = create_image(drawImageExtent,_drawFormat, VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
@@ -624,8 +627,6 @@ void VulkanEngine::init_swapchain()
 	_mainDeletionQueue.push_function([=]() {
 		destroy_image(_drawImage);
 		destroy_image(_depthImage);
-		//vkDestroyImageView(_device, _drawImageView, nullptr);
-		//vmaDestroyImage(_allocator, _drawImage._image, _drawImage._allocation);
 	});
 }
 
@@ -699,59 +700,24 @@ void VulkanEngine::init_renderables()
 	std::string monkeyPath = { "..\\..\\assets\\structure.glb" };
 
 	auto monkeyfile = loadGltf(monkeyPath);
+
+	for (int i = 0; i < 100; i++) {
+		auto f = loadGltf(monkeyPath);
+		get_current_frame()._frameDeletionQueue.flush();
+	}
+
 	assert(monkeyfile.has_value());
 
 	loadedScenes["structure"] = *monkeyfile;
 }
 
-bool VulkanEngine::load_shader_module(const char* filePath, VkShaderModule* outShaderModule)
-{
-	//open the file. With cursor at the end
-	std::ifstream file(filePath, std::ios::ate | std::ios::binary);
 
-	if (!file.is_open()) {
-		return false;
-	}
-
-	//find what the size of the file is by looking up the location of the cursor
-	//because the cursor is at the end, it gives the size directly in bytes
-	size_t fileSize = (size_t)file.tellg();
-
-	//spirv expects the buffer to be on uint32, so make sure to reserve a int vector big enough for the entire file
-	std::vector<uint32_t> buffer(fileSize / sizeof(uint32_t));
-
-	//put file cursor at beggining
-	file.seekg(0);
-
-	//load the entire file into the buffer
-	file.read((char*)buffer.data(), fileSize);
-
-	//now that the file is loaded into the buffer, we can close it
-	file.close();
-
-	//create a new shader module, using the buffer we loaded
-	VkShaderModuleCreateInfo createInfo = {};
-	createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-	createInfo.pNext = nullptr;
-
-	//codeSize has to be in bytes, so multply the ints in the buffer by size of int to know the real size of the buffer
-	createInfo.codeSize = buffer.size() * sizeof(uint32_t);
-	createInfo.pCode = buffer.data();
-
-	//check that the creation goes well.
-	VkShaderModule shaderModule;
-	if (vkCreateShaderModule(_device, &createInfo, nullptr, &shaderModule) != VK_SUCCESS) {
-		return false;
-	}
-	*outShaderModule = shaderModule;
-	return true;
-}
 
 void VulkanEngine::init_pipelines()
 {
 	//COMPUTE PIPELINES
 	VkShaderModule computeDraw;
-	if (!load_shader_module("../../shaders/sky.comp.spv", &computeDraw))
+	if (!vkutil::load_shader_module("../../shaders/sky.comp.spv", _device ,&computeDraw))
 	{
 		std::cout << "Error when building the colored mesh shader" << std::endl;
 	}
@@ -785,7 +751,7 @@ void VulkanEngine::init_pipelines()
 
 	// GRAPHICS PIPELINES
 	VkShaderModule triangleFragShader;
-	if (!load_shader_module("../../shaders/colored_triangle.frag.spv", &triangleFragShader))
+	if (!vkutil::load_shader_module("../../shaders/colored_triangle.frag.spv", _device, &triangleFragShader))
 	{
 		std::cout << "Error when building the triangle fragment shader module" << std::endl;
 	}
@@ -794,7 +760,7 @@ void VulkanEngine::init_pipelines()
 	}
 
 	VkShaderModule triangleVertexShader;
-	if (!load_shader_module("../../shaders/colored_triangle.vert.spv", &triangleVertexShader))
+	if (!vkutil::load_shader_module("../../shaders/colored_triangle.vert.spv", _device, &triangleVertexShader))
 	{
 		std::cout << "Error when building the triangle vertex shader module" << std::endl;
 	}
@@ -803,21 +769,21 @@ void VulkanEngine::init_pipelines()
 	}
 
 	VkShaderModule meshFragShader;
-	if (!load_shader_module("../../shaders/mesh.frag.spv", &meshFragShader))
+	if (!vkutil::load_shader_module("../../shaders/mesh.frag.spv", _device, &meshFragShader))
 	{
 		std::cout << "Error when building the triangle fragment shader module" << std::endl;
 	}
 	else {
-		std::cout << "Triangle fragment shader succesfully loaded" << std::endl;
+		std::cout << "Mesh fragment shader succesfully loaded" << std::endl;
 	}
 
 	VkShaderModule meshVertexShader;
-	if (!load_shader_module("../../shaders/mesh.vert.spv", &meshVertexShader))
+	if (!vkutil::load_shader_module("../../shaders/mesh.vert.spv", _device, &meshVertexShader))
 	{
 		std::cout << "Error when building the triangle vertex shader module" << std::endl;
 	}
 	else {
-		std::cout << "Triangle vertex shader succesfully loaded" << std::endl;
+		std::cout << "Mesh vertex shader succesfully loaded" << std::endl;
 	}
 
 	//build the pipeline layout that controls the inputs/outputs of the shader
@@ -1010,7 +976,6 @@ void VulkanEngine::init_descriptors()
 		VkSamplerCreateInfo sampl = {};
 		sampl.pNext = nullptr;
 		sampl.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-	
 
 		vkCreateSampler(_device,&sampl,nullptr,&_defaultSampler);
 
@@ -1059,62 +1024,5 @@ void VulkanEngine::init_descriptors()
 			destroy_buffer(_frames[i].cameraBuffer);
 			vkDestroyDescriptorPool(_device, _frames[i]._frameDescriptors.pool,nullptr);
 		});
-	}
-}
-
-VkPipeline PipelineBuilder::build_pipeline(VkDevice device)
-{
-	//make viewport state from our stored viewport and scissor.
-		//at the moment we wont support multiple viewports or scissors
-	VkPipelineViewportStateCreateInfo viewportState = {};
-	viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-	viewportState.pNext = nullptr;
-
-	viewportState.viewportCount = 1;
-	viewportState.pViewports = &_viewport;
-	viewportState.scissorCount = 1;
-	viewportState.pScissors = &_scissor;
-
-	//setup dummy color blending. We arent using transparent objects yet
-	//the blending is just "no blend", but we do write to the color attachment
-	VkPipelineColorBlendStateCreateInfo colorBlending = {};
-	colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-	colorBlending.pNext = nullptr;
-
-	colorBlending.logicOpEnable = VK_FALSE;
-	colorBlending.logicOp = VK_LOGIC_OP_COPY;
-	colorBlending.attachmentCount = 1;
-	colorBlending.pAttachments = &_colorBlendAttachment;
-
-	//build the actual pipeline
-	//we now use all of the info structs we have been writing into into this one to create the pipeline
-	VkGraphicsPipelineCreateInfo pipelineInfo = {};
-	pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-	pipelineInfo.pNext = &_renderInfo;
-
-	pipelineInfo.stageCount = _shaderStages.size();
-	pipelineInfo.pStages = _shaderStages.data();
-	pipelineInfo.pVertexInputState = &_vertexInputInfo;
-	pipelineInfo.pInputAssemblyState = &_inputAssembly;
-	pipelineInfo.pViewportState = &viewportState;
-	pipelineInfo.pRasterizationState = &_rasterizer;
-	pipelineInfo.pMultisampleState = &_multisampling;
-	pipelineInfo.pColorBlendState = &colorBlending;
-	pipelineInfo.pDepthStencilState = &_depthStencil;
-	pipelineInfo.layout = _pipelineLayout;
-	pipelineInfo.renderPass = VK_NULL_HANDLE;
-	pipelineInfo.subpass = 0;
-	pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
-
-	//its easy to error out on create graphics pipeline, so we handle it a bit better than the common VK_CHECK case
-	VkPipeline newPipeline;
-	if (vkCreateGraphicsPipelines(
-		device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &newPipeline) != VK_SUCCESS) {
-		std::cout << "failed to create pipline\n";
-		return VK_NULL_HANDLE; // failed to create graphics pipeline
-	}
-	else
-	{
-		return newPipeline;
 	}
 }
