@@ -11,7 +11,7 @@ layout (location = 0) out vec4 outFragColor;
 
 void main() 
 {
-	float lightValue = max(dot(inNormal, vec3(0.3f,-1.f,0.3f)), 0.3f);
+	float lightValue = max(dot(inNormal, vec3(0.3f,1.f,0.3f)), 0.7f);
 
 	vec3 color = inColor * texture(albedoTex,inUV).xyz;
 

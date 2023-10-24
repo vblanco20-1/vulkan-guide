@@ -12,6 +12,7 @@
 #include <memory>
 #include <filesystem>
 #include "vk_descriptors.h"
+#include <unordered_map>
 
 class VulkanEngine;
 
@@ -19,12 +20,22 @@ struct GLTFTexture {
 	std::vector<char> textureData;
 };
 
+struct  GPUGLTFMaterial {
+	glm::vec4 colorFactors;
+	glm::vec4 metal_rough_factors;
+	glm::vec4 extra[14];
+};
+
+static_assert(sizeof(GPUGLTFMaterial) == 256);
+
 struct GLTFMaterial {
 	glm::vec4 colorFactors;
 	float metallicFactor;
 	float roughnessFactor;
 
-	VkDescriptorSet matSet;
+	//VkDescriptorSet matSet;
+
+	MaterialData data;
 };
 
 struct GeoSurface {
@@ -36,44 +47,61 @@ struct GeoSurface {
 
 struct GLTFMesh {
 	std::string name;
-
-	std::vector<uint32_t> indices;
-	std::vector<Vertex> vertices;
+	
 	std::vector<GeoSurface> surfaces;
+	Surface surface;
 };
 
-struct GLTFNode {
-	std::weak_ptr<GLTFNode> parent;
-	std::vector<std::shared_ptr<GLTFNode>> children;
-	glm::mat4 transform;
-	std::shared_ptr<GLTFMesh> mesh;
 
-	glm::mat4 calculateWorldTransform() {
+struct Node : public IRenderable {
+	std::weak_ptr<Node> parent;
+	std::vector<std::shared_ptr<Node>> children;
 
-		std::shared_ptr<GLTFNode> p = parent.lock();
-		if (p) {
-			return p->calculateWorldTransform()*transform;
-		}
-		else {
-			return transform;
+	
+
+	glm::mat4 localTransform;
+	glm::mat4 worldTransform;
+
+	void refreshTransform(const glm::mat4& parentMatrix) {
+		worldTransform = parentMatrix * localTransform;
+		for (auto c : children) {
+			c->refreshTransform(worldTransform);
 		}
 	}
+
+	virtual void Draw(const glm::mat4& topMatrix, DrawContext& ctx);
 };
 
-//struct GLTFPbrMaterial {
-//
-//};
+struct MeshNode : public Node {
+
+	std::shared_ptr<GLTFMesh> mesh;
+
+	virtual void Draw(const glm::mat4& topMatrix, DrawContext& ctx);
+};
 
 struct LoadedGLTF: public IRenderable {
-	std::vector<std::shared_ptr<GLTFMesh>> meshes;
-	std::vector<std::shared_ptr<GLTFNode>> nodes;
 
-	std::vector< AllocatedImage> images;
-	std::vector< std::shared_ptr<GLTFMaterial>> materials;
+	//storage for all the data on a given gltf file
+
+	std::unordered_map<std::string,std::shared_ptr<GLTFMesh>> meshes;
+	std::unordered_map<std::string,std::shared_ptr<Node>> nodes;
+	std::unordered_map<std::string, AllocatedImage> images;
+	std::unordered_map<std::string, std::shared_ptr<GLTFMaterial>> materials;
+
+	//nodes that dont have a parent, for iterating through the file in tree order
+	std::vector<std::shared_ptr<Node>> topNodes;
+
+	//std::vector<std::shared_ptr<GLTFMesh>> meshes;
+	//std::vector<std::shared_ptr<GLTFNode>> nodes;
+
+	//std::vector< AllocatedImage> images;
+	//std::vector< std::shared_ptr<GLTFMaterial>> materials;
 
 	std::vector<VkSampler> samplers;
 
 	DescriptorAllocator descriptorPool;
+
+	AllocatedBuffer materialDataBuffer;
 
 	virtual void Draw(const glm::mat4& topMatrix, DrawContext& ctx);
 };

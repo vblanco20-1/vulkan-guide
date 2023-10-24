@@ -16,6 +16,7 @@
 #include <chrono>
 #include "fastgltf/types.hpp"
 #include "vk_loader.h"
+#include <span>
 
 struct GLTFMesh;
 namespace fastgltf { struct Mesh; }
@@ -63,17 +64,15 @@ struct DeletionQueue
 	}
 };
 
-struct Material {
-	VkPipeline pipeline;
-	VkPipelineLayout layout;
-};
+
+
 
 struct RenderObject {
+	uint32_t indexCount;
+	uint32_t firstIndex;
 	Surface* mesh;
-	Material* material;
-
-	VkDescriptorSet bindSet;
-	VkDescriptorSet matBind;
+	MaterialData* material;
+	
 	glm::mat4 transform;
 };
 
@@ -139,6 +138,8 @@ public:
 	VkQueue _graphicsQueue;
 	uint32_t _graphicsQueueFamily;
 
+	AllocatedBuffer _defaultGLTFMaterialData;
+
 	//VkCommandPool _commandPool;
 	//VkCommandBuffer _mainCommandBuffer;
 	
@@ -179,7 +180,7 @@ public:
 
 	VkPipeline _trianglePipeline;
 
-	Material _defaultMat;
+	MaterialData _defaultMat;
 
 	//draw resources
 	AllocatedImage _drawImage;
@@ -210,9 +211,7 @@ public:
 	//run main loop
 	void run();
 
-	void uploadMesh(GLTFMesh* mesh);
-
-	void uploadMesh(fastgltf::Mesh& mesh, fastgltf::Asset& asset);
+	Surface uploadMesh(std::span<uint32_t> indices, std::span<Vertex> vertices);
 
 	FrameData& get_current_frame();
 	FrameData& get_last_frame();

@@ -7,7 +7,7 @@
 #include <fastgltf/tools.hpp>
 #include "vk_engine.h"
 #include "vk_types.h"
-#include "../chapter-2/vk_initializers.h"
+#include "vk_initializers.h"
 
 
 
@@ -39,6 +39,71 @@ struct overloaded : Ts... { using Ts::operator()...; };
 // explicit deduction guide (not needed as of C++20)
 template<class... Ts>
 overloaded(Ts...) -> overloaded<Ts...>;
+
+AllocatedImage load_image(VulkanEngine* engine, fastgltf::Asset& asset, fastgltf::Image& image)
+{
+	AllocatedImage newImage;
+
+	int width, height, nrChannels;
+
+	std::visit(fastgltf::visitor{
+	[](auto& arg) {},
+	[&](fastgltf::sources::URI& filePath) {
+		assert(filePath.fileByteOffset == 0); // We don't support offsets with stbi.
+		assert(filePath.uri.isLocalPath()); // We're only capable of loading local files.
+
+		const std::string path(filePath.uri.path().begin(), filePath.uri.path().end()); // Thanks C++.
+		unsigned char* data = stbi_load(path.c_str(), &width, &height, &nrChannels, 4);
+
+		VkExtent3D imagesize;
+		imagesize.width = width;
+		imagesize.height = height;
+		imagesize.depth = 1;
+
+		newImage = engine->create_image(data, imagesize, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT);
+
+		stbi_image_free(data);
+	},
+	[&](fastgltf::sources::Vector& vector) {
+
+		unsigned char* data = stbi_load_from_memory(vector.bytes.data(), static_cast<int>(vector.bytes.size()), &width, &height, &nrChannels, 4);
+
+		VkExtent3D imagesize;
+		imagesize.width = width;
+		imagesize.height = height;
+		imagesize.depth = 1;
+
+		newImage = engine->create_image(data, imagesize, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT);
+
+		stbi_image_free(data);
+	},
+	[&](fastgltf::sources::BufferView& view) {
+		auto& bufferView = asset.bufferViews[view.bufferViewIndex];
+		auto& buffer = asset.buffers[bufferView.bufferIndex];
+
+		std::visit(fastgltf::visitor {
+			// We only care about VectorWithMime here, because we specify LoadExternalBuffers, meaning
+			// all buffers are already loaded into a vector.
+			[](auto& arg) {},
+			[&](fastgltf::sources::Vector& vector) {
+
+				unsigned char* data = stbi_load_from_memory(vector.bytes.data() + bufferView.byteOffset, static_cast<int>(bufferView.byteLength), &width, &height, &nrChannels, 4);
+
+				VkExtent3D imagesize;
+				imagesize.width = width;
+				imagesize.height = height;
+				imagesize.depth = 1;
+
+				newImage = engine->create_image(data, imagesize, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT);
+
+				stbi_image_free(data);
+			}
+		}, buffer.data);
+	},
+		}, image.data);
+
+	return newImage;
+}
 
 std::optional<std::shared_ptr<LoadedGLTF>> loadGltf(const std::filesystem::path& filePath, VulkanEngine* engine)
 {
@@ -115,129 +180,120 @@ std::optional<std::shared_ptr<LoadedGLTF>> loadGltf(const std::filesystem::path&
 
 		file.samplers.push_back(newSampler);
 	}
+
+	//temporal arrays for all the objects to use while creating the GLTF data
+	std::vector<std::shared_ptr<GLTFMesh>> meshes;
+	std::vector<std::shared_ptr<Node>> nodes;
+	std::vector< AllocatedImage> images;
+	std::vector< std::shared_ptr<GLTFMaterial>> materials;
+
+
+
+
+
 	//load all textures
 	for (fastgltf::Image& image : asset->images) {
 		
-		AllocatedImage newImage;
+		AllocatedImage img = load_image(engine, *asset, image);
+
+		images.push_back(img);
 		
-		int width, height, nrChannels;
-
-		std::visit(fastgltf::visitor{
-		[](auto& arg) {},
-		[&](fastgltf::sources::URI& filePath) {
-			assert(filePath.fileByteOffset == 0); // We don't support offsets with stbi.
-			assert(filePath.uri.isLocalPath()); // We're only capable of loading local files.
-
-			const std::string path(filePath.uri.path().begin(), filePath.uri.path().end()); // Thanks C++.
-			unsigned char* data = stbi_load(path.c_str(), &width, &height, &nrChannels, 4);
-
-			VkExtent3D imagesize;
-			imagesize.width = width;
-			imagesize.height = height;
-			imagesize.depth = 1;
-
-			newImage= engine->create_image(data, imagesize, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT);
-
-			stbi_image_free(data);
-		},
-		[&](fastgltf::sources::Vector& vector) {
-
-			unsigned char* data = stbi_load_from_memory(vector.bytes.data(), static_cast<int>(vector.bytes.size()), &width, &height, &nrChannels, 4);
-			
-			VkExtent3D imagesize;
-			imagesize.width = width;
-			imagesize.height = height;
-			imagesize.depth = 1;
-
-			newImage = engine->create_image(data, imagesize, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT);
-
-			stbi_image_free(data);
-		},
-		[&](fastgltf::sources::BufferView& view) {
-			auto& bufferView = asset->bufferViews[view.bufferViewIndex];
-			auto& buffer = asset->buffers[bufferView.bufferIndex];
-			// Yes, we've already loaded every buffer into some GL buffer. However, with GL it's simpler
-			// to just copy the buffer data again for the texture. Besides, this is just an example.
-			std::visit(fastgltf::visitor {
-				// We only care about VectorWithMime here, because we specify LoadExternalBuffers, meaning
-				// all buffers are already loaded into a vector.
-				[](auto& arg) {},
-				[&](fastgltf::sources::Vector& vector) {
-
-					unsigned char* data = stbi_load_from_memory(vector.bytes.data() + bufferView.byteOffset, static_cast<int>(bufferView.byteLength), &width, &height, &nrChannels, 4);
-
-					VkExtent3D imagesize;
-					imagesize.width = width;
-					imagesize.height = height;
-					imagesize.depth = 1;
-
-					newImage = engine->create_image(data, imagesize, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT);
-
-					stbi_image_free(data);
-				}
-			}, buffer.data);
-		},
-		}, image.data);
-
-		file.images.push_back(newImage);
+		file.images[image.name.c_str()] = img;
 	}
+
+	//create buffer to hold the material data
+	file.materialDataBuffer = engine->create_buffer(sizeof(GPUGLTFMaterial) * asset->materials.size(), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,VMA_MEMORY_USAGE_CPU_TO_GPU);
+	int data_index = 0;
+	GPUGLTFMaterial* materialData = (GPUGLTFMaterial*)file.materialDataBuffer._info.pMappedData;
 
 	for (fastgltf::Material& mat : asset->materials) {
 
 		std::shared_ptr<GLTFMaterial> newMat = std::make_shared<GLTFMaterial>();
 
-		newMat->matSet = engine->_defaultGLTFdescriptor;
+		
+
+		newMat->data = engine->_defaultMat;
 		if (mat.pbrData.baseColorTexture.has_value())
 		{
-			newMat->matSet = file.descriptorPool.allocate(engine->_device, engine->_gltfMatDescriptorLayout);
+			GPUGLTFMaterial matData;
+			matData.colorFactors.x = mat.pbrData.baseColorFactor[0];
+			matData.colorFactors.y = mat.pbrData.baseColorFactor[1];
+			matData.colorFactors.z = mat.pbrData.baseColorFactor[2];
+			matData.colorFactors.w = mat.pbrData.baseColorFactor[3];
+
+			matData.metal_rough_factors.x = mat.pbrData.metallicFactor;
+			matData.metal_rough_factors.y = mat.pbrData.roughnessFactor;
+
+			materialData[data_index] = matData;
+
+			newMat->data.materialSet=file.descriptorPool.allocate(engine->_device, engine->_gltfMatDescriptorLayout);
+
+			
+			
+
 
 			int img = asset->textures[mat.pbrData.baseColorTexture.value().textureIndex].imageIndex.value();
 			int sampler = asset->textures[mat.pbrData.baseColorTexture.value().textureIndex].samplerIndex.value();
 
 			VkDescriptorImageInfo imgInfo{};
 			imgInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-			imgInfo.imageView = file.images[img]._imageView;
+			imgInfo.imageView = images[img]._imageView;
 			imgInfo.sampler = file.samplers[sampler];
 			
 
-			VkWriteDescriptorSet cameraWrite = vkinit::write_descriptor_image(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, newMat->matSet, &imgInfo, 0);
+			VkWriteDescriptorSet cameraWrite = vkinit::write_descriptor_image(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, newMat->data.materialSet, &imgInfo, 1);
 
-			vkUpdateDescriptorSets(engine->_device, 1, &cameraWrite, 0, nullptr);
+			VkDescriptorBufferInfo binfo = vkinit::buffer_info(file.materialDataBuffer._buffer, data_index * sizeof(GPUGLTFMaterial), sizeof(GPUGLTFMaterial));
+			VkWriteDescriptorSet bufferWrite = vkinit::write_descriptor_buffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, newMat->data.materialSet, &binfo, 0);
+
+			VkWriteDescriptorSet writes [] = {cameraWrite,bufferWrite };
+			vkUpdateDescriptorSets(engine->_device, 2, writes, 0, nullptr);
+
+			data_index++;
 		}
 
-
-		file.materials.push_back(newMat);
+		materials.push_back(newMat);
+		file.materials[mat.name.c_str()] = newMat;
 	}
 	
+	std::vector<uint32_t> indices;
+	std::vector<Vertex> vertices;
+
 	for (fastgltf::Mesh& mesh : asset->meshes)
 	{
 		//engine->uploadMesh(mesh, gltf);
 		std::shared_ptr<GLTFMesh> newmesh = std::make_shared<GLTFMesh>();
-		file.meshes.push_back(newmesh);
+		meshes.push_back(newmesh);
+		file.meshes[mesh.name.c_str()]= newmesh;
 		newmesh->name = mesh.name;
+
+		//clear the mesh arrays each mesh, we dont want to merge them by error
+		indices.clear();
+		vertices.clear();
+		
 
 		for (auto&& p : mesh.primitives)
 		{
 			GeoSurface newSurface;
-			newSurface.startIndex = newmesh->indices.size();
-			newSurface.vertexOffset = newmesh->vertices.size();
+			newSurface.startIndex = indices.size();
+			newSurface.vertexOffset = vertices.size();
 			newSurface.count = asset->accessors[p.indicesAccessor.value()].count;
 
 			{
 				fastgltf::Accessor& indexaccessor = asset->accessors[p.indicesAccessor.value()];
 
 				fastgltf::iterateAccessor<std::uint32_t>(*asset, indexaccessor, [&](std::uint32_t idx) {
-					newmesh->indices.push_back(idx + newSurface.vertexOffset);
+					indices.push_back(idx + newSurface.vertexOffset);
 					});
 			}
 
 			fastgltf::Accessor& posAccessor = asset->accessors[p.findAttribute("POSITION")->second];
 
-			newmesh->vertices.resize(newSurface.vertexOffset + posAccessor.count);
+			vertices.resize(newSurface.vertexOffset + posAccessor.count);
 
 			size_t vidx = newSurface.vertexOffset;
 			fastgltf::iterateAccessor<glm::vec3>(*asset, posAccessor, [&](glm::vec3 v) {
-				newmesh->vertices[vidx++].position = v;
+				vertices[vidx++].position = v;
 				});
 
 			auto normals = p.findAttribute("NORMAL");
@@ -245,8 +301,8 @@ std::optional<std::shared_ptr<LoadedGLTF>> loadGltf(const std::filesystem::path&
 			{
 				vidx = newSurface.vertexOffset;
 				fastgltf::iterateAccessor<glm::vec3>(*asset, asset->accessors[(*normals).second], [&](glm::vec3 v) {
-					newmesh->vertices[vidx++].normal = v;
-					});
+					vertices[vidx++].normal = v;
+				});
 			}
 
 			auto uv = p.findAttribute("TEXCOORD_0");
@@ -255,8 +311,8 @@ std::optional<std::shared_ptr<LoadedGLTF>> loadGltf(const std::filesystem::path&
 				vidx = newSurface.vertexOffset;
 				fastgltf::iterateAccessor<glm::vec2>(*asset, asset->accessors[(*uv).second], [&](glm::vec2 v) {
 					int idx = vidx;
-					newmesh->vertices[idx].uv_x = v.x;
-					newmesh->vertices[idx].uv_y = v.y;
+					vertices[idx].uv_x = v.x;
+					vertices[idx].uv_y = v.y;
 					vidx++;
 				});
 			}
@@ -266,42 +322,51 @@ std::optional<std::shared_ptr<LoadedGLTF>> loadGltf(const std::filesystem::path&
 			{
 				vidx = newSurface.vertexOffset;
 				fastgltf::iterateAccessor<glm::vec4>(*asset, asset->accessors[(*colors).second], [&](glm::vec4 v) {
-					newmesh->vertices[vidx++].color = v;
+					vertices[vidx++].color = v;
 					});
 			}
 			else {
-				for (auto& v : newmesh->vertices) {
+				for (auto& v : vertices) {
 					v.color = glm::vec4(1.f);
 				}
 			}
 			
 			if (p.materialIndex.has_value()) {
-				newSurface.material = file.materials[p.materialIndex.value()];
+				newSurface.material = materials[p.materialIndex.value()];
 			}
 			else {
-				newSurface.material = file.materials[0];
+				newSurface.material = materials[0];
 			}
 			
 			newmesh->surfaces.push_back(newSurface);
-		
-			engine->uploadMesh(newmesh.get());
-			std::cout << "out";
 		}
+		
+		
+		newmesh->surface = engine->uploadMesh(indices,vertices);
 	}
 
 
 	//load all nodes and their meshes
 	for (fastgltf::Node& node : asset->nodes)
 	{
-		std::shared_ptr<GLTFNode> newNode = std::make_shared<GLTFNode>();
-		file.nodes.push_back(newNode);
+		
+
+		std::shared_ptr<Node> newNode;
+		
 		if (node.meshIndex.has_value()) {
-			newNode->mesh = file.meshes[*node.meshIndex];
+			newNode = std::make_shared<MeshNode>();
+			static_cast<MeshNode*>(newNode.get())->mesh = meshes[*node.meshIndex];
+		}
+		else {
+			 newNode = std::make_shared<Node>();
 		}
 	
+		nodes.push_back(newNode);
+		file.nodes[node.name.c_str()];
+
 		std::visit(overloaded{ [&](fastgltf::Node::TransformMatrix matrix) {
 	
-			memcpy(&newNode->transform,matrix.data(),sizeof(matrix));
+			memcpy(&newNode->localTransform,matrix.data(),sizeof(matrix));
 		},
 		[&](fastgltf::Node::TRS transform) {
 	
@@ -314,7 +379,7 @@ std::optional<std::shared_ptr<LoadedGLTF>> loadGltf(const std::filesystem::path&
 			glm::mat4 rm = glm::toMat4(rot);
 			glm::mat4 sm = glm::scale(glm::mat4(1.f), sc);
 	
-			newNode->transform = tm * rm * sm;
+			newNode->localTransform = tm * rm * sm;
 	
 		} }, node.transform);
 	}
@@ -322,11 +387,19 @@ std::optional<std::shared_ptr<LoadedGLTF>> loadGltf(const std::filesystem::path&
 	//run loop again to setup transform hierarchy
 	for (int i = 0; i < asset->nodes.size(); i++) {
 		fastgltf::Node& node = asset->nodes[i];
-		std::shared_ptr<GLTFNode>& sceneNode = file.nodes[i];
+		std::shared_ptr<Node>& sceneNode = nodes[i];
 	
 		for (auto c : node.children) {
-			sceneNode->children.push_back(file.nodes[c]);
-			file.nodes[c]->parent = sceneNode;
+			sceneNode->children.push_back(nodes[c]);
+			nodes[c]->parent = sceneNode;
+		}
+	}
+
+	//find the top nodes, with no parents
+	for (auto& node : nodes) {
+		if (node->parent.lock() == nullptr) {
+			file.topNodes.push_back(node);
+			node->refreshTransform(glm::mat4{1.f});
 		}
 	}
 	
@@ -335,23 +408,41 @@ std::optional<std::shared_ptr<LoadedGLTF>> loadGltf(const std::filesystem::path&
 
 void LoadedGLTF::Draw(const glm::mat4& topMatrix, DrawContext& ctx)
 {
-	glm::mat4 gltfFlip = glm::mat4(1.f);
-	//gltfFlip[1][1] = -1;
-	glm::mat4 top = gltfFlip*topMatrix  ;
 	//create renderables from the scenenodes
-	for (auto& n : nodes)
+	for (auto& n : topNodes)
 	{
-		if (n->mesh) {
-			//for (auto & s : n->mesh->surfaces) {
-			RenderObject def;
-			def.mesh = &ctx.engine->loadedSurfaces[n->mesh->name];
-			def.material = &ctx.engine->_defaultMat;
-			def.transform = top* n->calculateWorldTransform();
-			//def.matBind = ctx.engine->_defaultGLTFdescriptor;
-			def.matBind = n->mesh->surfaces[0].material->matSet;
-			ctx.SurfacesToDraw.push_back(def);
-			//}
-			
-		}
+		n->Draw(topMatrix,ctx);
 	}
+}
+
+void Node::Draw(const glm::mat4& topMatrix, DrawContext& ctx)
+{
+	//recurse down
+	for (auto& c : children) {
+		c->Draw(topMatrix,ctx);
+	}
+}
+
+void MeshNode::Draw(const glm::mat4& topMatrix, DrawContext& ctx)
+{
+	glm::mat4 nodeMatrix = topMatrix * worldTransform;
+
+	for (auto& s : mesh->surfaces) {
+			RenderObject def;
+			def.indexCount = s.count;
+			def.firstIndex = s.startIndex;
+			def.mesh = &mesh->surface;
+			def.material = &s.material->data;
+			//def.bufferBinding = mesh->data.bufferBinding;
+			//def.layout = ctx.engine->_defaultMat.layout;
+			//def.pipeline = ctx.engine->_defaultMat.pipeline;
+			//def.indexBuffer = mesh->data._indexBuffer._buffer;
+
+			def.transform = nodeMatrix;
+			//def.matBind = s.material->matSet;
+			ctx.SurfacesToDraw.push_back(def);
+	}
+
+	//recurse down
+	Node::Draw(topMatrix,ctx);
 }

@@ -221,7 +221,7 @@ void VulkanEngine::draw_geometry(VkCommandBuffer cmd)
 {
 	//make a model view matrix for rendering the object
 		//camera position
-	glm::vec3 camPos = { 30.f,-00.f,-85.f };
+	glm::vec3 camPos = { 30.f,-00.f,-085.f };
 
 	glm::mat4 view = glm::translate(glm::mat4(1.f), camPos);
 	//camera projection
@@ -234,6 +234,20 @@ void VulkanEngine::draw_geometry(VkCommandBuffer cmd)
 	cachedDrawContext.SurfacesToDraw.clear();
 	cachedDrawContext.engine = this;
 	loadedScenes["structure"]->Draw(rotation, cachedDrawContext);
+
+	//loadedScenes["structure"]->Draw(glm::translate(glm::mat4{1.f}, {0.f, 50.f, 0.f}), cachedDrawContext);
+	//loadedScenes["structure"]->Draw(glm::translate(glm::mat4{ 1.f }, { 0.f, 100.f, 0.f }), cachedDrawContext);
+	//loadedScenes["structure"]->Draw(glm::translate(glm::mat4{ 1.f }, { 0.f, 150.f, 0.f }), cachedDrawContext);
+
+	std::sort(cachedDrawContext.SurfacesToDraw.begin(), cachedDrawContext.SurfacesToDraw.end(), [](const auto& A,const auto& B) {
+		if (A.material == B.material) {
+			return A.mesh < B.mesh;
+		}
+		else {
+			return A.material < B.material;
+		}
+	});
+
 
 	GPUSceneData* sceneUniformData = (GPUSceneData*)get_current_frame().cameraBuffer._allocation->GetMappedData();
 	sceneUniformData->view = view;
@@ -251,25 +265,35 @@ void VulkanEngine::draw_geometry(VkCommandBuffer cmd)
 	VkWriteDescriptorSet uboWrite = vkinit::write_descriptor_buffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, globalDescriptor, &uboInfo, 0);
 
 	vkUpdateDescriptorSets(_device, 1, &uboWrite, 0, nullptr);
-	
 
-	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _defaultMat.pipeline);
-	
-	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _defaultMat.layout, 1, 1, &globalDescriptor, 0, nullptr);
-	
+	VkPipeline lastPipeline = VK_NULL_HANDLE;
+	MaterialData* lastMaterial = nullptr;
+	Surface* lastMesh = nullptr;
 	for (auto& r : cachedDrawContext.SurfacesToDraw) {
-		
-		vkCmdBindDescriptorSets(cmd,VK_PIPELINE_BIND_POINT_GRAPHICS,_defaultMat.layout,0,1,&r.mesh->bufferBinding,0,nullptr);
-		vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _defaultMat.layout, 2, 1, &r.matBind, 0, nullptr);
 
-		vkCmdBindIndexBuffer(cmd,r.mesh->_indexBuffer._buffer,0,VK_INDEX_TYPE_UINT32);
-
+		if (r.material != lastMaterial)
+		{	
+			lastMaterial = r.material;
+			if (r.material->pipeline != lastPipeline) {
+				lastPipeline = r.material->pipeline;
+				vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, r.material->pipeline);
+				vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, r.material->layout, 1, 1, &globalDescriptor, 0, nullptr);
+			}
+			
+			vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, r.material->layout, 2, 1, &r.material->materialSet, 0, nullptr);
+		}
+		if (r.mesh != lastMesh)
+		{
+			lastMesh = r.mesh;
+			vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, r.material->layout, 0, 1, &r.mesh->bufferBinding, 0, nullptr);
+			vkCmdBindIndexBuffer(cmd, r.mesh->_indexBuffer._buffer, 0, VK_INDEX_TYPE_UINT32);
+		}
 		//calculate final mesh matrix
 		glm::mat4 mesh_matrix =  r.transform;//rotation * r.transform;
 		
-		vkCmdPushConstants(cmd, _defaultMat.layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4),&mesh_matrix);
+		vkCmdPushConstants(cmd, r.material->layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4),&mesh_matrix);
 
-		vkCmdDrawIndexed(cmd,r.mesh->indexCount,1,0,0,0);
+		vkCmdDrawIndexed(cmd,r.indexCount,1, r.firstIndex,0,0);
 	}
 }
 
@@ -420,24 +444,24 @@ AllocatedImage VulkanEngine:: create_image(void* data, VkExtent3D size, VkFormat
 	return new_image;
 }
 
-void VulkanEngine::uploadMesh(GLTFMesh* mesh)
+Surface VulkanEngine::uploadMesh(std::span<uint32_t> indices, std::span<Vertex> vertices)
 {
-	const size_t vertexBufferSize = mesh->vertices.size() * sizeof(Vertex);
-	const size_t indexBufferSize = mesh->indices.size() * sizeof(uint32_t);
+	const size_t vertexBufferSize = vertices.size() * sizeof(Vertex);
+	const size_t indexBufferSize = indices.size() * sizeof(uint32_t);
 
 	Surface newSurface;
 	newSurface._vertexBuffer = create_buffer(vertexBufferSize, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
 	newSurface._indexBuffer = create_buffer(indexBufferSize, VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
-	newSurface.indexCount = mesh->indices.size();
+	newSurface.indexCount = indices.size();
 
 	AllocatedBuffer staging = create_buffer(vertexBufferSize + indexBufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
 
 	void* data = staging._allocation->GetMappedData();
 	
 	//copy vertex buffer
-	memcpy(data, mesh->vertices.data(), vertexBufferSize);
+	memcpy(data, vertices.data(), vertexBufferSize);
 	//copy index buffer
-	memcpy((char*)data + vertexBufferSize, mesh->indices.data(), indexBufferSize);
+	memcpy((char*)data + vertexBufferSize, indices.data(), indexBufferSize);
 
 	immediate_submit([&](VkCommandBuffer cmd){
 		
@@ -466,116 +490,7 @@ void VulkanEngine::uploadMesh(GLTFMesh* mesh)
 
 	vkUpdateDescriptorSets(_device, 1, &cameraWrite, 0, nullptr);
 
-	loadedSurfaces[mesh->name] = newSurface;
-}
-
-void VulkanEngine::uploadMesh(fastgltf::Mesh& mesh, fastgltf::Asset& asset)
-{
-	
-	std::string name;
-	std::vector<uint32_t> indices;
-	std::vector<Vertex> vertices;
-	std::vector<GeoSurface> surfaces;
-
-	for (auto&& p : mesh.primitives)
-	{
-		GeoSurface newSurface;
-		newSurface.startIndex = indices.size();
-		newSurface.vertexOffset = vertices.size();
-		newSurface.count = asset.accessors[p.indicesAccessor.value()].count;
-
-		{
-			fastgltf::Accessor& indexaccessor = asset.accessors[p.indicesAccessor.value()];
-
-			fastgltf::iterateAccessor<std::uint32_t>(asset, indexaccessor, [&](std::uint32_t idx) {
-				indices.push_back(idx + newSurface.vertexOffset);
-				});
-		}
-
-		fastgltf::Accessor& posAccessor = asset.accessors[p.findAttribute("POSITION")->second];
-
-		vertices.resize(newSurface.vertexOffset + posAccessor.count);
-
-		size_t vidx = newSurface.vertexOffset;
-		fastgltf::iterateAccessor<glm::vec3>(asset, posAccessor, [&](glm::vec3 v) {
-			vertices[vidx++].position = v;
-		});
-
-		auto normals = p.findAttribute("NORMAL");
-		if (normals != p.attributes.end())
-		{
-			vidx = newSurface.vertexOffset;
-			fastgltf::iterateAccessor<glm::vec3>(asset, asset.accessors[(*normals).second], [&](glm::vec3 v) {
-				vertices[vidx++].normal = v;
-				});
-		}
-
-		auto colors = p.findAttribute("COLOR_0");
-		if (colors != p.attributes.end())
-		{
-			vidx = newSurface.vertexOffset;
-			fastgltf::iterateAccessor<glm::vec4>(asset, asset.accessors[(*colors).second], [&](glm::vec4 v) {
-				vertices[vidx++].color = v;
-				});
-		}
-		else {
-			for (auto& v : vertices) {
-				v.color = glm::vec4(1.f);
-			}
-		}
-
-		surfaces.push_back(newSurface);
-
-		std::cout << "out";
-	}
-
-
-
-	const size_t vertexBufferSize = vertices.size() * sizeof(Vertex);
-	const size_t indexBufferSize = indices.size() * sizeof(uint32_t);
-
-	Surface newSurface;
-	newSurface._vertexBuffer = create_buffer(vertexBufferSize, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
-	newSurface._indexBuffer = create_buffer(indexBufferSize, VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
-	newSurface.indexCount = indices.size();
-
-	AllocatedBuffer staging = create_buffer(vertexBufferSize + indexBufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
-
-	void* data = staging._allocation->GetMappedData();
-
-	//copy vertex buffer
-	memcpy(data, vertices.data(), vertexBufferSize);
-	//copy index buffer
-	memcpy((char*)data + vertexBufferSize, indices.data(), indexBufferSize);
-
-	immediate_submit([&](VkCommandBuffer cmd) {
-
-		VkBufferCopy vertexCopy{ 0 };
-		vertexCopy.dstOffset = 0;
-		vertexCopy.srcOffset = 0;
-		vertexCopy.size = vertexBufferSize;
-
-		vkCmdCopyBuffer(cmd, staging._buffer, newSurface._vertexBuffer._buffer, 1, &vertexCopy);
-
-		VkBufferCopy indexCopy{ 0 };
-		indexCopy.dstOffset = 0;
-		indexCopy.srcOffset = vertexBufferSize;
-		indexCopy.size = indexBufferSize;
-
-		vkCmdCopyBuffer(cmd, staging._buffer, newSurface._indexBuffer._buffer, 1, &indexCopy);
-	});
-
-	vmaDestroyBuffer(_allocator, staging._buffer, staging._allocation);
-
-	newSurface.bufferBinding = globalDescriptorAllocator.allocate(_device, _meshBufferDescriptorLayout);
-
-	VkDescriptorBufferInfo binfo = vkinit::buffer_info(newSurface._vertexBuffer._buffer, 0, vertexBufferSize);
-
-	VkWriteDescriptorSet cameraWrite = vkinit::write_descriptor_buffer(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, newSurface.bufferBinding, &binfo, 0);
-
-	vkUpdateDescriptorSets(_device, 1, &cameraWrite, 0, nullptr);
-
-	loadedSurfaces[mesh.name.c_str()] = newSurface;
+	return newSurface;
 }
 
 
@@ -1059,7 +974,8 @@ void VulkanEngine::init_descriptors()
 	}
 	{
 		DescriptorLayoutBuilder builder;
-		builder.add_binding(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+		builder.add_binding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+		builder.add_binding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
 		_gltfMatDescriptorLayout = builder.build(_device, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
 	}
 
@@ -1087,17 +1003,25 @@ void VulkanEngine::init_descriptors()
 
 		vkCreateSampler(_device,&sampl,nullptr,&defaultSampler);
 
-
 		_defaultGLTFdescriptor = globalDescriptorAllocator.allocate(_device, _gltfMatDescriptorLayout);
 	
+		_defaultMat.materialSet = _defaultGLTFdescriptor;
 		VkDescriptorImageInfo imgInfo{};
 		imgInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 		imgInfo.imageView = _whiteImage._imageView;
 		imgInfo.sampler = defaultSampler;
 
-		VkWriteDescriptorSet cameraWrite = vkinit::write_descriptor_image(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, _defaultGLTFdescriptor, &imgInfo, 0);
+		VkWriteDescriptorSet cameraWrite = vkinit::write_descriptor_image(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, _defaultGLTFdescriptor, &imgInfo, 1);
 
-		vkUpdateDescriptorSets(_device, 1, &cameraWrite, 0, nullptr);
+		//default material parameters
+		_defaultGLTFMaterialData = create_buffer(sizeof(GPUGLTFMaterial), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+
+
+		VkDescriptorBufferInfo binfo = vkinit::buffer_info(_defaultGLTFMaterialData._buffer,0, sizeof(GPUGLTFMaterial));
+		VkWriteDescriptorSet bufferWrite = vkinit::write_descriptor_buffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, _defaultGLTFdescriptor, &binfo, 0);
+
+		VkWriteDescriptorSet writes[] = { cameraWrite,bufferWrite };
+		vkUpdateDescriptorSets(_device, 2, writes, 0, nullptr);
 	}
 	for (int i = 0; i < FRAME_OVERLAP; i++)
 	{
@@ -1115,7 +1039,6 @@ void VulkanEngine::init_descriptors()
 		_frames[i].cameraBuffer = create_buffer(sizeof(GPUSceneData),VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,VMA_MEMORY_USAGE_CPU_TO_GPU);
 	}
 }
-
 
 VkPipeline PipelineBuilder::build_pipeline(VkDevice device)
 {
@@ -1173,33 +1096,3 @@ VkPipeline PipelineBuilder::build_pipeline(VkDevice device)
 		return newPipeline;
 	}
 }
-
-
-
-static const std::byte* getBufferData(const fastgltf::Buffer& buffer) {
-	const std::byte* result = nullptr;
-
-	std::visit(fastgltf::visitor{
-		[](auto&) {},
-		[&](const fastgltf::sources::Vector& vec) {
-			result = reinterpret_cast<const std::byte*>(vec.bytes.data());
-		},
-		[&](const fastgltf::sources::ByteView& bv) {
-			result = bv.bytes.data();
-		},
-		}, buffer.data);
-
-	return result;
-}
-
-
-template<>
-struct fastgltf::ElementTraits<glm::vec3> : fastgltf::ElementTraitsBase<glm::vec3, AccessorType::Vec3, float> {};
-template<>
-struct fastgltf::ElementTraits<glm::vec4> : fastgltf::ElementTraitsBase<glm::vec4, AccessorType::Vec4, float> {};
-// helper type for the visitor #4
-template<class... Ts>
-struct overloaded : Ts... { using Ts::operator()...; };
-// explicit deduction guide (not needed as of C++20)
-template<class... Ts>
-overloaded(Ts...) -> overloaded<Ts...>;

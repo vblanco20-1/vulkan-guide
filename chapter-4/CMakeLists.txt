@@ -18,6 +18,7 @@ add_executable (chapter_4
 )
 
 
+set_property(TARGET chapter_4 PROPERTY CXX_STANDARD 20)
 set_property(TARGET chapter_4 PROPERTY VS_DEBUGGER_WORKING_DIRECTORY $<TARGET_FILE_DIR:chapter_1>)
 
 target_include_directories(chapter_4 PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
