@@ -701,10 +701,10 @@ void VulkanEngine::init_renderables()
 
 	auto monkeyfile = loadGltf(monkeyPath);
 
-	for (int i = 0; i < 100; i++) {
-		auto f = loadGltf(monkeyPath);
-		get_current_frame()._frameDeletionQueue.flush();
-	}
+	//for (int i = 0; i < 100; i++) {
+	//	auto f = loadGltf(monkeyPath);
+	//	get_current_frame()._frameDeletionQueue.flush();
+	//}
 
 	assert(monkeyfile.has_value());
 
