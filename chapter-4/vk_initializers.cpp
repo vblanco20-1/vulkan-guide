@@ -107,7 +107,7 @@ VkRenderingAttachmentInfo vkinit::color_attachment_info(VkImageView view, VkImag
 
 	colorAttachment.imageView = view;
 	colorAttachment.imageLayout = layout;
-	colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+	colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
 	colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 	
 

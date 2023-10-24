@@ -105,8 +105,6 @@ public:
 	
 	FrameData _frames[FRAME_OVERLAP];
 
-	VkRenderPass _renderPass;
-
 	VkSurfaceKHR _surface;
 	VkSwapchainKHR _swapchain;
 	VkFormat _swachainImageFormat;
@@ -218,6 +216,8 @@ private:
 	void init_sync_structures();
 
 	void init_renderables();
+
+	void init_imgui();
 	
 	bool load_shader_module(const char* filePath, VkShaderModule* outShaderModule);
 };
