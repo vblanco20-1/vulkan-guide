@@ -11,9 +11,8 @@
 #include "vk_mesh.h"
 #include <unordered_map>
 #include <string>
-#include <glm/mat4x4.hpp>
 #include "vk_descriptors.h"
-#include <chrono>
+//#include <chrono>
 #include "fastgltf/types.hpp"
 #include "vk_loader.h"
 #include <span>
@@ -64,26 +63,15 @@ struct DeletionQueue
 	}
 };
 
-
-
-
 struct RenderObject {
 	uint32_t indexCount;
 	uint32_t firstIndex;
-	Surface* mesh;
+	GPUMesh* mesh;
 	MaterialData* material;
 	
 	glm::mat4 transform;
 };
 
-struct GPUSceneData {
-	glm::mat4 view;
-	glm::mat4 proj;
-	glm::mat4 viewproj;
-	glm::vec4 ambientColor;
-	glm::vec4 sunlightDirection; //w for sun power
-	glm::vec4 sunlightColor;
-};
 
 struct FrameData {
 	VkSemaphore _presentSemaphore, _renderSemaphore;
@@ -109,13 +97,10 @@ struct GLTFScene {
 };
 
 struct DrawContext {
-	std::vector<RenderObject> SurfacesToDraw;
+	std::vector<RenderObject> OpaqueSurfaces;
+	std::vector<RenderObject> TransparentSurfaces;
 	class VulkanEngine* engine;
 };
-
-
-
-
 
 class VulkanEngine {
 public:
@@ -132,16 +117,10 @@ public:
 	VkPhysicalDevice _chosenGPU;
 	VkDevice _device;
 
-	//VkSemaphore _presentSemaphore, _renderSemaphore;
-	//VkFence _renderFence;
-
 	VkQueue _graphicsQueue;
 	uint32_t _graphicsQueueFamily;
 
 	AllocatedBuffer _defaultGLTFMaterialData;
-
-	//VkCommandPool _commandPool;
-	//VkCommandBuffer _mainCommandBuffer;
 	
 	FrameData _frames[FRAME_OVERLAP];
 
@@ -198,6 +177,9 @@ public:
 	VkCommandBuffer _immCommandBuffer;
 	VkCommandPool _immCommandPool;
 
+	//singleton style getter.multiple engines is not supported
+	static VulkanEngine& Get();
+
 	//initializes everything in the engine
 	void init();
 
@@ -212,7 +194,7 @@ public:
 	//run main loop
 	void run();
 
-	Surface uploadMesh(std::span<uint32_t> indices, std::span<Vertex> vertices);
+	GPUMesh uploadMesh(std::span<uint32_t> indices, std::span<Vertex> vertices);
 
 	FrameData& get_current_frame();
 	FrameData& get_last_frame();
@@ -224,14 +206,13 @@ public:
 	AllocatedImage create_image(void* data, VkExtent3D size, VkFormat format, VkImageUsageFlags usage);
 
 	void immediate_submit(std::function<void(VkCommandBuffer cmd)>&& function);
-	std::unordered_map<std::string, Surface> loadedSurfaces;
 
 	std::unordered_map<std::string,std::shared_ptr< LoadedGLTF>> loadedScenes;
 
-	
+	void destroy_image(const AllocatedImage & img);
+	void destroy_buffer(const AllocatedBuffer& buffer);
 private:
 
-	//std::vector<RenderObject> renderables;
 
 
 	void init_vulkan();

@@ -105,8 +105,10 @@ AllocatedImage load_image(VulkanEngine* engine, fastgltf::Asset& asset, fastgltf
 	return newImage;
 }
 
-std::optional<std::shared_ptr<LoadedGLTF>> loadGltf(const std::filesystem::path& filePath, VulkanEngine* engine)
+std::optional<std::shared_ptr<LoadedGLTF>> loadGltf(std::string_view filePath)
 {
+	VulkanEngine* engine = &VulkanEngine::Get();
+
 	std::cout << "Loading GLTF: " << filePath << std::endl;
 	
 	std::shared_ptr<LoadedGLTF> scene = std::make_shared<LoadedGLTF>();
@@ -122,8 +124,6 @@ std::optional<std::shared_ptr<LoadedGLTF>> loadGltf(const std::filesystem::path&
 
 	file.descriptorPool.init_pool(engine->_device, 10000, sizes);
 
-
-
 	constexpr auto gltfOptions =
 		fastgltf::Options::DontRequireValidAssetMember |
 		fastgltf::Options::AllowDouble |
@@ -136,9 +136,11 @@ std::optional<std::shared_ptr<LoadedGLTF>> loadGltf(const std::filesystem::path&
 	
 	fastgltf::Asset gltf;
 	
+	std::filesystem::path path = filePath;
+
 	auto type = fastgltf::determineGltfFileType(&data);
 	if (type == fastgltf::GltfType::glTF) {
-		auto load = parser.loadGLTF(&data, filePath.parent_path(), gltfOptions);
+		auto load = parser.loadGLTF(&data, path.parent_path(), gltfOptions);
 		if (load)
 		{
 			gltf = std::move(load.get());
@@ -149,7 +151,7 @@ std::optional<std::shared_ptr<LoadedGLTF>> loadGltf(const std::filesystem::path&
 		}
 	}
 	else if (type == fastgltf::GltfType::GLB) {
-		auto load = parser.loadBinaryGLTF(&data, filePath.parent_path(), gltfOptions);
+		auto load = parser.loadBinaryGLTF(&data, path.parent_path(), gltfOptions);
 		if (load)
 		{
 			gltf = std::move(load.get());
@@ -187,10 +189,6 @@ std::optional<std::shared_ptr<LoadedGLTF>> loadGltf(const std::filesystem::path&
 	std::vector< AllocatedImage> images;
 	std::vector< std::shared_ptr<GLTFMaterial>> materials;
 
-
-
-
-
 	//load all textures
 	for (fastgltf::Image& image : asset->images) {
 		
@@ -204,7 +202,7 @@ std::optional<std::shared_ptr<LoadedGLTF>> loadGltf(const std::filesystem::path&
 	//create buffer to hold the material data
 	file.materialDataBuffer = engine->create_buffer(sizeof(GPUGLTFMaterial) * asset->materials.size(), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,VMA_MEMORY_USAGE_CPU_TO_GPU);
 	int data_index = 0;
-	GPUGLTFMaterial* materialData = (GPUGLTFMaterial*)file.materialDataBuffer._info.pMappedData;
+	GPUGLTFMaterial* materialData = (GPUGLTFMaterial*)file.materialDataBuffer.info.pMappedData;
 
 	for (fastgltf::Material& mat : asset->materials) {
 
@@ -223,17 +221,18 @@ std::optional<std::shared_ptr<LoadedGLTF>> loadGltf(const std::filesystem::path&
 
 		if (mat.alphaMode == fastgltf::AlphaMode::Opaque) {
 			newMat->data = engine->_gltfDefaultOpaque;
+			newMat->IsTransparent = false;
 		}
 		else {
 			newMat->data = engine->_gltfDefaultTranslucent;
+			newMat->IsTransparent = true;
 		}
 		
 		newMat->data.materialSet = file.descriptorPool.allocate(engine->_device, engine->_gltfMatDescriptorLayout);
-		
 
 		VkDescriptorImageInfo imageInfo{};
 		imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		imageInfo.imageView = engine->_whiteImage._imageView;
+		imageInfo.imageView = engine->_whiteImage.imageView;
 		imageInfo.sampler = engine->_defaultSampler;
 
 		if (mat.pbrData.baseColorTexture.has_value())
@@ -241,13 +240,13 @@ std::optional<std::shared_ptr<LoadedGLTF>> loadGltf(const std::filesystem::path&
 			int img = asset->textures[mat.pbrData.baseColorTexture.value().textureIndex].imageIndex.value();
 			int sampler = asset->textures[mat.pbrData.baseColorTexture.value().textureIndex].samplerIndex.value();
 
-			imageInfo.imageView = images[img]._imageView;
+			imageInfo.imageView = images[img].imageView;
 			imageInfo.sampler = file.samplers[sampler];
 		}
 
 		VkWriteDescriptorSet cameraWrite = vkinit::write_descriptor_image(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, newMat->data.materialSet, &imageInfo, 1);
 
-		VkDescriptorBufferInfo binfo = vkinit::buffer_info(file.materialDataBuffer._buffer, data_index * sizeof(GPUGLTFMaterial), sizeof(GPUGLTFMaterial));
+		VkDescriptorBufferInfo binfo = vkinit::buffer_info(file.materialDataBuffer.buffer, data_index * sizeof(GPUGLTFMaterial), sizeof(GPUGLTFMaterial));
 		VkWriteDescriptorSet bufferWrite = vkinit::write_descriptor_buffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, newMat->data.materialSet, &binfo, 0);
 
 		VkWriteDescriptorSet writes[] = { cameraWrite,bufferWrite };
@@ -258,12 +257,12 @@ std::optional<std::shared_ptr<LoadedGLTF>> loadGltf(const std::filesystem::path&
 		file.materials[mat.name.c_str()] = newMat;
 	}
 	
+	//use the same vectors for all meshes so that the memory doesnt reallocate as often
 	std::vector<uint32_t> indices;
 	std::vector<Vertex> vertices;
 
 	for (fastgltf::Mesh& mesh : asset->meshes)
 	{
-		//engine->uploadMesh(mesh, gltf);
 		std::shared_ptr<GLTFMesh> newmesh = std::make_shared<GLTFMesh>();
 		meshes.push_back(newmesh);
 		file.meshes[mesh.name.c_str()]= newmesh;
@@ -272,7 +271,6 @@ std::optional<std::shared_ptr<LoadedGLTF>> loadGltf(const std::filesystem::path&
 		//clear the mesh arrays each mesh, we dont want to merge them by error
 		indices.clear();
 		vertices.clear();
-		
 
 		for (auto&& p : mesh.primitives)
 		{
@@ -286,7 +284,7 @@ std::optional<std::shared_ptr<LoadedGLTF>> loadGltf(const std::filesystem::path&
 
 				fastgltf::iterateAccessor<std::uint32_t>(*asset, indexaccessor, [&](std::uint32_t idx) {
 					indices.push_back(idx + newSurface.vertexOffset);
-					});
+				});
 			}
 
 			fastgltf::Accessor& posAccessor = asset->accessors[p.findAttribute("POSITION")->second];
@@ -343,8 +341,7 @@ std::optional<std::shared_ptr<LoadedGLTF>> loadGltf(const std::filesystem::path&
 			newmesh->surfaces.push_back(newSurface);
 		}
 		
-		
-		newmesh->surface = engine->uploadMesh(indices,vertices);
+		newmesh->meshBuffers = engine->uploadMesh(indices,vertices);
 	}
 
 
@@ -356,8 +353,8 @@ std::optional<std::shared_ptr<LoadedGLTF>> loadGltf(const std::filesystem::path&
 		std::shared_ptr<Node> newNode;
 		
 		if (node.meshIndex.has_value()) {
-			newNode = std::make_shared<MeshNode>();
-			static_cast<MeshNode*>(newNode.get())->mesh = meshes[*node.meshIndex];
+			newNode = std::make_shared<GltfMeshNode>();
+			static_cast<GltfMeshNode*>(newNode.get())->mesh = meshes[*node.meshIndex];
 		}
 		else {
 			 newNode = std::make_shared<Node>();
@@ -417,32 +414,75 @@ void LoadedGLTF::Draw(const glm::mat4& topMatrix, DrawContext& ctx)
 	}
 }
 
-void Node::Draw(const glm::mat4& topMatrix, DrawContext& ctx)
+void LoadedGLTF::clearAll()
 {
-	//recurse down
-	for (auto& c : children) {
-		c->Draw(topMatrix,ctx);
+	VkDescriptorPool poolToDestroy = descriptorPool.pool;
+
+	//we need to copy all of the data that has to be destroyed into arrays to pass into the lambda.
+	//shared_ptr deletes the actual objects for us once all references are gone (after the destruction callback is run)
+
+	std::vector<std::shared_ptr<GLTFMesh>> meshesToDestroy;
+	std::vector<AllocatedImage> imagesToDestroy;
+	std::vector<std::shared_ptr<GLTFMaterial>> materialsToDestroy;
+
+	for (auto& [k,v] : meshes) {
+		meshesToDestroy.push_back(v);
 	}
+
+	for (auto& [k, v] : images) {
+		imagesToDestroy.push_back(v);
+	}
+
+	for (auto& [k, v] : materials) {
+		materialsToDestroy.push_back(v);
+	}
+
+	auto materialBuffer = materialDataBuffer;
+	auto samplersToDestroy = samplers;
+
+
+	VulkanEngine::Get().get_current_frame()._frameDeletionQueue.push_function([materialBuffer,poolToDestroy, meshesToDestroy,imagesToDestroy,materialsToDestroy, samplersToDestroy](){
+		VkDevice dv = VulkanEngine::Get()._device;
+
+		vkDestroyDescriptorPool(dv,poolToDestroy,nullptr);
+
+		for (auto& i : imagesToDestroy) {
+			VulkanEngine::Get().destroy_image(i);
+		}
+		for (auto& mesh : meshesToDestroy) {
+			VulkanEngine::Get().destroy_buffer(mesh->meshBuffers.indexBuffer);
+			VulkanEngine::Get().destroy_buffer(mesh->meshBuffers.vertexBuffer);
+		}
+		
+		VulkanEngine::Get().destroy_buffer(materialBuffer);
+
+		for (auto& sampler : samplersToDestroy) {
+			
+			vkDestroySampler(dv,sampler,nullptr);
+		}
+	});
 }
 
-void MeshNode::Draw(const glm::mat4& topMatrix, DrawContext& ctx)
+void GltfMeshNode::Draw(const glm::mat4& topMatrix, DrawContext& ctx)
 {
 	glm::mat4 nodeMatrix = topMatrix * worldTransform;
 
 	for (auto& s : mesh->surfaces) {
-			RenderObject def;
-			def.indexCount = s.count;
-			def.firstIndex = s.startIndex;
-			def.mesh = &mesh->surface;
-			def.material = &s.material->data;
-			//def.bufferBinding = mesh->data.bufferBinding;
-			//def.layout = ctx.engine->_defaultMat.layout;
-			//def.pipeline = ctx.engine->_defaultMat.pipeline;
-			//def.indexBuffer = mesh->data._indexBuffer._buffer;
+		RenderObject def;
+		def.indexCount = s.count;
+		def.firstIndex = s.startIndex;
+		def.mesh = &mesh->meshBuffers;
+		def.material = &s.material->data;
 
-			def.transform = nodeMatrix;
-			//def.matBind = s.material->matSet;
-			ctx.SurfacesToDraw.push_back(def);
+
+		def.transform = nodeMatrix;
+
+		if (s.material->IsTransparent) {
+			ctx.TransparentSurfaces.push_back(def);
+		}
+		else {
+			ctx.OpaqueSurfaces.push_back(def);
+		}
 	}
 
 	//recurse down

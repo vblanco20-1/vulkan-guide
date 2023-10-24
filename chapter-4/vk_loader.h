@@ -5,35 +5,16 @@
 
 #include <vk_types.h>
 #include <vk_mesh.h>
-#include <glm/mat4x4.hpp>
-#include <glm/gtc/quaternion.hpp>
-#include <optional>
-#include <string>
-#include <memory>
-#include <filesystem>
+
 #include "vk_descriptors.h"
 #include <unordered_map>
 
 class VulkanEngine;
 
-struct GLTFTexture {
-	std::vector<char> textureData;
-};
-
-struct  GPUGLTFMaterial {
-	glm::vec4 colorFactors;
-	glm::vec4 metal_rough_factors;
-	glm::vec4 extra[14];
-};
-
-static_assert(sizeof(GPUGLTFMaterial) == 256);
 
 struct GLTFMaterial {
-	glm::vec4 colorFactors;
-	float metallicFactor;
-	float roughnessFactor;
 
-	//VkDescriptorSet matSet;
+	bool IsTransparent;
 
 	MaterialData data;
 };
@@ -49,30 +30,11 @@ struct GLTFMesh {
 	std::string name;
 	
 	std::vector<GeoSurface> surfaces;
-	Surface surface;
+	GPUMesh meshBuffers;
 };
 
 
-struct Node : public IRenderable {
-	std::weak_ptr<Node> parent;
-	std::vector<std::shared_ptr<Node>> children;
-
-	
-
-	glm::mat4 localTransform;
-	glm::mat4 worldTransform;
-
-	void refreshTransform(const glm::mat4& parentMatrix) {
-		worldTransform = parentMatrix * localTransform;
-		for (auto c : children) {
-			c->refreshTransform(worldTransform);
-		}
-	}
-
-	virtual void Draw(const glm::mat4& topMatrix, DrawContext& ctx);
-};
-
-struct MeshNode : public Node {
+struct GltfMeshNode : public Node {
 
 	std::shared_ptr<GLTFMesh> mesh;
 
@@ -82,7 +44,6 @@ struct MeshNode : public Node {
 struct LoadedGLTF: public IRenderable {
 
 	//storage for all the data on a given gltf file
-
 	std::unordered_map<std::string,std::shared_ptr<GLTFMesh>> meshes;
 	std::unordered_map<std::string,std::shared_ptr<Node>> nodes;
 	std::unordered_map<std::string, AllocatedImage> images;
@@ -91,20 +52,20 @@ struct LoadedGLTF: public IRenderable {
 	//nodes that dont have a parent, for iterating through the file in tree order
 	std::vector<std::shared_ptr<Node>> topNodes;
 
-	//std::vector<std::shared_ptr<GLTFMesh>> meshes;
-	//std::vector<std::shared_ptr<GLTFNode>> nodes;
-
-	//std::vector< AllocatedImage> images;
-	//std::vector< std::shared_ptr<GLTFMaterial>> materials;
-
 	std::vector<VkSampler> samplers;
 
 	DescriptorAllocator descriptorPool;
 
 	AllocatedBuffer materialDataBuffer;
 
+	~LoadedGLTF(){ clearAll(); };
+
+
 	virtual void Draw(const glm::mat4& topMatrix, DrawContext& ctx);
+
+private:
+	void clearAll();
 };
 
 
-std::optional<std::shared_ptr<LoadedGLTF>> loadGltf(const std::filesystem::path& filePath, VulkanEngine* engine);
+std::optional<std::shared_ptr<LoadedGLTF>> loadGltf(std::string_view filePath);

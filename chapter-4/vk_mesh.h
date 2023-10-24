@@ -19,20 +19,4 @@ struct Vertex {
 	float uv_y;
 	glm::vec4 color;
 }; 
-struct MaterialData {
-	VkPipeline pipeline;
-	VkPipelineLayout layout;
-	VkDescriptorSet materialSet;
-};
-struct Surface {
 
-	size_t indexCount;
-	AllocatedBuffer _indexBuffer;
-	AllocatedBuffer _vertexBuffer;
-	VkDescriptorSet bufferBinding;
-};
-
-class IRenderable {
-
-	virtual void Draw(const glm::mat4& topMatrix, DrawContext& ctx) = 0;
-};
