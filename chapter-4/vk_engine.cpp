@@ -86,6 +86,12 @@ void VulkanEngine::init()
 
 	//everything went fine
 	_isInitialized = true;
+
+	mainCamera.velocity = glm::vec3(0.f);
+	mainCamera.position = glm::vec3(30.f, -00.f, -085.f);
+
+	mainCamera.pitch = 0;
+	mainCamera.yaw = 0;
 }
 void VulkanEngine::cleanup()
 {	
@@ -232,28 +238,8 @@ void VulkanEngine::draw()
 
 void VulkanEngine::draw_geometry(VkCommandBuffer cmd)
 {
-	//make a model view matrix for rendering the object
-		//camera position
-	glm::vec3 camPos = { 30.f,-00.f,-085.f };
-
-	glm::mat4 view = glm::translate(glm::mat4(1.f), camPos);
-	//camera projection
-	glm::mat4 projection = glm::perspective(glm::radians(70.f), 1700.f / 900.f, 10000.f, 0.1f);
-	projection[1][1] *= -1;
-	//model rotation
-	glm::mat4 rotation = glm::rotate(glm::mat4{ 1.0f }, glm::radians(_frameNumber * 0.1f), glm::vec3(0, 1, 0));
-
-	static DrawContext cachedDrawContext;
-	cachedDrawContext.OpaqueSurfaces.clear();
-	cachedDrawContext.TransparentSurfaces.clear();
-	cachedDrawContext.engine = this;
-	loadedScenes["structure"]->Draw(rotation, cachedDrawContext);
-
-	//loadedScenes["structure"]->Draw(glm::translate(glm::mat4{1.f}, {0.f, 50.f, 0.f}), cachedDrawContext);
-	//loadedScenes["structure"]->Draw(glm::translate(glm::mat4{ 1.f }, { 0.f, 100.f, 0.f }), cachedDrawContext);
-	//loadedScenes["structure"]->Draw(glm::translate(glm::mat4{ 1.f }, { 0.f, 150.f, 0.f }), cachedDrawContext);
-
-	std::sort(cachedDrawContext.OpaqueSurfaces.begin(), cachedDrawContext.OpaqueSurfaces.end(), [](const auto& A,const auto& B) {
+	//sort the opaque surfaces by material and mesh
+	std::sort(drawCommands.OpaqueSurfaces.begin(), drawCommands.OpaqueSurfaces.end(), [](const auto& A,const auto& B) {
 		if (A.material == B.material) {
 			return A.mesh < B.mesh;
 		}
@@ -262,12 +248,8 @@ void VulkanEngine::draw_geometry(VkCommandBuffer cmd)
 		}
 	});
 
-
 	GPUSceneData* sceneUniformData = (GPUSceneData*)get_current_frame().cameraBuffer.allocation->GetMappedData();
-	sceneUniformData->view = view;
-	sceneUniformData->proj = projection;
-	sceneUniformData->viewproj = projection* view;
-	
+	*sceneUniformData = sceneData;
 
 	VkDescriptorSet globalDescriptor = get_current_frame()._frameDescriptors.allocate(_device, _gpuSceneDataDescriptorLayout);
 
@@ -311,13 +293,17 @@ void VulkanEngine::draw_geometry(VkCommandBuffer cmd)
 		vkCmdDrawIndexed(cmd, r.indexCount, 1, r.firstIndex, 0, 0);
 	};
 
-	for (auto& r : cachedDrawContext.OpaqueSurfaces) {
+	for (auto& r : drawCommands.OpaqueSurfaces) {
 		draw(r);
 	}
 
-	for (auto& r : cachedDrawContext.TransparentSurfaces) {
+	for (auto& r : drawCommands.TransparentSurfaces) {
 		draw(r);
 	}
+
+	//we delete the draw commands now that we processed them
+	drawCommands.OpaqueSurfaces.clear();
+	drawCommands.TransparentSurfaces.clear();
 }
 
 void VulkanEngine::run()
@@ -333,7 +319,23 @@ void VulkanEngine::run()
 		{
 			//close the window when user alt-f4s or clicks the X button			
 			if (e.type == SDL_QUIT) bQuit = true;
-		}
+			
+			mainCamera.processSDLEvent(e);
+		}		
+
+		mainCamera.update(1.f);
+
+		glm::mat4 view = mainCamera.getViewMatrix();
+
+		//camera projection
+		glm::mat4 projection = glm::perspective(glm::radians(70.f), 1700.f / 900.f, 10000.f, 0.1f);
+		projection[1][1] *= -1;
+		
+		sceneData.view = view;
+		sceneData.proj = projection;
+		sceneData.viewproj = projection * view;
+
+		loadedScenes["structure"]->Draw(glm::mat4(1.f), drawCommands);
 
 		draw();
 	}
@@ -700,8 +702,6 @@ void VulkanEngine::init_renderables()
 	assert(monkeyfile.has_value());
 
 	loadedScenes["structure"] = *monkeyfile;
-
-
 }
 
 bool VulkanEngine::load_shader_module(const char* filePath, VkShaderModule* outShaderModule)

@@ -16,6 +16,7 @@
 #include "fastgltf/types.hpp"
 #include "vk_loader.h"
 #include <span>
+#include "camera.h"
 
 struct GLTFMesh;
 namespace fastgltf { struct Mesh; }
@@ -99,8 +100,9 @@ struct GLTFScene {
 struct DrawContext {
 	std::vector<RenderObject> OpaqueSurfaces;
 	std::vector<RenderObject> TransparentSurfaces;
-	class VulkanEngine* engine;
 };
+
+
 
 class VulkanEngine {
 public:
@@ -176,6 +178,12 @@ public:
 	VkFence _immFence;
 	VkCommandBuffer _immCommandBuffer;
 	VkCommandPool _immCommandPool;
+
+	DrawContext drawCommands;
+
+	GPUSceneData sceneData;
+
+	Camera mainCamera;
 
 	//singleton style getter.multiple engines is not supported
 	static VulkanEngine& Get();
