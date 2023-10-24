@@ -180,7 +180,8 @@ public:
 
 	VkPipeline _trianglePipeline;
 
-	MaterialData _defaultMat;
+	MaterialData _gltfDefaultOpaque;
+	MaterialData _gltfDefaultTranslucent;
 
 	//draw resources
 	AllocatedImage _drawImage;
@@ -191,7 +192,7 @@ public:
 
 	//default image for fallback
 	AllocatedImage _whiteImage;
-
+	VkSampler _defaultSampler;
 	//immediate submit structures
 	VkFence _immFence;
 	VkCommandBuffer _immCommandBuffer;

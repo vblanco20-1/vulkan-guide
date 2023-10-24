@@ -210,48 +210,50 @@ std::optional<std::shared_ptr<LoadedGLTF>> loadGltf(const std::filesystem::path&
 
 		std::shared_ptr<GLTFMaterial> newMat = std::make_shared<GLTFMaterial>();
 
+		GPUGLTFMaterial matData;
+		matData.colorFactors.x = mat.pbrData.baseColorFactor[0];
+		matData.colorFactors.y = mat.pbrData.baseColorFactor[1];
+		matData.colorFactors.z = mat.pbrData.baseColorFactor[2];
+		matData.colorFactors.w = mat.pbrData.baseColorFactor[3];
+
+		matData.metal_rough_factors.x = mat.pbrData.metallicFactor;
+		matData.metal_rough_factors.y = mat.pbrData.roughnessFactor;
+
+		materialData[data_index] = matData;
+
+		if (mat.alphaMode == fastgltf::AlphaMode::Opaque) {
+			newMat->data = engine->_gltfDefaultOpaque;
+		}
+		else {
+			newMat->data = engine->_gltfDefaultTranslucent;
+		}
+		
+		newMat->data.materialSet = file.descriptorPool.allocate(engine->_device, engine->_gltfMatDescriptorLayout);
 		
 
-		newMat->data = engine->_defaultMat;
+		VkDescriptorImageInfo imageInfo{};
+		imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		imageInfo.imageView = engine->_whiteImage._imageView;
+		imageInfo.sampler = engine->_defaultSampler;
+
 		if (mat.pbrData.baseColorTexture.has_value())
 		{
-			GPUGLTFMaterial matData;
-			matData.colorFactors.x = mat.pbrData.baseColorFactor[0];
-			matData.colorFactors.y = mat.pbrData.baseColorFactor[1];
-			matData.colorFactors.z = mat.pbrData.baseColorFactor[2];
-			matData.colorFactors.w = mat.pbrData.baseColorFactor[3];
-
-			matData.metal_rough_factors.x = mat.pbrData.metallicFactor;
-			matData.metal_rough_factors.y = mat.pbrData.roughnessFactor;
-
-			materialData[data_index] = matData;
-
-			newMat->data.materialSet=file.descriptorPool.allocate(engine->_device, engine->_gltfMatDescriptorLayout);
-
-			
-			
-
-
 			int img = asset->textures[mat.pbrData.baseColorTexture.value().textureIndex].imageIndex.value();
 			int sampler = asset->textures[mat.pbrData.baseColorTexture.value().textureIndex].samplerIndex.value();
 
-			VkDescriptorImageInfo imgInfo{};
-			imgInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-			imgInfo.imageView = images[img]._imageView;
-			imgInfo.sampler = file.samplers[sampler];
-			
-
-			VkWriteDescriptorSet cameraWrite = vkinit::write_descriptor_image(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, newMat->data.materialSet, &imgInfo, 1);
-
-			VkDescriptorBufferInfo binfo = vkinit::buffer_info(file.materialDataBuffer._buffer, data_index * sizeof(GPUGLTFMaterial), sizeof(GPUGLTFMaterial));
-			VkWriteDescriptorSet bufferWrite = vkinit::write_descriptor_buffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, newMat->data.materialSet, &binfo, 0);
-
-			VkWriteDescriptorSet writes [] = {cameraWrite,bufferWrite };
-			vkUpdateDescriptorSets(engine->_device, 2, writes, 0, nullptr);
-
-			data_index++;
+			imageInfo.imageView = images[img]._imageView;
+			imageInfo.sampler = file.samplers[sampler];
 		}
 
+		VkWriteDescriptorSet cameraWrite = vkinit::write_descriptor_image(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, newMat->data.materialSet, &imageInfo, 1);
+
+		VkDescriptorBufferInfo binfo = vkinit::buffer_info(file.materialDataBuffer._buffer, data_index * sizeof(GPUGLTFMaterial), sizeof(GPUGLTFMaterial));
+		VkWriteDescriptorSet bufferWrite = vkinit::write_descriptor_buffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, newMat->data.materialSet, &binfo, 0);
+
+		VkWriteDescriptorSet writes[] = { cameraWrite,bufferWrite };
+		vkUpdateDescriptorSets(engine->_device, 2, writes, 0, nullptr);
+
+		data_index++;
 		materials.push_back(newMat);
 		file.materials[mat.name.c_str()] = newMat;
 	}

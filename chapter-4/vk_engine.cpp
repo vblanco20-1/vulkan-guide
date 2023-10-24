@@ -702,7 +702,7 @@ void VulkanEngine::init_sync_structures()
 void VulkanEngine::init_renderables()
 {
 	//std::filesystem::path monkeyPath = { "..\\..\\assets\\monkeyHD.glb" };
-	std::filesystem::path monkeyPath = { "..\\..\\assets\\structure_mat.glb" };
+	std::filesystem::path monkeyPath = { "..\\..\\assets\\structure.glb" };
 	auto monkeyfile = loadGltf(monkeyPath,this);
 	loadedScenes["structure"] = *monkeyfile;
 
@@ -866,8 +866,8 @@ void VulkanEngine::init_pipelines()
 	mesh_layout_info.pPushConstantRanges = &matrixRange;
 	mesh_layout_info.pushConstantRangeCount = 1;
 
-
-	VK_CHECK(vkCreatePipelineLayout(_device, &mesh_layout_info, nullptr, &_defaultMat.layout));
+	VK_CHECK(vkCreatePipelineLayout(_device, &mesh_layout_info, nullptr, &_gltfDefaultOpaque.layout));
+	VK_CHECK(vkCreatePipelineLayout(_device, &mesh_layout_info, nullptr, &_gltfDefaultTranslucent.layout));
 
 	//build the stage-create-info for both vertex and fragment stages. This lets the pipeline know the shader modules per stage
 	PipelineBuilder pipelineBuilder;
@@ -926,7 +926,7 @@ void VulkanEngine::init_pipelines()
 	pipelineBuilder._shaderStages.push_back(
 		vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT, meshFragShader));
 
-	pipelineBuilder._pipelineLayout = _defaultMat.layout;
+	pipelineBuilder._pipelineLayout = _gltfDefaultOpaque.layout;
 	
 	pipelineBuilder._depthStencil = vkinit::pipeline_depth_stencil_create_info();
 	pipelineBuilder._depthStencil.depthTestEnable = true;
@@ -935,7 +935,22 @@ void VulkanEngine::init_pipelines()
 
 
 	//finally build the pipeline
-	_defaultMat.pipeline = pipelineBuilder.build_pipeline(_device);
+	_gltfDefaultOpaque.pipeline = pipelineBuilder.build_pipeline(_device);
+
+
+	//create the transparent variant
+	pipelineBuilder._colorBlendAttachment.blendEnable = true;
+ 
+	pipelineBuilder._colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE; // Optional
+	pipelineBuilder._colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_DST_ALPHA; // Optional
+	pipelineBuilder._colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD; // Optional
+	pipelineBuilder._colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE; // Optional
+	pipelineBuilder._colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO; // Optional
+	pipelineBuilder._colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD; // Optional
+
+	pipelineBuilder._depthStencil.depthWriteEnable = false;
+
+	_gltfDefaultTranslucent.pipeline = pipelineBuilder.build_pipeline(_device);
 
 	//clear the shader stages for the builder
 	pipelineBuilder._shaderStages.clear();
@@ -994,22 +1009,22 @@ void VulkanEngine::init_descriptors()
 		uint32_t whitepixel = 0xFFFFFFFF; 
 		_whiteImage = create_image((void*) & whitepixel, VkExtent3D{1,1,1}, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT);
 
-		VkSampler defaultSampler;
+		
 
 		VkSamplerCreateInfo sampl = {};
 		sampl.pNext = nullptr;
 		sampl.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
 	
 
-		vkCreateSampler(_device,&sampl,nullptr,&defaultSampler);
+		vkCreateSampler(_device,&sampl,nullptr,&_defaultSampler);
 
 		_defaultGLTFdescriptor = globalDescriptorAllocator.allocate(_device, _gltfMatDescriptorLayout);
 	
-		_defaultMat.materialSet = _defaultGLTFdescriptor;
+		_gltfDefaultOpaque.materialSet = _defaultGLTFdescriptor;
 		VkDescriptorImageInfo imgInfo{};
 		imgInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 		imgInfo.imageView = _whiteImage._imageView;
-		imgInfo.sampler = defaultSampler;
+		imgInfo.sampler = _defaultSampler;
 
 		VkWriteDescriptorSet cameraWrite = vkinit::write_descriptor_image(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, _defaultGLTFdescriptor, &imgInfo, 1);
 
