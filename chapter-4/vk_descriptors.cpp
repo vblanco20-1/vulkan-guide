@@ -27,7 +27,7 @@ VkDescriptorSetLayout DescriptorLayoutBuilder::build(VkDevice device, VkShaderSt
     info.pNext = nullptr;
 
     info.pBindings = bindings.data();
-    info.bindingCount = bindings.size();
+    info.bindingCount = (uint32_t)bindings.size();
     info.flags = 0;
 
     VkDescriptorSetLayout set;
@@ -105,5 +105,5 @@ void DescriptorWriter::build(VkDevice device, VkDescriptorSet set)
         write.dstSet = set;
     }
 
-    vkUpdateDescriptorSets(device, writes.size(), writes.data(), 0, nullptr);
+    vkUpdateDescriptorSets(device, (uint32_t)writes.size(), writes.data(), 0, nullptr);
 }

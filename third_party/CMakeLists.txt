@@ -6,8 +6,6 @@ add_library(vma INTERFACE)
 
 add_library(stb_image INTERFACE)
 
-add_library(tinyobjloader STATIC)
-
 add_subdirectory(fastgltf)
 add_subdirectory(fmt EXCLUDE_FROM_ALL)
 target_sources(vkbootstrap PRIVATE 
@@ -22,13 +20,6 @@ target_link_libraries(vkbootstrap PUBLIC Vulkan::Vulkan $<$<BOOL:UNIX>:${CMAKE_D
 target_include_directories(vma INTERFACE vma)
 
 target_include_directories(glm INTERFACE glm)
-
-target_sources(tinyobjloader PRIVATE 
-  tinyobjloader/tiny_obj_loader.h
-  tinyobjloader/tiny_obj_loader.cc
-  )
-
-target_include_directories(tinyobjloader PUBLIC tinyobjloader)
 
 add_library(sdl2 INTERFACE)
 

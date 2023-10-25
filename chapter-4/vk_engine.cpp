@@ -25,6 +25,7 @@
 #include "imgui_impl_vulkan.h"
 #include <fastgltf/parser.hpp>
 #include <fastgltf/tools.hpp>
+#include <glm/gtx/transform.hpp>
 
 constexpr bool bUseValidationLayers = false;
 
@@ -159,7 +160,7 @@ void VulkanEngine::draw()
 
     // execute the compute pipeline dispatch. We are using 16x16 workgroup size so
     // we need to divide by it
-    vkCmdDispatch(cmd, std::ceil(_windowExtent.width / 16.0), std::ceil(_windowExtent.height / 16.0), 1);
+    vkCmdDispatch(cmd, (uint32_t)std::ceil(_windowExtent.width / 16.0), (uint32_t)std::ceil(_windowExtent.height / 16.0), 1);
 
     VkRenderingAttachmentInfo colorAttachment = vkinit::color_attachment_info(_drawImage.imageView, VK_IMAGE_LAYOUT_GENERAL);
     VkRenderingAttachmentInfo depthAttachment = vkinit::depth_attachment_info(_depthImage.imageView, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
@@ -777,7 +778,7 @@ void VulkanEngine::init_imgui()
     pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     pool_info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
     pool_info.maxSets = 1000;
-    pool_info.poolSizeCount = std::size(pool_sizes);
+    pool_info.poolSizeCount = (uint32_t)std::size(pool_sizes);
     pool_info.pPoolSizes = pool_sizes;
 
     VkDescriptorPool imguiPool;

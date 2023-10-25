@@ -8,7 +8,7 @@
 #include <string>
 #include <vector>
 
-#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+//#define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/mat4x4.hpp>
 #include <glm/vec4.hpp>
 
@@ -52,6 +52,15 @@ struct MaterialData {
     VkPipeline pipeline;
     VkPipelineLayout layout;
     VkDescriptorSet materialSet;
+};
+
+struct Vertex {
+
+	glm::vec3 position;
+	float uv_x;
+	glm::vec3 normal;
+	float uv_y;
+	glm::vec4 color;
 };
 
 // holds the resources needed for a mesh

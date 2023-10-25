@@ -3,7 +3,6 @@
 
 #pragma once
 
-#include <vk_mesh.h>
 #include <vk_types.h>
 
 #include "vk_descriptors.h"

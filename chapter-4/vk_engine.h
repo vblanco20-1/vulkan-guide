@@ -17,7 +17,6 @@
 #include <camera.h>
 #include <vk_descriptors.h>
 #include <vk_loader.h>
-#include <vk_mesh.h>
 #include <vk_pipelines.h>
 struct GLTFMesh;
 namespace fastgltf {
@@ -67,12 +66,6 @@ struct FrameData {
 
 constexpr unsigned int FRAME_OVERLAP = 2;
 
-struct GLTFScene {
-    // stores the vertex and index buffers for the whole scene
-    AllocatedBuffer meshBuffer;
-
-    std::vector<AllocatedImage> allTextures;
-};
 
 struct DrawContext {
     std::vector<RenderObject> OpaqueSurfaces;

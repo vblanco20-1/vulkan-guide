@@ -1,13 +1,13 @@
 ﻿#include "stb_image.h"
 #include <iostream>
 #include <vk_loader.h>
-#include <vk_mesh.h>
 
 #include "vk_engine.h"
 #include "vk_initializers.h"
 #include "vk_types.h"
 #include <fastgltf/parser.hpp>
 #include <fastgltf/tools.hpp>
+#include <glm/gtx/quaternion.hpp>
 
 static const std::byte* getBufferData(const fastgltf::Buffer& buffer)
 {
@@ -252,8 +252,8 @@ std::optional<std::shared_ptr<LoadedGLTF>> loadGltf(std::string_view filePath)
         imageInfo.sampler = engine->_defaultSampler;
 
         if (mat.pbrData.baseColorTexture.has_value()) {
-            int img = asset->textures[mat.pbrData.baseColorTexture.value().textureIndex].imageIndex.value();
-            int sampler = asset->textures[mat.pbrData.baseColorTexture.value().textureIndex].samplerIndex.value();
+            size_t img = asset->textures[mat.pbrData.baseColorTexture.value().textureIndex].imageIndex.value();
+            size_t sampler = asset->textures[mat.pbrData.baseColorTexture.value().textureIndex].samplerIndex.value();
 
             imageInfo.imageView = images[img].imageView;
             imageInfo.sampler = file.samplers[sampler];
@@ -289,9 +289,9 @@ std::optional<std::shared_ptr<LoadedGLTF>> loadGltf(std::string_view filePath)
 
         for (auto&& p : mesh.primitives) {
             GeoSurface newSurface;
-            newSurface.startIndex = indices.size();
-            newSurface.vertexOffset = vertices.size();
-            newSurface.count = asset->accessors[p.indicesAccessor.value()].count;
+            newSurface.startIndex = (uint32_t)indices.size();
+            newSurface.vertexOffset = (uint32_t)vertices.size();
+            newSurface.count = (uint32_t)asset->accessors[p.indicesAccessor.value()].count;
 
             {
                 fastgltf::Accessor& indexaccessor = asset->accessors[p.indicesAccessor.value()];
@@ -320,9 +320,9 @@ std::optional<std::shared_ptr<LoadedGLTF>> loadGltf(std::string_view filePath)
             if (uv != p.attributes.end()) {
                 vidx = newSurface.vertexOffset;
                 fastgltf::iterateAccessor<glm::vec2>(*asset, asset->accessors[(*uv).second], [&](glm::vec2 v) {
-                    int idx = vidx;
-                    vertices[idx].uv_x = v.x;
-                    vertices[idx].uv_y = v.y;
+
+                    vertices[vidx].uv_x = v.x;
+                    vertices[vidx].uv_y = v.y;
                     vidx++;
                 });
             }
