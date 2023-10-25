@@ -1,4 +1,3 @@
-﻿#include <vk_mesh.h>
+﻿#include <iostream>
 #include <tiny_obj_loader.h>
-#include <iostream>
-
+#include <vk_mesh.h>

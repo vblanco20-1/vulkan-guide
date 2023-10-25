@@ -5,219 +5,222 @@
 
 #include <vk_types.h>
 
-#include <vector>
 #include <deque>
 #include <functional>
-#include <unordered_map>
-#include <string>
 #include <span>
+#include <string>
+#include <unordered_map>
+#include <vector>
 
 #include <vk_mem_alloc.h>
 
-#include <vk_descriptors.h>
+#include <camera.h>
 #include <fastgltf/types.hpp>
+#include <vk_descriptors.h>
 #include <vk_loader.h>
 #include <vk_mesh.h>
-#include <camera.h>
 #include <vk_pipelines.h>
 struct GLTFMesh;
-namespace fastgltf { struct Mesh; }
+namespace fastgltf {
+struct Mesh;
+}
 
+struct DeletionQueue {
+    std::deque<std::function<void()>> deletors;
 
+    void push_function(std::function<void()>&& function)
+    {
+        deletors.push_back(function);
+    }
 
-struct DeletionQueue
-{
-	std::deque<std::function<void()>> deletors;
+    void flush()
+    {
+        // reverse iterate the deletion queue to execute all the functions
+        for (auto it = deletors.rbegin(); it != deletors.rend(); it++) {
+            (*it)(); // call functors
+        }
 
-	void push_function(std::function<void()>&& function) {
-		deletors.push_back(function);
-	}
-
-	void flush() {
-		// reverse iterate the deletion queue to execute all the functions
-		for (auto it = deletors.rbegin(); it != deletors.rend(); it++) {
-			(*it)(); //call functors
-		}
-
-		deletors.clear();
-	}
+        deletors.clear();
+    }
 };
 
 struct RenderObject {
-	uint32_t indexCount;
-	uint32_t firstIndex;
-	GPUMesh* mesh;
-	MaterialData* material;
-	
-	glm::mat4 transform;
+    uint32_t indexCount;
+    uint32_t firstIndex;
+    GPUMesh* mesh;
+    MaterialData* material;
+
+    glm::mat4 transform;
 };
 
-
 struct FrameData {
-	VkSemaphore _presentSemaphore, _renderSemaphore;
-	VkFence _renderFence;
+    VkSemaphore _presentSemaphore, _renderSemaphore;
+    VkFence _renderFence;
 
+    DescriptorAllocator _frameDescriptors;
+    DeletionQueue _frameDeletionQueue;
 
-	DescriptorAllocator _frameDescriptors;
-	DeletionQueue _frameDeletionQueue;
+    VkCommandPool _commandPool;
+    VkCommandBuffer _mainCommandBuffer;
 
-	VkCommandPool _commandPool;
-	VkCommandBuffer _mainCommandBuffer;
-
-	AllocatedBuffer cameraBuffer;
+    AllocatedBuffer cameraBuffer;
 };
 
 constexpr unsigned int FRAME_OVERLAP = 2;
 
 struct GLTFScene {
-	//stores the vertex and index buffers for the whole scene
-	AllocatedBuffer meshBuffer;
+    // stores the vertex and index buffers for the whole scene
+    AllocatedBuffer meshBuffer;
 
-	std::vector<AllocatedImage> allTextures;
+    std::vector<AllocatedImage> allTextures;
 };
 
 struct DrawContext {
-	std::vector<RenderObject> OpaqueSurfaces;
-	std::vector<RenderObject> TransparentSurfaces;
+    std::vector<RenderObject> OpaqueSurfaces;
+    std::vector<RenderObject> TransparentSurfaces;
 };
 
-
+struct EngineStats {
+    float frametime;
+    int triangle_count;
+    int drawcall_count;
+    float mesh_draw_time;
+};
 
 class VulkanEngine {
 public:
+    bool _isInitialized { false };
+    int _frameNumber { 0 };
 
-	bool _isInitialized{ false };
-	int _frameNumber {0};
+    VkExtent2D _windowExtent { 1700, 900 };
 
-	VkExtent2D _windowExtent{ 1700 , 900 };
+    struct SDL_Window* _window { nullptr };
 
-	struct SDL_Window* _window{ nullptr };
+    VkInstance _instance;
+    VkDebugUtilsMessengerEXT _debug_messenger;
+    VkPhysicalDevice _chosenGPU;
+    VkDevice _device;
 
-	VkInstance _instance;
-	VkDebugUtilsMessengerEXT _debug_messenger;
-	VkPhysicalDevice _chosenGPU;
-	VkDevice _device;
+    VkQueue _graphicsQueue;
+    uint32_t _graphicsQueueFamily;
 
-	VkQueue _graphicsQueue;
-	uint32_t _graphicsQueueFamily;
+    AllocatedBuffer _defaultGLTFMaterialData;
 
-	AllocatedBuffer _defaultGLTFMaterialData;
-	
-	FrameData _frames[FRAME_OVERLAP];
+    FrameData _frames[FRAME_OVERLAP];
 
-	VkSurfaceKHR _surface;
-	VkSwapchainKHR _swapchain;
-	VkFormat _swachainImageFormat;
+    VkSurfaceKHR _surface;
+    VkSwapchainKHR _swapchain;
+    VkFormat _swachainImageFormat;
 
-	VkDescriptorPool _descriptorPool;
+    VkDescriptorPool _descriptorPool;
 
-	DescriptorAllocator globalDescriptorAllocator;
+    DescriptorAllocator globalDescriptorAllocator;
 
-	VkPipeline _gradientPipeline;
-	VkPipelineLayout _gradientPipelineLayout;
+    VkPipeline _gradientPipeline;
+    VkPipelineLayout _gradientPipelineLayout;
 
-	std::vector<VkFramebuffer> _framebuffers;
-	std::vector<VkImage> _swapchainImages;
-	std::vector<VkImageView> _swapchainImageViews;
+    std::vector<VkFramebuffer> _framebuffers;
+    std::vector<VkImage> _swapchainImages;
+    std::vector<VkImageView> _swapchainImageViews;
 
-	VkDescriptorSet _drawImageDescriptors;
-	VkDescriptorSet _defaultGLTFdescriptor;
+    VkDescriptorSet _drawImageDescriptors;
+    VkDescriptorSet _defaultGLTFdescriptor;
 
-	VkDescriptorSetLayout _swapchainImageDescriptorLayout;
+    VkDescriptorSetLayout _swapchainImageDescriptorLayout;
 
-	DeletionQueue _mainDeletionQueue;
+    DeletionQueue _mainDeletionQueue;
 
-	VmaAllocator _allocator; //vma lib allocator
+    VmaAllocator _allocator; // vma lib allocator
 
+    VkDescriptorSetLayout _gpuSceneDataDescriptorLayout;
+    VkDescriptorSetLayout _meshBufferDescriptorLayout;
+    VkDescriptorSetLayout _gltfMatDescriptorLayout;
 
-	VkDescriptorSetLayout _gpuSceneDataDescriptorLayout;
-	VkDescriptorSetLayout _meshBufferDescriptorLayout;
-	VkDescriptorSetLayout _gltfMatDescriptorLayout;
+    MaterialData _gltfDefaultOpaque;
+    MaterialData _gltfDefaultTranslucent;
 
-	MaterialData _gltfDefaultOpaque;
-	MaterialData _gltfDefaultTranslucent;
+    // draw resources
+    AllocatedImage _drawImage;
+    AllocatedImage _depthImage;
 
-	//draw resources
-	AllocatedImage _drawImage;
-	AllocatedImage _depthImage;
+    // the format for the draw image
+    VkFormat _drawFormat;
 
-	//the format for the draw image
-	VkFormat _drawFormat;
+    // default image for fallback
+    AllocatedImage _whiteImage;
+    VkSampler _defaultSampler;
+    // immediate submit structures
+    VkFence _immFence;
+    VkCommandBuffer _immCommandBuffer;
+    VkCommandPool _immCommandPool;
 
-	//default image for fallback
-	AllocatedImage _whiteImage;
-	VkSampler _defaultSampler;
-	//immediate submit structures
-	VkFence _immFence;
-	VkCommandBuffer _immCommandBuffer;
-	VkCommandPool _immCommandPool;
+    DrawContext drawCommands;
 
-	DrawContext drawCommands;
+    GPUSceneData sceneData;
 
-	GPUSceneData sceneData;
+    Camera mainCamera;
 
-	Camera mainCamera;
+    EngineStats stats;
 
-	//singleton style getter.multiple engines is not supported
-	static VulkanEngine& Get();
+    // singleton style getter.multiple engines is not supported
+    static VulkanEngine& Get();
 
-	//initializes everything in the engine
-	void init();
+    // initializes everything in the engine
+    void init();
 
-	//shuts down the engine
-	void cleanup();
+    // shuts down the engine
+    void cleanup();
 
-	//draw loop
-	void draw();
+    // draw loop
+    void draw();
 
-	void draw_geometry(VkCommandBuffer cmd);
+    void draw_geometry(VkCommandBuffer cmd);
 
-	//run main loop
-	void run();
+    // run main loop
+    void run();
 
-	//upload a mesh into a pair of gpu buffers. If descriptor allocator is not null, it will also create a descriptor that points to the vertex buffer
-	GPUMesh uploadMesh(std::span<uint32_t> indices, std::span<Vertex> vertices, DescriptorAllocator* alloc);
+    // upload a mesh into a pair of gpu buffers. If descriptor allocator is not
+    // null, it will also create a descriptor that points to the vertex buffer
+    GPUMesh uploadMesh(std::span<uint32_t> indices, std::span<Vertex> vertices, DescriptorAllocator* alloc);
 
-	FrameData& get_current_frame();
-	FrameData& get_last_frame();
+    FrameData& get_current_frame();
+    FrameData& get_last_frame();
 
+    AllocatedBuffer create_buffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage);
+    AllocatedImage create_image(VkExtent3D size, VkFormat format, VkImageUsageFlags usage);
 
-	AllocatedBuffer create_buffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage);
-	AllocatedImage create_image(VkExtent3D size, VkFormat format, VkImageUsageFlags usage);
+    AllocatedImage create_image(void* data, VkExtent3D size, VkFormat format, VkImageUsageFlags usage);
 
-	AllocatedImage create_image(void* data, VkExtent3D size, VkFormat format, VkImageUsageFlags usage);
+    void immediate_submit(std::function<void(VkCommandBuffer cmd)>&& function);
 
-	void immediate_submit(std::function<void(VkCommandBuffer cmd)>&& function);
+    std::unordered_map<std::string, std::shared_ptr<LoadedGLTF>> loadedScenes;
+    std::vector<std::shared_ptr<LoadedGLTF>> brickadiaScene;
 
-	std::unordered_map<std::string,std::shared_ptr< LoadedGLTF>> loadedScenes;
+    void destroy_image(const AllocatedImage& img);
+    void destroy_buffer(const AllocatedBuffer& buffer);
 
-	void destroy_image(const AllocatedImage & img);
-	void destroy_buffer(const AllocatedBuffer& buffer);
 private:
+    void init_vulkan();
 
+    void init_swapchain();
 
+    void init_default_renderpass();
 
-	void init_vulkan();
+    void init_framebuffers();
 
-	void init_swapchain();
+    void init_commands();
 
-	void init_default_renderpass();
+    void init_pipelines();
 
-	void init_framebuffers();
+    void init_descriptors();
 
-	void init_commands();
+    // void loadGltf(const std::filesystem::path& filePath);
 
-	void init_pipelines();
+    void init_sync_structures();
 
-	void init_descriptors();
+    void init_renderables();
 
-	//void loadGltf(const std::filesystem::path& filePath);
+    void init_imgui();
 
-	void init_sync_structures();
-
-	void init_renderables();
-
-	void init_imgui();
-	
-	bool load_shader_module(const char* filePath, VkShaderModule* outShaderModule);
+    bool load_shader_module(const char* filePath, VkShaderModule* outShaderModule);
 };
