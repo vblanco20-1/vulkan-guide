@@ -9,31 +9,6 @@
 #include <deque>
 #include <functional>
 
-class PipelineBuilder {
-public:
-
-	std::vector<VkPipelineShaderStageCreateInfo> _shaderStages;
-	VkPipelineVertexInputStateCreateInfo _vertexInputInfo;
-	VkPipelineInputAssemblyStateCreateInfo _inputAssembly;
-	VkViewport _viewport;
-	VkRect2D _scissor;
-	VkPipelineRasterizationStateCreateInfo _rasterizer;
-	VkPipelineColorBlendAttachmentState _colorBlendAttachment;
-	VkPipelineMultisampleStateCreateInfo _multisampling;
-	VkPipelineLayout _pipelineLayout;
-	VkPipelineDepthStencilStateCreateInfo _depthStencil;
-	VkPipelineRenderingCreateInfo _renderInfo;
-
-	VkPipeline build_pipeline(VkDevice device);
-};
-
-enum class ImageTransitionMode {
-	IntoAttachment,
-	IntoGeneral,
-	GeneralToPresent,
-	AttachmentToPresent
-};
-
 struct DeletionQueue
 {
 	std::deque<std::function<void()>> deletors;
@@ -139,9 +114,4 @@ private:
 	void init_descriptors();
 
 	void init_sync_structures();
-
-	void transition_image(VkCommandBuffer cmd, VkImage image, ImageTransitionMode transitionMode);
-
-	
-	bool load_shader_module(const char* filePath, VkShaderModule* outShaderModule);
 };

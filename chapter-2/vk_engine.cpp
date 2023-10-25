@@ -16,22 +16,12 @@
 #define VMA_IMPLEMENTATION
 #include "vk_mem_alloc.h"
 #include "vk_images.h"
+#include "../chapter-4/vk_pipelines.h"
 
 constexpr bool bUseValidationLayers = true;
 
 //we want to immediately abort when there is an error. In normal engines this would give an error message to the user, or perform a dump of state.
 using namespace std;
-#define VK_CHECK(x)                                                 \
-	do                                                              \
-	{                                                               \
-		VkResult err = x;                                           \
-		if (err)                                                    \
-		{                                                           \
-			std::cout <<"Detected Vulkan error: " << err << std::endl; \
-			abort();                                                \
-		}                                                           \
-	} while (0)
-
 
 void VulkanEngine::init()
 {
@@ -119,7 +109,7 @@ void VulkanEngine::draw()
 	
 	// transition our main draw image into general layout so we can write into it
 	// we will overwrite it all so we dont care about what was the older layout
-	vkutil::transition_image(cmd, _drawImage._image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
+	vkutil::transition_image(cmd, _drawImage.image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
 	
 
 	// bind the gradient drawing compute pipeline
@@ -133,7 +123,7 @@ void VulkanEngine::draw()
 
 
 	//transtion the draw image and the swapchain image into their correct transfer layouts
-	vkutil::transition_image(cmd, _drawImage._image, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+	vkutil::transition_image(cmd, _drawImage.image, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 	vkutil::transition_image(cmd, _swapchainImages[swapchainImageIndex], VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
 	VkImageSubresourceRange clearRange = vkinit::image_subresource_range(VK_IMAGE_ASPECT_COLOR_BIT);
@@ -144,7 +134,7 @@ void VulkanEngine::draw()
 	extent.depth = 1;
 
 	// execute a copy from the draw image into the swapchain
-	vkutil::copy_image_to_image(cmd, _drawImage._image, _swapchainImages[swapchainImageIndex], extent);
+	vkutil::copy_image_to_image(cmd, _drawImage.image, _swapchainImages[swapchainImageIndex], extent);
 
 	// set swapchain image layout to Present so we can show it on the screen
 	vkutil::transition_image(cmd, _swapchainImages[swapchainImageIndex], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
@@ -310,17 +300,17 @@ void VulkanEngine::init_swapchain()
 	rimg_allocinfo.requiredFlags = VkMemoryPropertyFlags(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
 	//allocate and create the image
-	vmaCreateImage(_allocator, &rimg_info, &rimg_allocinfo, &_drawImage._image, &_drawImage._allocation, nullptr);
+	vmaCreateImage(_allocator, &rimg_info, &rimg_allocinfo, &_drawImage.image, &_drawImage.allocation, nullptr);
 
 	//build a image-view for the draw image to use for rendering
-	VkImageViewCreateInfo rview_info = vkinit::imageview_create_info(_drawFormat, _drawImage._image, VK_IMAGE_ASPECT_COLOR_BIT);
+	VkImageViewCreateInfo rview_info = vkinit::imageview_create_info(_drawFormat, _drawImage.image, VK_IMAGE_ASPECT_COLOR_BIT);
 
 	VK_CHECK(vkCreateImageView(_device, &rview_info, nullptr, &_drawImageView));
 
 	//add to deletion queues
 	_mainDeletionQueue.push_function([=]() {
 		vkDestroyImageView(_device, _drawImageView, nullptr);
-		vmaDestroyImage(_allocator, _drawImage._image, _drawImage._allocation);
+		vmaDestroyImage(_allocator, _drawImage.image, _drawImage.allocation);
 		});
 }
 
@@ -354,53 +344,10 @@ void VulkanEngine::init_sync_structures()
 	VK_CHECK(vkCreateSemaphore(_device, &semaphoreCreateInfo, nullptr, &_renderSemaphore));
 }
 
-bool VulkanEngine::load_shader_module(const char* filePath, VkShaderModule* outShaderModule)
-{
-	//open the file. With cursor at the end
-	std::ifstream file(filePath, std::ios::ate | std::ios::binary);
-
-	if (!file.is_open()) {
-		return false;
-	}
-
-	//find what the size of the file is by looking up the location of the cursor
-	//because the cursor is at the end, it gives the size directly in bytes
-	size_t fileSize = (size_t)file.tellg();
-
-	//spirv expects the buffer to be on uint32, so make sure to reserve a int vector big enough for the entire file
-	std::vector<uint32_t> buffer(fileSize / sizeof(uint32_t));
-
-	//put file cursor at beggining
-	file.seekg(0);
-
-	//load the entire file into the buffer
-	file.read((char*)buffer.data(), fileSize);
-
-	//now that the file is loaded into the buffer, we can close it
-	file.close();
-
-	//create a new shader module, using the buffer we loaded
-	VkShaderModuleCreateInfo createInfo = {};
-	createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-	createInfo.pNext = nullptr;
-
-	//codeSize has to be in bytes, so multply the ints in the buffer by size of int to know the real size of the buffer
-	createInfo.codeSize = buffer.size() * sizeof(uint32_t);
-	createInfo.pCode = buffer.data();
-
-	//check that the creation goes well.
-	VkShaderModule shaderModule;
-	if (vkCreateShaderModule(_device, &createInfo, nullptr, &shaderModule) != VK_SUCCESS) {
-		return false;
-	}
-	*outShaderModule = shaderModule;
-	return true;
-}
-
 void VulkanEngine::init_pipelines()
 {
 	VkShaderModule computeDraw;
-	if (!load_shader_module("../../shaders/gradient.comp.spv", &computeDraw))
+	if (!vkutil::load_shader_module("../../shaders/gradient.comp.spv", _device, &computeDraw))
 	{
 		std::cout << "Error when building the colored mesh shader" << std::endl;
 	}

@@ -213,6 +213,4 @@ private:
     void init_renderables();
 
     void init_imgui();
-
-    bool load_shader_module(const char* filePath, VkShaderModule* outShaderModule);
 };

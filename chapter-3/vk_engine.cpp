@@ -16,22 +16,12 @@
 #define VMA_IMPLEMENTATION
 #include "vk_mem_alloc.h"
 #include "vk_images.h"
+#include <vk_pipelines.h>
 
 constexpr bool bUseValidationLayers = true;
 
 //we want to immediately abort when there is an error. In normal engines this would give an error message to the user, or perform a dump of state.
 using namespace std;
-#define VK_CHECK(x)                                                 \
-	do                                                              \
-	{                                                               \
-		VkResult err = x;                                           \
-		if (err)                                                    \
-		{                                                           \
-			std::cout <<"Detected Vulkan error: " << err << std::endl; \
-			abort();                                                \
-		}                                                           \
-	} while (0)
-
 
 void VulkanEngine::init()
 {
@@ -119,7 +109,7 @@ void VulkanEngine::draw()
 	
 	// transition our main draw image into general layout so we can write into it
 	// we will overwrite it all so we dont care about what was the older layout
-	vkutil::transition_image(cmd, _drawImage._image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
+	vkutil::transition_image(cmd, _drawImage.image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
 	
 
 	// bind the gradient drawing compute pipeline
@@ -136,7 +126,7 @@ void VulkanEngine::draw()
 
 	VkRenderingAttachmentInfo colorAttachment = vkinit::color_attachment_info(_drawImageView, VK_IMAGE_LAYOUT_GENERAL);
 
-	VkRenderingInfo renderInfo = vkinit::rendering_info(_windowExtent, &colorAttachment);
+	VkRenderingInfo renderInfo = vkinit::rendering_info(_windowExtent, &colorAttachment, nullptr);
 
 	vkCmdBeginRendering(cmd, &renderInfo);
 
@@ -150,7 +140,7 @@ void VulkanEngine::draw()
 
 
 	//transtion the draw image and the swapchain image into their correct transfer layouts
-	vkutil::transition_image(cmd, _drawImage._image, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+	vkutil::transition_image(cmd, _drawImage.image, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 	vkutil::transition_image(cmd, _swapchainImages[swapchainImageIndex], VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
 	VkImageSubresourceRange clearRange = vkinit::image_subresource_range(VK_IMAGE_ASPECT_COLOR_BIT);
@@ -161,7 +151,7 @@ void VulkanEngine::draw()
 	extent.depth = 1;
 
 	// execute a copy from the draw image into the swapchain
-	vkutil::copy_image_to_image(cmd, _drawImage._image, _swapchainImages[swapchainImageIndex], extent);
+	vkutil::copy_image_to_image(cmd, _drawImage.image, _swapchainImages[swapchainImageIndex], extent);
 
 	// set swapchain image layout to Present so we can show it on the screen
 	vkutil::transition_image(cmd, _swapchainImages[swapchainImageIndex], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
@@ -328,17 +318,17 @@ void VulkanEngine::init_swapchain()
 	rimg_allocinfo.requiredFlags = VkMemoryPropertyFlags(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
 	//allocate and create the image
-	vmaCreateImage(_allocator, &rimg_info, &rimg_allocinfo, &_drawImage._image, &_drawImage._allocation, nullptr);
+	vmaCreateImage(_allocator, &rimg_info, &rimg_allocinfo, &_drawImage.image, &_drawImage.allocation, nullptr);
 
 	//build a image-view for the draw image to use for rendering
-	VkImageViewCreateInfo rview_info = vkinit::imageview_create_info(_drawFormat, _drawImage._image, VK_IMAGE_ASPECT_COLOR_BIT);
+	VkImageViewCreateInfo rview_info = vkinit::imageview_create_info(_drawFormat, _drawImage.image, VK_IMAGE_ASPECT_COLOR_BIT);
 
 	VK_CHECK(vkCreateImageView(_device, &rview_info, nullptr, &_drawImageView));
 
 	//add to deletion queues
 	_mainDeletionQueue.push_function([=]() {
 		vkDestroyImageView(_device, _drawImageView, nullptr);
-		vmaDestroyImage(_allocator, _drawImage._image, _drawImage._allocation);
+		vmaDestroyImage(_allocator, _drawImage.image, _drawImage.allocation);
 		});
 }
 
@@ -372,54 +362,11 @@ void VulkanEngine::init_sync_structures()
 	VK_CHECK(vkCreateSemaphore(_device, &semaphoreCreateInfo, nullptr, &_renderSemaphore));
 }
 
-bool VulkanEngine::load_shader_module(const char* filePath, VkShaderModule* outShaderModule)
-{
-	//open the file. With cursor at the end
-	std::ifstream file(filePath, std::ios::ate | std::ios::binary);
-
-	if (!file.is_open()) {
-		return false;
-	}
-
-	//find what the size of the file is by looking up the location of the cursor
-	//because the cursor is at the end, it gives the size directly in bytes
-	size_t fileSize = (size_t)file.tellg();
-
-	//spirv expects the buffer to be on uint32, so make sure to reserve a int vector big enough for the entire file
-	std::vector<uint32_t> buffer(fileSize / sizeof(uint32_t));
-
-	//put file cursor at beggining
-	file.seekg(0);
-
-	//load the entire file into the buffer
-	file.read((char*)buffer.data(), fileSize);
-
-	//now that the file is loaded into the buffer, we can close it
-	file.close();
-
-	//create a new shader module, using the buffer we loaded
-	VkShaderModuleCreateInfo createInfo = {};
-	createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-	createInfo.pNext = nullptr;
-
-	//codeSize has to be in bytes, so multply the ints in the buffer by size of int to know the real size of the buffer
-	createInfo.codeSize = buffer.size() * sizeof(uint32_t);
-	createInfo.pCode = buffer.data();
-
-	//check that the creation goes well.
-	VkShaderModule shaderModule;
-	if (vkCreateShaderModule(_device, &createInfo, nullptr, &shaderModule) != VK_SUCCESS) {
-		return false;
-	}
-	*outShaderModule = shaderModule;
-	return true;
-}
-
 void VulkanEngine::init_pipelines()
 {
 	//COMPUTE PIPELINES
 	VkShaderModule computeDraw;
-	if (!load_shader_module("../../shaders/gradient.comp.spv", &computeDraw))
+	if (!vkutil::load_shader_module("../../shaders/gradient.comp.spv",_device ,&computeDraw))
 	{
 		std::cout << "Error when building the colored mesh shader" << std::endl;
 	}
@@ -453,7 +400,7 @@ void VulkanEngine::init_pipelines()
 
 	// GRAPHICS PIPELINES
 	VkShaderModule triangleFragShader;
-	if (!load_shader_module("../../shaders/colored_triangle.frag.spv", &triangleFragShader))
+	if (!vkutil::load_shader_module("../../shaders/colored_triangle.frag.spv",_device, &triangleFragShader))
 	{
 		std::cout << "Error when building the triangle fragment shader module" << std::endl;
 	}
@@ -462,7 +409,7 @@ void VulkanEngine::init_pipelines()
 	}
 
 	VkShaderModule triangleVertexShader;
-	if (!load_shader_module("../../shaders/colored_triangle.vert.spv", &triangleVertexShader))
+	if (!vkutil::load_shader_module("../../shaders/colored_triangle.vert.spv",_device, &triangleVertexShader))
 	{
 		std::cout << "Error when building the triangle vertex shader module" << std::endl;
 	}
@@ -516,6 +463,7 @@ void VulkanEngine::init_pipelines()
 	//use the triangle layout we created
 	pipelineBuilder._pipelineLayout = _trianglePipelineLayout;
 
+	pipelineBuilder._depthStencil = vkinit::pipeline_depth_stencil_create_info();
 
 	//render format
 	pipelineBuilder._renderInfo = vkinit::pipeline_render_info(&_drawFormat);
@@ -576,62 +524,4 @@ void VulkanEngine::init_descriptors()
 	VkWriteDescriptorSet cameraWrite = vkinit::write_descriptor_image(VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, _drawImageDescriptors, &imgInfo, 0);
 
 	vkUpdateDescriptorSets(_device, 1, &cameraWrite, 0, nullptr);
-}
-
-
-VkPipeline PipelineBuilder::build_pipeline(VkDevice device)
-{
-	//make viewport state from our stored viewport and scissor.
-		//at the moment we wont support multiple viewports or scissors
-	VkPipelineViewportStateCreateInfo viewportState = {};
-	viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-	viewportState.pNext = nullptr;
-
-	viewportState.viewportCount = 1;
-	viewportState.pViewports = &_viewport;
-	viewportState.scissorCount = 1;
-	viewportState.pScissors = &_scissor;
-
-	//setup dummy color blending. We arent using transparent objects yet
-	//the blending is just "no blend", but we do write to the color attachment
-	VkPipelineColorBlendStateCreateInfo colorBlending = {};
-	colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-	colorBlending.pNext = nullptr;
-
-	colorBlending.logicOpEnable = VK_FALSE;
-	colorBlending.logicOp = VK_LOGIC_OP_COPY;
-	colorBlending.attachmentCount = 1;
-	colorBlending.pAttachments = &_colorBlendAttachment;
-
-	//build the actual pipeline
-	//we now use all of the info structs we have been writing into into this one to create the pipeline
-	VkGraphicsPipelineCreateInfo pipelineInfo = {};
-	pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-	pipelineInfo.pNext = &_renderInfo;
-
-	pipelineInfo.stageCount = _shaderStages.size();
-	pipelineInfo.pStages = _shaderStages.data();
-	pipelineInfo.pVertexInputState = &_vertexInputInfo;
-	pipelineInfo.pInputAssemblyState = &_inputAssembly;
-	pipelineInfo.pViewportState = &viewportState;
-	pipelineInfo.pRasterizationState = &_rasterizer;
-	pipelineInfo.pMultisampleState = &_multisampling;
-	pipelineInfo.pColorBlendState = &colorBlending;
-	pipelineInfo.pDepthStencilState = &_depthStencil;
-	pipelineInfo.layout = _pipelineLayout;
-	pipelineInfo.renderPass = VK_NULL_HANDLE;
-	pipelineInfo.subpass = 0;
-	pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
-
-	//its easy to error out on create graphics pipeline, so we handle it a bit better than the common VK_CHECK case
-	VkPipeline newPipeline;
-	if (vkCreateGraphicsPipelines(
-		device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &newPipeline) != VK_SUCCESS) {
-		std::cout << "failed to create pipline\n";
-		return VK_NULL_HANDLE; // failed to create graphics pipeline
-	}
-	else
-	{
-		return newPipeline;
-	}
 }

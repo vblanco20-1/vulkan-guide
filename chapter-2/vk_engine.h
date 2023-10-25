@@ -9,13 +9,6 @@
 #include <deque>
 #include <functional>
 
-enum class ImageTransitionMode {
-	IntoAttachment,
-	IntoGeneral,
-	GeneralToPresent,
-	AttachmentToPresent
-};
-
 struct DeletionQueue
 {
 	std::deque<std::function<void()>> deletors;
@@ -117,9 +110,4 @@ private:
 	void init_descriptors();
 
 	void init_sync_structures();
-
-	void transition_image(VkCommandBuffer cmd, VkImage image, ImageTransitionMode transitionMode);
-
-	
-	bool load_shader_module(const char* filePath, VkShaderModule* outShaderModule);
 };
