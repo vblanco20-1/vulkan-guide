@@ -14,6 +14,7 @@
 
 #include "vk_mem_alloc.h"
 #include <vulkan/vulkan.h>
+#include <fmt/core.h>
 
 // we will add our main reusable types here
 struct AllocatedImage {
@@ -102,7 +103,7 @@ struct Node : public IRenderable {
     do {                                                                \
         VkResult err = x;                                               \
         if (err) {                                                      \
-            std::cout << "Detected Vulkan error: " << err << std::endl; \
+            fmt::print("Detected Vulkan error: "); \
             abort();                                                    \
         }                                                               \
     } while (0)

@@ -9,7 +9,7 @@ add_library(stb_image INTERFACE)
 add_library(tinyobjloader STATIC)
 
 add_subdirectory(fastgltf)
-
+add_subdirectory(fmt EXCLUDE_FROM_ALL)
 target_sources(vkbootstrap PRIVATE 
   vkbootstrap/VkBootstrap.h
   vkbootstrap/VkBootstrap.cpp

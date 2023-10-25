@@ -10,7 +10,6 @@
 #include "VkBootstrap.h"
 #include <array>
 #include <fstream>
-#include <iostream>
 
 #include "vk_images.h"
 #include "vk_loader.h"
@@ -267,14 +266,9 @@ void VulkanEngine::draw_geometry(VkCommandBuffer cmd)
 
     VkDescriptorSet globalDescriptor = get_current_frame()._frameDescriptors.allocate(_device, _gpuSceneDataDescriptorLayout);
 
-    VkDescriptorBufferInfo uboInfo {};
-    uboInfo.buffer = get_current_frame().cameraBuffer.buffer;
-    uboInfo.offset = 0;
-    uboInfo.range = sizeof(GPUSceneData);
-
-    VkWriteDescriptorSet uboWrite = vkinit::write_descriptor_buffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, globalDescriptor, &uboInfo, 0);
-
-    vkUpdateDescriptorSets(_device, 1, &uboWrite, 0, nullptr);
+	DescriptorWriter writer;
+	writer.write_buffer(0, get_current_frame().cameraBuffer.buffer, sizeof(GPUSceneData), 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+	writer.build(_device, globalDescriptor);
 
     VkPipeline lastPipeline = VK_NULL_HANDLE;
     MaterialData* lastMaterial = nullptr;
@@ -376,7 +370,7 @@ void VulkanEngine::run()
         sceneData.proj = projection;
         sceneData.viewproj = projection * view;
 
-        // loadedScenes["structure"]->Draw(glm::mat4{1.f}, drawCommands);
+         loadedScenes["structure"]->Draw(glm::mat4{1.f}, drawCommands);
 
         // for (int x = 0; x < 4; x++) {
         //	for (int y = 0; y < 4; y++) {
@@ -532,10 +526,9 @@ GPUMesh VulkanEngine::uploadMesh(std::span<uint32_t> indices, std::span<Vertex> 
         // create a descriptor set that refers to this mesh buffer
         newSurface.bufferBinding = alloc->allocate(_device, _meshBufferDescriptorLayout);
 
-        VkDescriptorBufferInfo binfo = vkinit::buffer_info(newSurface.vertexBuffer.buffer, 0, vertexBufferSize);
-        VkWriteDescriptorSet bufferMeshWrite = vkinit::write_descriptor_buffer(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, newSurface.bufferBinding, &binfo, 0);
-
-        vkUpdateDescriptorSets(_device, 1, &bufferMeshWrite, 0, nullptr);
+        DescriptorWriter writer;
+        writer.write_buffer(0,newSurface.vertexBuffer.buffer,vertexBufferSize,0,VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
+        writer.build(_device, newSurface.bufferBinding);
     }
 
     return newSurface;
@@ -751,16 +744,16 @@ void VulkanEngine::init_renderables()
 
     loadedScenes["structure"] = *monkeyfile;
 
-    std::string mapFolder = { "..\\..\\assets\\brickadia\\MidnightAlleyClustered" };
-
-    for (auto const& dir_entry : std::filesystem::directory_iterator { mapFolder }) {
-        if (dir_entry.is_regular_file() && dir_entry.path().extension() == ".glb") {
-            auto monkeyfile = loadGltf(dir_entry.path().string());
-            if (monkeyfile.has_value()) {
-                brickadiaScene.push_back(*monkeyfile);
-            }
-        }
-    }
+    //std::string mapFolder = { "..\\..\\assets\\brickadia\\MidnightAlleyClustered" };
+    //
+    //for (auto const& dir_entry : std::filesystem::directory_iterator { mapFolder }) {
+    //    if (dir_entry.is_regular_file() && dir_entry.path().extension() == ".glb") {
+    //        auto monkeyfile = loadGltf(dir_entry.path().string());
+    //        if (monkeyfile.has_value()) {
+    //            brickadiaScene.push_back(*monkeyfile);
+    //        }
+    //    }
+    //}
 }
 
 void VulkanEngine::init_imgui()
@@ -832,7 +825,7 @@ void VulkanEngine::init_pipelines()
     // COMPUTE PIPELINES
     VkShaderModule computeDraw;
     if (!vkutil::load_shader_module("../../shaders/sky.comp.spv", _device, &computeDraw)) {
-        std::cout << "Error when building the colored mesh shader" << std::endl;
+        fmt::println("Error when building the colored mesh shader");
     }
 
     VkPipelineLayoutCreateInfo computeLayout {};
@@ -864,16 +857,12 @@ void VulkanEngine::init_pipelines()
     // GRAPHICS PIPELINES
     VkShaderModule meshFragShader;
     if (!vkutil::load_shader_module("../../shaders/mesh.frag.spv", _device, &meshFragShader)) {
-        std::cout << "Error when building the triangle fragment shader module" << std::endl;
-    } else {
-        std::cout << "Mesh fragment shader succesfully loaded" << std::endl;
+        fmt::println("Error when building the triangle fragment shader module");
     }
 
     VkShaderModule meshVertexShader;
     if (!vkutil::load_shader_module("../../shaders/mesh.vert.spv", _device, &meshVertexShader)) {
-        std::cout << "Error when building the triangle vertex shader module" << std::endl;
-    } else {
-        std::cout << "Mesh vertex shader succesfully loaded" << std::endl;
+        fmt::println("Error when building the triangle vertex shader module");
     }
 
     // build the pipeline layout that controls the inputs/outputs of the shader
@@ -1026,11 +1015,9 @@ void VulkanEngine::init_descriptors()
 
     _drawImageDescriptors = globalDescriptorAllocator.allocate(_device, _swapchainImageDescriptorLayout);
     {
-        VkDescriptorImageInfo imgInfo { .imageView = _drawImage.imageView, .imageLayout = VK_IMAGE_LAYOUT_GENERAL };
-
-        VkWriteDescriptorSet cameraWrite = vkinit::write_descriptor_image(VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, _drawImageDescriptors, &imgInfo, 0);
-
-        vkUpdateDescriptorSets(_device, 1, &cameraWrite, 0, nullptr);
+        DescriptorWriter writer;	
+		writer.write_image(0, _drawImage.imageView, VK_NULL_HANDLE, VK_IMAGE_LAYOUT_GENERAL, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
+        writer.build(_device, _drawImageDescriptors);
     }
     {
         // default white image descriptor
@@ -1047,22 +1034,15 @@ void VulkanEngine::init_descriptors()
         _defaultGLTFdescriptor = globalDescriptorAllocator.allocate(_device, _gltfMatDescriptorLayout);
 
         _gltfDefaultOpaque.materialSet = _defaultGLTFdescriptor;
-        VkDescriptorImageInfo imgInfo {};
-        imgInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        imgInfo.imageView = _whiteImage.imageView;
-        imgInfo.sampler = _defaultSampler;
-
-        VkWriteDescriptorSet cameraWrite = vkinit::write_descriptor_image(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-            _defaultGLTFdescriptor, &imgInfo, 1);
 
         // default material parameters
         _defaultGLTFMaterialData = create_buffer(sizeof(GPUGLTFMaterial), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
 
-        VkDescriptorBufferInfo binfo = vkinit::buffer_info(_defaultGLTFMaterialData.buffer, 0, sizeof(GPUGLTFMaterial));
-        VkWriteDescriptorSet bufferWrite = vkinit::write_descriptor_buffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, _defaultGLTFdescriptor, &binfo, 0);
+        DescriptorWriter writer;
+        writer.write_buffer(0, _defaultGLTFMaterialData.buffer, sizeof(GPUGLTFMaterial), 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+        writer.write_image(1, _whiteImage.imageView,_defaultSampler,VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
 
-        VkWriteDescriptorSet writes[] = { cameraWrite, bufferWrite };
-        vkUpdateDescriptorSets(_device, 2, writes, 0, nullptr);
+        writer.build(_device, _defaultGLTFdescriptor);
 
         _mainDeletionQueue.push_function([&]() {
             vkDestroySampler(_device, _defaultSampler, nullptr);

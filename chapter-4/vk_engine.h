@@ -15,7 +15,6 @@
 #include <vk_mem_alloc.h>
 
 #include <camera.h>
-#include <fastgltf/types.hpp>
 #include <vk_descriptors.h>
 #include <vk_loader.h>
 #include <vk_mesh.h>
