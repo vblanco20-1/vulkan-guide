@@ -21,6 +21,9 @@ For example, ``glm::vec3`` would be a vector of 3 floats, which would be defined
    template <>
    struct fastgltf::ElementTraits<glm::vec3> : fastgltf::ElementTraitsBase<glm::vec3, AccessorType::Vec3, float> {};
 
+Note that, for glm types, there is a header with all pre-defined types shipped with fastgltf: ``fastgltf/glm_element_traits.hpp``.
+This header includes the ElementTraits definition for all relevant glm types.
+
 
 .. warning::
 

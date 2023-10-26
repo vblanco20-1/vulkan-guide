@@ -131,7 +131,7 @@ TEST_CASE("Test percent-encoded URIs in glTF", "[uri-tests]") {
 	fastgltf::Parser parser;
 	auto asset = parser.loadGLTF(&jsonData, boxWithSpaces);
 	REQUIRE(asset.error() == fastgltf::Error::None);
-	REQUIRE(parser.validate(asset.get()) == fastgltf::Error::None);
+	REQUIRE(fastgltf::validate(asset.get()) == fastgltf::Error::None);
 
 	REQUIRE(asset->images.size() == 3);
 

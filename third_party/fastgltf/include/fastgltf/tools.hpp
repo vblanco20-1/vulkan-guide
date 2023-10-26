@@ -199,7 +199,7 @@ template <typename ElementType>
 bool findSparseIndex(const std::byte* bytes, std::size_t indexCount, std::size_t desiredIndex,
 		std::size_t& resultIndex) {
 	auto* elements = reinterpret_cast<const ElementType*>(bytes);
-	auto count = static_cast<std::ptrdiff_t>(indexCount);
+	auto count = indexCount;
 
 	resultIndex = 0;
 

@@ -15,7 +15,7 @@ TEST_CASE("Load basic GLB file", "[gltf-loader]") {
     SECTION("Load basic Box.glb") {
         auto asset = parser.loadBinaryGLTF(&jsonData, folder, fastgltf::Options::None, fastgltf::Category::Buffers);
         REQUIRE(asset.error() == fastgltf::Error::None);
-		REQUIRE(parser.validate(asset.get()) == fastgltf::Error::None);
+		REQUIRE(fastgltf::validate(asset.get()) == fastgltf::Error::None);
 
         REQUIRE(asset->buffers.size() == 1);
 
@@ -30,7 +30,7 @@ TEST_CASE("Load basic GLB file", "[gltf-loader]") {
     SECTION("Load basic Box.glb and load buffers") {
         auto asset = parser.loadBinaryGLTF(&jsonData, folder, fastgltf::Options::LoadGLBBuffers, fastgltf::Category::Buffers);
         REQUIRE(asset.error() == fastgltf::Error::None);
-		REQUIRE(parser.validate(asset.get()) == fastgltf::Error::None);
+		REQUIRE(fastgltf::validate(asset.get()) == fastgltf::Error::None);
 
         REQUIRE(asset->buffers.size() == 1);
 

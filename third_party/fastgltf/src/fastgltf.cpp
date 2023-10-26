@@ -225,7 +225,13 @@ namespace fastgltf {
 		return Error::InvalidJson;
 	}
 
-	fg::Error parseTextureObject(simdjson::dom::object& object, std::string_view key, TextureInfo* info, Extensions extensions) noexcept {
+	enum class TextureInfoType {
+		Standard = 0,
+		NormalTexture = 1,
+		OcclusionTexture = 2,
+	};
+
+	fg::Error parseTextureInfo(simdjson::dom::object& object, std::string_view key, TextureInfo* info, Extensions extensions, TextureInfoType type = TextureInfoType::Standard) noexcept {
 		using namespace simdjson;
 
 		dom::object child;
@@ -249,12 +255,20 @@ namespace fastgltf {
 			info->texCoordIndex = 0;
 		}
 
-		// scale only applies to normal textures.
-		double scale = 1.0F;
-		if (child["scale"].get_double().get(scale) == SUCCESS) {
-			info->scale = static_cast<float>(scale);
-		} else {
-			info->scale = 1.0F;
+		if (type == TextureInfoType::NormalTexture) {
+			double scale = 1.0F;
+			if (child["scale"].get_double().get(scale) == SUCCESS) {
+				reinterpret_cast<NormalTextureInfo*>(info)->scale = static_cast<float>(scale);
+			} else {
+				reinterpret_cast<NormalTextureInfo*>(info)->scale = 1.0F;
+			}
+		} else if (type == TextureInfoType::OcclusionTexture) {
+			double strength = 1.0F;
+			if (child["strength"].get_double().get(strength) == SUCCESS) {
+				reinterpret_cast<OcclusionTextureInfo*>(info)->strength = static_cast<float>(strength);
+			} else {
+				reinterpret_cast<OcclusionTextureInfo*>(info)->strength = 1.0F;
+			}
 		}
 
 		dom::object extensionsObject;
@@ -708,7 +722,16 @@ fg::MimeType fg::Parser::getMimeTypeFromString(std::string_view mime) {
     }
 }
 
-fg::Error fg::Parser::validate(const fastgltf::Asset& asset) const {
+fg::Error fg::validate(const fastgltf::Asset& asset) {
+	auto isExtensionUsed = [&used = asset.extensionsUsed](std::string_view extension) {
+		for (const auto& extensionUsed : used) {
+			if (extension == extensionUsed) {
+				return true;
+			}
+		}
+		return false;
+	};
+
 	for (const auto& accessor : asset.accessors) {
 		if (accessor.type == AccessorType::Invalid)
 			return Error::InvalidGltf;
@@ -752,7 +775,7 @@ fg::Error fg::Parser::validate(const fastgltf::Asset& asset) const {
 		if (bufferView.bufferIndex >= asset.buffers.size())
 			return Error::InvalidGltf;
 
-		if (bufferView.meshoptCompression != nullptr && hasBit(config.extensions, Extensions::EXT_meshopt_compression))
+		if (bufferView.meshoptCompression != nullptr && isExtensionUsed(extensions::EXT_meshopt_compression))
 			return Error::InvalidGltf;
 
 		if (bufferView.meshoptCompression) {
@@ -839,7 +862,7 @@ fg::Error fg::Parser::validate(const fastgltf::Asset& asset) const {
 				if (name == "POSITION") {
 					if (accessor.type != AccessorType::Vec3)
 						return Error::InvalidGltf;
-					if (!hasBit(config.extensions, Extensions::KHR_mesh_quantization)) {
+					if (!isExtensionUsed(extensions::KHR_mesh_quantization)) {
 						if (accessor.componentType != ComponentType::Float)
 							return Error::InvalidGltf;
 					} else {
@@ -849,7 +872,7 @@ fg::Error fg::Parser::validate(const fastgltf::Asset& asset) const {
 				} else if (name == "NORMAL") {
 					if (accessor.type != AccessorType::Vec3)
 						return Error::InvalidGltf;
-					if (!hasBit(config.extensions, Extensions::KHR_mesh_quantization)) {
+					if (!isExtensionUsed(extensions::KHR_mesh_quantization)) {
 						if (accessor.componentType != ComponentType::Float)
 							return Error::InvalidGltf;
 					} else {
@@ -861,7 +884,7 @@ fg::Error fg::Parser::validate(const fastgltf::Asset& asset) const {
 				} else if (name == "TANGENT") {
 					if (accessor.type != AccessorType::Vec4)
 						return Error::InvalidGltf;
-					if (!hasBit(config.extensions, Extensions::KHR_mesh_quantization)) {
+					if (!isExtensionUsed(extensions::KHR_mesh_quantization)) {
 						if (accessor.componentType != ComponentType::Float)
 							return Error::InvalidGltf;
 					} else {
@@ -873,7 +896,7 @@ fg::Error fg::Parser::validate(const fastgltf::Asset& asset) const {
 				} else if (startsWith(name, "TEXCOORD_")) {
 					if (accessor.type != AccessorType::Vec2)
 						return Error::InvalidGltf;
-					if (!hasBit(config.extensions, Extensions::KHR_mesh_quantization)) {
+					if (!isExtensionUsed(extensions::KHR_mesh_quantization)) {
 						if (accessor.componentType != ComponentType::Float &&
 						    accessor.componentType != ComponentType::UnsignedByte &&
 						    accessor.componentType != ComponentType::UnsignedShort) {
@@ -935,10 +958,10 @@ fg::Error fg::Parser::validate(const fastgltf::Asset& asset) const {
 
 		if (node.skinIndex.has_value() && node.meshIndex.has_value()) {
 			// "When the node contains skin, all mesh.primitives MUST contain JOINTS_0 and WEIGHTS_0 attributes."
-			auto& mesh = asset.meshes[node.meshIndex.value()];
-			for (auto& primitive : mesh.primitives) {
-				auto joints0 = primitive.findAttribute("JOINTS_0");
-				auto weights0 = primitive.findAttribute("WEIGHTS_0");
+			const auto& mesh = asset.meshes[node.meshIndex.value()];
+			for (const auto& primitive : mesh.primitives) {
+				const auto* joints0 = primitive.findAttribute("JOINTS_0");
+				const auto* weights0 = primitive.findAttribute("WEIGHTS_0");
 				if (joints0 == primitive.attributes.end() || weights0 == primitive.attributes.end())
 					return Error::InvalidGltf;
 			}
@@ -977,7 +1000,7 @@ fg::Expected<fg::Asset> fg::Parser::parse(simdjson::dom::object root, Category c
 	using namespace simdjson;
 	fillCategories(categories);
 
-	Asset asset;
+	Asset asset {};
 
 	// Create a new chunk memory resource for each asset we parse.
 	asset.memoryResource = resourceAllocator = std::make_shared<ChunkMemoryResource>();
@@ -1045,11 +1068,6 @@ fg::Expected<fg::Asset> fg::Parser::parse(simdjson::dom::object root, Category c
 
 	Category readCategories = Category::None;
 	for (const auto& object : root) {
-		// We've read everything the user asked for, we can safely exit the loop.
-		if (readCategories == categories) {
-			break;
-		}
-
 		auto hashedKey = crcStringFunction(object.key);
 		if (hashedKey == force_consteval<crc32c("scene")>) {
 			std::uint64_t defaultScene;
@@ -1101,6 +1119,30 @@ fg::Expected<fg::Asset> fg::Parser::parse(simdjson::dom::object root, Category c
 			KEY_SWITCH_CASE(Scenes, scenes)
 			KEY_SWITCH_CASE(Skins, skins)
 			KEY_SWITCH_CASE(Textures, textures)
+			case force_consteval<crc32c("extensionsUsed")>: {
+				for (auto usedValue : array) {
+					std::string_view usedString;
+					if (auto eError = usedValue.get_string().get(usedString); eError == SUCCESS) {
+						std::pmr::string string(usedString, resourceAllocator.get());
+						asset.extensionsUsed.emplace_back(std::move(string));
+					} else {
+						error = Error::InvalidGltf;
+					}
+				}
+				break;
+			}
+			case force_consteval<crc32c("extensionsRequired")>: {
+				for (auto requiredValue : array) {
+					std::string_view requiredString;
+					if (auto eError = requiredValue.get_string().get(requiredString); eError == SUCCESS) {
+						std::pmr::string string(requiredString, resourceAllocator.get());
+						asset.extensionsRequired.emplace_back(std::move(string));
+					} else {
+						error = Error::InvalidGltf;
+					}
+				}
+				break;
+			}
 			default:
 				break;
 		}
@@ -1903,20 +1945,27 @@ fg::Error fg::Parser::parseLights(simdjson::dom::array& lights, Asset& asset) {
             }
 
             double innerConeAngle;
-            if (spotObject["innerConeAngle"].get_double().get(innerConeAngle) != SUCCESS) {
+            if (auto error = spotObject["innerConeAngle"].get_double().get(innerConeAngle); error == SUCCESS) {
+                light.innerConeAngle = static_cast<float>(innerConeAngle);
+            } else if (error == NO_SUCH_FIELD) {
+                light.innerConeAngle = 0.0f;
+            } else {
                 return Error::InvalidGltf;
             }
-            light.innerConeAngle = static_cast<float>(innerConeAngle);
 
             double outerConeAngle;
-            if (spotObject["outerConeAngle"].get_double().get(outerConeAngle) != SUCCESS) {
+            if (auto error = spotObject["outerConeAngle"].get_double().get(outerConeAngle); error == SUCCESS) {
+                light.outerConeAngle = static_cast<float>(outerConeAngle);
+            } else if (error == NO_SUCH_FIELD) {
+                static constexpr double pi = 3.141592653589793116;
+                light.outerConeAngle = static_cast<float>(pi / 4.0);
+            } else {
                 return Error::InvalidGltf;
             }
-            light.outerConeAngle = static_cast<float>(outerConeAngle);
         }
 
         dom::array colorArray;
-        if (lightObject["color"].get_array().get(colorArray) == SUCCESS) {
+        if (auto error = lightObject["color"].get_array().get(colorArray); error == SUCCESS) {
             if (colorArray.size() != 3U) {
                 return Error::InvalidGltf;
             }
@@ -1928,13 +1977,17 @@ fg::Error fg::Parser::parseLights(simdjson::dom::array& lights, Asset& asset) {
                     return Error::InvalidGltf;
                 }
             }
+        } else if (error == NO_SUCH_FIELD) {
+            light.color = std::array<float, 3>{{1.0f, 1.0f, 1.0f}};
+        } else {
+            return Error::InvalidGltf;
         }
 
         double intensity;
         if (lightObject["intensity"].get_double().get(intensity) == SUCCESS) {
             light.intensity = static_cast<float>(intensity);
         } else {
-            light.intensity = 0.0;
+            light.intensity = 0.0f;
         }
 
         double range;
@@ -1980,24 +2033,32 @@ fg::Error fg::Parser::parseMaterials(simdjson::dom::array& materials, Asset& ass
             material.emissiveFactor = {{ 0, 0, 0 }};
         }
 
-        TextureInfo textureObject = {};
-        if (auto error = parseTextureObject(materialObject, "normalTexture", &textureObject, config.extensions); error == Error::None) {
-            material.normalTexture = std::move(textureObject);
-        } else if (error != Error::MissingField) {
-            return error;
-        }
+	    {
+		    NormalTextureInfo normalTextureInfo = {};
+		    if (auto error = parseTextureInfo(materialObject, "normalTexture", &normalTextureInfo, config.extensions, TextureInfoType::NormalTexture); error == Error::None) {
+			    material.normalTexture = std::move(normalTextureInfo);
+		    } else if (error != Error::MissingField) {
+			    return error;
+		    }
+	    }
 
-        if (auto error = parseTextureObject(materialObject, "occlusionTexture", &textureObject, config.extensions); error == Error::None) {
-            material.occlusionTexture = std::move(textureObject);
-        } else if (error != Error::MissingField) {
-            return error;
-        }
+	    {
+			OcclusionTextureInfo occlusionTextureInfo = {};
+	        if (auto error = parseTextureInfo(materialObject, "occlusionTexture", &occlusionTextureInfo, config.extensions, TextureInfoType::OcclusionTexture); error == Error::None) {
+	            material.occlusionTexture = std::move(occlusionTextureInfo);
+	        } else if (error != Error::MissingField) {
+	            return error;
+	        }
+	    }
 
-        if (auto error = parseTextureObject(materialObject, "emissiveTexture", &textureObject, config.extensions); error == Error::None) {
-            material.emissiveTexture = std::move(textureObject);
-        } else if (error != Error::MissingField) {
-            return error;
-        }
+	    {
+		    TextureInfo textureInfo = {};
+	        if (auto error = parseTextureInfo(materialObject, "emissiveTexture", &textureInfo, config.extensions); error == Error::None) {
+	            material.emissiveTexture = std::move(textureInfo);
+	        } else if (error != Error::MissingField) {
+	            return error;
+	        }
+	    }
 
         dom::object pbrMetallicRoughness;
         if (materialObject["pbrMetallicRoughness"].get_object().get(pbrMetallicRoughness) == SUCCESS) {
@@ -2022,14 +2083,15 @@ fg::Error fg::Parser::parseMaterials(simdjson::dom::array& materials, Asset& ass
                 pbr.roughnessFactor = static_cast<float>(factor);
             }
 
-            if (auto error = parseTextureObject(pbrMetallicRoughness, "baseColorTexture", &textureObject, config.extensions); error == Error::None) {
-                pbr.baseColorTexture = std::move(textureObject);
+	        TextureInfo textureInfo;
+            if (auto error = parseTextureInfo(pbrMetallicRoughness, "baseColorTexture", &textureInfo, config.extensions); error == Error::None) {
+                pbr.baseColorTexture = std::move(textureInfo);
             } else if (error != Error::MissingField) {
                 return error;
             }
 
-            if (auto error = parseTextureObject(pbrMetallicRoughness, "metallicRoughnessTexture", &textureObject, config.extensions); error == Error::None) {
-                pbr.metallicRoughnessTexture = std::move(textureObject);
+            if (auto error = parseTextureInfo(pbrMetallicRoughness, "metallicRoughnessTexture", &textureInfo, config.extensions); error == Error::None) {
+                pbr.metallicRoughnessTexture = std::move(textureInfo);
             } else if (error != Error::MissingField) {
                 return error;
             }
@@ -2099,7 +2161,7 @@ fg::Error fg::Parser::parseMaterials(simdjson::dom::array& materials, Asset& ass
 					}
 
 					TextureInfo anisotropyTexture;
-					if (auto error = parseTextureObject(anisotropyObject, "anisotropyTexture", &anisotropyTexture, config.extensions); error == Error::None) {
+					if (auto error = parseTextureInfo(anisotropyObject, "anisotropyTexture", &anisotropyTexture, config.extensions); error == Error::None) {
 						anisotropy->anisotropyTexture = std::move(anisotropyTexture);
 					} else if (error != Error::MissingField) {
 						return error;
@@ -2123,7 +2185,7 @@ fg::Error fg::Parser::parseMaterials(simdjson::dom::array& materials, Asset& ass
                     }
 
                     TextureInfo clearcoatTexture;
-                    if (auto error = parseTextureObject(clearcoatObject, "clearcoatTexture", &clearcoatTexture, config.extensions); error == Error::None) {
+                    if (auto error = parseTextureInfo(clearcoatObject, "clearcoatTexture", &clearcoatTexture, config.extensions); error == Error::None) {
                         clearcoat->clearcoatTexture = std::move(clearcoatTexture);
                     } else if (error != Error::MissingField) {
                         return error;
@@ -2139,14 +2201,14 @@ fg::Error fg::Parser::parseMaterials(simdjson::dom::array& materials, Asset& ass
                     }
 
                     TextureInfo clearcoatRoughnessTexture;
-                    if (auto error = parseTextureObject(clearcoatObject, "clearcoatRoughnessTexture", &clearcoatRoughnessTexture, config.extensions); error == Error::None) {
+                    if (auto error = parseTextureInfo(clearcoatObject, "clearcoatRoughnessTexture", &clearcoatRoughnessTexture, config.extensions); error == Error::None) {
                         clearcoat->clearcoatRoughnessTexture = std::move(clearcoatRoughnessTexture);
                     } else if (error != Error::MissingField) {
                         return error;
                     }
 
                     TextureInfo clearcoatNormalTexture;
-                    if (auto error = parseTextureObject(clearcoatObject, "clearcoatNormalTexture", &clearcoatNormalTexture, config.extensions); error == Error::None) {
+                    if (auto error = parseTextureInfo(clearcoatObject, "clearcoatNormalTexture", &clearcoatNormalTexture, config.extensions); error == Error::None) {
                         clearcoat->clearcoatNormalTexture = std::move(clearcoatNormalTexture);
                     } else if (error != Error::MissingField) {
                         return error;
@@ -2208,7 +2270,7 @@ fg::Error fg::Parser::parseMaterials(simdjson::dom::array& materials, Asset& ass
                     }
 
                     TextureInfo iridescenceTexture;
-                    if (auto error = parseTextureObject(iridescenceObject, "specularTexture", &iridescenceTexture, config.extensions); error == Error::None) {
+                    if (auto error = parseTextureInfo(iridescenceObject, "specularTexture", &iridescenceTexture, config.extensions); error == Error::None) {
                         iridescence->iridescenceTexture = std::move(iridescenceTexture);
                     } else if (error != Error::MissingField) {
                         return error;
@@ -2242,7 +2304,7 @@ fg::Error fg::Parser::parseMaterials(simdjson::dom::array& materials, Asset& ass
                     }
 
                     TextureInfo iridescenceThicknessTexture;
-                    if (auto error = parseTextureObject(iridescenceObject, "specularTexture", &iridescenceThicknessTexture, config.extensions); error == Error::None) {
+                    if (auto error = parseTextureInfo(iridescenceObject, "specularTexture", &iridescenceThicknessTexture, config.extensions); error == Error::None) {
                         iridescence->iridescenceThicknessTexture = std::move(iridescenceThicknessTexture);
                     } else if (error != Error::MissingField) {
                         return error;
@@ -2280,7 +2342,7 @@ fg::Error fg::Parser::parseMaterials(simdjson::dom::array& materials, Asset& ass
                     }
 
                     TextureInfo sheenColorTexture;
-                    if (auto error = parseTextureObject(sheenObject, "sheenColorTexture", &sheenColorTexture, config.extensions); error == Error::None) {
+                    if (auto error = parseTextureInfo(sheenObject, "sheenColorTexture", &sheenColorTexture, config.extensions); error == Error::None) {
                         sheen->sheenColorTexture = std::move(sheenColorTexture);
                     } else if (error != Error::MissingField) {
                         return error;
@@ -2296,7 +2358,7 @@ fg::Error fg::Parser::parseMaterials(simdjson::dom::array& materials, Asset& ass
                     }
 
                     TextureInfo sheenRoughnessTexture;
-                    if (auto error = parseTextureObject(sheenObject, "sheenRoughnessTexture", &sheenRoughnessTexture, config.extensions); error == Error::None) {
+                    if (auto error = parseTextureInfo(sheenObject, "sheenRoughnessTexture", &sheenRoughnessTexture, config.extensions); error == Error::None) {
                         sheen->sheenRoughnessTexture = std::move(sheenRoughnessTexture);
                     } else if (error != Error::MissingField) {
                         return error;
@@ -2324,7 +2386,7 @@ fg::Error fg::Parser::parseMaterials(simdjson::dom::array& materials, Asset& ass
                     }
 
                     TextureInfo specularTexture;
-                    if (auto error = parseTextureObject(specularObject, "specularTexture", &specularTexture, config.extensions); error == Error::None) {
+                    if (auto error = parseTextureInfo(specularObject, "specularTexture", &specularTexture, config.extensions); error == Error::None) {
                         specular->specularTexture = std::move(specularTexture);
                     } else if (error != Error::MissingField) {
                         return error;
@@ -2350,7 +2412,7 @@ fg::Error fg::Parser::parseMaterials(simdjson::dom::array& materials, Asset& ass
                     }
 
                     TextureInfo specularColorTexture;
-                    if (auto error = parseTextureObject(specularObject, "specularColorTexture", &specularColorTexture, config.extensions); error == Error::None) {
+                    if (auto error = parseTextureInfo(specularObject, "specularColorTexture", &specularColorTexture, config.extensions); error == Error::None) {
                         specular->specularColorTexture = std::move(specularColorTexture);
                     } else if (error != Error::MissingField) {
                         return error;
@@ -2378,7 +2440,7 @@ fg::Error fg::Parser::parseMaterials(simdjson::dom::array& materials, Asset& ass
                     }
 
                     TextureInfo transmissionTexture;
-                    if (auto error = parseTextureObject(transmissionObject, "transmissionTexture", &transmissionTexture, config.extensions); error == Error::None) {
+                    if (auto error = parseTextureInfo(transmissionObject, "transmissionTexture", &transmissionTexture, config.extensions); error == Error::None) {
                         transmission->transmissionTexture = std::move(transmissionTexture);
                     } else if (error != Error::MissingField) {
                         return error;
@@ -2416,7 +2478,7 @@ fg::Error fg::Parser::parseMaterials(simdjson::dom::array& materials, Asset& ass
                     }
 
                     TextureInfo thicknessTexture;
-                    if (auto error = parseTextureObject(volumeObject, "thicknessTexture", &thicknessTexture, config.extensions); error == Error::None) {
+                    if (auto error = parseTextureInfo(volumeObject, "thicknessTexture", &thicknessTexture, config.extensions); error == Error::None) {
                         volume->thicknessTexture = std::move(thicknessTexture);
                     } else if (error != Error::MissingField) {
                         return error;
@@ -2455,6 +2517,81 @@ fg::Error fg::Parser::parseMaterials(simdjson::dom::array& materials, Asset& ass
                     return Error::InvalidJson;
                 }
             }
+
+#if FASTGLTF_ENABLE_DEPRECATED_EXT
+            if (hasBit(config.extensions, Extensions::KHR_materials_pbrSpecularGlossiness)) {
+                dom::object specularGlossinessObject;
+                auto specularGlossinessError = extensionsObject[extensions::KHR_materials_pbrSpecularGlossiness].get_object().get(specularGlossinessObject);
+                if (specularGlossinessError == SUCCESS) {
+                    auto specularGlossiness = std::make_unique<MaterialSpecularGlossiness>();
+
+                    dom::array diffuseFactor;
+                    if (auto error = specularGlossinessObject["diffuseFactor"].get_array().get(diffuseFactor); error == SUCCESS) {
+                        std::size_t i = 0;
+                        for (auto factor : diffuseFactor) {
+                            if (i >= specularGlossiness->diffuseFactor.size()) {
+                                return Error::InvalidGltf;
+                            }
+                            double value;
+                            if (factor.get_double().get(value) != SUCCESS) {
+                                return Error::InvalidGltf;
+                            }
+                            specularGlossiness->diffuseFactor[i++] = static_cast<float>(value);
+                        }
+                    } else if (error == NO_SUCH_FIELD) {
+                        specularGlossiness->diffuseFactor = std::array<float, 4>{{ 1.0f, 1.0f, 1.0f, 1.0f }};
+                    } else {
+                        return Error::InvalidGltf;
+                    }
+
+                    TextureInfo diffuseTexture;
+                    if (auto error = parseTextureInfo(specularGlossinessObject, "diffuseTexture", &diffuseTexture, config.extensions); error == Error::None) {
+                        specularGlossiness->diffuseTexture = std::move(diffuseTexture);
+                    } else if (error != Error::MissingField) {
+                        return error;
+                    }
+
+                    dom::array specularFactor;
+                    if (auto error = specularGlossinessObject["specularFactor"].get_array().get(specularFactor); error == SUCCESS) {
+                        std::size_t i = 0;
+                        for (auto factor : specularFactor) {
+                            if (i >= specularGlossiness->specularFactor.size()) {
+                                return Error::InvalidGltf;
+                            }
+                            double value;
+                            if (factor.get_double().get(value) != SUCCESS) {
+                                return Error::InvalidGltf;
+                            }
+                            specularGlossiness->specularFactor[i++] = static_cast<float>(value);
+                        }
+                    } else if (error == NO_SUCH_FIELD) {
+                        specularGlossiness->specularFactor = std::array<float, 3>{{ 1.0f, 1.0f, 1.0f }};
+                    } else {
+                        return Error::InvalidGltf;
+                    }
+
+                    double glossinessFactor;
+                    if (auto error = specularGlossinessObject["glossinessFactor"].get_double().get(glossinessFactor); error == SUCCESS) {
+                        specularGlossiness->glossinessFactor = static_cast<float>(glossinessFactor);
+                    } else if (error == NO_SUCH_FIELD) {
+                        specularGlossiness->glossinessFactor = 1.0f;
+                    } else {
+                        return Error::InvalidGltf;
+                    }
+
+                    TextureInfo specularGlossinessTexture;
+                    if (auto error = parseTextureInfo(specularGlossinessObject, "specularGlossinessTexture", &specularGlossinessTexture, config.extensions); error == Error::None) {
+                        specularGlossiness->specularGlossinessTexture = std::move(specularGlossinessTexture);
+                    } else if (error != Error::MissingField) {
+                        return error;
+                    }
+
+                    material.specularGlossiness = std::move(specularGlossiness);
+                } else if (specularGlossinessError != NO_SUCH_FIELD) {
+                    return Error::InvalidJson;
+                }
+            }
+#endif
         } else if (extensionError != NO_SUCH_FIELD) {
             return Error::InvalidJson;
         }
@@ -2707,6 +2844,31 @@ fg::Error fg::Parser::parseNodes(simdjson::dom::array& nodes, Asset& asset) {
                 std::uint64_t light;
                 if (lightsObject["light"].get_uint64().get(light) == SUCCESS) {
                     node.lightIndex = static_cast<std::size_t>(light);
+                }
+            }
+
+            dom::object gpuInstancingObject;
+            if (extensionsObject[extensions::EXT_mesh_gpu_instancing].get_object().get(gpuInstancingObject) == SUCCESS) {
+                dom::object attributesObject;
+                if (gpuInstancingObject["attributes"].get_object().get(attributesObject) == SUCCESS) {
+                    auto parseAttributes = [this](dom::object& object, decltype(node.instancingAttributes)& attributes) -> auto {
+                        // We iterate through the JSON object and write each key/pair value into the
+                        // attribute map. The keys are only validated in the validate() method.
+                        attributes = decltype(node.instancingAttributes)(0, resourceAllocator.get());
+                        attributes.reserve(object.size());
+                        for (const auto& field : object) {
+                            const auto key = field.key;
+
+                            std::uint64_t attributeIndex;
+                            if (field.value.get_uint64().get(attributeIndex) != SUCCESS) {
+                                return Error::InvalidGltf;
+                            }
+                            attributes.emplace_back(
+                                std::make_pair(std::pmr::string(key, resourceAllocator.get()), static_cast<std::size_t>(attributeIndex)));
+                        }
+                        return Error::None;
+                    };
+                    parseAttributes(attributesObject, node.instancingAttributes);
                 }
             }
         }

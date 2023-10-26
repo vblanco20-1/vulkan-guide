@@ -115,15 +115,15 @@ Usage
 
 fastgltf is a pure C++17 library and only depends on simdjson.
 By using the included CMake 3.11 script, simdjson is automatically downloaded while configuring by default.
-The library is tested on GCC 9, GCC 10, Clang 12, and MSVC 14 (Visual Studio 2022) using CI.
+The library is tested on GCC 9, GCC 10, Clang 13, and MSVC 14 (Visual Studio 2022) using CI.
 fastgltf is also available from vcpkg_ and conan_.
 
 The following snippet illustrates how to use fastgltf to load a glTF file.
 
 .. code:: c++
 
-   #include <fastgltf_parser.hpp>
-   #include <fastgltf_types.hpp>
+   #include <fastgltf/parser.hpp>
+   #include <fastgltf/types.hpp>
 
    void load(std::filesystem::path path) {
        // Creates a Parser instance. Optimally, you should reuse this across loads, but don't use it
@@ -139,6 +139,7 @@ The following snippet illustrates how to use fastgltf to load a glTF file.
 
        // This loads the glTF file into the gltf object and parses the JSON. For GLB files, use
        // Parser::loadBinaryGLTF instead.
+       // You can detect the type of glTF using fastgltf::determineGltfFileType.
        auto asset = parser.loadGLTF(&data, path.parent_path(), fastgltf::Options::None);
        if (auto error = asset.error(); error != fastgltf::Error::None) {
            // Some error occurred while reading the buffer, parsing the JSON, or validating the data.
@@ -151,11 +152,11 @@ The following snippet illustrates how to use fastgltf to load a glTF file.
            // Process the buffers.
        }
 
-       // Optionally, you can now also call the Parser::validate method. This will more strictly
+       // Optionally, you can now also call the fastgltf::validate method. This will more strictly
        // enforce the glTF spec and is not needed most of the time, though I would certainly
        // recommend it in a development environment or when debugging to avoid mishaps.
 
-       //  parser.validate(asset.get());
+       // fastgltf::validate(asset.get());
    }
 
 

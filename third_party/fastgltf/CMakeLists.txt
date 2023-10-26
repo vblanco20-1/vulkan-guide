@@ -14,13 +14,14 @@ option(FASTGLTF_ENABLE_TESTS "Enables test targets for fastlgtf" OFF)
 option(FASTGLTF_ENABLE_EXAMPLES "Enables example targets for fastgltf" OFF)
 option(FASTGLTF_ENABLE_DOCS "Enables the configuration of targets that build/generate documentation" OFF)
 option(FASTGLTF_ENABLE_GLTF_RS "Enables the benchmark usage of gltf-rs" OFF)
+option(FASTGLTF_ENABLE_DEPRECATED_EXT "Enables support for deprecated extensions" OFF)
 
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/add_source_directory.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/compiler_flags.cmake)
 
 if (FASTGLTF_DOWNLOAD_SIMDJSON)
     # Download and configure simdjson
-    set(SIMDJSON_TARGET_VERSION "3.2.3")
+    set(SIMDJSON_TARGET_VERSION "3.3.0")
     set(SIMDJSON_DL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/deps/simdjson")
     file(MAKE_DIRECTORY ${SIMDJSON_DL_DIR})
 
@@ -51,7 +52,7 @@ if (FASTGLTF_DOWNLOAD_SIMDJSON)
     endif()
 
     add_library(fastgltf_simdjson ${SIMDJSON_HEADER_FILE} ${SIMDJSON_SOURCE_FILE})
-    target_compile_features(fastgltf_simdjson PUBLIC cxx_std_17)
+    target_compile_features(fastgltf_simdjson PRIVATE cxx_std_17)
     target_include_directories(fastgltf_simdjson PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/deps/simdjson> $<INSTALL_INTERFACE:include>)
     compiler_flags(fastgltf_simdjson)
     enable_debug_inlining(fastgltf_simdjson)
@@ -102,7 +103,8 @@ if (SIMDJSON_TARGET_VERSION)
     target_compile_definitions(fastgltf PRIVATE SIMDJSON_TARGET_VERSION="${SIMDJSON_TARGET_VERSION}")
 endif()
 
-target_compile_definitions(fastgltf PRIVATE "FASTGLTF_USE_CUSTOM_SMALLVECTOR=$<BOOL:${FASTGLTF_USE_CUSTOM_SMALLVECTOR}>")
+target_compile_definitions(fastgltf PUBLIC "FASTGLTF_USE_CUSTOM_SMALLVECTOR=$<BOOL:${FASTGLTF_USE_CUSTOM_SMALLVECTOR}>")
+target_compile_definitions(fastgltf PUBLIC "FASTGLTF_ENABLE_DEPRECATED_EXT=$<BOOL:${FASTGLTF_ENABLE_DEPRECATED_EXT}>")
 
 if (ANDROID)
     target_link_libraries(fastgltf PRIVATE android)
@@ -132,7 +134,7 @@ install(
 if (FASTGLTF_ENABLE_TESTS OR FASTGLTF_ENABLE_EXAMPLES)
     # This is required so that Catch2 compiles with C++17, enabling various features we use in tests.
     if (NOT DEFINED CMAKE_CXX_STANDARD OR CMAKE_CXX_STANDARD STREQUAL "" OR CMAKE_CXX_STANDARD LESS 17)
-        set(CMAKE_CXX_STANDARD 17 CACHE BOOL "C++ standard" FORCE)
+        set(CMAKE_CXX_STANDARD "17" CACHE STRING "C++ standard" FORCE)
     endif()
 
     add_subdirectory(deps)

@@ -5,43 +5,17 @@
 #include "vk_engine.h"
 #include "vk_initializers.h"
 #include "vk_types.h"
-#include <fastgltf/parser.hpp>
-#include <fastgltf/tools.hpp>
 #include <glm/gtx/quaternion.hpp>
 
-static const std::byte* getBufferData(const fastgltf::Buffer& buffer)
-{
-    const std::byte* result = nullptr;
+#include <fastgltf/parser.hpp>
+#include <fastgltf/tools.hpp>
+#include <fastgltf/glm_element_traits.hpp>
 
-    std::visit(fastgltf::visitor {
-                   [](auto&) {},
-                   [&](const fastgltf::sources::Vector& vec) {
-                       result = reinterpret_cast<const std::byte*>(vec.bytes.data());
-                   },
-                   [&](const fastgltf::sources::ByteView& bv) { result = bv.bytes.data(); },
-               },
-        buffer.data);
-
-    return result;
-}
-
-template <>
-struct fastgltf::ElementTraits<glm::vec2> : fastgltf::ElementTraitsBase<glm::vec2, AccessorType::Vec2, float> {
-};
-template <>
-struct fastgltf::ElementTraits<glm::vec3> : fastgltf::ElementTraitsBase<glm::vec3, AccessorType::Vec3, float> {
-};
-template <>
-struct fastgltf::ElementTraits<glm::vec4> : fastgltf::ElementTraitsBase<glm::vec4, AccessorType::Vec4, float> {
-};
-// helper type for the visitor #4
+//needed for the fastgltf variants
 template <class... Ts>
 struct overloaded : Ts... {
     using Ts::operator()...;
 };
-// explicit deduction guide (not needed as of C++20)
-template <class... Ts>
-overloaded(Ts...) -> overloaded<Ts...>;
 
 std::optional<AllocatedImage> load_image(VulkanEngine* engine, fastgltf::Asset& asset, fastgltf::Image& image)
 {

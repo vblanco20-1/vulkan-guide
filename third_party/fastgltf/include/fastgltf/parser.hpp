@@ -102,6 +102,7 @@ namespace fastgltf {
 			case Error::MissingExternalBuffer: return "MissingExternalBuffer";
 			case Error::UnsupportedVersion: return "UnsupportedVersion";
 			case Error::InvalidURI: return "InvalidURI";
+			default: FASTGLTF_UNREACHABLE
 		}
 	}
 
@@ -119,6 +120,7 @@ namespace fastgltf {
 			case Error::MissingExternalBuffer: return "An external buffer was not found.";
 			case Error::UnsupportedVersion: return "The glTF version is not supported by fastgltf.";
 			case Error::InvalidURI: return "A URI from a buffer or image failed to be parsed.";
+			default: FASTGLTF_UNREACHABLE
 		}
 	}
 
@@ -174,8 +176,16 @@ namespace fastgltf {
         // See https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_materials_unlit/README.md
         KHR_materials_unlit = 1 << 17,
 
-		// See https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_materials_anisotropy/README.md
-	    KHR_materials_anisotropy = 1 << 18,
+        // See https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_materials_anisotropy/README.md
+        KHR_materials_anisotropy = 1 << 18,
+
+        // See https://github.com/KhronosGroup/glTF/tree/main/extensions/2.0/Vendor/EXT_mesh_gpu_instancing/README.md
+        EXT_mesh_gpu_instancing = 1 << 19,
+
+#if FASTGLTF_ENABLE_DEPRECATED_EXT
+        // See https://github.com/KhronosGroup/glTF/tree/main/extensions/2.0/Archived/KHR_materials_pbrSpecularGlossiness/README.md
+        KHR_materials_pbrSpecularGlossiness = 1 << 20,
+#endif
     };
     // clang-format on
 
@@ -251,6 +261,7 @@ namespace fastgltf {
 
     // String representations of glTF 2.0 extension identifiers.
     namespace extensions {
+        constexpr std::string_view EXT_mesh_gpu_instancing = "EXT_mesh_gpu_instancing";
         constexpr std::string_view EXT_meshopt_compression = "EXT_meshopt_compression";
         constexpr std::string_view EXT_texture_webp = "EXT_texture_webp";
         constexpr std::string_view KHR_lights_punctual = "KHR_lights_punctual";
@@ -268,13 +279,23 @@ namespace fastgltf {
         constexpr std::string_view KHR_texture_basisu = "KHR_texture_basisu";
         constexpr std::string_view KHR_texture_transform = "KHR_texture_transform";
         constexpr std::string_view MSFT_texture_dds = "MSFT_texture_dds";
+
+#if FASTGLTF_ENABLE_DEPRECATED_EXT
+        constexpr std::string_view KHR_materials_pbrSpecularGlossiness = "KHR_materials_pbrSpecularGlossiness";
+#endif
     } // namespace extensions
 
 	// clang-format off
 	// An array of pairs of string representations of extension identifiers and their respective enum
 	// value used for enabling/disabling the loading of it. This also represents all extensions that
 	// fastgltf supports and understands.
-	static constexpr std::array<std::pair<std::string_view, Extensions>, 17> extensionStrings = {{
+#if FASTGLTF_ENABLE_DEPRECATED_EXT
+	static constexpr size_t SUPPORTED_EXTENSION_COUNT = 19;
+#else
+	static constexpr size_t SUPPORTED_EXTENSION_COUNT = 18;
+#endif
+	static constexpr std::array<std::pair<std::string_view, Extensions>, SUPPORTED_EXTENSION_COUNT> extensionStrings = {{
+		{ extensions::EXT_mesh_gpu_instancing,            Extensions::EXT_mesh_gpu_instancing },
 		{ extensions::EXT_meshopt_compression,            Extensions::EXT_meshopt_compression },
 		{ extensions::EXT_texture_webp,                   Extensions::EXT_texture_webp },
 		{ extensions::KHR_lights_punctual,                Extensions::KHR_lights_punctual },
@@ -292,6 +313,10 @@ namespace fastgltf {
 		{ extensions::KHR_texture_basisu,                 Extensions::KHR_texture_basisu },
 		{ extensions::KHR_texture_transform,              Extensions::KHR_texture_transform },
 		{ extensions::MSFT_texture_dds,                   Extensions::MSFT_texture_dds },
+
+#if FASTGLTF_ENABLE_DEPRECATED_EXT
+		{ extensions::KHR_materials_pbrSpecularGlossiness,Extensions::KHR_materials_pbrSpecularGlossiness },
+#endif
 	}};
 	// clang-format on
 
@@ -352,7 +377,7 @@ namespace fastgltf {
 
 		[[nodiscard]] void* do_allocate(std::size_t bytes, std::size_t alignment) override {
 			auto& block = blocks[blockIdx];
-			auto availableSize = block.dataPointer - block.data.get();
+			auto availableSize = static_cast<std::size_t>(block.dataPointer - block.data.get());
 			if ((availableSize + bytes) > block.size) {
 				// The block can't fit the new allocation. We'll just create a new block and use that.
 				allocateNewBlock();
@@ -465,7 +490,7 @@ namespace fastgltf {
 		}
 
 		T&& operator*() && noexcept {
-			assert(err = Error::None);
+			assert(err == Error::None);
 			return std::move(value);
 		}
 
@@ -583,7 +608,14 @@ namespace fastgltf {
          */
         bool loadFromAndroidAsset(const std::filesystem::path& path, std::uint64_t byteOffset = 0) noexcept;
     };
-    #endif
+	#endif
+
+	/**
+	 * This function further validates all the input more strictly that is parsed from the glTF.
+	 * Realistically, this should not be necessary in Release applications, but could be helpful
+	 * when debugging an asset related issue.
+	*/
+	[[nodiscard]] Error validate(const Asset& asset);
 
     /**
      * Some internals the parser passes on to each glTF instance.
@@ -659,13 +691,6 @@ namespace fastgltf {
          * @return An Asset wrapped in an Expected type, which may contain an error if one occurred.
 		 */
 		[[nodiscard]] Expected<Asset> loadBinaryGLTF(GltfDataBuffer* buffer, std::filesystem::path directory, Options options = Options::None, Category categories = Category::All);
-
-		/**
-		 * This function further validates all the input more strictly that is parsed from the glTF.
-		 * Realistically, this should not be necessary in Release applications, but could be helpful
-		 * when debugging an asset related issue.
-		*/
-		[[nodiscard]] Error validate(const Asset& asset) const;
 
         /**
          * This function can be used to set callbacks so that you can control memory allocation for

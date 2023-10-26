@@ -252,12 +252,12 @@ namespace fastgltf {
      * a Vec3 accessor type this will return 3, as a Vec3 contains 3 components.
      */
     constexpr std::uint8_t getNumComponents(AccessorType type) noexcept {
-        return (to_underlying(type) >> 8) & 0xFF;
+        return (to_underlying(type) >> 8U) & 0xFFU;
     }
 
     constexpr std::uint16_t getComponentBitSize(ComponentType componentType) noexcept {
         auto masked = to_underlying(componentType) & 0xFFFF0000;
-        return masked >> 16;
+        return static_cast<std::uint16_t>(masked >> 16U);
     }
 
     constexpr std::uint16_t getElementByteSize(AccessorType type, ComponentType componentType) noexcept {
@@ -287,7 +287,7 @@ namespace fastgltf {
     };
 
     constexpr ComponentType getComponentType(std::underlying_type_t<ComponentType> componentType) noexcept {
-        std::size_t index = componentType - 5120;
+        const auto index = componentType - getGLComponentType(ComponentType::Byte);
         if (index >= components.size())
             return ComponentType::Invalid;
         return components[index];
@@ -312,16 +312,16 @@ namespace fastgltf {
         switch (accessorTypeName[0]) {
             case 'S': return AccessorType::Scalar;
             case 'V': {
-                auto componentCount = accessorTypeName[3] - '2';
-                if (1ULL + componentCount >= accessorTypes.size())
+                auto componentCount = static_cast<std::size_t>(accessorTypeName[3] - '2');
+                if (componentCount + 1 >= accessorTypes.size())
                     return AccessorType::Invalid;
-                return accessorTypes[1ULL + componentCount];
+                return accessorTypes[componentCount + 1];
             }
             case 'M': {
-                auto componentCount = accessorTypeName[3] - '2';
-                if (4ULL + componentCount >= accessorTypes.size())
+                auto componentCount = static_cast<std::size_t>(accessorTypeName[3] - '2');
+                if (componentCount + 4 >= accessorTypes.size())
                     return AccessorType::Invalid;
-                return accessorTypes[4ULL + componentCount];
+                return accessorTypes[componentCount + 4];
             }
         }
 
@@ -1309,8 +1309,29 @@ namespace fastgltf {
          */
         std::variant<TRS, TransformMatrix> transform;
 
+        /**
+         * Only ever non-empty when EXT_mesh_gpu_instancing is enabled and used by the asset.
+         */
+        std::pmr::vector<std::pair<std::pmr::string, std::size_t>> instancingAttributes;
+
         std::pmr::string name;
-    };
+ 
+        [[nodiscard]] auto findInstancingAttribute(std::string_view attributeName) noexcept {
+            for (auto it = instancingAttributes.begin(); it != instancingAttributes.end(); ++it) {
+                if (it->first == attributeName)
+                    return it;
+            }
+            return instancingAttributes.end();
+        }
+
+        [[nodiscard]] auto findInstancingAttribute(std::string_view attributeName) const noexcept {
+            for (auto it = instancingAttributes.cbegin(); it != instancingAttributes.cend(); ++it) {
+                if (it->first == attributeName)
+                    return it;
+            }
+            return instancingAttributes.cend();
+        }
+   };
 
     struct Primitive {
 		using attribute_type = std::pair<std::pmr::string, std::size_t>;
@@ -1325,7 +1346,7 @@ namespace fastgltf {
         Optional<std::size_t> indicesAccessor;
         Optional<std::size_t> materialIndex;
 
-		[[nodiscard]] auto findAttribute(std::string_view name) {
+		[[nodiscard]] auto findAttribute(std::string_view name) noexcept {
 			for (decltype(attributes)::iterator it = attributes.begin(); it != attributes.end(); ++it) {
 				if (it->first == name)
 					return it;
@@ -1333,7 +1354,7 @@ namespace fastgltf {
 			return attributes.end();
 		}
 
-		[[nodiscard]] auto findAttribute(std::string_view name) const {
+		[[nodiscard]] auto findAttribute(std::string_view name) const noexcept {
 			for (decltype(attributes)::const_iterator it = attributes.cbegin(); it != attributes.cend(); ++it) {
 				if (it->first == name)
 					return it;
@@ -1341,7 +1362,7 @@ namespace fastgltf {
 			return attributes.cend();
 		}
 
-		[[nodiscard]] auto findTargetAttribute(std::size_t targetIndex, std::string_view name) {
+		[[nodiscard]] auto findTargetAttribute(std::size_t targetIndex, std::string_view name) noexcept {
 			auto& targetAttributes = targets[targetIndex];
 			for (std::remove_reference_t<decltype(targetAttributes)>::iterator it = targetAttributes.begin(); it != targetAttributes.end(); ++it) {
 				if (it->first == name)
@@ -1350,7 +1371,7 @@ namespace fastgltf {
 			return targetAttributes.end();
 		}
 
-		[[nodiscard]] auto findTargetAttribute(std::size_t targetIndex, std::string_view name) const {
+		[[nodiscard]] auto findTargetAttribute(std::size_t targetIndex, std::string_view name) const noexcept {
 			const auto& targetAttributes = targets[targetIndex];
 			for (std::remove_reference_t<decltype(targetAttributes)>::const_iterator it = targetAttributes.cbegin(); it != targetAttributes.cend(); ++it) {
 				if (it->first == name)
@@ -1395,13 +1416,20 @@ namespace fastgltf {
     struct TextureInfo {
         std::size_t textureIndex;
         std::size_t texCoordIndex;
-        float scale;
 
         /**
          * Data from KHR_texture_transform, and nullptr if the extension wasn't enabled or used.
          */
         std::unique_ptr<TextureTransform> transform;
     };
+
+	struct NormalTextureInfo : TextureInfo {
+		float scale;
+	};
+
+	struct OcclusionTextureInfo : TextureInfo {
+		float strength;
+	};
 
     struct PBRData {
         /**
@@ -1481,6 +1509,19 @@ namespace fastgltf {
         Optional<TextureInfo> sheenRoughnessTexture;
     };
 
+#if FASTGLTF_ENABLE_DEPRECATED_EXT
+    /**
+     * Specular/Glossiness information from KHR_materials_pbrSpecularGlossiness.
+     */
+    struct MaterialSpecularGlossiness {
+        std::array<float, 4> diffuseFactor;
+        Optional<TextureInfo> diffuseTexture;
+        std::array<float, 3> specularFactor;
+        float glossinessFactor;
+        Optional<TextureInfo> specularGlossinessTexture;
+    };
+#endif
+
     struct Material {
         /**
          * A set of parameter values that are used to define the metallic-roughness material model
@@ -1491,8 +1532,8 @@ namespace fastgltf {
         /**
          * The tangent space normal texture.
          */
-        Optional<TextureInfo> normalTexture;
-        Optional<TextureInfo> occlusionTexture;
+        Optional<NormalTextureInfo> normalTexture;
+        Optional<OcclusionTextureInfo> occlusionTexture;
         Optional<TextureInfo> emissiveTexture;
 
         /**
@@ -1532,6 +1573,13 @@ namespace fastgltf {
          * Specular information from KHR_materials_specular.
          */
         std::unique_ptr<MaterialSpecular> specular;
+
+#if FASTGLTF_ENABLE_DEPRECATED_EXT
+        /**
+         * Specular/Glossiness information from KHR_materials_pbrSpecularGlossiness.
+         */
+        std::unique_ptr<MaterialSpecularGlossiness> specularGlossiness;
+#endif
 
         /**
          * Specular information from KHR_materials_transmission.
@@ -1681,6 +1729,9 @@ namespace fastgltf {
          * This will only ever have no value if #Options::DontRequireValidAssetMember was specified.
          */
         Optional<AssetInfo> assetInfo;
+		std::pmr::vector<std::pmr::string> extensionsUsed;
+		std::pmr::vector<std::pmr::string> extensionsRequired;
+
         Optional<std::size_t> defaultScene;
         std::vector<Accessor> accessors;
         std::vector<Animation> animations;
@@ -1705,6 +1756,8 @@ namespace fastgltf {
         Asset(Asset&& other) noexcept :
 				memoryResource(std::move(other.memoryResource)),
 				assetInfo(std::move(other.assetInfo)),
+				extensionsUsed(std::move(other.extensionsUsed)),
+				extensionsRequired(std::move(other.extensionsRequired)),
 				defaultScene(other.defaultScene),
 				accessors(std::move(other.accessors)),
 				animations(std::move(other.animations)),
@@ -1726,6 +1779,8 @@ namespace fastgltf {
 		Asset& operator=(Asset&& other) noexcept {
 			memoryResource = std::move(other.memoryResource);
 			assetInfo = std::move(other.assetInfo);
+			extensionsUsed = std::move(other.extensionsUsed);
+			extensionsRequired = std::move(other.extensionsRequired);
 			defaultScene = other.defaultScene;
 			accessors = std::move(other.accessors);
 			animations = std::move(other.animations);
