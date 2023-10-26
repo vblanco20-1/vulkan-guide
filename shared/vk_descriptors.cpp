@@ -50,7 +50,6 @@ void DescriptorAllocator::init_pool(VkDevice device, uint32_t maxSets, std::vect
 
 void DescriptorAllocator::clear_descriptors(VkDevice device)
 {
-
     vkResetDescriptorPool(device, pool, 0);
 }
 

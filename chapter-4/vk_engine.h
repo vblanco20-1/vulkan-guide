@@ -206,8 +206,6 @@ private:
 
     void init_descriptors();
 
-    // void loadGltf(const std::filesystem::path& filePath);
-
     void init_sync_structures();
 
     void init_renderables();

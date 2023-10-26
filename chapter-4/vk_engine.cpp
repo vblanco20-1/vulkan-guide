@@ -192,8 +192,6 @@ void VulkanEngine::draw()
     vkutil::transition_image(cmd, _swapchainImages[swapchainImageIndex], VK_IMAGE_LAYOUT_UNDEFINED,
         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
-    VkImageSubresourceRange clearRange = vkinit::image_subresource_range(VK_IMAGE_ASPECT_COLOR_BIT);
-
     VkExtent3D extent;
     extent.height = _windowExtent.height;
     extent.width = _windowExtent.width;
@@ -219,9 +217,7 @@ void VulkanEngine::draw()
 
     VkSemaphoreSubmitInfo waitInfo = vkinit::semaphore_submit_info(VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR,
         get_current_frame()._presentSemaphore);
-    // VkSemaphoreSubmitInfo waitInfo2 =
-    // vkinit::semaphore_submit_info(VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR,
-    // get_last_frame()._renderSemaphore);
+   
     VkSemaphoreSubmitInfo signalInfo = vkinit::semaphore_submit_info(VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT, get_current_frame()._renderSemaphore);
 
     VkSubmitInfo2 submit = vkinit::submit_info(&cmdinfo, &signalInfo, &waitInfo);
@@ -720,7 +716,7 @@ void VulkanEngine::init_renderables()
     std::string structurePath = { "..\\..\\assets\\structure.glb" };
     auto structureFile = loadGltf(structurePath);
 
-    assert(monkeyfile.has_value());
+    assert(structureFile.has_value());
 
     loadedScenes["structure"] = *structureFile;
 }
@@ -794,7 +790,7 @@ void VulkanEngine::init_pipelines()
     // COMPUTE PIPELINES
     VkShaderModule computeDraw;
     if (!vkutil::load_shader_module("../../shaders/sky.comp.spv", _device, &computeDraw)) {
-        fmt::println("Error when building the colored mesh shader");
+        fmt::println("Error when building the sky compute shader");
     }
 
     VkPipelineLayoutCreateInfo computeLayout {};
