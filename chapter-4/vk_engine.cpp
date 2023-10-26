@@ -373,18 +373,6 @@ void VulkanEngine::run()
 
          loadedScenes["structure"]->Draw(glm::mat4{1.f}, drawCommands);
 
-        // for (int x = 0; x < 4; x++) {
-        //	for (int y = 0; y < 4; y++) {
-        //
-        //		loadedScenes["structure"]->Draw(glm::translate(glm::vec3(20.f *
-        // x, 0.f, 20.f * y)), drawCommands);
-        //	}
-        // }
-
-        for (auto& m : brickadiaScene) {
-            m->Draw(glm::mat4(1.f), drawCommands);
-        }
-
         draw();
 
         auto end = std::chrono::system_clock::now();
@@ -729,32 +717,12 @@ void VulkanEngine::init_sync_structures()
 
 void VulkanEngine::init_renderables()
 {
-    // std::filesystem::path monkeyPath = { "..\\..\\assets\\monkeyHD.glb" };
-    // std::string monkeyPath = { "..\\..\\assets\\structure.glb" };
-    // std::string monkeyPath = { "..\\..\\assets\\Bistro(gltfpack).glb" };
-
-    std::string monkeyPath = { "..\\..\\assets\\structure.glb" };
-    auto monkeyfile = loadGltf(monkeyPath);
-
-    // for (int i = 0; i < 100; i++) {
-    //	auto f = loadGltf(monkeyPath);
-    //	get_current_frame()._frameDeletionQueue.flush();
-    // }
+    std::string structurePath = { "..\\..\\assets\\structure.glb" };
+    auto structureFile = loadGltf(structurePath);
 
     assert(monkeyfile.has_value());
 
-    loadedScenes["structure"] = *monkeyfile;
-
-    //std::string mapFolder = { "..\\..\\assets\\brickadia\\MidnightAlleyClustered" };
-    //
-    //for (auto const& dir_entry : std::filesystem::directory_iterator { mapFolder }) {
-    //    if (dir_entry.is_regular_file() && dir_entry.path().extension() == ".glb") {
-    //        auto monkeyfile = loadGltf(dir_entry.path().string());
-    //        if (monkeyfile.has_value()) {
-    //            brickadiaScene.push_back(*monkeyfile);
-    //        }
-    //    }
-    //}
+    loadedScenes["structure"] = *structureFile;
 }
 
 void VulkanEngine::init_imgui()
