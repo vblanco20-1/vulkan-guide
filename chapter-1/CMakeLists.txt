@@ -11,6 +11,9 @@ set_property(TARGET chapter_1 PROPERTY VS_DEBUGGER_WORKING_DIRECTORY $<TARGET_FI
 
 target_include_directories(chapter_1 PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 
-target_link_libraries(chapter_1 vkguide_shared vkbootstrap vma glm  imgui stb_image)
+target_link_libraries(chapter_1 vkguide_shared vkbootstrap)
 
-target_link_libraries(chapter_1 Vulkan::Vulkan sdl2)
+add_custom_command(TARGET chapter_1 POST_BUILD
+  COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_RUNTIME_DLLS:chapter_1> $<TARGET_FILE_DIR:chapter_1>
+  COMMAND_EXPAND_LISTS
+  )

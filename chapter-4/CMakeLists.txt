@@ -11,15 +11,11 @@ add_executable (chapter_4
 
 
 set_property(TARGET chapter_4 PROPERTY CXX_STANDARD 20)
-set_property(TARGET chapter_4 PROPERTY VS_DEBUGGER_WORKING_DIRECTORY $<TARGET_FILE_DIR:chapter_1>)
+set_property(TARGET chapter_4 PROPERTY VS_DEBUGGER_WORKING_DIRECTORY $<TARGET_FILE_DIR:chapter_4>)
 
 target_include_directories(chapter_4 PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 
-target_link_libraries(chapter_4 vkguide_shared  vkbootstrap vma glm imgui stb_image)
-
-target_link_libraries(chapter_4 Vulkan::Vulkan fastgltf::fastgltf fmt::fmt SDL2::SDL2)
-
-target_precompile_headers(chapter_4 PUBLIC <optional> <vector> <memory> <string> <vector> <unordered_map> <glm/mat4x4.hpp>  <glm/vec4.hpp> <vulkan/vulkan.h>)
+target_link_libraries(chapter_4 vkguide_shared vkbootstrap imgui fastgltf::fastgltf)
 
 add_custom_command(TARGET chapter_4 POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_RUNTIME_DLLS:chapter_4> $<TARGET_FILE_DIR:chapter_4>
