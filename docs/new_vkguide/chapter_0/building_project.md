@@ -33,4 +33,4 @@ From Visual Studio, select the engine target, set as Startup Project, and you ca
 ![vs]({{site.baseurl}}/assets/images/vs_compile.png)
 
 
-Next: [Chapter 0 code walkthrough]({{ site.baseurl }}{% link docs/new_vkguide/chapter-0/code_walkthrough.md %})
+Next: [Chapter 0 code walkthrough]({{ site.baseurl }}{% link docs/new_vkguide/chapter_0/code_walkthrough.md %})
