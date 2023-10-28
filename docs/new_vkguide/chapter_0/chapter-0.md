@@ -1,7 +1,8 @@
 ---
 layout: default
 title: "New 0. Initial Setup"
-nav_order: 2
+parent: "Vkguide 2 (WIP)"
+nav_order: 99
 has_children: true
 permalink: /docs/new_vkguide/chapter_0
 ---
