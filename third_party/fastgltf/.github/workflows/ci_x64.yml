@@ -1,0 +1,173 @@
+name: CI x64
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - '.github/workflows/**'
+      - '**.cpp'
+      - '**.hpp'
+      - '**.txt'
+  pull_request:
+    branches: [ "main" ]
+
+env:
+  BUILD_TYPE: Release
+  SAMPLE_MODELS_LOCATION: tests/gltf/glTF-Sample-Models
+
+jobs:
+  build_windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/cache@v3
+        id: sample-models-cache
+        with:
+          path: ${{ github.workspace }}/${{ env.SAMPLE_MODELS_LOCATION }}
+          key: gltf-sample-models
+
+      - name: Install Python dependencies
+        run: pip3 install Jinja2
+
+      - name: Download dependencies
+        run: python3 fetch_test_deps.py
+
+      - name: Clone glTF-Sample-Models
+        if: steps.sample-models-cache.outputs.cache-hit != 'true'
+        run: git clone https://github.com/KhronosGroup/glTF-Sample-Models ${{ github.workspace }}/${{ env.SAMPLE_MODELS_LOCATION }}
+
+      - name: Configure CMake
+        run: cmake -B ${{ github.workspace }}/build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DFASTGLTF_ENABLE_TESTS=ON
+
+      - name: Build (Windows)
+        run: cmake --build ${{ github.workspace }}/build --config ${{ env.BUILD_TYPE }} --target tests/fastgltf_tests --verbose
+
+      - name: Run tests
+        run: ${{ github.workspace }}\build\tests\Release\fastgltf_tests.exe -d yes --order lex [base64],[gltf-loader],[gltf-tools],[uri-tests],[vector-tests]
+
+  build_windows_deprecated_extensions:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/cache@v3
+        id: sample-models-cache
+        with:
+          path: ${{ github.workspace }}/${{ env.SAMPLE_MODELS_LOCATION }}
+          key: gltf-sample-models
+
+      - name: Install Python dependencies
+        run: pip3 install Jinja2
+
+      - name: Download dependencies
+        run: python3 fetch_test_deps.py
+
+      - name: Clone glTF-Sample-Models
+        if: steps.sample-models-cache.outputs.cache-hit != 'true'
+        run: git clone https://github.com/KhronosGroup/glTF-Sample-Models ${{ github.workspace }}/${{ env.SAMPLE_MODELS_LOCATION }}
+
+      - name: Configure CMake
+        run: cmake -B ${{ github.workspace }}/build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DFASTGLTF_ENABLE_TESTS=ON -DFASTGLTF_ENABLE_DEPRECATED_EXT=ON
+
+      - name: Build (Windows)
+        run: cmake --build ${{ github.workspace }}/build --config ${{ env.BUILD_TYPE }} --target tests/fastgltf_tests --verbose
+
+      - name: Run tests
+        run: ${{ github.workspace }}\build\tests\Release\fastgltf_tests.exe -d yes --order lex [base64],[gltf-loader],[gltf-tools],[uri-tests],[vector-tests]
+
+  build_linux:
+    strategy:
+      matrix:
+        c_compiler: [gcc-9, gcc-10, clang-13]
+        include:
+          - cxx_compiler: g++-9
+            c_compiler: gcc-9
+          - cxx_compiler: g++-10
+            c_compiler: gcc-10
+          - cxx_compiler: clang++-13
+            c_compiler: clang-13
+
+    runs-on: ubuntu-latest
+    env:
+      CC: ${{ matrix.c_compiler }}
+      CXX: ${{ matrix.cxx_compiler }}
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/cache@v3
+        id: sample-models-cache
+        with:
+          path: ${{ github.workspace }}/${{ env.SAMPLE_MODELS_LOCATION }}
+          key: gltf-sample-models
+
+      - name: Install Python dependencies
+        run: pip3 install Jinja2
+
+      - name: Download dependencies
+        run: python3 fetch_test_deps.py
+
+      - name: Clone glTF-Sample-Models
+        if: steps.sample-models-cache.outputs.cache-hit != 'true'
+        run: git clone https://github.com/KhronosGroup/glTF-Sample-Models ${{ github.workspace }}/${{ env.SAMPLE_MODELS_LOCATION }}
+
+      # GLFW requires these libs to be present so that configuring succeeds.
+      - name: Install libxandr
+        run: sudo apt-get install -y libxrandr-dev libxinerama-dev libx11-dev libxcursor-dev libxi-dev
+
+      - name: Configure CMake
+        run: cmake -B ${{ github.workspace }}/build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DFASTGLTF_ENABLE_TESTS=ON
+
+      - name: Build
+        run: cmake --build ${{ github.workspace }}/build --config ${{ env.BUILD_TYPE }} --target fastgltf_tests --verbose
+
+      - name: Run tests
+        run: ${{ github.workspace }}/build/tests/fastgltf_tests -d yes --order lex [base64],[gltf-loader],[gltf-tools],[uri-tests],[vector-tests]
+
+  build_linux_deprecated_extensions:
+    strategy:
+      matrix:
+        c_compiler: [gcc-9, gcc-10, clang-13]
+        include:
+          - cxx_compiler: g++-9
+            c_compiler: gcc-9
+          - cxx_compiler: g++-10
+            c_compiler: gcc-10
+          - cxx_compiler: clang++-13
+            c_compiler: clang-13
+
+    runs-on: ubuntu-latest
+    env:
+      CC: ${{ matrix.c_compiler }}
+      CXX: ${{ matrix.cxx_compiler }}
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/cache@v3
+        id: sample-models-cache
+        with:
+          path: ${{ github.workspace }}/${{ env.SAMPLE_MODELS_LOCATION }}
+          key: gltf-sample-models
+
+      - name: Install Python dependencies
+        run: pip3 install Jinja2
+
+      - name: Download dependencies
+        run: python3 fetch_test_deps.py
+
+      - name: Clone glTF-Sample-Models
+        if: steps.sample-models-cache.outputs.cache-hit != 'true'
+        run: git clone https://github.com/KhronosGroup/glTF-Sample-Models ${{ github.workspace }}/${{ env.SAMPLE_MODELS_LOCATION }}
+
+      # GLFW requires these libs to be present so that configuring succeeds.
+      - name: Install libxandr
+        run: sudo apt-get install -y libxrandr-dev libxinerama-dev libx11-dev libxcursor-dev libxi-dev
+
+      - name: Configure CMake
+        run: cmake -B ${{ github.workspace }}/build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DFASTGLTF_ENABLE_TESTS=ON -DFASTGLTF_ENABLE_DEPRECATED_EXT=ON
+
+      - name: Build
+        run: cmake --build ${{ github.workspace }}/build --config ${{ env.BUILD_TYPE }} --target fastgltf_tests --verbose
+
+      - name: Run tests
+        run: ${{ github.workspace }}/build/tests/fastgltf_tests -d yes --order lex [base64],[gltf-loader],[gltf-tools],[uri-tests],[vector-tests]

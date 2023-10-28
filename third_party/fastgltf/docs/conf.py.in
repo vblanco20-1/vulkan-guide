@@ -1,0 +1,22 @@
+project = 'fastgltf'
+copyright = '2023, spnda'
+author = 'spnda'
+release = '@PROJECT_VERSION@'
+
+extensions = ["breathe", "sphinx_rtd_theme"]
+
+templates_path = ['_templates']
+exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
+
+html_theme = 'sphinx_rtd_theme'
+# html_static_path = ['_static']
+html_theme_options = {
+    'display_version': True,
+    'titles_only': True,
+    'navigation_depth': 5,
+}
+
+fastgltf_sources = "@DOXYGEN_INPUT@".split()
+
+breathe_default_project = "fastgltf"
+breathe_projects = {"fastgltf": "@DOXYGEN_OUTPUT@/xml"}

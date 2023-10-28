@@ -1,0 +1,60 @@
+name: CI arm
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - '.github/workflows/**'
+      - '**.cpp'
+      - '**.hpp'
+      - '**.txt'
+  pull_request:
+    branches: [ "main" ]
+
+env:
+  BUILD_TYPE: Release
+
+jobs:
+  build_windows:
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [ARM64]
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install Python dependencies
+        run: pip3 install Jinja2
+
+      - name: Download dependencies
+        run: python3 fetch_test_deps.py
+
+      - name: Configure CMake
+        run: cmake -A ${{ matrix.arch }} -DCMAKE_CROSSCOMPILING=1 -B ${{ github.workspace }}/build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DFASTGLTF_ENABLE_TESTS=ON
+
+      - name: Build
+        run: cmake --build ${{ github.workspace }}/build --config ${{ env.BUILD_TYPE }} --verbose
+
+  build_windows_deprecated_extensions:
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [ARM64]
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install Python dependencies
+        run: pip3 install Jinja2
+
+      - name: Download dependencies
+        run: python3 fetch_test_deps.py
+
+      - name: Configure CMake
+        run: cmake -A ${{ matrix.arch }} -DCMAKE_CROSSCOMPILING=1 -B ${{ github.workspace }}/build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DFASTGLTF_ENABLE_TESTS=ON -DFASTGLTF_ENABLE_DEPRECATED_EXT=ON
+
+      - name: Build
+        run: cmake --build ${{ github.workspace }}/build --config ${{ env.BUILD_TYPE }} --verbose

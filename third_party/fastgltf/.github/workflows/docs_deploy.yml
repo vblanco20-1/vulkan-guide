@@ -1,0 +1,50 @@
+name: Deploy documentation
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'docs/*'
+      - 'include/fastgltf/*.hpp'
+  pull_request:
+    paths:
+      - 'docs/*'
+      - 'include/fastgltf/*.hpp'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install CMake dependencies
+        run: sudo apt-get install doxygen
+
+      - name: Install Python dependencies
+        run: pip3 install -U Sphinx breathe sphinx_rtd_theme
+
+      - name: Add ~/.local/bin to PATH
+        run: PATH=$HOME/.local/bin:$PATH
+
+      - name: Configure CMake project
+        run: cmake -B ${{ github.workspace }}/build -DFASTGLTF_ENABLE_DOCS=ON
+
+      - name: Build docs CMake target
+        run: cmake --build ${{ github.workspace }}/build --target generate_sphinx --verbose
+
+      - name: Upload pages artifact
+        uses: actions/upload-pages-artifact@v2
+        if: github.ref == 'refs/heads/main'
+        with:
+          path: ${{ github.workspace }}/build/docs/sphinx
+
+      - name: Deploy site
+        uses: actions/deploy-pages@v2
+        if: github.ref == 'refs/heads/main'
