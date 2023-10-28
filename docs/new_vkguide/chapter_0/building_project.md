@@ -32,5 +32,21 @@ From Visual Studio, select the engine target, set as Startup Project, and you ca
 
 ![vs]({{site.baseurl}}/assets/images/vs_compile.png)
 
+# Third party libraries
+Under the third_party folder, we have several different libraries that we are going to use across the tutorial. Those libraries are all embedded as sourcecode into the folder. Some of them have source code edits or are different from what is on their public repo
+
+This is the list of libraries we are using.
+
+- vulkan SDK: This one is not in the third_party folder, but its a dependency we have. You should have it installed from the explanation above
+- vkbootstrap: We will be using this to simplify the vulkan initialization logic. It will do things like select what gpu to use for us, and setup some initial structures.
+- VMA: Vulkan Memory Allocator. This is a library that implements high performance memory allocators for GPU structures. We will use that instead of trying to write the allocators ourselves. It will manage our GPU memory
+- SDL: Highly multiplatform library for windowing, input, audio, and a few other things. We will be using its windowing and input parts on the tutorial.
+- GLM : Math library. Will provide vectors, matrices, and so on.
+- {fmt} : String formatting and console output library. We will use it instead of std::cout as it runs significantly faster and gives us great utilities to display strings and other formatting options.
+- stb_image: for loading PNG or jpeg images.
+- dear imgui: Great UI library very useful for debug interfaces. Will lets us display some timings or add some UI windows.
+- fastgltf: High performance GLTF loading library. 
+
+
 
 Next: [Chapter 0 code walkthrough]({{ site.baseurl }}{% link docs/new_vkguide/chapter_0/code_walkthrough.md %})
