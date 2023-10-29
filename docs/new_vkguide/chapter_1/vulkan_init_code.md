@@ -34,7 +34,6 @@ public:
 
     // --- omitted ---
 
-<!-- codegen from tag inst_init on file E:\ProgrammingProjects\vulkan-guide-2\chapter-1/vk_engine.h --> 
 	VkInstance _instance;// Vulkan library handle
 	VkDebugUtilsMessengerEXT _debug_messenger;// Vulkan debug output handle
 	VkPhysicalDevice _chosenGPU;// GPU chosen as the default device
@@ -53,7 +52,6 @@ We will now call those init functions in order from our engine init function
 
 vk_engine.cpp
 ```cpp
-<!-- codegen from tag init_fn on file E:\ProgrammingProjects\vulkan-guide-2\chapter-1/vk_engine.cpp --> 
 void VulkanEngine::init()
 {
 	// We initialize SDL and create a window with it. 
@@ -111,7 +109,6 @@ Now that our new init_Vulkan function is added, we can start filling it with the
 void VulkanEngine::init_vulkan()
 {
 
-<!-- codegen from tag init_instance on file E:\ProgrammingProjects\vulkan-guide-2\chapter-1/vk_engine.cpp --> 
 	vkb::InstanceBuilder builder;
 
 	bool bUseValidationLayers = true;
@@ -155,7 +152,6 @@ void VulkanEngine::init_vulkan()
 {
 	// other code ------
 
-<!-- codegen from tag init_device on file E:\ProgrammingProjects\vulkan-guide-2\chapter-1/vk_engine.cpp --> 
 	SDL_Vulkan_CreateSurface(_window, _instance, &_surface);
 
 	VkPhysicalDeviceVulkan13Features features{};
@@ -213,7 +209,6 @@ class VulkanEngine {
 public:
 	// --- other code ---
 
-<!-- codegen from tag swap_init on file E:\ProgrammingProjects\vulkan-guide-2\chapter-1/vk_engine.h --> 
 	VkSwapchainKHR _swapchain;
 	VkFormat _swachainImageFormat;
 
