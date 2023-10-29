@@ -338,4 +338,3 @@ With the Vulkan initialization completed and the layers working, we can begin to
 
 Next: [Vulkan Commands]({{ site.baseurl }}{% link docs/chapter-1/vulkan_command_flow.md %})
 
-{% include comments.html term="1. Comments" %
