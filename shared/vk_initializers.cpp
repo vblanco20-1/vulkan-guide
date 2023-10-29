@@ -296,7 +296,8 @@ VkPipelineLayoutCreateInfo vkinit::pipeline_layout_create_info()
 }
 
 VkPipelineShaderStageCreateInfo vkinit::pipeline_shader_stage_create_info(VkShaderStageFlagBits stage,
-    VkShaderModule shaderModule)
+    VkShaderModule shaderModule,
+    const char * entry)
 {
     VkPipelineShaderStageCreateInfo info {};
     info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -307,7 +308,7 @@ VkPipelineShaderStageCreateInfo vkinit::pipeline_shader_stage_create_info(VkShad
     // module containing the code for this shader stage
     info.module = shaderModule;
     // the entry point of the shader
-    info.pName = "main";
+    info.pName = entry;
     return info;
 }
 

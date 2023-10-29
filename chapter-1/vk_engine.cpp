@@ -9,14 +9,11 @@
 
 #include "VkBootstrap.h"
 #include <array>
-#include <iostream>
-
-
-constexpr bool bUseValidationLayers = true;
 
 //we want to immediately abort when there is an error. In normal engines this would give an error message to the user, or perform a dump of state.
 using namespace std;
 
+//> init_fn
 void VulkanEngine::init()
 {
 	// We initialize SDL and create a window with it. 
@@ -44,6 +41,7 @@ void VulkanEngine::init()
 	//everything went fine
 	_isInitialized = true;
 }
+//< init_fn
 void VulkanEngine::cleanup()
 {	
 	if (_isInitialized) {
@@ -171,7 +169,10 @@ void VulkanEngine::run()
 
 void VulkanEngine::init_vulkan()
 {
+//> init_instance
 	vkb::InstanceBuilder builder;
+
+	bool bUseValidationLayers = true;
 
 	//make the vulkan instance, with basic debug features
 	auto inst_ret = builder.set_app_name("Example Vulkan Application")
@@ -186,6 +187,9 @@ void VulkanEngine::init_vulkan()
 	_instance = vkb_inst.instance;
 	_debug_messenger = vkb_inst.debug_messenger;
 
+//< init_instance
+// 
+//> init_device
 	SDL_Vulkan_CreateSurface(_window, _instance, &_surface);
 
 	VkPhysicalDeviceVulkan13Features features{};
@@ -193,7 +197,7 @@ void VulkanEngine::init_vulkan()
 	features.synchronization2 = true;
 
 	//use vkbootstrap to select a gpu. 
-	//We want a gpu that can write to the SDL surface and supports vulkan 1.2
+	//We want a gpu that can write to the SDL surface and supports vulkan 1.3
 	vkb::PhysicalDeviceSelector selector{ vkb_inst };
 	vkb::PhysicalDevice physicalDevice = selector
 		.set_minimum_version(1, 3)
@@ -202,9 +206,8 @@ void VulkanEngine::init_vulkan()
 		.select()
 		.value();
 
-		//physicalDevice.features.
-	//create the final vulkan device
 
+	//create the final vulkan device
 	vkb::DeviceBuilder deviceBuilder{ physicalDevice };
 
 	vkb::Device vkbDevice = deviceBuilder.build().value();
@@ -213,18 +216,20 @@ void VulkanEngine::init_vulkan()
 	_device = vkbDevice.device;
 	_chosenGPU = physicalDevice.physical_device;
 
+//< init_device
+
 	// use vkbootstrap to get a Graphics queue
 	_graphicsQueue = vkbDevice.get_queue(vkb::QueueType::graphics).value();
 
 	_graphicsQueueFamily = vkbDevice.get_queue_index(vkb::QueueType::graphics).value();
 }
-
+//> init_swap
 void VulkanEngine::init_swapchain()
 {
 	vkb::SwapchainBuilder swapchainBuilder{_chosenGPU,_device,_surface };
 
 	vkb::Swapchain vkbSwapchain = swapchainBuilder
-		.set_desired_format({ VK_FORMAT_B8G8R8A8_SRGB, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR })
+		//.set_desired_format({ VK_FORMAT_B8G8R8A8_SRGB, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR })
 		//use vsync present mode
 		.set_desired_present_mode(VK_PRESENT_MODE_FIFO_KHR)
 		.set_desired_extent(_windowExtent.width, _windowExtent.height)
@@ -239,6 +244,7 @@ void VulkanEngine::init_swapchain()
 
 	_swachainImageFormat = vkbSwapchain.image_format;
 }
+//< init_swap
 
 void VulkanEngine::init_commands()
 {

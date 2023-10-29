@@ -48,7 +48,8 @@ VkImageCreateInfo image_create_info(VkFormat format, VkImageUsageFlags usageFlag
 VkImageViewCreateInfo imageview_create_info(VkFormat format, VkImage image, VkImageAspectFlags aspectFlags);
 VkPipelineLayoutCreateInfo pipeline_layout_create_info();
 VkPipelineShaderStageCreateInfo pipeline_shader_stage_create_info(VkShaderStageFlagBits stage,
-    VkShaderModule shaderModule);
+    VkShaderModule shaderModule,
+    const char * entry = "main");
 VkPipelineVertexInputStateCreateInfo vertex_input_state_create_info();
 VkPipelineInputAssemblyStateCreateInfo input_assembly_create_info(VkPrimitiveTopology topology);
 VkPipelineRasterizationStateCreateInfo rasterization_state_create_info(VkPolygonMode polygonMode);

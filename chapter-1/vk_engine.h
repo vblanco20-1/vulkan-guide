@@ -23,11 +23,13 @@ public:
 
 	struct SDL_Window* _window{ nullptr };
 
-	VkInstance _instance;
-	VkDebugUtilsMessengerEXT _debug_messenger;
-	VkPhysicalDevice _chosenGPU;
-	VkDevice _device;
-
+//> inst_init
+	VkInstance _instance;// Vulkan library handle
+	VkDebugUtilsMessengerEXT _debug_messenger;// Vulkan debug output handle
+	VkPhysicalDevice _chosenGPU;// GPU chosen as the default device
+	VkDevice _device; // Vulkan device for commands
+	VkSurfaceKHR _surface;// Vulkan window surface
+//< inst_init
 	VkSemaphore _presentSemaphore, _renderSemaphore;
 	VkFence _renderFence;
 
@@ -37,15 +39,13 @@ public:
 	VkCommandPool _commandPool;
 	VkCommandBuffer _mainCommandBuffer;
 	
-	VkRenderPass _renderPass;
-
-	VkSurfaceKHR _surface;
+//> swap_init
 	VkSwapchainKHR _swapchain;
 	VkFormat _swachainImageFormat;
 
-	std::vector<VkFramebuffer> _framebuffers;
 	std::vector<VkImage> _swapchainImages;
 	std::vector<VkImageView> _swapchainImageViews;
+//< swap_init
 
 	//initializes everything in the engine
 	void init();
@@ -64,10 +64,6 @@ private:
 	void init_vulkan();
 
 	void init_swapchain();
-
-	void init_default_renderpass();
-
-	void init_framebuffers();
 
 	void init_commands();
 

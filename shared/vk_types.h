@@ -1,6 +1,6 @@
 ﻿// vulkan_guide.h : Include file for standard system include files,
 // or project specific include files.
-
+//> intro
 #pragma once
 
 #include <memory>
@@ -8,13 +8,16 @@
 #include <string>
 #include <vector>
 
+#include <vulkan/vulkan.h>
+#include <vulkan/vk_enum_string_helper.h>
+#include <fmt/core.h>
+//< intro
 //#define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/mat4x4.hpp>
 #include <glm/vec4.hpp>
 
 #include "vk_mem_alloc.h"
-#include <vulkan/vulkan.h>
-#include <fmt/core.h>
+
 
 // we will add our main reusable types here
 struct AllocatedImage {
@@ -107,12 +110,13 @@ struct Node : public IRenderable {
         }
     }
 };
-
+//> intro
 #define VK_CHECK(x)                                                     \
     do {                                                                \
         VkResult err = x;                                               \
         if (err) {                                                      \
-            fmt::print("Detected Vulkan error: "); \
+             fmt::print("Detected Vulkan error: {}", string_VkResult(err)); \
             abort();                                                    \
         }                                                               \
     } while (0)
+//< intro
