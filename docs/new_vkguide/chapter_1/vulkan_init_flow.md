@@ -57,6 +57,5 @@ Normal applications will use either MAILBOX or one of the 2 FIFO modes. Mostly d
 In this guide, we will be using the FIFO_RELAXED mode, because it implements a upper cap on our rendering speed, and as we aren't going to render many objects, it's best if the framerate is capped and not reaching 5000 FPS which can cause issues like overheating. On real applications that have some work to do, MAILBOX is likely going to be a better default.
 
 
-Next: [Initializing vulkan code]({{ site.baseurl }}{% link /docs/new_vkguide/chapter-1/vulkan_init_code.md %})
 
 
