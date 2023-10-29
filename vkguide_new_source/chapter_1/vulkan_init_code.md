@@ -232,6 +232,3 @@ Validation Error: [ VUID-vkDestroyInstance-instance-00629 ] Object 0: handle = 0
 ```
 
 With the Vulkan initialization completed and the layers working, we can begin to prepare the actual render loop and command execution.
-
-
-Next: [Vulkan Commands]({{ site.baseurl }}{% link docs/chapter-1/vulkan_command_flow.md %})
