@@ -159,7 +159,7 @@ void VulkanEngine::init_vulkan()
 	features.synchronization2 = true;
 
 	//use vkbootstrap to select a gpu. 
-	//We want a gpu that can write to the SDL surface and supports vulkan 1.2
+	//We want a gpu that can write to the SDL surface and supports vulkan 1.3
 	vkb::PhysicalDeviceSelector selector{ vkb_inst };
 	vkb::PhysicalDevice physicalDevice = selector
 		.set_minimum_version(1, 3)
@@ -328,5 +328,5 @@ We are now destroying the Instance before the Device and the Surface (which was 
 Validation Error: [ VUID-vkDestroyInstance-instance-00629 ] Object 0: handle = 0x24ff02340c0, type = VK_OBJECT_TYPE_INSTANCE; Object 1: handle = 0xf8ce070000000002, type = VK_OBJECT_TYPE_SURFACE_KHR; | MessageID = 0x8b3d8e18 | OBJ ERROR : For VkInstance 0x24ff02340c0[], VkSurfaceKHR 0xf8ce070000000002[] has not been destroyed. The Vulkan spec states: All child objects created using instance must have been destroyed prior to destroying instance (https://www.khronos.org/registry/vulkan/specs/1.1-extensions/html/vkspec.html#VUID-vkDestroyInstance-instance-00629)
 ```
 
-With the Vulkan initialization completed and the layers working, we can begin to prepare the actual render loop and command execution.
+With the Vulkan initialization completed and the layers working, we can begin to prepare the command structures so that we can make the gpu do something.
 
