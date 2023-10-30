@@ -20,7 +20,7 @@ We also need to add those into the vulkan engine class, alongside the members we
 ```cpp
 class VulkanEngine{
 public:
-^code framedata chapter-1/vk_engine.h
+^code queues chapter-1/vk_engine.h
 }
 ```
 

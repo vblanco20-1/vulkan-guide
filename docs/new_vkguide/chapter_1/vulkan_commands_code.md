@@ -20,15 +20,12 @@ We also need to add those into the vulkan engine class, alongside the members we
 ```cpp
 class VulkanEngine{
 public:
-struct FrameData {
-	VkSemaphore _presentSemaphore, _renderSemaphore;
-	VkFence _renderFence;
+	FrameData _frames[FRAME_OVERLAP];
 
-	VkCommandPool _commandPool;
-	VkCommandBuffer _mainCommandBuffer;
-};
+	FrameData& get_current_frame() { return _frames[_frameNumber % FRAME_OVERLAP]; };
 
-constexpr unsigned int FRAME_OVERLAP = 2;
+	VkQueue _graphicsQueue;
+	uint32_t _graphicsQueueFamily;
 }
 ```
 
