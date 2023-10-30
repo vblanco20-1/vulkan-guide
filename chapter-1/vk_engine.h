@@ -6,12 +6,17 @@
 #include <vk_types.h>
 #include <vector>
 
-enum class ImageTransitionMode {
-	IntoAttachment,
-	IntoGeneral,
-	GeneralToPresent,
-	AttachmentToPresent
+//> framedata
+struct FrameData {
+	VkSemaphore _presentSemaphore, _renderSemaphore;
+	VkFence _renderFence;
+
+	VkCommandPool _commandPool;
+	VkCommandBuffer _mainCommandBuffer;
 };
+
+constexpr unsigned int FRAME_OVERLAP = 2;
+//< framedata
 
 class VulkanEngine {
 public:
@@ -30,14 +35,15 @@ public:
 	VkDevice _device; // Vulkan device for commands
 	VkSurfaceKHR _surface;// Vulkan window surface
 //< inst_init
-	VkSemaphore _presentSemaphore, _renderSemaphore;
-	VkFence _renderFence;
+
+//> queues
+	FrameData _frames[FRAME_OVERLAP];
+
+	FrameData& get_current_frame() { return _frames[_frameNumber % FRAME_OVERLAP]; };
 
 	VkQueue _graphicsQueue;
 	uint32_t _graphicsQueueFamily;
-
-	VkCommandPool _commandPool;
-	VkCommandBuffer _mainCommandBuffer;
+//<
 	
 //> swap_init
 	VkSwapchainKHR _swapchain;
@@ -68,7 +74,4 @@ private:
 	void init_commands();
 
 	void init_sync_structures();
-
-	void transition_image(VkCommandBuffer cmd, VkImage image, ImageTransitionMode transitionMode);
-
 };

@@ -11,8 +11,9 @@ VkCommandPoolCreateInfo vkinit::command_pool_create_info(uint32_t queueFamilyInd
     return info;
 }
 
+//> init_cmd
 VkCommandBufferAllocateInfo vkinit::command_buffer_allocate_info(
-    VkCommandPool pool, uint32_t count /*= 1*/, VkCommandBufferLevel level /*= VK_COMMAND_BUFFER_LEVEL_PRIMARY*/)
+    VkCommandPool pool, uint32_t count /*= 1*/)
 {
     VkCommandBufferAllocateInfo info = {};
     info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -20,7 +21,7 @@ VkCommandBufferAllocateInfo vkinit::command_buffer_allocate_info(
 
     info.commandPool = pool;
     info.commandBufferCount = count;
-    info.level = level;
+    info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     return info;
 }
 
@@ -34,7 +35,7 @@ VkCommandBufferBeginInfo vkinit::command_buffer_begin_info(VkCommandBufferUsageF
     info.flags = flags;
     return info;
 }
-
+//< init_cmd
 VkCommandBufferSubmitInfo vkinit::command_buffer_submit_info(VkCommandBuffer cmd)
 {
     VkCommandBufferSubmitInfo cmdinfo {};
