@@ -109,7 +109,7 @@ Check how we are sending the _swapchainSemaphore to it. This is to make sure tha
 We use the index given from this function to decide which of the swapchain images we are going to use for drawing.
 
 Time to begin the rendering commands. For that, we are going to reset the command buffer for this frame, and begin it again. 
-We will need 2 extra functions added into the initializers code. 
+We will need to add another function to the initializers code for this. 
 
 <!-- codegen from tag init_cmd_draw on file E:\ProgrammingProjects\vulkan-guide-2\shared/vk_initializers.cpp --> 
 ```cpp
