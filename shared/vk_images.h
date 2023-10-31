@@ -3,13 +3,6 @@
 
 #include <vulkan/vulkan.h>
 
-enum class ImageTransitionMode {
-    IntoAttachment,
-    IntoGeneral,
-    GeneralToPresent,
-    AttachmentToPresent
-};
-
 namespace vkutil {
 
 void transition_image(VkCommandBuffer cmd, VkImage image, VkImageLayout currentLayout, VkImageLayout newLayout);

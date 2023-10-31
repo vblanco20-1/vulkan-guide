@@ -8,7 +8,7 @@
 
 //> framedata
 struct FrameData {
-	VkSemaphore _presentSemaphore, _renderSemaphore;
+	VkSemaphore _swapchainSemaphore, _renderSemaphore;
 	VkFence _renderFence;
 
 	VkCommandPool _commandPool;
@@ -43,7 +43,7 @@ public:
 
 	VkQueue _graphicsQueue;
 	uint32_t _graphicsQueueFamily;
-//<
+//< queues
 	
 //> swap_init
 	VkSwapchainKHR _swapchain;

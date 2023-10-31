@@ -16,7 +16,7 @@
 #define VMA_IMPLEMENTATION
 #include "vk_mem_alloc.h"
 #include "vk_images.h"
-#include "../chapter-4/vk_pipelines.h"
+#include "vk_pipelines.h"
 
 constexpr bool bUseValidationLayers = true;
 
