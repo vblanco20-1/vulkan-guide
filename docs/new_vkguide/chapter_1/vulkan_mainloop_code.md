@@ -7,9 +7,6 @@ nav_order: 41
 
 The first thing we need to do, is to add the syncronization structures that we are going to need into our FrameData structure
 
-
-
-
 ```cpp
 struct FrameData {
 	VkSemaphore _swapchainSemaphore, _renderSemaphore;
