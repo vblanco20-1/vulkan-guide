@@ -100,21 +100,6 @@ Next, we are going to request an image index from the swapchain.
 	uint32_t swapchainImageIndex;
 	VK_CHECK(vkAcquireNextImageKHR(_device, _swapchain, 1000000000, get_current_frame()._swapchainSemaphore, nullptr, &swapchainImageIndex));
 ```
-<!-- codegen from tag draw_2 on file E:\ProgrammingProjects\vulkan-guide-2\chapter-1/vk_engine.cpp --> 
-```cpp
-	//naming it cmd for shorter writing
-	VkCommandBuffer cmd = get_current_frame()._mainCommandBuffer;
-
-	// now that we are sure that the commands finished executing, we can safely
-	// reset the command buffer to begin recording again.
-	VK_CHECK(vkResetCommandBuffer(cmd, 0));
-
-	//begin the command buffer recording. We will use this command buffer exactly once, so we want to let vulkan know that
-	VkCommandBufferBeginInfo cmdBeginInfo = vkinit::command_buffer_begin_info(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
-
-	//start the command buffer recording
-	VK_CHECK(vkBeginCommandBuffer(cmd, &cmdBeginInfo));
-```
 
 
 vkAcquireNextImageKHR will request the image index from the swapchain, and if the swapchain doesn't have any image we can use, it will block the thread with a maximum for the timeout set, which will be 1 second. This will be our FPS lock.
@@ -144,13 +129,7 @@ when a command buffer is started, we need to give it an info struct with some pr
 
 Back to VulkanEngine::draw(), we start by resetting the command buffer and restarting it.
 
-<!-- codegen from tag draw_2 on file E:\ProgrammingProjects\vulkan-guide-2\chapter-1/vk_engine.cpp --> 
-```cpp
-	//request image from the swapchain
-	uint32_t swapchainImageIndex;
-	VK_CHECK(vkAcquireNextImageKHR(_device, _swapchain, 1000000000, get_current_frame()._swapchainSemaphore, nullptr, &swapchainImageIndex));
-```
-<!-- codegen from tag draw_2 on file E:\ProgrammingProjects\vulkan-guide-2\chapter-1/vk_engine.cpp --> 
+<!-- codegen from tag draw_3 on file E:\ProgrammingProjects\vulkan-guide-2\chapter-1/vk_engine.cpp --> 
 ```cpp
 	//naming it cmd for shorter writing
 	VkCommandBuffer cmd = get_current_frame()._mainCommandBuffer;
@@ -252,7 +231,7 @@ Once we have the range and the barrier, we pack them into a VkDependencyInfo str
 
 With the transition function implemented, we can now actually draw things.
 
-<!-- codegen from tag draw_3 on file E:\ProgrammingProjects\vulkan-guide-2\chapter-1/vk_engine.cpp --> 
+<!-- codegen from tag draw_4 on file E:\ProgrammingProjects\vulkan-guide-2\chapter-1/vk_engine.cpp --> 
 ```cpp
 
 	//make the swapchain image into writeable mode before rendering
@@ -348,7 +327,7 @@ submit_info arranges everything together. it needs the command submit info, and 
 
 With the initializers made, we can write the submit itself.
 
-<!-- codegen from tag draw_4 on file E:\ProgrammingProjects\vulkan-guide-2\chapter-1/vk_engine.cpp --> 
+<!-- codegen from tag draw_5 on file E:\ProgrammingProjects\vulkan-guide-2\chapter-1/vk_engine.cpp --> 
 ```cpp
 	//prepare the submission to the queue. 
 	//we want to wait on the _presentSemaphore, as that semaphore is signaled when the swapchain is ready
@@ -377,7 +356,7 @@ And for the fence, we are going to use the current frame _renderFence. At the st
 
 Last thing we need on the frame is to present the image we have just drawn into the screen
 
-<!-- codegen from tag draw_5 on file E:\ProgrammingProjects\vulkan-guide-2\chapter-1/vk_engine.cpp --> 
+<!-- codegen from tag draw_6 on file E:\ProgrammingProjects\vulkan-guide-2\chapter-1/vk_engine.cpp --> 
 ```cpp
 	//prepare present
 	// this will put the image we just rendered to into the visible window.

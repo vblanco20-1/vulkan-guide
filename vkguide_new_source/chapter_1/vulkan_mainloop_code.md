@@ -70,7 +70,7 @@ when a command buffer is started, we need to give it an info struct with some pr
 
 Back to VulkanEngine::draw(), we start by resetting the command buffer and restarting it.
 
-^code draw_2 chapter-1/vk_engine.cpp
+^code draw_3 chapter-1/vk_engine.cpp
 
 We are going to copy the command buffer handle from our FrameData into a variable named `cmd`. this is to shorten all other references to it. Vulkan handles are just a 64 bit handle/pointer, so its fine to copy them around, but remember that their actual data is handled by vulkan itself.
 
@@ -116,7 +116,7 @@ Once we have the range and the barrier, we pack them into a VkDependencyInfo str
 
 With the transition function implemented, we can now actually draw things.
 
-^code draw_3 chapter-1/vk_engine.cpp
+^code draw_4 chapter-1/vk_engine.cpp
 
 We begin by transitioning the swapchain image.
 `VK_IMAGE_LAYOUT_UNDEFINED` Is the "dont care" layout. Its also the layout newly created images will be at. We use it when we dont care about the data that is already in the image, and we are fine with the GPU destroying it. 
@@ -147,7 +147,7 @@ submit_info arranges everything together. it needs the command submit info, and 
 
 With the initializers made, we can write the submit itself.
 
-^code draw_4 chapter-1/vk_engine.cpp
+^code draw_5 chapter-1/vk_engine.cpp
 
 We first create each of the different info structs needed, and then we call `vkQueueSubmit2`.
 For our command info we are just going to send the command we just recorded.
@@ -160,7 +160,7 @@ And for the fence, we are going to use the current frame _renderFence. At the st
 
 Last thing we need on the frame is to present the image we have just drawn into the screen
 
-^code draw_5 chapter-1/vk_engine.cpp
+^code draw_6 chapter-1/vk_engine.cpp
 
 `vkQueuePresent` has a very similar info struct as the queue submit. It also has the pointers for the semaphores, but it has image index and swapchain index. 
 We will wait on the _renderSemaphore, and connect it to our swapchain. This way, we wont be presenting the image to the screen until it has finished the rendering commands from the submit right before it.
