@@ -162,7 +162,7 @@ VkCommandBufferAllocateInfo vkinit::command_buffer_allocate_info(
 }
 ```
 
-We will be hardcoding command buffer level to VK_COMMAND_BUFFER_LEVEL_PRIMARY . As we wont ever be using them, we can just ignore their existence. By abstracting things with defaults that match your engine, you can simplify things a bit.
+We will be hardcoding command buffer level to VK_COMMAND_BUFFER_LEVEL_PRIMARY . As we wont ever be using secondary command buffers, we can just ignore their existence and configuration parameters. By abstracting things with defaults that match your engine, you can simplify things a bit.
 
 We have now abstracted the calls, so let's go update VulkanEngine::init_commands() to use this.
 

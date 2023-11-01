@@ -28,7 +28,7 @@ Both of these structures are pretty simple and need almost no options other than
 
 ^code init_sync chapter-1/vk_engine.cpp
 
-On the fence, we are using the flag `VK_FENCE_CREATE_SIGNALED_BIT` . This is very important, as it allows us to wait on a freshly created fence without causing errors. If we did not have that bit, when we call into WaitFences, the cpu will hang, as there is no code that will signal that fence, so it just stops. 
+On the fence, we are using the flag `VK_FENCE_CREATE_SIGNALED_BIT` . This is very important, as it allows us to wait on a freshly created fence without causing errors. If we did not have that bit, when we call into WaitFences the first frame, before the gpu is doing work, the thread will be blocked. 
 
 We create the 3 structures for each of our doublebuffered frames. Now that we have them, we can write the draw loop.
 
@@ -74,9 +74,9 @@ Back to VulkanEngine::draw(), we start by resetting the command buffer and resta
 
 We are going to copy the command buffer handle from our FrameData into a variable named `cmd`. this is to shorten all other references to it. Vulkan handles are just a 64 bit handle/pointer, so its fine to copy them around, but remember that their actual data is handled by vulkan itself.
 
-Now we call `vkResetCommandBuffer` to clear the buffer. This will generally completly remove the commands and likely free its memory. We can now start the command buffer again with `vkBeginCommandBuffer`. On the cmdBeginInfo, we will give it the flag `VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT`. This is optional, but we might get a small speedup from our command encoding if we can tell the drivers that this buffer will only be submitted and executed once. We are only doing 1 submit per frame before the command buffer is reset, so this is perfectly good for us.
+Now we call `vkResetCommandBuffer` to clear the buffer. This will completly remove all commands and likely free its memory. We can now start the command buffer again with `vkBeginCommandBuffer`. On the cmdBeginInfo, we will give it the flag `VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT`. This is optional, but we might get a small speedup from our command encoding if we can tell the drivers that this buffer will only be submitted and executed once. We are only doing 1 submit per frame before the command buffer is reset, so this is perfectly good for us.
 
-With the command buffer recording started, let's add commands to it. We will first transition the swapchain image into a drawable layout, then perform a VkCmdClear on it, and then transition it back for a display optimal layout. 
+With the command buffer recording started, let's add commands to it. We will first transition the swapchain image into a drawable layout, then perform a VkCmdClear on it, and finally transition it back for a display optimal layout. 
 
 This means we are going to need a way to transition images as part of a command buffer instead of using a renderpass, so we are going to add it as a function on vk_images.h
 
@@ -96,6 +96,8 @@ transitioning a image has loads of possible options. We are going to do the abso
 
 We will be doing a pipeline barrier, using the syncronization 2 feature/extension which is part of vulkan 1.3 . A pipeline barrier can be used for many different things like syncronizing read/write operation between commands and controlling things like one command drawing into a image and other command using that image for reading.  
 
+Add the function to vk_images.cpp.
+
 ^code transition shared/vk_images.cpp
 
 VkImageMemoryBarrier2 contains the information for a given *image* barrier. On here, is where we set the old and new layouts.
@@ -114,7 +116,7 @@ An thing we care in that structure is the AspectMask. This is going to be either
 
 Once we have the range and the barrier, we pack them into a VkDependencyInfo struct and call `VkCmdPipelineBarrier2`. It is possible to layout transitions multiple images at once by sending more imageMemoryBarriers into the dependency info, which is likely to improve performance if we are doing transitions or barriers for multiple things at once. 
 
-With the transition function implemented, we can now actually draw things.
+With the transition function implemented, we can now draw things.
 
 ^code draw_4 chapter-1/vk_engine.cpp
 
