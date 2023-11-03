@@ -233,7 +233,7 @@ void VulkanEngine::init_swapchain()
 	vkb::SwapchainBuilder swapchainBuilder{_chosenGPU,_device,_surface };
 
 	vkb::Swapchain vkbSwapchain = swapchainBuilder
-		//.set_desired_format({ VK_FORMAT_B8G8R8A8_SRGB, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR })
+		.use_default_format_selection()
 		//use vsync present mode
 		.set_desired_present_mode(VK_PRESENT_MODE_FIFO_KHR)
 		.set_desired_extent(_windowExtent.width, _windowExtent.height)
