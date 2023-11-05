@@ -11,7 +11,7 @@ We have the render loop implemented now, so the next step is to draw something.
 Instead of drawing geometry just yet, we are going to use Compute Shaders to write data into a image, and then display that image to the screen. Compute shaders to calculate images is a very common use case that you can see from complex postprocessing chains in engines. Its also common to do when the programmer is going to do raytracing or other non-geometry drawing.
 
 ## VkPipeline
-In vulkan, to execute code on the gpu, we need to setup a pipeline. There are two types of pipelines, Graphics and Compute. The Compute pipelines are much simpler, because they only require the data for the shader code, and the layout for the descriptors used for data bindings. Graphics pipelines, on the other hand, have to configure a considerable amount of state for all of the fixed function hardware in the GPU such as color blending, depth testing, or geometry formats. 
+In vulkan, to execute code on the gpu, we need to setup a pipeline. There are two types of pipelines, Graphics and Compute. The Compute pipelines are much simpler, because they only require the data for the shader code, and the layout for the descriptors used for data bindings. Graphics pipelines, on the other hand, have to configure a considerable amount of state for all of the fixed function hardware in the GPU such as color blending, depth testing, or geometry formats. We will use them next chapter.
 
 Both types of pipelines share the shader modules and the layouts, which are built in the same way. 
 
