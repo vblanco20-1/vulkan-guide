@@ -2,7 +2,7 @@
 layout: default
 title: Vulkan Shaders
 parent:  "New 2. Drawing with Compute"
-nav_order: 1
+nav_order: 3
 ---
 
 ## Running code on the GPU
