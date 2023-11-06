@@ -70,7 +70,7 @@ struct ComputePushConstants {
 
 To set the push constant ranges, we need to change the code that creates the pipeline layout at the start of init_pipelines. the new version looks like this
 
-^code comp_pipeline_pc chapter-1/vk_engine.cpp
+^code comp_pipeline_pc chapter-2/vk_engine.cpp
 
 We need to add a VkPushConstantRange to the pipeline layout info. A PushConstantRange holds an offset, which we will keep at 0, and then a size plus the stage flags. For size we will use our cpp version of the structure, as that matches. And for stage flags its going to be compute because its the only stage we have right now.
 
@@ -86,7 +86,7 @@ if (!vkutil::load_shader_module("../../shaders/gradient_color.comp.spv", _device
 
 This is all we need to add pushconstants to a shader. lets now use them from the render loop
 
-^code draw_pc chapter-1/vk_engine.cpp
+^code draw_pc chapter-2/vk_engine.cpp
 
 To update pushconstants, we call VkCmdPushConstants. it requires the pipeline layout, an offset for the data to be written to (we use just offset 0), and the size of the data + the pointer to copy. It also requires the shader stage flags as one can update pushconstants for different stages on different commands.
 
@@ -124,19 +124,19 @@ The sky shader is too complicated to explain here, but feel free to check the co
 
 With 2 shaders, we need to create 2 different VkShaderModule.
 
-^code comp_pipeline_multi chapter-1/vk_engine.cpp
+^code comp_pipeline_multi chapter-2/vk_engine.cpp
 
 We have changed the pipelines function. We keep the pipeline layout from before, but now we create 2 different pipelines, and store them into the ComputeEffect vector. We also give the effects some default data.
 
 Now we can add the imgui debug window for this. This goes on run() function. We will replace the demo effect call with the new ui logic
 
-^code imgui_bk chapter-1/vk_engine.cpp
+^code imgui_bk chapter-2/vk_engine.cpp
 
 First we grab the selected compute effect by indexing into the array. Then we use Imgui::Text to display the effect name, and then we have int slider and float4 input for the edits.
 
 Last we need to do is to change the render loop to select the shader selected with its data
 
-^code draw_multi chapter-1/vk_engine.cpp
+^code draw_multi chapter-2/vk_engine.cpp
 
 Not much of a change, we are just hooking into the compute effect array and uploading the pushconstants from there.
 

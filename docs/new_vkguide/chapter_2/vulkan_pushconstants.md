@@ -70,7 +70,24 @@ struct ComputePushConstants {
 
 To set the push constant ranges, we need to change the code that creates the pipeline layout at the start of init_pipelines. the new version looks like this
 
-^code comp_pipeline_pc chapter-1/vk_engine.cpp
+<!-- codegen from tag comp_pipeline_pc on file E:\ProgrammingProjects\vulkan-guide-2\chapter-2/vk_engine.cpp --> 
+```cpp
+VkPipelineLayoutCreateInfo computeLayout{};
+computeLayout.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+computeLayout.pNext = nullptr;
+computeLayout.pSetLayouts = &_drawImageDescriptorLayout;
+computeLayout.setLayoutCount = 1;
+
+VkPushConstantRange pushConstant{};
+pushConstant.offset = 0;
+pushConstant.size = sizeof(ComputePushConstants) ;
+pushConstant.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+
+computeLayout.pPushConstantRanges = &pushConstant;
+computeLayout.pushConstantRangeCount = 1;
+
+VK_CHECK(vkCreatePipelineLayout(_device, &computeLayout, nullptr, &_gradientPipelineLayout));
+```
 
 We need to add a VkPushConstantRange to the pipeline layout info. A PushConstantRange holds an offset, which we will keep at 0, and then a size plus the stage flags. For size we will use our cpp version of the structure, as that matches. And for stage flags its going to be compute because its the only stage we have right now.
 
@@ -86,7 +103,22 @@ if (!vkutil::load_shader_module("../../shaders/gradient_color.comp.spv", _device
 
 This is all we need to add pushconstants to a shader. lets now use them from the render loop
 
-^code draw_pc chapter-1/vk_engine.cpp
+<!-- codegen from tag draw_pc on file E:\ProgrammingProjects\vulkan-guide-2\chapter-2/vk_engine.cpp --> 
+```cpp
+	// bind the gradient drawing compute pipeline
+	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, _gradientPipeline);
+
+	// bind the descriptor set containing the draw image for the compute pipeline
+	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, _gradientPipelineLayout, 0, 1, &_drawImageDescriptors, 0, nullptr);
+
+	ComputePushConstants pc;
+	pc.data1 = glm::vec4(1,0,0,1);
+	pc.data2 = glm::vec4(0,0,1,1);
+
+	vkCmdPushConstants(cmd,_gradientPipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(ComputePushConstants),&pc);
+	// execute the compute pipeline dispatch. We are using 16x16 workgroup size so we need to divide by it
+	vkCmdDispatch(cmd, std::ceil(_windowExtent.width / 16.0), std::ceil(_windowExtent.height / 16.0), 1);
+```
 
 To update pushconstants, we call VkCmdPushConstants. it requires the pipeline layout, an offset for the data to be written to (we use just offset 0), and the size of the data + the pointer to copy. It also requires the shader stage flags as one can update pushconstants for different stages on different commands.
 
@@ -124,19 +156,117 @@ The sky shader is too complicated to explain here, but feel free to check the co
 
 With 2 shaders, we need to create 2 different VkShaderModule.
 
-^code comp_pipeline_multi chapter-1/vk_engine.cpp
+<!-- codegen from tag comp_pipeline_multi on file E:\ProgrammingProjects\vulkan-guide-2\chapter-2/vk_engine.cpp --> 
+```cpp
+VkShaderModule gradientShader;
+if (!vkutil::load_shader_module("../../shaders/gradient_color.comp.spv", _device, &gradientShader)) {
+	std::cout << "Error when building the compute shader" << std::endl;
+}
+
+VkShaderModule skyShader;
+if (!vkutil::load_shader_module("../../shaders/sky.comp.spv", _device, &skyShader)) {
+	std::cout << "Error when building the compute shader" << std::endl;
+}
+
+VkPipelineShaderStageCreateInfo stageinfo{};
+stageinfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+stageinfo.pNext = nullptr;
+stageinfo.stage = VK_SHADER_STAGE_COMPUTE_BIT;
+stageinfo.module = gradientShader;
+stageinfo.pName = "main";
+
+VkComputePipelineCreateInfo computePipelineCreateInfo{};
+computePipelineCreateInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+computePipelineCreateInfo.pNext = nullptr;
+computePipelineCreateInfo.layout = _gradientPipelineLayout;
+computePipelineCreateInfo.stage = stageinfo;
+
+ComputeEffect gradient;
+gradient.layout = _gradientPipelineLayout;
+gradient.name = "gradient";
+gradient.data = {};
+
+//default colors
+gradient.data.data1 = glm::vec4(1, 0, 0, 1);
+gradient.data.data2 = glm::vec4(0, 0, 1, 1);
+
+VK_CHECK(vkCreateComputePipelines(_device, VK_NULL_HANDLE, 1, &computePipelineCreateInfo, nullptr, &gradient.pipeline));
+
+//change the shader module only to create the sky shader
+computePipelineCreateInfo.stage.module = skyShader;
+
+ComputeEffect sky;
+sky.layout = _gradientPipelineLayout;
+sky.name = "sky";
+sky.data = {};
+//default sky parameters
+sky.data.data1 = glm::vec4(0.1, 0.2, 0.4 ,0.97);
+
+VK_CHECK(vkCreateComputePipelines(_device, VK_NULL_HANDLE, 1, &computePipelineCreateInfo, nullptr, &sky.pipeline));
+
+//add the 2 background effects into the array
+backgroundEffects.push_back(gradient);
+backgroundEffects.push_back(sky);
+
+//destroy structures properly
+vkDestroyShaderModule(_device, gradientShader, nullptr);
+vkDestroyShaderModule(_device, skyShader, nullptr);
+_mainDeletionQueue.push_function([&]() {
+	vkDestroyPipelineLayout(_device, _gradientPipelineLayout, nullptr);
+	vkDestroyPipeline(_device, sky.pipeline, nullptr);
+	vkDestroyPipeline(_device, gradient.pipeline, nullptr);
+});
+
+```
 
 We have changed the pipelines function. We keep the pipeline layout from before, but now we create 2 different pipelines, and store them into the ComputeEffect vector. We also give the effects some default data.
 
 Now we can add the imgui debug window for this. This goes on run() function. We will replace the demo effect call with the new ui logic
 
-^code imgui_bk chapter-1/vk_engine.cpp
+<!-- codegen from tag imgui_bk on file E:\ProgrammingProjects\vulkan-guide-2\chapter-2/vk_engine.cpp --> 
+```cpp
+		ImGui::NewFrame();
+
+		if (ImGui::Begin("background")) {
+			
+			ComputeEffect& selected = backgroundEffects[currentBackgroundEffect];
+
+			ImGui::Text("Selected effect: ", selected.name);
+
+			ImGui::SliderInt("Effect Index", &currentBackgroundEffect,0, backgroundEffects.size() - 1);
+
+			ImGui::InputFloat4("data1",(float*)& selected.data.data1);
+			ImGui::InputFloat4("data2",(float*)& selected.data.data2);
+			ImGui::InputFloat4("data3",(float*)& selected.data.data3);
+			ImGui::InputFloat4("data4",(float*)& selected.data.data4);
+
+			ImGui::End();
+		}
+
+		ImGui::Render();
+
+```
 
 First we grab the selected compute effect by indexing into the array. Then we use Imgui::Text to display the effect name, and then we have int slider and float4 input for the edits.
 
 Last we need to do is to change the render loop to select the shader selected with its data
 
-^code draw_multi chapter-1/vk_engine.cpp
+<!-- codegen from tag draw_multi on file E:\ProgrammingProjects\vulkan-guide-2\chapter-2/vk_engine.cpp --> 
+```cpp
+	vkutil::transition_image(cmd, _drawImage.image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
+
+	ComputeEffect& effect = backgroundEffects[currentBackgroundEffect];
+
+	// bind the background compute pipeline
+	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, effect.pipeline);
+
+	// bind the descriptor set containing the draw image for the compute pipeline
+	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, _gradientPipelineLayout, 0, 1, &_drawImageDescriptors, 0, nullptr);
+
+	vkCmdPushConstants(cmd, _gradientPipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(ComputePushConstants), &effect.data);
+	// execute the compute pipeline dispatch. We are using 16x16 workgroup size so we need to divide by it
+	vkCmdDispatch(cmd, std::ceil(_windowExtent.width / 16.0), std::ceil(_windowExtent.height / 16.0), 1);
+```
 
 Not much of a change, we are just hooking into the compute effect array and uploading the pushconstants from there.
 
