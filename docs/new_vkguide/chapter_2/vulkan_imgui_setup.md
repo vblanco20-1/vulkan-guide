@@ -327,3 +327,7 @@ After that, we transition the swapchain image from attachment-optimal into prese
 
 If you run the application at this point, you will have the imgui demo window you can play around with.
 
+Lets continue and hook our new debug UI to the shaders.
+
+
+

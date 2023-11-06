@@ -164,4 +164,8 @@ Now that we have a VkRenderInfo, we can call `vkCmdBeginRendering`, this begins 
 After that, we transition the swapchain image from attachment-optimal into present mode, and can finally end the command buffer.
 
 If you run the application at this point, you will have the imgui demo window you can play around with.
+
+Lets continue and hook our new debug UI to the shaders.
+
+
  

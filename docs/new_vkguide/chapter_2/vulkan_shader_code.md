@@ -383,9 +383,9 @@ void VulkanEngine::init_pipelines()
 {
 	//layout code
 	VkShaderModule computeDrawShader;
-	if (!vkutil::load_shader_module("../../shaders/gradient.comp.spv", _device, &computeDrawShader))
+	if (!vkutil::load_shader_module("../../shaders/gradient_color.comp.spv", _device, &computeDrawShader))
 	{
-		std::cout << "Error when building the colored mesh shader" << std::endl;
+		std::cout << "Error when building the compute shader" << std::endl;
 	}
 
 	VkPipelineShaderStageCreateInfo stageinfo{};
@@ -416,12 +416,12 @@ At the end of the function, we will do proper cleanup of the structures so that 
 
 <!-- codegen from tag comp_pipeline_3 on file E:\ProgrammingProjects\vulkan-guide-2\chapter-2/vk_engine.cpp --> 
 ```cpp
-	vkDestroyShaderModule(_device,computeDrawShader,nullptr);
+	vkDestroyShaderModule(_device, computeDrawShader, nullptr);
 
 	_mainDeletionQueue.push_function([&]() {
 		vkDestroyPipelineLayout(_device, _gradientPipelineLayout, nullptr);
-		vkDestroyPipeline(_device,_gradientPipeline, nullptr);
-	});
+		vkDestroyPipeline(_device, _gradientPipeline, nullptr);
+		});
 ```
 
 We can destroy the shader module directly on the function, we created the pipeline so we have no need for it anymore. With the pipeline and its layout, we need to wait until the end of the program.
