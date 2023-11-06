@@ -4,6 +4,15 @@ layout(rgba8,set = 0, binding = 0) uniform image2D image;
 
 // License Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License.
 
+//push constants block
+layout( push_constant ) uniform constants
+{
+ vec4 data1;
+ vec4 data2;
+ vec4 data3;
+ vec4 data4;
+} PushConstants;
+
 // Return random noise in the range [0.0, 1.0], as a function of x.
 float Noise2d( in vec2 x )
 {
@@ -48,11 +57,12 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
     vec2 iResolution = imageSize(image);
 	// Sky Background Color
-	vec3 vColor = vec3( 0.1, 0.2, 0.4 ) * fragCoord.y / iResolution.y;
+	//vec3 vColor = vec3( 0.1, 0.2, 0.4 ) * fragCoord.y / iResolution.y;
+    vec3 vColor = PushConstants.data1.xyz * fragCoord.y / iResolution.y;
 
     // Note: Choose fThreshhold in the range [0.99, 0.9999].
     // Higher values (i.e., closer to one) yield a sparser starfield.
-    float StarFieldThreshhold = 0.97;
+    float StarFieldThreshhold = PushConstants.data1.w;//0.97;
 
     // Stars with a slow crawl.
     float xRate = 0.2;
@@ -75,7 +85,6 @@ void main()
     {
         vec4 color;
         mainImage(color,texelCoord);
-
     
         imageStore(image, texelCoord, color);
     }   

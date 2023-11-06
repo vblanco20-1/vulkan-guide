@@ -22,6 +22,7 @@ VkSubmitInfo2 submit_info(VkCommandBufferSubmitInfo* cmd, VkSemaphoreSubmitInfo*
     VkSemaphoreSubmitInfo* waitSemaphoreInfo);
 VkPresentInfoKHR present_info();
 
+VkRenderingAttachmentInfo attachment_info(VkImageView view, VkClearValue* clear, VkImageLayout layout /*= VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL*/);
 VkRenderingAttachmentInfo color_attachment_info(VkImageView view, VkImageLayout layout);
 
 VkRenderingAttachmentInfo depth_attachment_info(VkImageView view,

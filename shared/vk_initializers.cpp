@@ -110,7 +110,8 @@ VkSubmitInfo2 vkinit::submit_info(VkCommandBufferSubmitInfo* cmd, VkSemaphoreSub
 VkPresentInfoKHR vkinit::present_info()
 {
     VkPresentInfoKHR info = {};
-
+    info.sType =  VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+    info.pNext = 0;
 
     info.swapchainCount = 0;
     info.pSwapchains = nullptr;
@@ -121,8 +122,9 @@ VkPresentInfoKHR vkinit::present_info()
     return info;
 }
 
-VkRenderingAttachmentInfo vkinit::color_attachment_info(
-    VkImageView view, VkImageLayout layout /*= VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL*/)
+//> color_info
+VkRenderingAttachmentInfo vkinit::attachment_info(
+    VkImageView view, VkClearValue* clear ,VkImageLayout layout /*= VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL*/)
 {
     VkRenderingAttachmentInfo colorAttachment {};
     colorAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
@@ -130,12 +132,15 @@ VkRenderingAttachmentInfo vkinit::color_attachment_info(
 
     colorAttachment.imageView = view;
     colorAttachment.imageLayout = layout;
-    colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+    colorAttachment.loadOp = clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
     colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    if (clear) {
+        colorAttachment.clearValue = *clear;
+    }
 
     return colorAttachment;
 }
-
+//< color_info
 VkRenderingAttachmentInfo vkinit::depth_attachment_info(
     VkImageView view, VkImageLayout layout /*= VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL*/)
 {
@@ -151,7 +156,7 @@ VkRenderingAttachmentInfo vkinit::depth_attachment_info(
 
     return depthAttachment;
 }
-
+//> render_info
 VkRenderingInfo vkinit::rendering_info(VkExtent2D renderExtent, VkRenderingAttachmentInfo* colorAttachment,
     VkRenderingAttachmentInfo* depthAttachment)
 {
@@ -168,7 +173,7 @@ VkRenderingInfo vkinit::rendering_info(VkExtent2D renderExtent, VkRenderingAttac
 
     return renderInfo;
 }
-
+//< render_info
 //> subresource
 VkImageSubresourceRange vkinit::image_subresource_range(VkImageAspectFlags aspectMask)
 {
@@ -253,6 +258,7 @@ VkDescriptorBufferInfo vkinit::buffer_info(VkBuffer buffer, VkDeviceSize offset,
     return binfo;
 }
 
+//> image_set
 VkImageCreateInfo vkinit::image_create_info(VkFormat format, VkImageUsageFlags usageFlags, VkExtent3D extent)
 {
     VkImageCreateInfo info = {};
@@ -266,7 +272,11 @@ VkImageCreateInfo vkinit::image_create_info(VkFormat format, VkImageUsageFlags u
 
     info.mipLevels = 1;
     info.arrayLayers = 1;
+
+    //for MSAA. we will not be using it by default, so default it to 1 sample per pixel.
     info.samples = VK_SAMPLE_COUNT_1_BIT;
+
+    //optimal tiling, which means the image is stored on the best gpu format
     info.tiling = VK_IMAGE_TILING_OPTIMAL;
     info.usage = usageFlags;
 
@@ -291,7 +301,7 @@ VkImageViewCreateInfo vkinit::imageview_create_info(VkFormat format, VkImage ima
 
     return info;
 }
-
+//< image_set
 VkPipelineLayoutCreateInfo vkinit::pipeline_layout_create_info()
 {
     VkPipelineLayoutCreateInfo info {};

@@ -61,6 +61,7 @@ VkPipeline PipelineBuilder::build_pipeline(VkDevice device)
     }
 }
 
+//> load_shader
 bool vkutil::load_shader_module(const char* filePath,
     VkDevice device,
     VkShaderModule* outShaderModule)
@@ -107,3 +108,4 @@ bool vkutil::load_shader_module(const char* filePath,
     *outShaderModule = shaderModule;
     return true;
 }
+//< load_shader

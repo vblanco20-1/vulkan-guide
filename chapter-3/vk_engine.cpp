@@ -302,8 +302,8 @@ void VulkanEngine::init_swapchain()
 		1
 	};
 
-	//hardcoding the depth format to 32 bit float
-	_drawFormat = VK_FORMAT_R8G8B8A8_UNORM;
+	//hardcoding the depth format to 16bit float
+	_drawFormat = VK_FORMAT_R16G16B16A16_SFLOAT;
 
 	VkImageUsageFlags drawImageUsages{};
 	drawImageUsages |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;

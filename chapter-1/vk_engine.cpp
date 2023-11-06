@@ -95,7 +95,7 @@ void VulkanEngine::draw()
 	VK_CHECK(vkAcquireNextImageKHR(_device, _swapchain, 1000000000, get_current_frame()._swapchainSemaphore, nullptr, &swapchainImageIndex));
 //< draw_2
 
-//> draw_2
+//> draw_3
 	//naming it cmd for shorter writing
 	VkCommandBuffer cmd = get_current_frame()._mainCommandBuffer;
 
@@ -108,9 +108,9 @@ void VulkanEngine::draw()
 
 	//start the command buffer recording
 	VK_CHECK(vkBeginCommandBuffer(cmd, &cmdBeginInfo));
-//< draw_2
+//< draw_3
 // 
-//> draw_3
+//> draw_4
 
 	//make the swapchain image into writeable mode before rendering
 	vkutil::transition_image(cmd, _swapchainImages[swapchainImageIndex], VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
@@ -130,9 +130,9 @@ void VulkanEngine::draw()
 
 	//finalize the command buffer (we can no longer add commands, but it can now be executed)
 	VK_CHECK(vkEndCommandBuffer(cmd));
-//< draw_3
+//< draw_4
 
-//> draw_4
+//> draw_5
 	//prepare the submission to the queue. 
 	//we want to wait on the _presentSemaphore, as that semaphore is signaled when the swapchain is ready
 	//we will signal the _renderSemaphore, to signal that rendering has finished
@@ -147,9 +147,9 @@ void VulkanEngine::draw()
 	//submit command buffer to the queue and execute it.
 	// _renderFence will now block until the graphic commands finish execution
 	VK_CHECK(vkQueueSubmit2(_graphicsQueue, 1, &submit, get_current_frame()._renderFence));
-//< draw_4
+//< draw_5
 // 
-//> draw_5
+//> draw_6
 	//prepare present
 	// this will put the image we just rendered to into the visible window.
 	// we want to wait on the _renderSemaphore for that, 
@@ -170,7 +170,7 @@ void VulkanEngine::draw()
 	//increase the number of frames drawn
 	_frameNumber++;
 
-//< draw_5
+//< draw_6
 }
 
 void VulkanEngine::run()
@@ -257,7 +257,7 @@ void VulkanEngine::init_swapchain()
 	vkb::SwapchainBuilder swapchainBuilder{_chosenGPU,_device,_surface };
 
 	vkb::Swapchain vkbSwapchain = swapchainBuilder
-		//.set_desired_format({ VK_FORMAT_B8G8R8A8_SRGB, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR })
+		.use_default_format_selection()
 		//use vsync present mode
 		.set_desired_present_mode(VK_PRESENT_MODE_FIFO_KHR)
 		.set_desired_extent(_windowExtent.width, _windowExtent.height)

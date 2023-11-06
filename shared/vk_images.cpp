@@ -33,41 +33,42 @@ void vkutil::transition_image(VkCommandBuffer cmd, VkImage image, VkImageLayout 
     vkCmdPipelineBarrier2(cmd, &depInfo);
 }
 //< transition
-
+//> copyimg
 void vkutil::copy_image_to_image(VkCommandBuffer cmd, VkImage source, VkImage destination, VkExtent3D imageSize)
 {
-    VkImageSubresourceRange subImage {};
-    subImage.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    subImage.baseMipLevel = 0;
-    subImage.levelCount = 1;
-    subImage.baseArrayLayer = 0;
-    subImage.layerCount = 1;
+    VkImageBlit2 blitRegion{};
+	blitRegion.sType = VK_STRUCTURE_TYPE_IMAGE_BLIT_2;
+	blitRegion.pNext = nullptr;
 
-    VkImageCopy2 copyregion {};
-    copyregion.sType = VK_STRUCTURE_TYPE_IMAGE_COPY_2;
-    copyregion.pNext = nullptr;
-    copyregion.extent = imageSize;
+    blitRegion.srcOffsets[1].x = imageSize.width;
+    blitRegion.srcOffsets[1].y = imageSize.height;
+    blitRegion.srcOffsets[1].z = 1;
 
-    copyregion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    copyregion.srcSubresource.baseArrayLayer = 0;
-    copyregion.srcSubresource.layerCount = 1;
-    copyregion.srcSubresource.mipLevel = 0;
+    blitRegion.dstOffsets[1].x = imageSize.width;
+    blitRegion.dstOffsets[1].y = imageSize.height;
+	blitRegion.dstOffsets[1].z = 1;
 
-    copyregion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    copyregion.dstSubresource.baseArrayLayer = 0;
-    copyregion.dstSubresource.layerCount = 1;
-    copyregion.dstSubresource.mipLevel = 0;
+	blitRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	blitRegion.srcSubresource.baseArrayLayer = 0;
+	blitRegion.srcSubresource.layerCount = 1;
+	blitRegion.srcSubresource.mipLevel = 0;
 
-    VkCopyImageInfo2 copyInfo {};
-    copyInfo.sType = VK_STRUCTURE_TYPE_COPY_IMAGE_INFO_2;
-    copyInfo.pNext = nullptr;
-    copyInfo.dstImage = destination;
-    copyInfo.dstImageLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-    copyInfo.srcImage = source;
-    copyInfo.srcImageLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+	blitRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	blitRegion.dstSubresource.baseArrayLayer = 0;
+	blitRegion.dstSubresource.layerCount = 1;
+	blitRegion.dstSubresource.mipLevel = 0;
 
-    copyInfo.regionCount = 1;
-    copyInfo.pRegions = &copyregion;
+    VkBlitImageInfo2 blitInfo{};
+	blitInfo.sType = VK_STRUCTURE_TYPE_BLIT_IMAGE_INFO_2;
+	blitInfo.pNext = nullptr;
+	blitInfo.dstImage = destination;
+	blitInfo.dstImageLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+	blitInfo.srcImage = source;
+	blitInfo.srcImageLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+    blitInfo.filter = VK_FILTER_NEAREST;
+    blitInfo.regionCount = 1;
+    blitInfo.pRegions = &blitRegion;
 
-    vkCmdCopyImage2(cmd, &copyInfo);
+    vkCmdBlitImage2(cmd, &blitInfo);
 }
+//< copyimg

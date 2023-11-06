@@ -162,7 +162,7 @@ void VulkanEngine::draw()
     // we need to divide by it
     vkCmdDispatch(cmd, (uint32_t)std::ceil(_windowExtent.width / 16.0), (uint32_t)std::ceil(_windowExtent.height / 16.0), 1);
 
-    VkRenderingAttachmentInfo colorAttachment = vkinit::color_attachment_info(_drawImage.imageView, VK_IMAGE_LAYOUT_GENERAL);
+    VkRenderingAttachmentInfo colorAttachment = vkinit::attachment_info(_drawImage.imageView,nullptr, VK_IMAGE_LAYOUT_GENERAL);
     VkRenderingAttachmentInfo depthAttachment = vkinit::depth_attachment_info(_depthImage.imageView, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
 
     VkRenderingInfo renderInfo = vkinit::rendering_info(_windowExtent, &colorAttachment, &depthAttachment);
@@ -938,13 +938,13 @@ void VulkanEngine::init_pipelines()
 void VulkanEngine::init_descriptors()
 {
     // create a descriptor pool
-    std::vector<VkDescriptorPoolSize> sizes = {
+    std::vector<DescriptorAllocator::PoolSizeRatio> sizes = {
         { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 3 },
         { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 3 },
         { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 3 },
     };
 
-    globalDescriptorAllocator.init_pool(_device, 10000, sizes);
+    globalDescriptorAllocator.init_pool(_device, 10, sizes);
     _mainDeletionQueue.push_function(
         [&]() { vkDestroyDescriptorPool(_device, globalDescriptorAllocator.pool, nullptr); });
 
@@ -1017,7 +1017,7 @@ void VulkanEngine::init_descriptors()
     }
     for (int i = 0; i < FRAME_OVERLAP; i++) {
         // create a descriptor pool
-        std::vector<VkDescriptorPoolSize> frame_sizes = { { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 3 },
+        std::vector<DescriptorAllocator::PoolSizeRatio> frame_sizes = { { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 3 },
             { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 3 },
             { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 3 } };
 
