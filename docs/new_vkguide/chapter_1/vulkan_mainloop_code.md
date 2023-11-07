@@ -248,7 +248,7 @@ With the transition function implemented, we can now draw things.
 	VkImageSubresourceRange clearRange = vkinit::image_subresource_range(VK_IMAGE_ASPECT_COLOR_BIT);
 
 	//clear image
-	vkCmdClearColorImage(cmd, _swapchainImages[swapchainImageIndex],VK_IMAGE_LAYOUT_GENERAL,&clearValue,1,&clearRange);
+	vkCmdClearColorImage(cmd, _swapchainImages[swapchainImageIndex], VK_IMAGE_LAYOUT_GENERAL, &clearValue, 1, &clearRange);
 
 	//make the swapchain image into presentable mode
 	vkutil::transition_image(cmd, _swapchainImages[swapchainImageIndex],VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);

@@ -7,7 +7,6 @@ nav_order: 5
 
 Lets now write the code necesary for our compute shader. We will begin with a very simple shader that has an image as input, and writes a color to it, based on the thread ID, forming a gradient.
 
-
 ```c
 //GLSL version to use
 #version 460
@@ -435,16 +434,14 @@ Go back to the draw() function, we will replace the vkCmdClear with a compute sh
 
 <!-- codegen from tag draw_comp on file E:\ProgrammingProjects\vulkan-guide-2\chapter-2/vk_engine.cpp --> 
 ```cpp
-	vkutil::transition_image(cmd, _drawImage.image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
-
 	// bind the gradient drawing compute pipeline
-	vkCmdBindPipeline(cmd,VK_PIPELINE_BIND_POINT_COMPUTE,_gradientPipeline);
+	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, _gradientPipeline);
 
 	// bind the descriptor set containing the draw image for the compute pipeline
-	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE,_gradientPipelineLayout,0,1,&_drawImageDescriptors,0,nullptr);
+	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, _gradientPipelineLayout, 0, 1, &_drawImageDescriptors, 0, nullptr);
 
 	// execute the compute pipeline dispatch. We are using 16x16 workgroup size so we need to divide by it
-	vkCmdDispatch(cmd,std::ceil(_windowExtent.width / 16.0), std::ceil(_windowExtent.height / 16.0),1);
+	vkCmdDispatch(cmd, std::ceil(_windowExtent.width / 16.0), std::ceil(_windowExtent.height / 16.0), 1);
 ```
 
 First we need to bind the pipeline using `vkCmdBindPipeline`. As the pipeline is a compute shader, we use `VK_PIPELINE_BIND_POINT_COMPUTE`. Then, we need to bind the descriptor set that holds the draw image so that the shader can access it.

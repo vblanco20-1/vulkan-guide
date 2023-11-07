@@ -7,7 +7,6 @@ nav_order: 5
 
 Lets now write the code necesary for our compute shader. We will begin with a very simple shader that has an image as input, and writes a color to it, based on the thread ID, forming a gradient.
 
-
 ```c
 //GLSL version to use
 #version 460

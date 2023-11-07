@@ -112,10 +112,10 @@ This is all we need to add pushconstants to a shader. lets now use them from the
 	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, _gradientPipelineLayout, 0, 1, &_drawImageDescriptors, 0, nullptr);
 
 	ComputePushConstants pc;
-	pc.data1 = glm::vec4(1,0,0,1);
-	pc.data2 = glm::vec4(0,0,1,1);
+	pc.data1 = glm::vec4(1, 0, 0, 1);
+	pc.data2 = glm::vec4(0, 0, 1, 1);
 
-	vkCmdPushConstants(cmd,_gradientPipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(ComputePushConstants),&pc);
+	vkCmdPushConstants(cmd, _gradientPipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(ComputePushConstants), &pc);
 	// execute the compute pipeline dispatch. We are using 16x16 workgroup size so we need to divide by it
 	vkCmdDispatch(cmd, std::ceil(_windowExtent.width / 16.0), std::ceil(_windowExtent.height / 16.0), 1);
 ```
@@ -253,8 +253,6 @@ Last we need to do is to change the render loop to select the shader selected wi
 
 <!-- codegen from tag draw_multi on file E:\ProgrammingProjects\vulkan-guide-2\chapter-2/vk_engine.cpp --> 
 ```cpp
-	vkutil::transition_image(cmd, _drawImage.image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
-
 	ComputeEffect& effect = backgroundEffects[currentBackgroundEffect];
 
 	// bind the background compute pipeline

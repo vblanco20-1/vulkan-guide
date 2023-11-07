@@ -5,7 +5,7 @@ parent:  "New 2. Drawing with Compute"
 nav_order: 1
 ---
 
-Before we begin drawing, we need to implement a couple other things first that will help with the tutorial. First we have a deletion queue that will allow us to safely handle the cleanup of a growing amount of objects, and then we will change the render loop to draw into a non-swapchain image and then copy it to the swapchain.
+Before we begin drawing, we need to implement a couple other things. First we have a deletion queue that will allow us to safely handle the cleanup of a growing amount of objects, and then we will change the render loop to draw into a non-swapchain image and then copy it to the swapchain.
 
 
 ## Deletion queue
@@ -37,7 +37,7 @@ struct DeletionQueue
 
 std::function stores a lambda, and we can use it to store a callback with some data, which is perfect for this case. 
 
-Doing callbacks like this is inneficient at scale, because we are storing whole std::functions for every object we are deleting, which not going to be optimal. For the amount of objects we will use in this tutorial, its going to be fine. but if you need to delete thousands of objects and want them deleted faster, a better implementation would be to store arrays of vulkan handles of various types such as VkImage, VkBuffer, and so on. And then delete those from a loop.
+Doing callbacks like this is inneficient at scale, because we are storing whole std::functions for every object we are deleting, which is not going to be optimal. For the amount of objects we will use in this tutorial, its going to be fine. but if you need to delete thousands of objects and want them deleted faster, a better implementation would be to store arrays of vulkan handles of various types such as VkImage, VkBuffer, and so on. And then delete those from a loop.
 
 We will have the deletion queue in multiple places, for multiple lifetimes of objects. One of them is on the engine class itself, and will be flushed when the engine gets destroyed. Global objects go into that one. We will also store one deletion queue for each frame in flight, which will allow us to delete objects next frame after they are used. 
 
@@ -112,12 +112,12 @@ Now we will initialize it from `init_vulkan()` call, at the end of the function.
 	});
 ```
 
-There isnt much to explain it, we are just initializing the _allocator member, and then adding its destruction function into the destruction queue so that it gets cleared when the engine exits. We hook the physical device, instance, and device to the creation function. Vulkan Memory Allocator library follows similar call conventions as the vulkan api, so it works with similar info structs.
+There isnt much to explain it, we are initializing the _allocator member, and then adding its destruction function into the destruction queue so that it gets cleared when the engine exits. We hook the physical device, instance, and device to the creation function. Vulkan Memory Allocator library follows similar call conventions as the vulkan api, so it works with similar info structs.
 
 # New draw loop.
 
 Drawing directly into the swapchain is fine for many projects, and it can even be optimal in some cases such as phones. But it comes with a few restrictions. 
-The most important of it is that the formats of the image used in the swapchain are not guaranteed. Different OS, drivers, and windowing modes can have different optimal swapchain formats. We could force a fixed format on the swapchain image, but that might not be the best.
+The most important of them is that the formats of the image used in the swapchain are not guaranteed. Different OS, drivers, and windowing modes can have different optimal swapchain formats. Things like HDR support also need their own very specific formats.
 Another one is that we only get a swapchain image index from the windowing present system. There are low-latency techniques where we could be rendering into another image, and then directly push that image to the swapchain with very low latency. 
 
 One very important limitation is that their resolution is fixed to whatever your window size is. If you want to have higher or lower resolution, and then do some scaling logic, you need to draw into a different image.
@@ -144,10 +144,9 @@ class VulkanEngine{
 }
 ```
 
-Lets begin by adding a couple extra members to initializers. one to create a image, and other to create its imageview
+Lets check the vk_initializers function for image and imageview create info.
 
 ^code image_set shared/vk_initializers.cpp
-
 
 We will hardcode the image tiling to OPTIMAL, which means that we allow the gpu to shuffle the data however it sees fit. If we want to read the image data from cpu, we would need to use tiling LINEAR, which makes the gpu data into a simple 2d array. This tiling is highly limited in what can be gpu do with it, so the only real use case for it is CPU readback.
 
@@ -155,44 +154,7 @@ On the imageview creation, we need to setup the subresource. Thats similar to th
 
 Now, at the end of init_swapchain, lets create it.
 
-```cpp
-//draw image size will match the window
-VkExtent3D drawImageExtent = {
-	_windowExtent.width,
-	_windowExtent.height,
-	1
-};
-
-//hardcoding the depth format to 16bit float
-_drawFormat = VK_FORMAT_R16G16B16A16_SFLOAT;
-
-VkImageUsageFlags drawImageUsages{};
-drawImageUsages |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
-drawImageUsages |= VK_IMAGE_USAGE_STORAGE_BIT;
-drawImageUsages |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-
-VkImageCreateInfo rimg_info = vkinit::image_create_info(_drawFormat, drawImageUsages, drawImageExtent);
-
-//for the draw image, we want to allocate it from gpu local memory
-VmaAllocationCreateInfo rimg_allocinfo = {};
-rimg_allocinfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
-rimg_allocinfo.requiredFlags = VkMemoryPropertyFlags(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-
-//allocate and create the image
-vmaCreateImage(_allocator, &rimg_info, &rimg_allocinfo, &_drawImage.image, &_drawImage.allocation, nullptr);
-
-//build a image-view for the draw image to use for rendering
-VkImageViewCreateInfo rview_info = vkinit::imageview_create_info(_drawFormat, _drawImage.image, VK_IMAGE_ASPECT_COLOR_BIT);
-
-VK_CHECK(vkCreateImageView(_device, &rview_info, nullptr, &_drawImageView));
-
-//add to deletion queues
-_mainDeletionQueue.push_function([=]() {
-	vkDestroyImageView(_device, _drawImageView, nullptr);
-	vmaDestroyImage(_allocator, _drawImage.image, _drawImage.allocation);
-});
-
-```
+^code init_swap chapter-2/vk_engine.cpp
 
 We begin by creating a VkExtent3d structure with the size of the image we want, which will match our window size.
 
@@ -206,7 +168,7 @@ With VMA_MEMORY_USAGE_GPU_ONLY usage, we are letting VMA know that this is a gpu
 
 In vulkan, there are multiple memory regions we can allocate images and buffers from. PC implementations with dedicated GPUs will generally have a cpu ram region, a GPU Vram region, and a "upload heap" which is a special region of gpu vram that allows cpu writes. If you have resizable bar enabled, the upload heap can be the entire gpu vram. Else it will be much smaller, generally only 256 megabytes. We tell VMA to put it on GPU_ONLY which will prioritize it to be on the gpu vram but outside of that upload heap region.
 
-With the image allocate, we create an imageview to pair with it. In vulkan, you need a imageview to access images. This is generally a thin wrapper over the image itself that lets you do things like limit access to only 1 mipmap. We will always be pairing vkimages with their "default" imageview in this tutorial.
+With the image allocated, we create an imageview to pair with it. In vulkan, you need a imageview to access images. This is generally a thin wrapper over the image itself that lets you do things like limit access to only 1 mipmap. We will always be pairing vkimages with their "default" imageview in this tutorial.
 
 # new draw loop
 
@@ -220,40 +182,18 @@ Vulkan has 2 main ways of copying one image to another. you can use VkCmdCopyIma
 CopyImage is faster, but its much more restricted, for example the resolution on both images must match.
 Meanwhile, blit image lets you copy images of different formats and different sizes into one another. You have a source rectangle and a target rectangle, and the system copies it into its position.
 
-With it, we can now update the render loop
-
-We will be changing the code that records the command buffer. You can now delete the older one. 
-The new code is this
+With it, we can now update the render loop. As draw() is getting too big, we are going to leave the syncronization, command buffer management, and transitions in the draw() function, but we are going to add the draw commands themselves into a draw_main() function.
 
 ```cpp
-	VK_CHECK(vkBeginCommandBuffer(cmd, &cmdBeginInfo));	
-
-	// transition our main draw image into general layout so we can write into it
-	// we will overwrite it all so we dont care about what was the older layout
-	vkutil::transition_image(cmd, _drawImage.image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
-	
-
-	//make a clear-color from frame number. This will flash with a 120 frame period.
-	VkClearColorValue clearValue;
-	float flash = abs(sin(_frameNumber / 120.f));
-	clearValue = { { 0.0f, 0.0f, flash, 1.0f } };
-
-	VkImageSubresourceRange clearRange = vkinit::image_subresource_range(VK_IMAGE_ASPECT_COLOR_BIT);
-
-	//clear image
-	vkCmdClearColorImage(cmd, _drawImage.image,VK_IMAGE_LAYOUT_GENERAL,&clearValue,1,&clearRange);
-
-
-	//transtion the draw image and the swapchain image into their correct transfer layouts
-	vkutil::transition_image(cmd, _drawImage.image, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-	vkutil::transition_image(cmd, _swapchainImages[swapchainImageIndex], VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-
-	VkImageSubresourceRange clearRange = vkinit::image_subresource_range(VK_IMAGE_ASPECT_COLOR_BIT);
-
-	VkExtent3D extent;
-	extent.height = _windowExtent.height;
-	extent.width = _windowExtent.width;
-	extent.depth = 1;
+void VulkanEngine::draw_main(VkCommandBuffer cmd)
+{
+^code draw_clear chapter-2/vk_engine.cpp
+}
+```
+We will be changing the code that records the command buffer. You can now delete the older one. 
+The new code is this.
+```cpp
+^code draw_first chapter-2/vk_engine.cpp
 
 	// execute a copy from the draw image into the swapchain
 	vkutil::copy_image_to_image(cmd, _drawImage.image, _swapchainImages[swapchainImageIndex], extent);
@@ -261,12 +201,11 @@ The new code is this
 	// set swapchain image layout to Present so we can show it on the screen
 	vkutil::transition_image(cmd, _swapchainImages[swapchainImageIndex], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 
-
 	//finalize the command buffer (we can no longer add commands, but it can now be executed)
 	VK_CHECK(vkEndCommandBuffer(cmd));
 ```
 
-The main diference we have in the render loop is that we no longer do the clear on the swapchain image. Instead, we do it on the `_drawImage.image`. Once we have cleared the image, we transition both the swapchain and the draw image into their layouts for transfer, and we execute the copy command. Once we are done with the copy command, we transition the swapchain image into present layout for display. 
+The main diference we have in the render loop is that we no longer do the clear on the swapchain image. Instead, we do it on the `_drawImage.image`. Once we have cleared the image, we transition both the swapchain and the draw image into their layouts for transfer, and we execute the copy command. Once we are done with the copy command, we transition the swapchain image into present layout for display. As we are always drawing on the same image, our draw_image does not need to access swapchain index, it just clears the draw image.
 
 This will now provide us a way to render images outside of the swapchain itself. We now get significantly higher pixel precision, and we unlock some other techniques.
 

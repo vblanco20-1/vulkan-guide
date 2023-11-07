@@ -149,7 +149,11 @@ With the attachment info done, we can make the VkRenderingInfo.
 
 We are going to take a render extent to setup a rectangle of pixels to draw, and we will send a color attachment and a depth attachment. We dont need the depth attachment right now, thats for later.
 
-We now go change the render loop so that we can call the imgui draw commands
+We now go change the render loop so that we can call the imgui draw commands. We will begin by adding a new function draw_imgui() to the VulkanEngine class, and putting our imgui drawing code inside it.
+
+^code imgui_draw_fn chapter-2/vk_engine.cpp
+
+Then we need to call it from our draw() function.
 
 ^code imgui_draw chapter-2/vk_engine.cpp
 

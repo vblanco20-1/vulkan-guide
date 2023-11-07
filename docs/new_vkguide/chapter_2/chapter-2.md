@@ -6,11 +6,10 @@ nav_order: 4
 has_children: true
 permalink: /docs/new_vkguide/chapter_2
 ---
-![chapter1]({{site.baseurl}}/diagrams/chapter1.png)
-# Chapter 1 : Initialization and render Loop
+# Chapter 2 : Drawing with compute
 
-In this chapter, we are going to start the tutorial code, and configure the initial Vulkan structures needed to support rendering.
-We will also be writing the initial render loop, including command buffer and render image management.
+In this chapter, we are going to begin drawing using compute shaders. As part of the chapter, we will also setup DearImgui library to get some user interface.
+
 {: .fs-6 .fw-300 }
 
 
