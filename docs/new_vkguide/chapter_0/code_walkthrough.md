@@ -22,8 +22,6 @@ The files are all stored in the project/src/ folder
 vk_engine will be our main engine class, and the core of the project. vk_loader will be tied into it as it will need to interface it while loading GLTF files.
 The other files are for generic vulkan abstraction layers that will get built as the tutorial needs. Those abstraction files have no dependencies other than vulkan, so you can keep them for your own projects.
 
-Whenever possible, we will try to keep the headers of each component as lightweight as possible. The lighter the headers are, the faster your program will compile, and this is crucial when dealing with C++
-
 # Code
 
 <!-- codegen from tag main on file E:\ProgrammingProjects\vulkan-guide-2\chapter-0/main.cpp --> 
@@ -82,17 +80,7 @@ We will be using the `vk_enum_string_helper.h` on the tutorial. This is a Vulkan
 
 The tutorial is not going to use the standard std::cout for printing information. We will use {fmt} lib instead. This is a very high quality library for formatting strings and printing them. Cpp 20 std::format is based on this library, but we can use the library to get a much wider feature set and better support. In here, we use `fmt::println` to output an error to the console in the case the vulkan gives an error. 
 
-
-vk_initializers.h looks like this
-
-```cpp
-#pragma once
-
-#include <vk_types.h>
-
-namespace vkinit {
-}
-```
+vk_initializers.h is prewritten. It contains initializers for most of the vulkan info structs and other similar ones. They abstract those structs slightly, and every time we use one of them, its code and abstraction will be explained.
 
 We include the vk_types header, which brings Vulkan itself (we will need it), and we declare a namespace for the functions we will add here later.
 
@@ -114,6 +102,8 @@ public:
 
 	struct SDL_Window* _window{ nullptr };
 
+	static VulkanEngine& Get();
+
 	//initializes everything in the engine
 	void init();
 
@@ -134,6 +124,8 @@ The Vulkan engine will be the core of everything we will be doing. We will be ce
 We have a flag to know if the engine is initialized, a frame number integer (very useful!), and the size of the window we are going to open, in pixels. 
 
 The declaration `struct SDL_Window* window;` is of special interest. Note the `struct` at the beginning. This is called a forward-declaration, and it's what allows us to have the `SDL_Window `pointer in the class, without including SDL on the Vulkan engine header. This variable holds the window that we create for the application.
+
+We are also adding a Get() function as global singleton pattern.
 
 With the headers seen, let's go to the cpp files.
 
@@ -157,8 +149,15 @@ vk_engine.cpp, line 10
 
 <!-- codegen from tag init on file E:\ProgrammingProjects\vulkan-guide-2\chapter-0/vk_engine.cpp --> 
 ```cpp
+VulkanEngine* loadedEngine = nullptr;
+
+VulkanEngine& VulkanEngine::Get(){	return *loadedEngine; }
 void VulkanEngine::init()
-{
+{	
+	// only one engine initialization is allowed with the application.
+	assert(loadedEngine == nullptr);
+	loadedEngine = this;
+
 	// We initialize SDL and create a window with it. 
 	SDL_Init(SDL_INIT_VIDEO);
 
@@ -178,17 +177,16 @@ void VulkanEngine::init()
 }
 ```
 
-
 Here we see our first proper code, in the shape of creating a SDL window.
-The first thing we do is init the SDL library. The SDL library contains quite a few things, so we have to send a flag of what do we want to use. SDL_INIT_VIDEO tells SDL that we want the main windowing functionality. That also includes basic input events like keys or mouse.
+The first thing we do is init the SDL library. The SDL library contains quite a few things, so we have to send a flag of what do we want to use. SDL_INIT_VIDEO tells SDL that we want the main windowing functionality. That also includes basic input events like keys or mouse. 
+
+We also set a global pointer for the vulkan engine singleton reference. We do that instead of a typical singleton because we want to control explicitly when is the class initalized and destroyed. The normal Cpp singleton pattern doesnt give us control over that.
 
 Once SDL has been initialized, we use it to create a window. The window is stored on the `_window` member for later use.
 
 Because SDL is a C library, it does not support constructors and destructors, and things have to get deleted manually. 
 
 If the window is created, it also has to be destroyed.
-
-
 <!-- codegen from tag extras on file E:\ProgrammingProjects\vulkan-guide-2\chapter-0/vk_engine.cpp --> 
 ```cpp
 void VulkanEngine::cleanup()
@@ -197,6 +195,9 @@ void VulkanEngine::cleanup()
 		
 		SDL_DestroyWindow(_window);
 	}
+
+	//clear engine pointer
+	loadedEngine = nullptr;
 }
 
 void VulkanEngine::draw()
@@ -205,7 +206,8 @@ void VulkanEngine::draw()
 }
 ```
 
-In a similar way that we did `SDL_CreateWindow`, we need to do `SDL_DestroyWindow`. This will destroy the window for the program.
+In a similar way that we did `SDL_CreateWindow`, we need to do `SDL_DestroyWindow`. This will destroy the window for the program. We also clear the singleton pointer for the engine from here, now that the engine is fully cleared.
+
 Over time, we will add more logic into this cleanup function.
 
 Our draw function is empty for now, but here is where we will add the rendering code.

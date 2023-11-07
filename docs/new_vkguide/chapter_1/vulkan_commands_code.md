@@ -5,7 +5,7 @@ parent:  "New 1. Initializing Vulkan"
 nav_order: 21
 ---
 
-We will begin by writing our FrameData struct, on the vk_engine.h header. This will hold the structures and commands we will need to draw a given frame, and that we will be double-buffering. 
+We will begin by writing our FrameData struct, on the vk_engine.h header. This will hold the structures and commands we will need to draw a given frame, as we will be double-buffering, with the GPU running some commands while we write into others. 
 ```cpp
 struct FrameData {
 
@@ -115,24 +115,13 @@ The .level is set to Primary . Command buffers can be Primary of Secondary level
 Primary level are the ones that are sent into a VkQueue, and do all of the work. This is what we will use in the guide.
 Secondary level are ones that can act as "subcommands" to a primary buffer. They are most commonly used when you want to record commands for a single pass from multiple cores. We are not going to use them.
 
+You can find the details and parameters for those info structures here:
+* [VkCommandPoolCreateInfo](https://registry.khronos.org/vulkan/specs/1.3-extensions/html/chap6.html#VkCommandPoolCreateInfo)
+* [VkCommandBufferAllocateInfo](https://registry.khronos.org/vulkan/specs/1.3-extensions/html/chap6.html#VkCommandBufferAllocateInfo)
+
 ## The VkInit module
 
-If you remember the article that explored the project files, we commented that the vk_initializers module will contain abstraction over the initialization of Vulkan structures. Let's go abstract the 2 Info structures into there, for easier readability.
-
-
-vk_initializers.h
-```cpp
-namespace vkinit {
-VkCommandPoolCreateInfo command_pool_create_info(uint32_t queueFamilyIndex, VkCommandPoolCreateFlags flags = 0);
-VkCommandBufferAllocateInfo command_buffer_allocate_info(VkCommandPool pool, uint32_t count = 1);
-}
-```
-
-2 new functions, `command_pool_create_info()`, and `command_buffer_allocate_info()`. We also use default arguments `flags = 0` to not have to input all arguments for basic stuff.
-Now, let's copy the code into the implementation of those 2 functions.
-
-
-vk_initializers.cpp
+If you remember the article that explored the project files, we commented that the vk_initializers module will contain abstraction over the initialization of Vulkan structures. Let's look into the implementation for those 2 structures.
 
 <!-- codegen from tag init_cmd on file E:\ProgrammingProjects\vulkan-guide-2\shared/vk_initializers.cpp --> 
 ```cpp
@@ -162,9 +151,7 @@ VkCommandBufferAllocateInfo vkinit::command_buffer_allocate_info(
 }
 ```
 
-We will be hardcoding command buffer level to VK_COMMAND_BUFFER_LEVEL_PRIMARY . As we wont ever be using secondary command buffers, we can just ignore their existence and configuration parameters. By abstracting things with defaults that match your engine, you can simplify things a bit.
-
-We have now abstracted the calls, so let's go update VulkanEngine::init_commands() to use this.
+We will be hardcoding command buffer level to `VK_COMMAND_BUFFER_LEVEL_PRIMARY` . As we wont ever be using secondary command buffers, we can just ignore their existence and configuration parameters. By abstracting things with defaults that match your engine, you can simplify things a bit.
 
 <!-- codegen from tag init_cmd on file E:\ProgrammingProjects\vulkan-guide-2\chapter-1/vk_engine.cpp --> 
 ```cpp
@@ -186,10 +173,9 @@ void VulkanEngine::init_commands()
 }
 ```
 
-Much better and shorter. Over the guide, the vk_initializers module will keep growing with more and more structs. You will be able to reuse that module in other projects safely given how simple it is. This module will be addition-only over the whole tutorial, so if you want, you can copy the one from the project sourcecode and add the "final" version directly into the code. Here is the link if you want it. [Header](https://github.com/vblanco20-1/vulkan-guide/blob/all-chapters-1.3-wip/shared/vk_initializers.h) [Source](https://github.com/vblanco20-1/vulkan-guide/blob/all-chapters-1.3-wip/shared/vk_initializers.cpp)
+Much better and shorter. Over the guide, we will keep using that vkinit namespace. You will be able to reuse that module in other projects safely given how simple it is. Remember that the starting_point branch has it written, as recomended on chapter 0.
 
 ## Cleanup
-
 Same as before, what we have created, we have to delete
 
 ```cpp
@@ -213,4 +199,4 @@ It's not possible to individually destroy VkCommandBuffer, destroying their pare
 
 VkQueue-s also can't be destroyed, as, like with the VkPhysicalDevice, they aren't really created objects, more like a handle to something that already exists as part of the VkInstance. 
 
-Now that we have the Queue and the CommandBuffer, we are ready to start executing commands. But we still need another piece, which is the syncronization structures to syncronize GPU execution with CPU
+We now have a way to send commands to the gpu, but we still need another piece, which is the syncronization structures to syncronize GPU execution with CPU

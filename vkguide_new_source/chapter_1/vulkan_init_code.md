@@ -113,8 +113,14 @@ To select a GPU to use, we are going to use vkb::PhysicalDeviceSelector.
 
 First of all, we need to create a VkSurfaceKHR object from the SDL window. This is the actual window we will be rendering to, so we need to tell the physical device selector to grab a GPU that can render to said window.
 
-We need to enable some features. For now, those are dynamic rendering, and syncronization 2. Those are optional features provided in vulkan 1.3 that change a few things. dynamic rendering allows us to completely skip renderpasses/framebuffers (if you want to learn about them, they are explained in the old version of vkguide), and also use a new upgraded version of the syncronization functions. By giving the vkb::PhysicalDeviceSelector the `VkPhysicalDeviceVulkan13Features` structure, we can tell vkbootstrap to find a gpu that has those features.
+We need to enable some features. For now, those are dynamic rendering, and syncronization 2. Those are optional features provided in vulkan 1.3 that change a few things. dynamic rendering allows us to completely skip renderpasses/framebuffers (if you want to learn about them, they are explained in the old version of vkguide), and also use a new upgraded version of the syncronization functions. By giving the vkb::PhysicalDeviceSelector the `VkPhysicalDeviceVulkan13Features` structure , we can tell vkbootstrap to find a gpu that has those features. 
 
+There are multiple levels of feature structs you can use depending on your vulkan version, you can find their info here: 
+
+[Vulkan Spec: 1.0 physical device features](https://registry.khronos.org/vulkan/specs/1.3-extensions/html/chap47.html#VkPhysicalDeviceFeatures)
+[Vulkan Spec: 1.1 physical device features](https://registry.khronos.org/vulkan/specs/1.3-extensions/html/chap47.html#VkPhysicalDeviceVulkan11Features)
+[Vulkan Spec: 1.2 physical device features](https://registry.khronos.org/vulkan/specs/1.3-extensions/html/chap47.html#VkPhysicalDeviceVulkan12Features)
+[Vulkan Spec: 1.3 physical device features](https://registry.khronos.org/vulkan/specs/1.3-extensions/html/chap47.html#VkPhysicalDeviceVulkan13Features)
 
 
 Once we have a VkPhysicalDevice, we can directly build a VkDevice from it.
@@ -124,8 +130,6 @@ And at the end, we store the handles in the class.
 That's it, we have initialized Vulkan. We can now start calling Vulkan commands.
 
 If you run the project right now, it will crash if you dont have a gpu with the required features or vulkan drivers that dont support them. If that happens, make sure your drivers are updated. If its just something your GPU doesnt support, go with the older version of vkguide as you wont be able to follow this tutorial.
-
-But before we start executing commands, there is one last thing to do.
 
 ## Setting up the swapchain
 
@@ -153,7 +157,7 @@ Like with the other initialization functions, we are going to use the vkb librar
 
 ^code init_swap chapter-1/vk_engine.cpp
 
-The most important detail here is the present mode, which we have set to `VK_PRESENT_MODE_FIFO_KHR`. This way we are doing a hard VSync, which will limit the FPS of the entire engine to the speed of the monitor. It's a good way to have a FPS limit for now.
+The most important detail here is the present mode, which we have set to `VK_PRESENT_MODE_FIFO_KHR`. This way we are doing a hard VSync, which will limit the FPS of the entire engine to the speed of the monitor.
 
 We also send the window sizes to the swapchain. This is important as creating a swapchain will also create the images for it, so the size is locked. If you need to resize the window, the swapchain will need to be rebuild.
 
@@ -187,7 +191,9 @@ void VulkanEngine::cleanup()
 }
 ```
 
-It is imperative that objects are destroyed in the opposite order that they are created. In some cases, if you know what you are doing, the order can be changed a bit and it will be fine, but destroying the objects in reverse order is an easy way to have it work.
+Objects have dependencies on each other, and we need to delete them in the correct order. Deleting them in the opposite order they were created is a good way of doing it. In some cases, if you know what you are doing, the order can be changed a bit and it will be fine.
+
+Destroying the swapchain will also destroy the images for that swapchain, but the image-views need to be destroyed separately.
 
 VkPhysicalDevice can't be destroyed, as it's not a Vulkan resource per-se, it's more like just a handle to a GPU in the system.
 

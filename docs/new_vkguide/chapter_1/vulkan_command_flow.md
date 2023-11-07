@@ -8,8 +8,6 @@ nav_order: 20
 
 ![cmake]({{site.baseurl}}/diagrams/vkcommands.png)
 
-
-
 ## Vulkan Command Execution
 Unlike OpenGL or DirectX pre-11, in Vulkan, all GPU commands have to go through a command buffer, and executed through a Queue.
 
@@ -23,17 +21,16 @@ In this tutorial, we are going to record the commands every frame, as it's more 
 
 Recording commands in Vulkan is relatively cheap. Often, the operation that is costly is the VkQueueSubmit call, where the driver validates the command buffer and executes it on the GPU.
 
-One very important part with command buffers is that they can be recorded in parallel. You can record different command buffers from different threads safely. To do that, you need to have 1 `VkCommandPool` and 1 `VkCommandBuffer` per thread (minimum), and make sure that each thread only uses their own command buffers & pools. Once that is done, it's possible to submit the command buffers in one of the threads. `vkQueueSubmit` is not thread-safe, only one thread can push the commands on a given queue at a time.
+One very important part with command buffers is that they can be recorded in parallel. You can record different command buffers from different threads safely. To do that, you need to have 1 `VkCommandPool` and 1 `VkCommandBuffer` per thread (minimum), and make sure that each thread only uses their own command buffers & pools. Once that is done, it's possible to submit the command buffers in one of the threads. `vkQueueSubmit` is not thread-safe, only one thread can push the commands on a given queue at a time. Its common in big engines to have the submit being done from a background thread, and that way the main render-loop thread can continue executing.
 
 ## VkQueue
 Queues in Vulkan are an "execution port" for GPUs. Every GPU has multiple queues available, and you can even use them at the same time to execute different command streams. Commands submitted to separate queues may execute at once. This is very useful if you are doing background work that doesn't exactly map to the main frame loop. You can create a `VkQueue` specifically for said background work and have it separated from the normal rendering.
 
-All queues in Vulkan come from a Queue Family. A Queue Family is the "type" of queue it is, and what type of commands it supports. In this tutorial, we are going to use 
+All queues in Vulkan come from a Queue Family. A Queue Family is the "type" of queue it is, and what type of commands it supports. 
 
-Different GPUs support different Queue Families. An example is this NVidia GT 750ti from Vulkan Hardware Info <https://vulkan.gpuinfo.org/displayreport.php?id=8859#queuefamilies>. It has 2 Queue families, one that supports up to 16 queues that have all features, and then a family that can support 1 queue for transfer only.
+Different GPUs support different Queue Families. An example is this NVidia GT 750ti from Vulkan Hardware Info (Link)[https://vulkan.gpuinfo.org/displayreport.php?id=8859#queuefamilies]. It has 2 Queue families, one that supports up to 16 queues that have all features, and then a family that can support 1 queue for transfer only. [Here](https://vulkan.gpuinfo.org/displayreport.php?id=24407#queuefamilies) you have an example for a high end AMD card, there are 5 queue families, and only up to 2 queues per type. It has 1 queue that supports everything, up to 2 queues that support compute and transfer, 2 dedicated transfer queues, and then 2 other queues for present alone. As you can see, the queues supported by each GPU can vary significantly.
 
-It is common to see engines using 3 queue families. One for drawing the frame, other for async compute, and other for data transfer. In this tutorial, we will do everything on a single queue that will run all our commands for simplicity. 
-
+It is common to see engines using 3 queue families. One for drawing the frame, other for async compute, and other for data transfer. In this tutorial, we use a single queue that will run all our commands for simplicity.
 
 ## VkCommandPool
 A `VkCommandPool` is created from the `VkDevice`, and you need the index of the queue family this command pool will create commands from.
@@ -54,7 +51,6 @@ Once a command buffer has been submitted, it's still "alive", and being consumed
 To reset a command buffer, you use `vkResetCommandBuffer()`.
 
 As we will want to continue drawing the next frame while the command buffer is executed, we are going to double-buffer the commands. This way, while the gpu is busy rendering and processing one buffer, we can write into a different one.
-
 
 For more detailed information on the command buffer lifecycle, refer to the Vulkan specification chapter on them
 <https://www.khronos.org/registry/vulkan/specs/1.2-extensions/html/chap6.html#commandbuffers-lifecycle>.

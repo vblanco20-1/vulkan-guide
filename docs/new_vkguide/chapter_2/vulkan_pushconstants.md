@@ -50,7 +50,7 @@ void main()
     {
         float blend = float(texelCoord.y)/(size.y); 
     
-        imageStore(image, texelCoord, mix(topColor,bottomColor, vertical));
+        imageStore(image, texelCoord, mix(topColor,bottomColor, blend));
     }
 }
 ```

@@ -14,4 +14,3 @@ We will also be writing the initial render loop, including command buffer and re
 {: .fs-6 .fw-300 }
 
 
-{% include comments.html term="1. Comments" %}
