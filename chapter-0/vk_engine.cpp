@@ -9,8 +9,15 @@
 //< includes
 
 //> init
+VulkanEngine* loadedEngine = nullptr;
+
+VulkanEngine& VulkanEngine::Get(){	return *loadedEngine; }
 void VulkanEngine::init()
-{
+{	
+	// only one engine initialization is allowed with the application.
+	assert(loadedEngine == nullptr);
+	loadedEngine = this;
+
 	// We initialize SDL and create a window with it. 
 	SDL_Init(SDL_INIT_VIDEO);
 
@@ -37,6 +44,9 @@ void VulkanEngine::cleanup()
 		
 		SDL_DestroyWindow(_window);
 	}
+
+	//clear engine pointer
+	loadedEngine = nullptr;
 }
 
 void VulkanEngine::draw()

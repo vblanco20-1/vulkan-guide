@@ -15,6 +15,8 @@ public:
 
 	struct SDL_Window* _window{ nullptr };
 
+	static VulkanEngine& Get();
+
 	//initializes everything in the engine
 	void init();
 
