@@ -5,8 +5,6 @@ parent:  "New 2. Drawing with Compute"
 nav_order: 9
 ---
 
-
-
 We have a way to run compute shaders to display, and a way to add debug-UI to the engine. Lets use that to send data to the shaders through the UI, and have an interactive thing.
 
 we will be using PushConstants to send data to the shader. PushConstants are a feature unique to vulkan that allows for some small amount of data to be sent to the GPU. Keeping this data small is important, as most drivers will have a fast-path if the data is below some bytes (consult gpu vendor documentation). Its main use case is to send some per-object indexes or a couple matrices that change for every object. If you have data that is bigger than a handful of floats or ints, you should be using other systems that we will show next chapter.
