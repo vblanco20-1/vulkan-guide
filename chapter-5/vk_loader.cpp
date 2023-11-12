@@ -414,7 +414,7 @@ void LoadedGLTF::clearAll()
     auto materialBuffer = materialDataBuffer;
     auto samplersToDestroy = samplers;
 
-    VulkanEngine::Get().get_current_frame()._frameDeletionQueue.push_function(
+    VulkanEngine::Get().get_current_frame()._deletionQueue.push_function(
         [materialBuffer, poolToDestroy, meshesToDestroy, imagesToDestroy, materialsToDestroy, samplersToDestroy]() {
             VkDevice dv = VulkanEngine::Get()._device;
 

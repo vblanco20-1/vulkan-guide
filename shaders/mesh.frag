@@ -50,7 +50,7 @@ void main()
 {
 	float lightValue = max(dot(inNormal, vec3(0.3f,1.f,0.3f)), 0.1f);
 
-	vec3 irradiance = calcIrradiance(inNormal);
+	vec3 irradiance = calcIrradiance(inNormal); 
 
 
 	vec3 color = inColor * texture(albedoTex,inUV).xyz;

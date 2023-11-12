@@ -8,6 +8,7 @@
 #include "vk_mem_alloc.h"
 #include <deque>
 #include <functional>
+#include "vk_descriptors.h"
 
 struct DeletionQueue
 {
@@ -27,6 +28,34 @@ struct DeletionQueue
 	}
 };
 
+struct FrameData {
+	VkSemaphore _swapchainSemaphore, _renderSemaphore;
+	VkFence _renderFence;
+
+	VkCommandPool _commandPool;
+	VkCommandBuffer _mainCommandBuffer;
+
+	DeletionQueue _deletionQueue;
+};
+
+constexpr unsigned int FRAME_OVERLAP = 2;
+
+struct ComputePushConstants {
+	glm::vec4 data1;
+	glm::vec4 data2;
+	glm::vec4 data3;
+	glm::vec4 data4;
+};
+
+struct ComputeEffect {
+	const char* name;
+
+	VkPipeline pipeline;
+	VkPipelineLayout layout;
+
+	ComputePushConstants data;
+};
+
 class VulkanEngine {
 public:
 
@@ -42,22 +71,19 @@ public:
 	VkPhysicalDevice _chosenGPU;
 	VkDevice _device;
 
-	VkSemaphore _presentSemaphore, _renderSemaphore;
-	VkFence _renderFence;
+	FrameData _frames[FRAME_OVERLAP];
+
+	FrameData& get_current_frame() { return _frames[_frameNumber % FRAME_OVERLAP]; };
+
 
 	VkQueue _graphicsQueue;
-	uint32_t _graphicsQueueFamily;
-
-	VkCommandPool _commandPool;
-	VkCommandBuffer _mainCommandBuffer;
-	
-	VkRenderPass _renderPass;
+	uint32_t _graphicsQueueFamily;	
 
 	VkSurfaceKHR _surface;
 	VkSwapchainKHR _swapchain;
-	VkFormat _swachainImageFormat;
+	VkFormat _swapchainImageFormat;
 
-	VkDescriptorPool _descriptorPool;
+	DescriptorAllocator globalDescriptorAllocator;
 
 	VkPipeline _gradientPipeline;
 	VkPipelineLayout _gradientPipelineLayout;
@@ -67,8 +93,7 @@ public:
 	std::vector<VkImageView> _swapchainImageViews;
 
 	VkDescriptorSet _drawImageDescriptors;
-
-	VkDescriptorSetLayout _swapchainImageDescriptorLayout;
+	VkDescriptorSetLayout _drawImageDescriptorLayout;
 
 	DeletionQueue _mainDeletionQueue;
 
@@ -78,12 +103,17 @@ public:
 
 	VkPipeline _trianglePipeline;
 
+		// immediate submit structures
+	VkFence _immFence;
+	VkCommandBuffer _immCommandBuffer;
+	VkCommandPool _immCommandPool;
+
 	//draw resources
-	VkImageView _drawImageView;
+	
 	AllocatedImage _drawImage;
 
-	//the format for the draw image
-	VkFormat _drawFormat;
+	std::vector<ComputeEffect> backgroundEffects;
+	int currentBackgroundEffect{ 0 };
 
 	//initializes everything in the engine
 	void init();
@@ -94,8 +124,13 @@ public:
 	//draw loop
 	void draw();
 
+	void draw_main(VkCommandBuffer cmd);
+	void draw_imgui(VkCommandBuffer cmd, VkImageView targetImageView);
+
 	//run main loop
 	void run();
+
+	void immediate_submit(std::function<void(VkCommandBuffer cmd)>&& function);
 
 private:
 
@@ -103,15 +138,16 @@ private:
 
 	void init_swapchain();
 
-	void init_default_renderpass();
-
-	void init_framebuffers();
-
 	void init_commands();
+	
+	void init_background_pipelines();
+	void init_graphics_pipelines();
 
 	void init_pipelines();
 
 	void init_descriptors();
 
 	void init_sync_structures();
+	
+	void init_imgui();
 };

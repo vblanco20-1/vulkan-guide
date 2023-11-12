@@ -42,6 +42,22 @@ struct DeletionQueue {
     }
 };
 
+struct ComputePushConstants {
+	glm::vec4 data1;
+	glm::vec4 data2;
+	glm::vec4 data3;
+	glm::vec4 data4;
+};
+
+struct ComputeEffect {
+	const char* name;
+
+	VkPipeline pipeline;
+	VkPipelineLayout layout;
+
+	ComputePushConstants data;
+};
+
 struct RenderObject {
     uint32_t indexCount;
     uint32_t firstIndex;
@@ -52,11 +68,11 @@ struct RenderObject {
 };
 
 struct FrameData {
-    VkSemaphore _presentSemaphore, _renderSemaphore;
-    VkFence _renderFence;
+	VkSemaphore _swapchainSemaphore, _renderSemaphore;
+	VkFence _renderFence;
 
     DescriptorAllocator _frameDescriptors;
-    DeletionQueue _frameDeletionQueue;
+    DeletionQueue _deletionQueue;
 
     VkCommandPool _commandPool;
     VkCommandBuffer _mainCommandBuffer;
@@ -102,7 +118,7 @@ public:
 
     VkSurfaceKHR _surface;
     VkSwapchainKHR _swapchain;
-    VkFormat _swachainImageFormat;
+    VkFormat _swapchainImageFormat;
 
     VkDescriptorPool _descriptorPool;
 
@@ -114,11 +130,10 @@ public:
     std::vector<VkFramebuffer> _framebuffers;
     std::vector<VkImage> _swapchainImages;
     std::vector<VkImageView> _swapchainImageViews;
-
-    VkDescriptorSet _drawImageDescriptors;
     VkDescriptorSet _defaultGLTFdescriptor;
 
-    VkDescriptorSetLayout _swapchainImageDescriptorLayout;
+	VkDescriptorSet _drawImageDescriptors;
+	VkDescriptorSetLayout _drawImageDescriptorLayout;
 
     DeletionQueue _mainDeletionQueue;
 
@@ -154,6 +169,9 @@ public:
 
     EngineStats stats;
 
+	std::vector<ComputeEffect> backgroundEffects;
+	int currentBackgroundEffect{ 0 };
+
     // singleton style getter.multiple engines is not supported
     static VulkanEngine& Get();
 
@@ -165,6 +183,8 @@ public:
 
     // draw loop
     void draw();
+	void draw_main(VkCommandBuffer cmd);
+	void draw_imgui(VkCommandBuffer cmd, VkImageView targetImageView);
 
     void draw_geometry(VkCommandBuffer cmd);
 
@@ -196,13 +216,10 @@ private:
 
     void init_swapchain();
 
-    void init_default_renderpass();
-
-    void init_framebuffers();
-
     void init_commands();
 
     void init_pipelines();
+    void init_background_pipelines();
 
     void init_descriptors();
 
