@@ -18,7 +18,7 @@
 #include <vk_descriptors.h>
 #include <vk_loader.h>
 #include <vk_pipelines.h>
-struct GLTFMesh;
+struct MeshAsset;
 namespace fastgltf {
 struct Mesh;
 }

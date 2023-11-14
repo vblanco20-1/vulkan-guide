@@ -24,16 +24,16 @@ struct GeoSurface {
     std::shared_ptr<GLTFMaterial> material;
 };
 
-struct GLTFMesh {
+struct MeshAsset {
     std::string name;
 
     std::vector<GeoSurface> surfaces;
     GPUMesh meshBuffers;
 };
 
-struct GltfMeshNode : public Node {
+struct MeshNode : public Node {
 
-    std::shared_ptr<GLTFMesh> mesh;
+    std::shared_ptr<MeshAsset> mesh;
 
     virtual void Draw(const glm::mat4& topMatrix, DrawContext& ctx);
 };
@@ -41,7 +41,7 @@ struct GltfMeshNode : public Node {
 struct LoadedGLTF : public IRenderable {
 
     // storage for all the data on a given gltf file
-    std::unordered_map<std::string, std::shared_ptr<GLTFMesh>> meshes;
+    std::unordered_map<std::string, std::shared_ptr<MeshAsset>> meshes;
     std::unordered_map<std::string, std::shared_ptr<Node>> nodes;
     std::unordered_map<std::string, AllocatedImage> images;
     std::unordered_map<std::string, std::shared_ptr<GLTFMaterial>> materials;

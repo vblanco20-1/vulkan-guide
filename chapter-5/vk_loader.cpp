@@ -168,7 +168,7 @@ std::optional<std::shared_ptr<LoadedGLTF>> loadGltf(std::string_view filePath)
     }
 
     // temporal arrays for all the objects to use while creating the GLTF data
-    std::vector<std::shared_ptr<GLTFMesh>> meshes;
+    std::vector<std::shared_ptr<MeshAsset>> meshes;
     std::vector<std::shared_ptr<Node>> nodes;
     std::vector<AllocatedImage> images;
     std::vector<std::shared_ptr<GLTFMaterial>> materials;
@@ -252,7 +252,7 @@ std::optional<std::shared_ptr<LoadedGLTF>> loadGltf(std::string_view filePath)
     std::vector<Vertex> vertices;
 
     for (fastgltf::Mesh& mesh : asset->meshes) {
-        std::shared_ptr<GLTFMesh> newmesh = std::make_shared<GLTFMesh>();
+        std::shared_ptr<MeshAsset> newmesh = std::make_shared<MeshAsset>();
         meshes.push_back(newmesh);
         file.meshes[mesh.name.c_str()] = newmesh;
         newmesh->name = mesh.name;
@@ -329,8 +329,8 @@ std::optional<std::shared_ptr<LoadedGLTF>> loadGltf(std::string_view filePath)
         std::shared_ptr<Node> newNode;
 
         if (node.meshIndex.has_value()) {
-            newNode = std::make_shared<GltfMeshNode>();
-            static_cast<GltfMeshNode*>(newNode.get())->mesh = meshes[*node.meshIndex];
+            newNode = std::make_shared<MeshNode>();
+            static_cast<MeshNode*>(newNode.get())->mesh = meshes[*node.meshIndex];
         } else {
             newNode = std::make_shared<Node>();
         }
@@ -395,7 +395,7 @@ void LoadedGLTF::clearAll()
     // pass into the lambda. shared_ptr deletes the actual objects for us once all
     // references are gone (after the destruction callback is run)
 
-    std::vector<std::shared_ptr<GLTFMesh>> meshesToDestroy;
+    std::vector<std::shared_ptr<MeshAsset>> meshesToDestroy;
     std::vector<AllocatedImage> imagesToDestroy;
     std::vector<std::shared_ptr<GLTFMaterial>> materialsToDestroy;
 
@@ -436,7 +436,7 @@ void LoadedGLTF::clearAll()
         });
 }
 
-void GltfMeshNode::Draw(const glm::mat4& topMatrix, DrawContext& ctx)
+void MeshNode::Draw(const glm::mat4& topMatrix, DrawContext& ctx)
 {
     glm::mat4 nodeMatrix = topMatrix * worldTransform;
 
