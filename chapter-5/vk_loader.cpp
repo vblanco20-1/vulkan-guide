@@ -212,10 +212,8 @@ std::optional<std::shared_ptr<LoadedGLTF>> loadGltf(std::string_view filePath)
 
         if (mat.alphaMode == fastgltf::AlphaMode::Blend) {
             newMat->data = engine->_gltfDefaultTranslucent;
-            newMat->IsTransparent = true;
         } else {
             newMat->data = engine->_gltfDefaultOpaque;
-            newMat->IsTransparent = false;
         }
 
         newMat->data.materialSet = file.descriptorPool.allocate(engine->_device, engine->_gltfMatDescriptorLayout);
@@ -449,7 +447,7 @@ void MeshNode::Draw(const glm::mat4& topMatrix, DrawContext& ctx)
 
         def.transform = nodeMatrix;
 
-        if (s.material->IsTransparent) {
+        if (s.material->data.passType == MaterialPass::Transparent) {
             ctx.TransparentSurfaces.push_back(def);
         } else {
             ctx.OpaqueSurfaces.push_back(def);

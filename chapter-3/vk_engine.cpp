@@ -25,9 +25,7 @@
 constexpr bool bUseValidationLayers = true;
 
 //chapter stage for refactors/changes
-#define CHAPTER_STAGE 3
-
-
+#define CHAPTER_STAGE 0
 
 //we want to immediately abort when there is an error. In normal engines this would give an error message to the user, or perform a dump of state.
 using namespace std;
@@ -194,7 +192,6 @@ void VulkanEngine::draw()
 	//begin the command buffer recording. We will use this command buffer exactly once, so we want to let vulkan know that
 	VkCommandBufferBeginInfo cmdBeginInfo = vkinit::command_buffer_begin_info(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 
-	//> draw_first
 	VK_CHECK(vkBeginCommandBuffer(cmd, &cmdBeginInfo));
 
 	// transition our main draw image into general layout so we can write into it
@@ -211,8 +208,7 @@ void VulkanEngine::draw()
 	extent.height = _windowExtent.height;
 	extent.width = _windowExtent.width;
 	extent.depth = 1;
-	//< draw_first
-	//> imgui_draw
+
 	// execute a copy from the draw image into the swapchain
 	vkutil::copy_image_to_image(cmd, _drawImage.image, _swapchainImages[swapchainImageIndex], extent);
 
@@ -227,7 +223,6 @@ void VulkanEngine::draw()
 
 	//finalize the command buffer (we can no longer add commands, but it can now be executed)
 	VK_CHECK(vkEndCommandBuffer(cmd));
-	//< imgui_draw
 
 	//prepare the submission to the queue. 
 	//we want to wait on the _presentSemaphore, as that semaphore is signaled when the swapchain is ready
@@ -259,7 +254,6 @@ void VulkanEngine::draw()
 	presentInfo.pImageIndices = &swapchainImageIndex;
 
 	VkResult presentResult = vkQueuePresentKHR(_graphicsQueue, &presentInfo);
-
 
 	//increase the number of frames drawn
 	_frameNumber++;
@@ -358,7 +352,6 @@ void VulkanEngine::run()
 		ImGui_ImplVulkan_NewFrame();
 		ImGui_ImplSDL2_NewFrame(_window);
 
-//> imgui_bk
 		ImGui::NewFrame();
 
 		if (ImGui::Begin("background")) {
@@ -379,7 +372,6 @@ void VulkanEngine::run()
 
 		ImGui::Render();
 
-//< imgui_bk
 		if (!skipDrawing) {
 			draw();
 		}

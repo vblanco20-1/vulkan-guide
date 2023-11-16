@@ -11,9 +11,6 @@
 class VulkanEngine;
 
 struct GLTFMaterial {
-
-    bool IsTransparent;
-
     MaterialData data;
 };
 

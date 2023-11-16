@@ -363,6 +363,7 @@ void VulkanEngine::draw_geometry(VkCommandBuffer cmd)
         if (r.material != lastMaterial) {
             lastMaterial = r.material;
             if (r.material->pipeline != lastPipeline) {
+
                 lastPipeline = r.material->pipeline;
                 vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, r.material->pipeline);
                 vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, r.material->layout, 1, 1,
@@ -987,8 +988,11 @@ void VulkanEngine::init_pipelines()
     mesh_layout_info.pPushConstantRanges = &matrixRange;
     mesh_layout_info.pushConstantRangeCount = 1;
 
-    VK_CHECK(vkCreatePipelineLayout(_device, &mesh_layout_info, nullptr, &_gltfDefaultOpaque.layout));
-    VK_CHECK(vkCreatePipelineLayout(_device, &mesh_layout_info, nullptr, &_gltfDefaultTranslucent.layout));
+	VkPipelineLayout defaultLayout;
+	VK_CHECK(vkCreatePipelineLayout(_device, &mesh_layout_info, nullptr, &defaultLayout));
+
+    _gltfDefaultOpaque.layout = defaultLayout;
+    _gltfDefaultTranslucent.layout = defaultLayout;
 
     // build the stage-create-info for both vertex and fragment stages. This lets
     // the pipeline know the shader modules per stage
@@ -1019,6 +1023,7 @@ void VulkanEngine::init_pipelines()
 
     // finally build the pipeline
     _gltfDefaultOpaque.pipeline = pipelineBuilder.build_pipeline(_device);
+    _gltfDefaultOpaque.passType = MaterialPass::MainColor;
 
     // create the transparent variant
     pipelineBuilder.enable_blending_additive();
@@ -1026,14 +1031,15 @@ void VulkanEngine::init_pipelines()
     pipelineBuilder.enable_depthtest(false,VK_COMPARE_OP_GREATER_OR_EQUAL);
 
     _gltfDefaultTranslucent.pipeline = pipelineBuilder.build_pipeline(_device);
+    _gltfDefaultTranslucent.passType = MaterialPass::Transparent;
+
 
     vkDestroyShaderModule(_device, meshFragShader, nullptr);
     vkDestroyShaderModule(_device, meshVertexShader, nullptr);
 
-    _mainDeletionQueue.push_function([&]() {
-        vkDestroyPipelineLayout(_device, _gradientPipelineLayout, nullptr);
+	_mainDeletionQueue.push_function([&]() {
+		vkDestroyPipelineLayout(_device, _gradientPipelineLayout, nullptr);
         vkDestroyPipelineLayout(_device, _gltfDefaultOpaque.layout, nullptr);
-        vkDestroyPipelineLayout(_device, _gltfDefaultTranslucent.layout, nullptr);
 
         vkDestroyPipeline(_device, _gltfDefaultTranslucent.pipeline, nullptr);
         vkDestroyPipeline(_device, _gltfDefaultOpaque.pipeline, nullptr);

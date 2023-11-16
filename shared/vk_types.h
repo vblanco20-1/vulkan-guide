@@ -52,10 +52,18 @@ struct GPUSceneData {
     glm::vec4 sunlightColor;
 };
 
+enum class MaterialPass :uint8_t {
+    MainColor,
+    Transparent,
+    Other
+};
+
 struct MaterialData {
     VkPipeline pipeline;
     VkPipelineLayout layout;
     VkDescriptorSet materialSet;
+
+    MaterialPass passType;
 };
 
 struct Vertex {
