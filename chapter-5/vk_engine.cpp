@@ -1006,8 +1006,8 @@ void VulkanEngine::init_pipelines()
 
 	pipelineBuilder.set_multisampling_none();
 
-	//pipelineBuilder.disable_blending();
-    pipelineBuilder.enable_blending_additive();
+	pipelineBuilder.disable_blending();
+   
 	pipelineBuilder.enable_depthtest(true,VK_COMPARE_OP_GREATER_OR_EQUAL);
 
 	//render format

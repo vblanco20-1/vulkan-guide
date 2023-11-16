@@ -200,6 +200,10 @@ void PipelineBuilder::set_color_attachment_formats(std::span<VkFormat> formats)
     for (VkFormat f : formats) {
         _colorAttachmentformats.push_back(f);
     }
+
+    //connect that array to the renderInfo
+	_renderInfo.colorAttachmentCount = _colorAttachmentformats.size();
+	_renderInfo.pColorAttachmentFormats = _colorAttachmentformats.data();
 }
 
 //> load_shader
