@@ -4,15 +4,10 @@
 #include <iostream>
 #include "vk_initializers.h"
 
-PipelineBuilder::PipelineBuilder()
-{
-    clear();
-}
-
 void PipelineBuilder::clear()
 {
     //clear all of the structs we need back to 0 with their correct stype
-	_vertexInputInfo = { .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
+	
 
 	_inputAssembly = { .sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO };
 
@@ -27,6 +22,8 @@ void PipelineBuilder::clear()
 	_depthStencil = { .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO };
 
 	_renderInfo = { .sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO };
+
+	_shaderStages.clear();
 }
 
 VkPipeline PipelineBuilder::build_pipeline(VkDevice device)
@@ -50,6 +47,14 @@ VkPipeline PipelineBuilder::build_pipeline(VkDevice device)
     colorBlending.logicOp = VK_LOGIC_OP_COPY;
     colorBlending.attachmentCount = 1;
     colorBlending.pAttachments = &_colorBlendAttachment;
+
+    //completely clear VertexInputStateCreateInfo, as we wont be using it at all
+    VkPipelineVertexInputStateCreateInfo _vertexInputInfo = { .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
+
+    //we need to finish connecting the RenderInfo
+	_renderInfo.colorAttachmentCount = 1;
+	_renderInfo.pColorAttachmentFormats = &_colorAttachmentformat;
+
 
     // build the actual pipeline
     // we now use all of the info structs we have been writing into into this one
@@ -86,7 +91,7 @@ VkPipeline PipelineBuilder::build_pipeline(VkDevice device)
     if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo,
             nullptr, &newPipeline)
         != VK_SUCCESS) {
-        std::cout << "failed to create pipeline\n";
+        fmt::println("failed to create pipeline");
         return VK_NULL_HANDLE; // failed to create graphics pipeline
     } else {
         return newPipeline;
@@ -102,13 +107,6 @@ void PipelineBuilder::set_shaders(VkShaderModule vertexShader, VkShaderModule fr
 
 	_shaderStages.push_back(
 		vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT, fragmentShader));
-}
-
-void PipelineBuilder::set_empty_vertex_input()
-{
-	// no vertex bindings or attributes
-    _vertexInputInfo.vertexBindingDescriptionCount = 0;
-    _vertexInputInfo.vertexAttributeDescriptionCount = 0;
 }
 
 void PipelineBuilder::set_input_topology(VkPrimitiveTopology topology)
@@ -194,16 +192,9 @@ void PipelineBuilder::enable_depthtest(bool depthWriteEnable,VkCompareOp op)
 	_depthStencil.maxDepthBounds = 1.f;
 }
 
-void PipelineBuilder::set_color_attachment_formats(std::span<VkFormat> formats)
+void PipelineBuilder::set_color_attachment_format(VkFormat format)
 {
-    _colorAttachmentformats.clear();
-    for (VkFormat f : formats) {
-        _colorAttachmentformats.push_back(f);
-    }
-
-    //connect that array to the renderInfo
-	_renderInfo.colorAttachmentCount = _colorAttachmentformats.size();
-	_renderInfo.pColorAttachmentFormats = _colorAttachmentformats.data();
+    _colorAttachmentformat = format;
 }
 
 //> load_shader

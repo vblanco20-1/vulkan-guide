@@ -61,10 +61,12 @@ struct ComputeEffect {
 struct RenderObject {
     uint32_t indexCount;
     uint32_t firstIndex;
-    GPUMesh* mesh;
+    VkBuffer indexBuffer;
+    
     MaterialData* material;
 
     glm::mat4 transform;
+    VkDeviceAddress vertexBufferAddress;
 };
 
 struct FrameData {
@@ -140,7 +142,6 @@ public:
     VmaAllocator _allocator; // vma lib allocator
 
     VkDescriptorSetLayout _gpuSceneDataDescriptorLayout;
-    VkDescriptorSetLayout _meshBufferDescriptorLayout;
     VkDescriptorSetLayout _gltfMatDescriptorLayout;
 
     MaterialData _gltfDefaultOpaque;

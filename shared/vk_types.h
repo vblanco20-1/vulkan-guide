@@ -80,7 +80,12 @@ struct GPUMesh {
 
     AllocatedBuffer indexBuffer;
     AllocatedBuffer vertexBuffer;
-    VkDescriptorSet bufferBinding;
+    VkDeviceAddress vertexBufferAddress;
+};
+
+struct GPUDrawPushConstants {
+    glm::mat4 worldMatrix;
+    VkDeviceAddress vertexBuffer;
 };
 
 struct DrawContext;

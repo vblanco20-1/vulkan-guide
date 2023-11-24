@@ -340,7 +340,7 @@ void VulkanEngine::draw_geometry(VkCommandBuffer cmd)
     // sort the opaque surfaces by material and mesh
     std::sort(drawCommands.OpaqueSurfaces.begin(), drawCommands.OpaqueSurfaces.end(), [](const auto& A, const auto& B) {
         if (A.material == B.material) {
-            return A.mesh < B.mesh;
+            return A.indexBuffer < B.indexBuffer;
         } else {
             return A.material < B.material;
         }
@@ -357,7 +357,7 @@ void VulkanEngine::draw_geometry(VkCommandBuffer cmd)
 
     VkPipeline lastPipeline = VK_NULL_HANDLE;
     MaterialData* lastMaterial = nullptr;
-    GPUMesh* lastMesh = nullptr;
+    VkBuffer lastIndexBuffer = VK_NULL_HANDLE;
 
     auto draw = [&](const RenderObject& r) {
         if (r.material != lastMaterial) {
@@ -366,7 +366,7 @@ void VulkanEngine::draw_geometry(VkCommandBuffer cmd)
 
                 lastPipeline = r.material->pipeline;
                 vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, r.material->pipeline);
-                vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, r.material->layout, 1, 1,
+                vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, r.material->layout, 0, 1,
                     &globalDescriptor, 0, nullptr);
 
 				VkViewport viewport = {};
@@ -388,19 +388,19 @@ void VulkanEngine::draw_geometry(VkCommandBuffer cmd)
 				vkCmdSetScissor(cmd, 0, 1, &scissor);
             }
 
-            vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, r.material->layout, 2, 1,
+            vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, r.material->layout, 1, 1,
                 &r.material->materialSet, 0, nullptr);
         }
-        if (r.mesh != lastMesh) {
-            lastMesh = r.mesh;
-            vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, r.material->layout, 0, 1,
-                &r.mesh->bufferBinding, 0, nullptr);
-            vkCmdBindIndexBuffer(cmd, r.mesh->indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
+        if (r.indexBuffer != lastIndexBuffer) {
+            lastIndexBuffer = r.indexBuffer;
+            vkCmdBindIndexBuffer(cmd, r.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
         }
         // calculate final mesh matrix
-        glm::mat4 mesh_matrix = r.transform;
+        GPUDrawPushConstants push_constants;
+        push_constants.worldMatrix = r.transform;
+        push_constants.vertexBuffer = r.vertexBufferAddress;
 
-        vkCmdPushConstants(cmd, r.material->layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4), &mesh_matrix);
+        vkCmdPushConstants(cmd, r.material->layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(GPUDrawPushConstants), &push_constants);
 
         stats.drawcall_count++;
         stats.triangle_count += r.indexCount / 3;
@@ -600,8 +600,14 @@ GPUMesh VulkanEngine::uploadMesh(std::span<uint32_t> indices, std::span<Vertex> 
     const size_t indexBufferSize = indices.size() * sizeof(uint32_t);
 
     GPUMesh newSurface;
-    newSurface.vertexBuffer = create_buffer(vertexBufferSize, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+    
+    newSurface.vertexBuffer = create_buffer(vertexBufferSize, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
         VMA_MEMORY_USAGE_GPU_ONLY);
+
+
+    VkBufferDeviceAddressInfo deviceAdressInfo{.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO,.buffer = newSurface.vertexBuffer.buffer};
+    newSurface.vertexBufferAddress = vkGetBufferDeviceAddress(_device, &deviceAdressInfo);
+
     newSurface.indexBuffer = create_buffer(indexBufferSize, VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
         VMA_MEMORY_USAGE_GPU_ONLY);
 
@@ -631,15 +637,6 @@ GPUMesh VulkanEngine::uploadMesh(std::span<uint32_t> indices, std::span<Vertex> 
     });
 
     destroy_buffer(staging);
-
-    if (alloc) {
-        // create a descriptor set that refers to this mesh buffer
-        newSurface.bufferBinding = alloc->allocate(_device, _meshBufferDescriptorLayout);
-
-        DescriptorWriter writer;
-        writer.write_buffer(0,newSurface.vertexBuffer.buffer,vertexBufferSize,0,VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
-        writer.build(_device, newSurface.bufferBinding);
-    }
 
     return newSurface;
 }
@@ -710,14 +707,18 @@ void VulkanEngine::init_vulkan()
 
     SDL_Vulkan_CreateSurface(_window, _instance, &_surface);
 
-    VkPhysicalDeviceVulkan13Features features {};
-    features.dynamicRendering = true;
-    features.synchronization2 = true;
+    VkPhysicalDeviceVulkan13Features features13 {};
+	features13.dynamicRendering = true;
+	features13.synchronization2 = true;
+   
+   VkPhysicalDeviceVulkan12Features features12 {};
+   features12.bufferDeviceAddress = true;
+   features12.descriptorIndexing = true; 
 
     // use vkbootstrap to select a gpu.
     // We want a gpu that can write to the SDL surface and supports vulkan 1.2
     vkb::PhysicalDeviceSelector selector { vkb_inst };
-    vkb::PhysicalDevice physicalDevice = selector.set_minimum_version(1, 3).set_required_features_13(features).set_surface(_surface).select().value();
+    vkb::PhysicalDevice physicalDevice = selector.set_minimum_version(1, 3).set_required_features_13(features13).set_required_features_12(features12).set_surface(_surface).select().value();
 
     // physicalDevice.features.
     // create the final vulkan device
@@ -740,6 +741,7 @@ void VulkanEngine::init_vulkan()
     allocatorInfo.physicalDevice = _chosenGPU;
     allocatorInfo.device = _device;
     allocatorInfo.instance = _instance;
+    allocatorInfo.flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
     vmaCreateAllocator(&allocatorInfo, &_allocator);
 }
 
@@ -976,14 +978,14 @@ void VulkanEngine::init_pipelines()
 
     VkPushConstantRange matrixRange {};
     matrixRange.offset = 0;
-    matrixRange.size = sizeof(glm::mat4);
+    matrixRange.size = sizeof(GPUDrawPushConstants);
     matrixRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 
-    VkDescriptorSetLayout layouts[] = { _meshBufferDescriptorLayout, _gpuSceneDataDescriptorLayout,
+    VkDescriptorSetLayout layouts[] = {_gpuSceneDataDescriptorLayout,
         _gltfMatDescriptorLayout };
 
     VkPipelineLayoutCreateInfo mesh_layout_info = vkinit::pipeline_layout_create_info();
-    mesh_layout_info.setLayoutCount = 3;
+    mesh_layout_info.setLayoutCount = 2;
     mesh_layout_info.pSetLayouts = layouts;
     mesh_layout_info.pPushConstantRanges = &matrixRange;
     mesh_layout_info.pushConstantRangeCount = 1;
@@ -1000,8 +1002,6 @@ void VulkanEngine::init_pipelines()
 
 	pipelineBuilder.set_shaders(meshVertexShader, meshFragShader);
 
-	pipelineBuilder.set_empty_vertex_input();
-
 	pipelineBuilder.set_input_topology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
 
 	pipelineBuilder.set_polygon_mode(VK_POLYGON_MODE_FILL);
@@ -1015,7 +1015,7 @@ void VulkanEngine::init_pipelines()
 	pipelineBuilder.enable_depthtest(true,VK_COMPARE_OP_GREATER_OR_EQUAL);
 
 	//render format
-	pipelineBuilder.set_color_attachment_formats(std::span<VkFormat>{&_drawImage.imageFormat, 1});
+	pipelineBuilder.set_color_attachment_format(_drawImage.imageFormat);
 	pipelineBuilder.set_depth_format(_depthImage.imageFormat);	
 
     // use the triangle layout we created
@@ -1065,12 +1065,6 @@ void VulkanEngine::init_descriptors()
         builder.add_binding(0, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
         _drawImageDescriptorLayout = builder.build(_device, VK_SHADER_STAGE_COMPUTE_BIT);
     }
-
-    {
-        DescriptorLayoutBuilder builder;
-        builder.add_binding(0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
-        _meshBufferDescriptorLayout = builder.build(_device, VK_SHADER_STAGE_VERTEX_BIT);
-    }
     {
         DescriptorLayoutBuilder builder;
         builder.add_binding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
@@ -1085,7 +1079,6 @@ void VulkanEngine::init_descriptors()
 
     _mainDeletionQueue.push_function([&]() {
         vkDestroyDescriptorSetLayout(_device, _drawImageDescriptorLayout, nullptr);
-        vkDestroyDescriptorSetLayout(_device, _meshBufferDescriptorLayout, nullptr);
         vkDestroyDescriptorSetLayout(_device, _gpuSceneDataDescriptorLayout, nullptr);
         vkDestroyDescriptorSetLayout(_device, _gltfMatDescriptorLayout, nullptr);
     });

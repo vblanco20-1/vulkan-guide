@@ -105,7 +105,7 @@ void VulkanEngine::cleanup()
 }
 
 
-void VulkanEngine::draw_main(VkCommandBuffer cmd)
+void VulkanEngine::draw_background(VkCommandBuffer cmd)
 {
 	ComputeEffect& effect = backgroundEffects[currentBackgroundEffect];
 
@@ -118,11 +118,13 @@ void VulkanEngine::draw_main(VkCommandBuffer cmd)
 	vkCmdPushConstants(cmd, _gradientPipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(ComputePushConstants), &effect.data);
 	// execute the compute pipeline dispatch. We are using 16x16 workgroup size so we need to divide by it
 	vkCmdDispatch(cmd, std::ceil(_windowExtent.width / 16.0), std::ceil(_windowExtent.height / 16.0), 1);
+}
 
+void VulkanEngine::draw_geometry(VkCommandBuffer cmd)
+{
 	//draw the triangle
 
-	VkRenderingAttachmentInfo colorAttachment = vkinit::attachment_info(_drawImage.imageView, nullptr, VK_IMAGE_LAYOUT_GENERAL);
-
+	VkRenderingAttachmentInfo colorAttachment = vkinit::attachment_info(_drawImage.imageView, nullptr, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 	VkRenderingInfo renderInfo = vkinit::rendering_info(_windowExtent, &colorAttachment, nullptr);
 
 	vkCmdBeginRendering(cmd, &renderInfo);
@@ -198,10 +200,14 @@ void VulkanEngine::draw()
 	// we will overwrite it all so we dont care about what was the older layout
 	vkutil::transition_image(cmd, _drawImage.image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
 
-	draw_main(cmd);
+	draw_background(cmd);
+
+	vkutil::transition_image(cmd, _drawImage.image, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+
+	draw_geometry(cmd);
 
 	//transtion the draw image and the swapchain image into their correct transfer layouts
-	vkutil::transition_image(cmd, _drawImage.image, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+	vkutil::transition_image(cmd, _drawImage.image, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 	vkutil::transition_image(cmd, _swapchainImages[swapchainImageIndex], VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
 	VkExtent3D extent;
@@ -659,9 +665,13 @@ void VulkanEngine::init_pipelines()
 
 
 	// GRAPHICS PIPELINES
+	init_triangle_pipeline();
+}
+
+void VulkanEngine::init_triangle_pipeline()
+{
 	VkShaderModule triangleFragShader;
-	if (!vkutil::load_shader_module("../../shaders/colored_triangle.frag.spv",_device, &triangleFragShader))
-	{
+	if (!vkutil::load_shader_module("../../shaders/colored_triangle.frag.spv", _device, &triangleFragShader)) {
 		std::cout << "Error when building the triangle fragment shader module" << std::endl;
 	}
 	else {
@@ -669,8 +679,7 @@ void VulkanEngine::init_pipelines()
 	}
 
 	VkShaderModule triangleVertexShader;
-	if (!vkutil::load_shader_module("../../shaders/colored_triangle.vert.spv",_device, &triangleVertexShader))
-	{
+	if (!vkutil::load_shader_module("../../shaders/colored_triangle.vert.spv", _device, &triangleVertexShader)) {
 		std::cout << "Error when building the triangle vertex shader module" << std::endl;
 	}
 	else {
@@ -685,34 +694,30 @@ void VulkanEngine::init_pipelines()
 
 	PipelineBuilder pipelineBuilder;
 
-	pipelineBuilder.set_shaders(triangleVertexShader,triangleFragShader);
-	
-	pipelineBuilder.set_empty_vertex_input();	
-
-	pipelineBuilder.set_input_topology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
-
-	pipelineBuilder.set_polygon_mode(VK_POLYGON_MODE_FILL);
-
-	pipelineBuilder.set_cull_mode(VK_CULL_MODE_NONE, VK_FRONT_FACE_CLOCKWISE);
-
-	pipelineBuilder.set_multisampling_none();
-
-	pipelineBuilder.disable_blending();
-
 	//use the triangle layout we created
 	pipelineBuilder._pipelineLayout = _trianglePipelineLayout;
-
+	//connecting the vertex and pixel shaders to the pipeline
+	pipelineBuilder.set_shaders(triangleVertexShader, triangleFragShader);
+	//it will draw triangles
+	pipelineBuilder.set_input_topology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
+	//filled triangles
+	pipelineBuilder.set_polygon_mode(VK_POLYGON_MODE_FILL);
+	//no backface culling
+	pipelineBuilder.set_cull_mode(VK_CULL_MODE_NONE, VK_FRONT_FACE_CLOCKWISE);
+	//no multisampling
+	pipelineBuilder.set_multisampling_none();
+	//no blending
+	pipelineBuilder.disable_blending();
+	//no depth testing
 	pipelineBuilder.disable_depthtest();
 
-	//render format
-	pipelineBuilder.set_color_attachment_formats(std::span<VkFormat>{&_drawImage.imageFormat,1});
-	pipelineBuilder.set_depth_format(VK_FORMAT_UNDEFINED);	
+	//connect the image format we will draw into, from draw image
+	pipelineBuilder.set_color_attachment_format(_drawImage.imageFormat);
+	pipelineBuilder.set_depth_format(VK_FORMAT_UNDEFINED);
 
 	//finally build the pipeline
 	_trianglePipeline = pipelineBuilder.build_pipeline(_device);
 
-	//clear the shader stages for the builder
-	pipelineBuilder._shaderStages.clear();
 
 	vkDestroyShaderModule(_device, triangleFragShader, nullptr);
 	vkDestroyShaderModule(_device, triangleVertexShader, nullptr);

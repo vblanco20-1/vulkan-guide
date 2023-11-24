@@ -442,10 +442,11 @@ void MeshNode::Draw(const glm::mat4& topMatrix, DrawContext& ctx)
         RenderObject def;
         def.indexCount = s.count;
         def.firstIndex = s.startIndex;
-        def.mesh = &mesh->meshBuffers;
+        def.indexBuffer = mesh->meshBuffers.indexBuffer.buffer;
         def.material = &s.material->data;
 
-        def.transform = nodeMatrix;
+		def.transform = nodeMatrix;
+		def.vertexBufferAddress = mesh->meshBuffers.vertexBufferAddress;
 
         if (s.material->data.passType == MaterialPass::Transparent) {
             ctx.TransparentSurfaces.push_back(def);

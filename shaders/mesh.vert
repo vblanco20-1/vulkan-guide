@@ -2,6 +2,7 @@
 
 #extension GL_EXT_scalar_block_layout : require
 #extension GL_GOOGLE_include_directive : require
+#extension GL_EXT_buffer_reference : require
 //#include "scene_data.glsl"
 
 #include "input_structures.glsl"
@@ -9,12 +10,6 @@
 layout (location = 0) out vec3 outNormal;
 layout (location = 1) out vec3 outColor;
 layout (location = 2) out vec2 outUV;
-
-//push constants block
-layout( push_constant ) uniform constants
-{
-	mat4 render_matrix;
-} PushConstants;
 
 struct Vertex {
 
@@ -25,17 +20,20 @@ struct Vertex {
 	vec4 color;
 }; 
 
-layout(set = 0, binding = 0) readonly buffer VertexBuffer{   
-
+layout(buffer_reference, std430) readonly buffer VertexBuffer{ 
 	Vertex vertices[];
-} vertexBuffer;
+};
 
-
-
+//push constants block
+layout( push_constant ) uniform constants
+{
+	mat4 render_matrix;
+	VertexBuffer vertexBuffer;
+} PushConstants;
 
 void main() 
 {
-	Vertex v = vertexBuffer.vertices[gl_VertexIndex];
+	Vertex v = PushConstants.vertexBuffer.vertices[gl_VertexIndex];
 	
 	vec4 position = vec4(v.position, 1.0f);
 

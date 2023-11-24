@@ -100,7 +100,6 @@ public:
 	VmaAllocator _allocator; //vma lib allocator
 
 	VkPipelineLayout _trianglePipelineLayout;
-
 	VkPipeline _trianglePipeline;
 
 		// immediate submit structures
@@ -124,7 +123,10 @@ public:
 	//draw loop
 	void draw();
 
-	void draw_main(VkCommandBuffer cmd);
+	void draw_background(VkCommandBuffer cmd);
+
+	void draw_geometry(VkCommandBuffer cmd);
+
 	void draw_imgui(VkCommandBuffer cmd, VkImageView targetImageView);
 
 	//run main loop
@@ -144,7 +146,9 @@ private:
 	void init_graphics_pipelines();
 
 	void init_pipelines();
-
+	
+	void init_triangle_pipeline();
+	
 	void init_descriptors();
 
 	void init_sync_structures();
