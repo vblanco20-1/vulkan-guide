@@ -72,18 +72,17 @@ Lets begin writing the builder. All pipeline code will be on vk_pipelines.h/cpp.
 class PipelineBuilder {
 public:
     std::vector<VkPipelineShaderStageCreateInfo> _shaderStages;
-    std::vector<VkFormat> _colorAttachmentformats;
-
-    VkPipelineVertexInputStateCreateInfo _vertexInputInfo;
-    VkPipelineInputAssemblyStateCreateInfo _inputAssembly;   
+   
+    VkPipelineInputAssemblyStateCreateInfo _inputAssembly;
     VkPipelineRasterizationStateCreateInfo _rasterizer;
     VkPipelineColorBlendAttachmentState _colorBlendAttachment;
     VkPipelineMultisampleStateCreateInfo _multisampling;
     VkPipelineLayout _pipelineLayout;
     VkPipelineDepthStencilStateCreateInfo _depthStencil;
     VkPipelineRenderingCreateInfo _renderInfo;
+    VkFormat _colorAttachmentformat;
 
-    PipelineBuilder(){ clear(); }
+	PipelineBuilder(){ clear(); }
 
     void clear();
 
@@ -95,11 +94,11 @@ The pipeline builder will hold most of the state we need to track of. and an arr
 
 Lets write that clear() function first.
 
+<!-- codegen from tag pipe_clear on file E:\ProgrammingProjects\vulkan-guide-2\shared/vk_pipelines.cpp --> 
 ```cpp
 void PipelineBuilder::clear()
 {
-    //clear all of the structs we need back to 0 with their correct stype
-	_vertexInputInfo = { .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
+    //clear all of the structs we need back to 0 with their correct stype	
 
 	_inputAssembly = { .sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO };
 
@@ -115,8 +114,7 @@ void PipelineBuilder::clear()
 
 	_renderInfo = { .sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO };
 
-    _shaderStages.clear();
-	_colorAttachmentformats.clear();
+	_shaderStages.clear();
 }
 ```
 
@@ -124,10 +122,12 @@ We will set the .sType of every structure here, and leave everything else as 0. 
 
 Lets begin writing the build_pipeline function. first we will begin by setting some of the Info structures we are missing because they wont be configured.
 
+<!-- codegen from tag build_pipeline_1 on file E:\ProgrammingProjects\vulkan-guide-2\shared/vk_pipelines.cpp --> 
 ```cpp
 VkPipeline PipelineBuilder::build_pipeline(VkDevice device)
-{    
-    //make a viewport state info that just has viewport count set. We use dynamic so no need to give more data here.
+{
+    // make viewport state from our stored viewport and scissor.
+    // at the moment we wont support multiple viewports or scissors
     VkPipelineViewportStateCreateInfo viewportState = {};
     viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
     viewportState.pNext = nullptr;
@@ -135,7 +135,8 @@ VkPipeline PipelineBuilder::build_pipeline(VkDevice device)
     viewportState.viewportCount = 1;
     viewportState.scissorCount =1;
 
-    //attach the color attachments to the BlendStateCreateInfo
+    // setup dummy color blending. We arent using transparent objects yet
+    // the blending is just "no blend", but we do write to the color attachment
     VkPipelineColorBlendStateCreateInfo colorBlending = {};
     colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
     colorBlending.pNext = nullptr;
@@ -145,6 +146,10 @@ VkPipeline PipelineBuilder::build_pipeline(VkDevice device)
     colorBlending.attachmentCount = 1;
     colorBlending.pAttachments = &_colorBlendAttachment;
 
+
+    //completely clear VertexInputStateCreateInfo, as we have no need for it
+    VkPipelineVertexInputStateCreateInfo _vertexInputInfo = { .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
+
 ```
 
 We first fill `VkPipelineViewportStateCreateInfo` with just viewport count and nothing else. With dynamic viewport state we dont need to fill the viewport or stencil options here.
@@ -153,33 +158,33 @@ Then we fill `VkPipelineColorBlendStateCreateInfo` with some default options for
 
 Lets continue with the function, and begin filling the VkGraphicsPipelineCreateInfo
 
+<!-- codegen from tag build_pipeline_2 on file E:\ProgrammingProjects\vulkan-guide-2\shared/vk_pipelines.cpp --> 
 ```cpp
- // build the actual pipeline
- // we now use all of the info structs we have been writing into into this one
- // to create the pipeline
- VkGraphicsPipelineCreateInfo pipelineInfo = {};
- pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
- pipelineInfo.pNext = &_renderInfo;
+    // build the actual pipeline
+    // we now use all of the info structs we have been writing into into this one
+    // to create the pipeline
+    VkGraphicsPipelineCreateInfo pipelineInfo = {.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO};
+    //connect the renderInfo to the pNext extension mechanism
+    pipelineInfo.pNext = &_renderInfo;
 
- pipelineInfo.stageCount = (uint32_t)_shaderStages.size();
- pipelineInfo.pStages = _shaderStages.data();
- pipelineInfo.pVertexInputState = &_vertexInputInfo;
- pipelineInfo.pInputAssemblyState = &_inputAssembly;
- pipelineInfo.pViewportState = &viewportState;
- pipelineInfo.pRasterizationState = &_rasterizer;
- pipelineInfo.pMultisampleState = &_multisampling;
- pipelineInfo.pColorBlendState = &colorBlending;
- pipelineInfo.pDepthStencilState = &_depthStencil;
- pipelineInfo.layout = _pipelineLayout;
- pipelineInfo.renderPass = VK_NULL_HANDLE;
- pipelineInfo.subpass = 0;
- pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
+    pipelineInfo.stageCount = (uint32_t)_shaderStages.size();
+    pipelineInfo.pStages = _shaderStages.data();
+    pipelineInfo.pVertexInputState = &_vertexInputInfo;
+    pipelineInfo.pInputAssemblyState = &_inputAssembly;
+    pipelineInfo.pViewportState = &viewportState;
+    pipelineInfo.pRasterizationState = &_rasterizer;
+    pipelineInfo.pMultisampleState = &_multisampling;
+    pipelineInfo.pColorBlendState = &colorBlending;
+    pipelineInfo.pDepthStencilState = &_depthStencil;
+    pipelineInfo.layout = _pipelineLayout;
+
 ```
 
 We connect all of the configuration structures we have on the builder, and add _renderInfo into the pNext of the graphics pipeline info itself.
 
 next is setting up dynamic state
 
+<!-- codegen from tag build_pipeline_3 on file E:\ProgrammingProjects\vulkan-guide-2\shared/vk_pipelines.cpp --> 
 ```cpp
     VkDynamicState state[] = {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR};
 
@@ -189,26 +194,29 @@ next is setting up dynamic state
 
     pipelineInfo.pDynamicState = &dynamicInfo;
 ```
+
 Setting up dynamic state is just filling a `VkPipelineDynamicStateCreateInfo` with an array of VkDynamicState enums. We will use these 2 for now.
 
 This is all we needed for the pipeline, so we can finally call the create function.
 
+<!-- codegen from tag build_pipeline_4 on file E:\ProgrammingProjects\vulkan-guide-2\shared/vk_pipelines.cpp --> 
 ```cpp
- // its easy to error out on create graphics pipeline, so we handle it a bit
- // better than the common VK_CHECK case
- VkPipeline newPipeline;
- if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo,
-         nullptr, &newPipeline)
-     != VK_SUCCESS) {
-     fmt::println("failed to create pipeline");
-     return VK_NULL_HANDLE; // failed to create graphics pipeline
- } else {
-     return newPipeline;
- }
+    // its easy to error out on create graphics pipeline, so we handle it a bit
+    // better than the common VK_CHECK case
+    VkPipeline newPipeline;
+    if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo,
+            nullptr, &newPipeline)
+        != VK_SUCCESS) {
+        fmt::println("failed to create pipeline");
+        return VK_NULL_HANDLE; // failed to create graphics pipeline
+    } else {
+        return newPipeline;
+    }
 ```
 
 And thats it with the main creation function. We now need to actually set the options properly, as right now the entire pipeline is essentially null, which will error as-is due to missing options.
 
+<!-- codegen from tag set_shaders on file E:\ProgrammingProjects\vulkan-guide-2\shared/vk_pipelines.cpp --> 
 ```cpp
 void PipelineBuilder::set_shaders(VkShaderModule vertexShader, VkShaderModule fragmentShader)
 {
@@ -221,9 +229,12 @@ void PipelineBuilder::set_shaders(VkShaderModule vertexShader, VkShaderModule fr
 		vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT, fragmentShader));
 }
 ```
+
 We begin by adding a function to set the vertex and fragment shaders. We add them into the _shaderStages array with the proper info creation, which we already had from building the compute pipeline.
 
 Next we add a function to set input topology
+
+<!-- codegen from tag set_topo on file E:\ProgrammingProjects\vulkan-guide-2\shared/vk_pipelines.cpp --> 
 ```cpp
 void PipelineBuilder::set_input_topology(VkPrimitiveTopology topology)
 {
@@ -238,6 +249,7 @@ VkPrimitiveTopology has the options for VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, VK_
 
 The rasterizer state is a big one so we will split it on a few options.
 
+<!-- codegen from tag set_poly on file E:\ProgrammingProjects\vulkan-guide-2\shared/vk_pipelines.cpp --> 
 ```cpp
 void PipelineBuilder::set_polygon_mode(VkPolygonMode mode)
 {
@@ -245,8 +257,10 @@ void PipelineBuilder::set_polygon_mode(VkPolygonMode mode)
     _rasterizer.lineWidth = 1.f;
 }
 ```
+
 We need to have lineWidth as 1.f as default, then we set the polygon mode, which controls wireframe vs solid rendering and point rendering.
 
+<!-- codegen from tag set_cull on file E:\ProgrammingProjects\vulkan-guide-2\shared/vk_pipelines.cpp --> 
 ```cpp
 void PipelineBuilder::set_cull_mode(VkCullModeFlags cullMode, VkFrontFace frontFace)
 {
@@ -254,9 +268,12 @@ void PipelineBuilder::set_cull_mode(VkCullModeFlags cullMode, VkFrontFace frontF
     _rasterizer.frontFace = frontFace;
 }
 ```
+
 Cull mode will set the front face and the cull mode for backface culling. 
 
-Next is setting the multisample state. We 
+Next is setting the multisample state. We will default the structure to multisampling disabled. Later we can add other functions for enabling different multisampling levels for antialiasing
+
+<!-- codegen from tag set_multisample on file E:\ProgrammingProjects\vulkan-guide-2\shared/vk_pipelines.cpp --> 
 ```cpp
 void PipelineBuilder::set_multisampling_none()
 {
@@ -271,8 +288,9 @@ void PipelineBuilder::set_multisampling_none()
 }
 ```
 
-Next we will add a couple functions for blending modes.
+Next we will add a function for blending mode
 
+<!-- codegen from tag set_noblend on file E:\ProgrammingProjects\vulkan-guide-2\shared/vk_pipelines.cpp --> 
 ```cpp
 void PipelineBuilder::disable_blending()
 {
@@ -286,10 +304,15 @@ void PipelineBuilder::disable_blending()
 We will have our disable_blending() function that sets blendEnable to false but sets the correct write mask. We will add functions for more blending modes later. We need to setup a proper colorWriteMask here so that our pixel output will write to the attachment correctly.
 
 Now we hook our formats, lets add the functions for both depth testing and color attachment.
+
+<!-- codegen from tag set_formats on file E:\ProgrammingProjects\vulkan-guide-2\shared/vk_pipelines.cpp --> 
 ```cpp
 void PipelineBuilder::set_color_attachment_format(VkFormat format)
 {
-    _colorAttachmentformat = format;
+	_colorAttachmentformat = format;
+	//connect the format to the renderInfo  structure
+	_renderInfo.colorAttachmentCount = 1;
+	_renderInfo.pColorAttachmentFormats = &_colorAttachmentformat;
 }
 
 void PipelineBuilder::set_depth_format(VkFormat format)
@@ -298,7 +321,11 @@ void PipelineBuilder::set_depth_format(VkFormat format)
 }
 ```
 
+On the color attachment, the pipeline needs it by pointer because it wants an array of color attachments. This is useful for things like deferred rendering where you draw to multiple images at once, but we dont need this yet so we can default it to just 1 color format.
+
 The last one we need is a function to disable the depth testing logic.
+
+<!-- codegen from tag depth_disable on file E:\ProgrammingProjects\vulkan-guide-2\shared/vk_pipelines.cpp --> 
 ```cpp
 void PipelineBuilder::disable_depthtest()
 {
@@ -367,9 +394,10 @@ We will call this `init_triangle_pipeline()` from `init_pipelines()` function.
 
 Lets write that function We will start by loading the 2 shaders into VkShaderModules, like we did with the compute shader, but this time more shaders.
 
+<!-- codegen from tag triangle_shaders on file E:\ProgrammingProjects\vulkan-guide-2\chapter-3/vk_engine.cpp --> 
 ```cpp
 	VkShaderModule triangleFragShader;
-	if (!vkutil::load_shader_module("../../shaders/triangle.frag.spv", _device, &triangleFragShader)) {
+	if (!vkutil::load_shader_module("../../shaders/colored_triangle.frag.spv", _device, &triangleFragShader)) {
 		std::cout << "Error when building the triangle fragment shader module" << std::endl;
 	}
 	else {
@@ -377,26 +405,25 @@ Lets write that function We will start by loading the 2 shaders into VkShaderMod
 	}
 
 	VkShaderModule triangleVertexShader;
-	if (!vkutil::load_shader_module("../../shaders/triangle.vert.spv", _device, &triangleVertexShader)) {
+	if (!vkutil::load_shader_module("../../shaders/colored_triangle.vert.spv", _device, &triangleVertexShader)) {
 		std::cout << "Error when building the triangle vertex shader module" << std::endl;
 	}
 	else {
 		std::cout << "Triangle vertex shader succesfully loaded" << std::endl;
 	}
+
+	
+	//build the pipeline layout that controls the inputs/outputs of the shader
+	//we are not using descriptor sets or other systems yet, so no need to use anything other than empty default
+	VkPipelineLayoutCreateInfo pipeline_layout_info = vkinit::pipeline_layout_create_info();
+	VK_CHECK(vkCreatePipelineLayout(_device, &pipeline_layout_info, nullptr, &_trianglePipelineLayout));
 ```
 
-Next, we create the pipeline layout. Unlike with the compute shader before, this time we have no push constants and no descriptor bindings on here, so its really just a completely empty layout.
+We also create the pipeline layout. Unlike with the compute shader before, this time we have no push constants and no descriptor bindings on here, so its really just a completely empty layout.
 
-```cpp
-//build the pipeline layout that controls the inputs of the shader
-//we are not using descriptor sets or other systems yet, so no need to use anything other than empty default
-VkPipelineLayoutCreateInfo pipeline_layout_info = vkinit::pipeline_layout_create_info();
+Now we create the pipeline, using the Pipeline Builder created before.
 
-VK_CHECK(vkCreatePipelineLayout(_device, &pipeline_layout_info, nullptr, &_trianglePipelineLayout));
-```
-
-Now we create the pipeline, using the Pipeline Builder created before. 
-
+<!-- codegen from tag triangle_pip_1 on file E:\ProgrammingProjects\vulkan-guide-2\chapter-3/vk_engine.cpp --> 
 ```cpp
 	PipelineBuilder pipelineBuilder;
 
@@ -423,12 +450,27 @@ Now we create the pipeline, using the Pipeline Builder created before.
 
 	//finally build the pipeline
 	_trianglePipeline = pipelineBuilder.build_pipeline(_device);
+
+	//clean structures
+	vkDestroyShaderModule(_device, triangleFragShader, nullptr);
+	vkDestroyShaderModule(_device, triangleVertexShader, nullptr);
+
+	_mainDeletionQueue.push_function([&]() {
+		vkDestroyPipelineLayout(_device, _trianglePipelineLayout, nullptr);
+		vkDestroyPipeline(_device, _trianglePipeline, nullptr);
+	});
 ```
 
 With the pipeline built, we can draw our triangle as part of the command buffer we create every frame.
 
 The compute shader we run for the background needed to draw into GENERAL image layout, but when doing geometry rendering, we need to use COLOR_ATTACHMENT_OPTIMAL. It is possible to draw into GENERAL layout with graphics pipelines, but its lower performance and the validation layers will complain. We will create a new function, `draw_geometry()`, to hold these graphics commands. Lets update the draw loop first.
+
+<!-- codegen from tag draw_barriers on file E:\ProgrammingProjects\vulkan-guide-2\chapter-3/vk_engine.cpp --> 
 ```cpp
+	VK_CHECK(vkBeginCommandBuffer(cmd, &cmdBeginInfo));
+
+	// transition our main draw image into general layout so we can write into it
+	// we will overwrite it all so we dont care about what was the older layout
 	vkutil::transition_image(cmd, _drawImage.image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
 
 	draw_background(cmd);
@@ -439,22 +481,24 @@ The compute shader we run for the background needed to draw into GENERAL image l
 
 	//transtion the draw image and the swapchain image into their correct transfer layouts
 	vkutil::transition_image(cmd, _drawImage.image, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+	vkutil::transition_image(cmd, _swapchainImages[swapchainImageIndex], VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 ```
 
 Now fill the draw_geometry function
+
+<!-- codegen from tag draw_geo on file E:\ProgrammingProjects\vulkan-guide-2\chapter-3/vk_engine.cpp --> 
 ```cpp
 void VulkanEngine::draw_geometry(VkCommandBuffer cmd)
 {
-	//draw the triangle
-
+	
+	//begin a render pass  connected to our draw image
 	VkRenderingAttachmentInfo colorAttachment = vkinit::attachment_info(_drawImage.imageView, nullptr, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-
 	VkRenderingInfo renderInfo = vkinit::rendering_info(_windowExtent, &colorAttachment, nullptr);
-
 	vkCmdBeginRendering(cmd, &renderInfo);
 
-    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _trianglePipeline);
+	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _trianglePipeline);
 
+	//set dynamic viewport and scissor
 	VkViewport viewport = {};
 	viewport.x = 0;
 	viewport.y = 0;
@@ -473,7 +517,15 @@ void VulkanEngine::draw_geometry(VkCommandBuffer cmd)
 
 	vkCmdSetScissor(cmd, 0, 1, &scissor);
 
+	//launch a draw command to draw 3 vertices
 	vkCmdDraw(cmd, 3, 1, 0, 0);
+
+	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _meshPipeline);
+
+	vkCmdPushConstants(cmd,_meshPipelineLayout,VK_SHADER_STAGE_VERTEX_BIT,0, sizeof(VkDeviceAddress), &rectangle.vertexBufferAddress);
+	vkCmdBindIndexBuffer(cmd, rectangle.indexBuffer.buffer,0,VK_INDEX_TYPE_UINT32);
+
+	vkCmdDrawIndexed(cmd,6,1,0,0,0);
 
 	vkCmdEndRendering(cmd);
 }

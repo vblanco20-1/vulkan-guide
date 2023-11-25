@@ -70,24 +70,7 @@ Lets begin writing the builder. All pipeline code will be on vk_pipelines.h/cpp.
 
 ```cpp
 class PipelineBuilder {
-public:
-    std::vector<VkPipelineShaderStageCreateInfo> _shaderStages;
-    std::vector<VkFormat> _colorAttachmentformats;
-
-    VkPipelineVertexInputStateCreateInfo _vertexInputInfo;
-    VkPipelineInputAssemblyStateCreateInfo _inputAssembly;   
-    VkPipelineRasterizationStateCreateInfo _rasterizer;
-    VkPipelineColorBlendAttachmentState _colorBlendAttachment;
-    VkPipelineMultisampleStateCreateInfo _multisampling;
-    VkPipelineLayout _pipelineLayout;
-    VkPipelineDepthStencilStateCreateInfo _depthStencil;
-    VkPipelineRenderingCreateInfo _renderInfo;
-
-    PipelineBuilder(){ clear(); }
-
-    void clear();
-
-    VkPipeline build_pipeline(VkDevice device);
+^code pipeline shared/vk_pipelines.h
 }
 ```
 
@@ -95,57 +78,13 @@ The pipeline builder will hold most of the state we need to track of. and an arr
 
 Lets write that clear() function first.
 
-```cpp
-void PipelineBuilder::clear()
-{
-    //clear all of the structs we need back to 0 with their correct stype
-	_vertexInputInfo = { .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
-
-	_inputAssembly = { .sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO };
-
-	_rasterizer = { .sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO };
-
-	_colorBlendAttachment = {};
-
-	_multisampling = { .sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO };
-
-	_pipelineLayout = {};
-
-	_depthStencil = { .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO };
-
-	_renderInfo = { .sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO };
-
-    _shaderStages.clear();
-	_colorAttachmentformats.clear();
-}
-```
+^code pipe_clear shared/vk_pipelines.cpp
 
 We will set the .sType of every structure here, and leave everything else as 0. This is using cpp20 initializers, so the parameters we dont write from within the brackets will be defaulted to 0. Most of the Info structures in vulkan are designed so that 0 is valid clear/default option, so this works great here.
 
 Lets begin writing the build_pipeline function. first we will begin by setting some of the Info structures we are missing because they wont be configured.
 
-```cpp
-VkPipeline PipelineBuilder::build_pipeline(VkDevice device)
-{    
-    //make a viewport state info that just has viewport count set. We use dynamic so no need to give more data here.
-    VkPipelineViewportStateCreateInfo viewportState = {};
-    viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-    viewportState.pNext = nullptr;
-
-    viewportState.viewportCount = 1;
-    viewportState.scissorCount =1;
-
-    //attach the color attachments to the BlendStateCreateInfo
-    VkPipelineColorBlendStateCreateInfo colorBlending = {};
-    colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-    colorBlending.pNext = nullptr;
-
-    colorBlending.logicOpEnable = VK_FALSE;
-    colorBlending.logicOp = VK_LOGIC_OP_COPY;
-    colorBlending.attachmentCount = 1;
-    colorBlending.pAttachments = &_colorBlendAttachment;
-
-```
+^code build_pipeline_1 shared/vk_pipelines.cpp
 
 We first fill `VkPipelineViewportStateCreateInfo` with just viewport count and nothing else. With dynamic viewport state we dont need to fill the viewport or stencil options here.
 
@@ -153,166 +92,61 @@ Then we fill `VkPipelineColorBlendStateCreateInfo` with some default options for
 
 Lets continue with the function, and begin filling the VkGraphicsPipelineCreateInfo
 
-```cpp
- // build the actual pipeline
- // we now use all of the info structs we have been writing into into this one
- // to create the pipeline
- VkGraphicsPipelineCreateInfo pipelineInfo = {};
- pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
- pipelineInfo.pNext = &_renderInfo;
-
- pipelineInfo.stageCount = (uint32_t)_shaderStages.size();
- pipelineInfo.pStages = _shaderStages.data();
- pipelineInfo.pVertexInputState = &_vertexInputInfo;
- pipelineInfo.pInputAssemblyState = &_inputAssembly;
- pipelineInfo.pViewportState = &viewportState;
- pipelineInfo.pRasterizationState = &_rasterizer;
- pipelineInfo.pMultisampleState = &_multisampling;
- pipelineInfo.pColorBlendState = &colorBlending;
- pipelineInfo.pDepthStencilState = &_depthStencil;
- pipelineInfo.layout = _pipelineLayout;
- pipelineInfo.renderPass = VK_NULL_HANDLE;
- pipelineInfo.subpass = 0;
- pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
-```
+^code build_pipeline_2 shared/vk_pipelines.cpp
 
 We connect all of the configuration structures we have on the builder, and add _renderInfo into the pNext of the graphics pipeline info itself.
 
 next is setting up dynamic state
 
-```cpp
-    VkDynamicState state[] = {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR};
+^code build_pipeline_3 shared/vk_pipelines.cpp
 
-    VkPipelineDynamicStateCreateInfo dynamicInfo = {.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO};
-    dynamicInfo.pDynamicStates = &state[0];
-    dynamicInfo.dynamicStateCount = 2;
-
-    pipelineInfo.pDynamicState = &dynamicInfo;
-```
 Setting up dynamic state is just filling a `VkPipelineDynamicStateCreateInfo` with an array of VkDynamicState enums. We will use these 2 for now.
 
 This is all we needed for the pipeline, so we can finally call the create function.
 
-```cpp
- // its easy to error out on create graphics pipeline, so we handle it a bit
- // better than the common VK_CHECK case
- VkPipeline newPipeline;
- if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo,
-         nullptr, &newPipeline)
-     != VK_SUCCESS) {
-     fmt::println("failed to create pipeline");
-     return VK_NULL_HANDLE; // failed to create graphics pipeline
- } else {
-     return newPipeline;
- }
-```
+^code build_pipeline_4 shared/vk_pipelines.cpp
 
 And thats it with the main creation function. We now need to actually set the options properly, as right now the entire pipeline is essentially null, which will error as-is due to missing options.
 
-```cpp
-void PipelineBuilder::set_shaders(VkShaderModule vertexShader, VkShaderModule fragmentShader)
-{
-    _shaderStages.clear();
+^code set_shaders shared/vk_pipelines.cpp
 
-	_shaderStages.push_back(
-		vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_VERTEX_BIT, vertexShader));
-
-	_shaderStages.push_back(
-		vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT, fragmentShader));
-}
-```
 We begin by adding a function to set the vertex and fragment shaders. We add them into the _shaderStages array with the proper info creation, which we already had from building the compute pipeline.
 
 Next we add a function to set input topology
-```cpp
-void PipelineBuilder::set_input_topology(VkPrimitiveTopology topology)
-{
-    _inputAssembly.topology = topology;
-	// we are not going to use primitive restart on the entire tutorial so leave
-	// it on false
-    _inputAssembly.primitiveRestartEnable = VK_FALSE;
-}
-```
+
+^code set_topo shared/vk_pipelines.cpp
 
 VkPrimitiveTopology has the options for VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, VK_PRIMITIVE_TOPOLOGY_POINT_LIST, and so on. PrimitiveRestart is used for triangle strips and line strips, but we dont use it.
 
 The rasterizer state is a big one so we will split it on a few options.
 
-```cpp
-void PipelineBuilder::set_polygon_mode(VkPolygonMode mode)
-{
-    _rasterizer.polygonMode = mode;
-    _rasterizer.lineWidth = 1.f;
-}
-```
+^code set_poly shared/vk_pipelines.cpp
+
 We need to have lineWidth as 1.f as default, then we set the polygon mode, which controls wireframe vs solid rendering and point rendering.
 
-```cpp
-void PipelineBuilder::set_cull_mode(VkCullModeFlags cullMode, VkFrontFace frontFace)
-{
-    _rasterizer.cullMode = cullMode;
-    _rasterizer.frontFace = frontFace;
-}
-```
+^code set_cull shared/vk_pipelines.cpp
+
 Cull mode will set the front face and the cull mode for backface culling. 
 
-Next is setting the multisample state. We 
-```cpp
-void PipelineBuilder::set_multisampling_none()
-{
-    _multisampling.sampleShadingEnable = VK_FALSE;
-	// multisampling defaulted to no multisampling (1 sample per pixel)
-    _multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
-	_multisampling.minSampleShading = 1.0f;
-	_multisampling.pSampleMask = nullptr;
-    //no alpha to coverage either
-	_multisampling.alphaToCoverageEnable = VK_FALSE;
-    _multisampling.alphaToOneEnable = VK_FALSE;
-}
-```
+Next is setting the multisample state. We will default the structure to multisampling disabled. Later we can add other functions for enabling different multisampling levels for antialiasing
 
-Next we will add a couple functions for blending modes.
+^code set_multisample shared/vk_pipelines.cpp
 
-```cpp
-void PipelineBuilder::disable_blending()
-{
-    //default write mask
-    _colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-    //no blending
-    _colorBlendAttachment.blendEnable = VK_FALSE;
-}
-```
+Next we will add a function for blending mode
+
+^code set_noblend shared/vk_pipelines.cpp
 
 We will have our disable_blending() function that sets blendEnable to false but sets the correct write mask. We will add functions for more blending modes later. We need to setup a proper colorWriteMask here so that our pixel output will write to the attachment correctly.
 
 Now we hook our formats, lets add the functions for both depth testing and color attachment.
-```cpp
-void PipelineBuilder::set_color_attachment_format(VkFormat format)
-{
-    _colorAttachmentformat = format;
-}
 
-void PipelineBuilder::set_depth_format(VkFormat format)
-{
-    _renderInfo.depthAttachmentFormat = format;
-}
-```
+^code set_formats shared/vk_pipelines.cpp
+
+On the color attachment, the pipeline needs it by pointer because it wants an array of color attachments. This is useful for things like deferred rendering where you draw to multiple images at once, but we dont need this yet so we can default it to just 1 color format.
 
 The last one we need is a function to disable the depth testing logic.
-```cpp
-void PipelineBuilder::disable_depthtest()
-{
-	_depthStencil.depthTestEnable = VK_FALSE;
-	_depthStencil.depthWriteEnable = VK_FALSE;
-	_depthStencil.depthCompareOp = VK_COMPARE_OP_NEVER;
-	_depthStencil.depthBoundsTestEnable = VK_FALSE;
-	_depthStencil.stencilTestEnable = VK_FALSE;
-	_depthStencil.front = {};
-	_depthStencil.back = {};
-	_depthStencil.minDepthBounds = 0.f;
-	_depthStencil.maxDepthBounds= 1.f;
-}
-```
+
+^code depth_disable shared/vk_pipelines.cpp
 
 With all the basic features for the pipeline builder filled, we can now draw a triangle.
 For our triangle, we are going to use hardcoded vertex positions in the vertex shader, and the output will be a pure color. 
@@ -367,117 +201,23 @@ We will call this `init_triangle_pipeline()` from `init_pipelines()` function.
 
 Lets write that function We will start by loading the 2 shaders into VkShaderModules, like we did with the compute shader, but this time more shaders.
 
-```cpp
-	VkShaderModule triangleFragShader;
-	if (!vkutil::load_shader_module("../../shaders/triangle.frag.spv", _device, &triangleFragShader)) {
-		std::cout << "Error when building the triangle fragment shader module" << std::endl;
-	}
-	else {
-		std::cout << "Triangle fragment shader succesfully loaded" << std::endl;
-	}
+^code triangle_shaders chapter-3/vk_engine.cpp
 
-	VkShaderModule triangleVertexShader;
-	if (!vkutil::load_shader_module("../../shaders/triangle.vert.spv", _device, &triangleVertexShader)) {
-		std::cout << "Error when building the triangle vertex shader module" << std::endl;
-	}
-	else {
-		std::cout << "Triangle vertex shader succesfully loaded" << std::endl;
-	}
-```
+We also create the pipeline layout. Unlike with the compute shader before, this time we have no push constants and no descriptor bindings on here, so its really just a completely empty layout.
 
-Next, we create the pipeline layout. Unlike with the compute shader before, this time we have no push constants and no descriptor bindings on here, so its really just a completely empty layout.
+Now we create the pipeline, using the Pipeline Builder created before.
 
-```cpp
-//build the pipeline layout that controls the inputs of the shader
-//we are not using descriptor sets or other systems yet, so no need to use anything other than empty default
-VkPipelineLayoutCreateInfo pipeline_layout_info = vkinit::pipeline_layout_create_info();
-
-VK_CHECK(vkCreatePipelineLayout(_device, &pipeline_layout_info, nullptr, &_trianglePipelineLayout));
-```
-
-Now we create the pipeline, using the Pipeline Builder created before. 
-
-```cpp
-	PipelineBuilder pipelineBuilder;
-
-	//use the triangle layout we created
-	pipelineBuilder._pipelineLayout = _trianglePipelineLayout;
-	//connecting the vertex and pixel shaders to the pipeline
-	pipelineBuilder.set_shaders(triangleVertexShader, triangleFragShader);
-	//it will draw triangles
-	pipelineBuilder.set_input_topology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
-	//filled triangles
-	pipelineBuilder.set_polygon_mode(VK_POLYGON_MODE_FILL);
-	//no backface culling
-	pipelineBuilder.set_cull_mode(VK_CULL_MODE_NONE, VK_FRONT_FACE_CLOCKWISE);
-	//no multisampling
-	pipelineBuilder.set_multisampling_none();
-	//no blending
-	pipelineBuilder.disable_blending();
-	//no depth testing
-	pipelineBuilder.disable_depthtest();
-
-	//connect the image format we will draw into, from draw image
-	pipelineBuilder.set_color_attachment_format(_drawImage.imageFormat);
-	pipelineBuilder.set_depth_format(VK_FORMAT_UNDEFINED);
-
-	//finally build the pipeline
-	_trianglePipeline = pipelineBuilder.build_pipeline(_device);
-```
+^code triangle_pip_1 chapter-3/vk_engine.cpp
 
 With the pipeline built, we can draw our triangle as part of the command buffer we create every frame.
 
 The compute shader we run for the background needed to draw into GENERAL image layout, but when doing geometry rendering, we need to use COLOR_ATTACHMENT_OPTIMAL. It is possible to draw into GENERAL layout with graphics pipelines, but its lower performance and the validation layers will complain. We will create a new function, `draw_geometry()`, to hold these graphics commands. Lets update the draw loop first.
-```cpp
-	vkutil::transition_image(cmd, _drawImage.image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
 
-	draw_background(cmd);
-
-	vkutil::transition_image(cmd, _drawImage.image, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-
-	draw_geometry(cmd);
-
-	//transtion the draw image and the swapchain image into their correct transfer layouts
-	vkutil::transition_image(cmd, _drawImage.image, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-```
+^code draw_barriers chapter-3/vk_engine.cpp
 
 Now fill the draw_geometry function
-```cpp
-void VulkanEngine::draw_geometry(VkCommandBuffer cmd)
-{
-	//draw the triangle
 
-	VkRenderingAttachmentInfo colorAttachment = vkinit::attachment_info(_drawImage.imageView, nullptr, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-
-	VkRenderingInfo renderInfo = vkinit::rendering_info(_windowExtent, &colorAttachment, nullptr);
-
-	vkCmdBeginRendering(cmd, &renderInfo);
-
-    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _trianglePipeline);
-
-	VkViewport viewport = {};
-	viewport.x = 0;
-	viewport.y = 0;
-	viewport.width = _windowExtent.width;
-	viewport.height = _windowExtent.height;
-	viewport.minDepth = 0.f;
-	viewport.maxDepth = 1.f;
-
-	vkCmdSetViewport(cmd, 0, 1, &viewport);
-
-	VkRect2D scissor = {};
-	scissor.offset.x = 0;
-	scissor.offset.y = 0;
-	scissor.extent.width = _windowExtent.width;
-	scissor.extent.height = _windowExtent.height;
-
-	vkCmdSetScissor(cmd, 0, 1, &scissor);
-
-	vkCmdDraw(cmd, 3, 1, 0, 0);
-
-	vkCmdEndRendering(cmd);
-}
-```
+^code draw_geo chapter-3/vk_engine.cpp
 
 To draw our triangle we need to begin a renderpass with cmdBeginRendering. This is the same we were doing for imgui last chapter, but this time we are pointing it into our _drawImage instead of the swapchain image.
 
