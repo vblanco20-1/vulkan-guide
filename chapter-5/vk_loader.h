@@ -25,7 +25,7 @@ struct MeshAsset {
     std::string name;
 
     std::vector<GeoSurface> surfaces;
-    GPUMesh meshBuffers;
+    GPUMeshBuffers meshBuffers;
 };
 
 struct MeshNode : public Node {

@@ -76,7 +76,7 @@ struct Vertex {
 };
 
 // holds the resources needed for a mesh
-struct GPUMesh {
+struct GPUMeshBuffers {
 
     AllocatedBuffer indexBuffer;
     AllocatedBuffer vertexBuffer;

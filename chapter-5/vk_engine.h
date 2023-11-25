@@ -194,7 +194,7 @@ public:
 
     // upload a mesh into a pair of gpu buffers. If descriptor allocator is not
     // null, it will also create a descriptor that points to the vertex buffer
-    GPUMesh uploadMesh(std::span<uint32_t> indices, std::span<Vertex> vertices, DescriptorAllocator* alloc);
+	GPUMeshBuffers uploadMesh(std::span<uint32_t> indices, std::span<Vertex> vertices);
 
     FrameData& get_current_frame();
     FrameData& get_last_frame();
@@ -229,4 +229,6 @@ private:
     void init_renderables();
 
     void init_imgui();
+
+    void init_default_data();
 };

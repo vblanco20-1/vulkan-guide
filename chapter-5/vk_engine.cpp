@@ -513,8 +513,6 @@ AllocatedBuffer VulkanEngine::create_buffer(size_t allocSize, VkBufferUsageFlags
 
     bufferInfo.usage = usage;
 
-    // let the VMA library know that this data should be writeable by CPU, but
-    // also readable by GPU
     VmaAllocationCreateInfo vmaallocInfo = {};
     vmaallocInfo.usage = memoryUsage;
     vmaallocInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
@@ -594,12 +592,12 @@ AllocatedImage VulkanEngine::create_image(void* data, VkExtent3D size, VkFormat 
     return new_image;
 }
 
-GPUMesh VulkanEngine::uploadMesh(std::span<uint32_t> indices, std::span<Vertex> vertices, DescriptorAllocator* alloc)
+GPUMeshBuffers VulkanEngine::uploadMesh(std::span<uint32_t> indices, std::span<Vertex> vertices)
 {
     const size_t vertexBufferSize = vertices.size() * sizeof(Vertex);
     const size_t indexBufferSize = indices.size() * sizeof(uint32_t);
 
-    GPUMesh newSurface;
+    GPUMeshBuffers newSurface;
     
     newSurface.vertexBuffer = create_buffer(vertexBufferSize, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
         VMA_MEMORY_USAGE_GPU_ONLY);
@@ -1032,7 +1030,6 @@ void VulkanEngine::init_pipelines()
 
     _gltfDefaultTranslucent.pipeline = pipelineBuilder.build_pipeline(_device);
     _gltfDefaultTranslucent.passType = MaterialPass::Transparent;
-
 
     vkDestroyShaderModule(_device, meshFragShader, nullptr);
     vkDestroyShaderModule(_device, meshVertexShader, nullptr);
