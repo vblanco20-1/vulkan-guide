@@ -297,9 +297,8 @@ For the rest of the function, we do the same as in the triangle pipeline functio
 	//no multisampling
 	pipelineBuilder.set_multisampling_none();
 	//no blending
-	//pipelineBuilder.disable_blending();
-	//pipelineBuilder.disable_blending();
-	pipelineBuilder.enable_blending_additive();
+	pipelineBuilder.disable_blending();
+
 	//no depth testing
 	pipelineBuilder.disable_depthtest();
 

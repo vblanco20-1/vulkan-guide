@@ -10,4 +10,4 @@ permalink: /docs/new_vkguide/chapter_3
 
 We have already drawn with compute shaders, but in this chapter, we will use the real capabilities of a GPU to draw meshes using the rasterizer systems and the normal graphics pipeline.
 
-{: .fs-6 .fw-300 }
+{: .fs-6 .fw-300 

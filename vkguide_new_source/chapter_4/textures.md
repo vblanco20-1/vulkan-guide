@@ -2,7 +2,7 @@
 layout: default
 title: Textures
 parent: "New 4. Textures and Engine Architecture"
-nav_order: 2
+nav_order: 6
 ---
 
 We already showed how to use images when we did compute based rendering, but there are things about images we still need to deal with, specially how to use them in graphics shaders for rendering and display. We will begin here by creating a set of default textures for our engine, and then load a texture from a file.
@@ -30,3 +30,114 @@ For mip level, we will copy the data into mip level 0 which is the top level. Th
 
 With those 2 functions, we can set up some default textures. We will create a default-white, default-black, default-grey, and a checkerboard texture. This way we have some textures we can use when something fails to load.
 
+Lets add those 3 images into the VulkanEngine class, and a couple samplers too that we can use with those images and others.
+
+```cpp
+	AllocatedImage _whiteImage;
+	AllocatedImage _blackImage;
+	AllocatedImage _greyImage;
+	AllocatedImage _errorCheckerboardImage;
+
+    VkSampler _defaultSamplerLinear;
+	VkSampler _defaultSamplerNearest;
+```
+
+lets go and create those as part of the `init_default_data()` function, after the code we have that creates the rectangle mesh.
+
+^code default_img chapter-4/vk_engine.cpp
+
+for the 3 default color images, we create the image with that color as the single pixel. For the checkerboard, we write a 16x16 array of pixel color data with some simple math for a black/magenta check pattern.
+
+On the samplers, we will leave all parameters as default except the min/mag filters, which we will have as either Linear or Nearest. Linear will blur pixels, while Nearest will give a pixelated look.
+
+## Binding images to shaders
+When we did the compute based rendering, we bound the image using a `VK_DESCRIPTOR_TYPE_STORAGE_IMAGE`, which was the type we use for a read/write texture with no sampling logic. This is roughly equivalent to binding a buffer, just a multi-dimensional one with different memory layout. But when we do drawing, we want to use the fixed hardware in the GPU for accessing texture data, which needs the sampler. We have the option to either use `VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER`, which packages an image and a sampler to use with that image, or to use 2 descriptors, and separate the two into `VK_DESCRIPTOR_TYPE_SAMPLER` and `VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE`. According to gpu vendors, the separated approach can be faster as there is less duplicated data. But its a bit harder to deal with so we wont be doing it for now. Instead, we will use the combined descriptor to make our shaders simpler. 
+
+We have been creating our descriptors at startup time, but lets change it up for this case. We will convert the rectangle draw from before into a image display, and it can be useful to have the descriptors done dynamically so we can swap what texture it displays according to some UI, or implement it as a fully dynamic "blit image to screen" function. 
+
+To allocate descriptor sets at runtime, we will hold one descriptor allocator in our FrameData structure. This way it will work like with the deletion queue, where we flush the resources and delete things as we begin the rendering of that frame. Resetting the whole descriptor pool at once is a lot faster than trying to keep track of individual descriptor set resource lifetimes.
+
+We add it into FrameData struct
+
+```cpp
+struct FrameData {
+	VkSemaphore _swapchainSemaphore, _renderSemaphore;
+	VkFence _renderFence;
+
+	VkCommandPool _commandPool;
+	VkCommandBuffer _mainCommandBuffer;
+
+	DeletionQueue _deletionQueue;
+	DescriptorAllocator _frameDescriptors;
+};
+```
+
+Now, lets initialize it when we initialize the swapchain and create these structs. Add this at the end of init_descriptors()
+
+^code frame_desc chapter-4/vk_engine.cpp
+
+And now, we can clear these every frame when we flush the frame deletion queue. This goes at the start of draw()
+
+^code frame_clear chapter-4/vk_engine.cpp
+
+We will be modifying the rectangle draw we had before into a draw that displays a image in that rectangle. We need to create a new fragment shader that will show the image. Lets create a new fragment shader for that. We will call it `tex_image.frag`
+
+```c
+//glsl version 4.5
+#version 450
+
+//shader input
+layout (location = 0) in vec3 inColor;
+layout (location = 1) in vec2 inUV;
+//output write
+layout (location = 0) out vec4 outFragColor;
+
+//texture to access
+layout(set =0, binding = 0) uniform sampler2D displayTexture;
+
+void main() 
+{
+	outFragColor = texture(displayTexture,inUV);
+}
+```
+
+We have 2 inputs to the fragment shader, color and UV. The shader doesnt use color but we want to keep using the same vertex shader we had before.
+
+To sample a texture, you do `texture( textureSampler, coordinates )`. There are other functions for things like directly accessing a given pixel. The texture object is declared as `uniform sampler2D`. 
+
+This does change our pipeline layout, so we are going to need to update it too. 
+
+Lets add the layout into VulkanEngine class, as we will keep it around.
+
+```cpp
+class VulkanEngine {
+VkDescriptorSetLayout _singleImageDescriptorLayout;
+}
+```
+
+On init_descriptors(), lets create it alongside the rest
+
+
+```cpp
+{
+	DescriptorLayoutBuilder builder;
+	builder.add_binding(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+	_singleImageDescriptorLayout = builder.build(_device, VK_SHADER_STAGE_FRAGMENT_BIT);
+}
+```
+
+A descriptor set with just a single image-sampler descriptor. We can now update the `init_mesh_pipeline()` function with this. We will be modifying the start part, changing the fragment shader and connecting the descriptor set layout to the pipelinelayout creation.
+
+```cpp
+void VulkanEngine::init_mesh_pipeline()
+{
+^code frame_clear chapter-4/vk_engine.cpp
+}
+```
+
+Now, on our draw function, we can dynamically create the descriptor set needed when binding this pipeline, and use it to display textures we want to draw.
+
+```
+
+
+```

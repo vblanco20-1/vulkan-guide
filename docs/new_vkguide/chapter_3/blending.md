@@ -69,3 +69,4 @@ Lets try to use it to see what it does. We dont have alpha set in our shaders, s
 pipelineBuilder.enable_blending_additive();
 ```
 
+You should now see the rectangle we had as semi-transparent, letting the color below it show
