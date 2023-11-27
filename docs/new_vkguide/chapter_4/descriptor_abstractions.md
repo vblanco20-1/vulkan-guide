@@ -150,7 +150,38 @@ destroying loops over both lists and destroys everything to clear the entire all
 
 Last is the new allocation function.
 
-^code growpool_3 shared/vk_descriptors.cpp 
+<!-- codegen from tag growpool_3 on file E:\ProgrammingProjects\vulkan-guide-2\shared/vk_descriptors.cpp --> 
+```cpp
+VkDescriptorSet DescriptorAllocatorGrowable::allocate(VkDevice device, VkDescriptorSetLayout layout)
+{
+    //get or create a pool to allocate from
+    VkDescriptorPool poolToUse = get_pool(device);
+
+	VkDescriptorSetAllocateInfo allocInfo = {};
+	allocInfo.pNext = nullptr;
+	allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+	allocInfo.descriptorPool = poolToUse;
+	allocInfo.descriptorSetCount = 1;
+	allocInfo.pSetLayouts = &layout;
+
+	VkDescriptorSet ds;
+	VkResult result = vkAllocateDescriptorSets(device, &allocInfo, &ds);
+
+    //allocation failed. Try again
+    if (result == VK_ERROR_OUT_OF_POOL_MEMORY || result == VK_ERROR_FRAGMENTED_POOL) {
+
+        fullPools.push_back(poolToUse);
+    
+        poolToUse = get_pool(device);
+        allocInfo.descriptorPool = poolToUse;
+
+       VK_CHECK( vkAllocateDescriptorSets(device, &allocInfo, &ds));
+    }
+  
+    readyPools.push_back(poolToUse);
+    return ds;
+}
+```
 
 We first grab a pool, then allocate from it, and if the allocation failed, we add it into the fullPools array (as we know this pool is filled) and then try again. If the second time fails too stuff is completely broken so it just asserts and crashes. Once we have allocated with a pool, we add it back into the readyPools array.
 

@@ -68,7 +68,7 @@ struct FrameData {
 	VkCommandBuffer _mainCommandBuffer;
 
 	DeletionQueue _deletionQueue;
-	DescriptorAllocator _frameDescriptors;
+	DescriptorAllocatorGrowable _frameDescriptors;
 };
 ```
 
@@ -137,7 +137,12 @@ void VulkanEngine::init_mesh_pipeline()
 
 Now, on our draw function, we can dynamically create the descriptor set needed when binding this pipeline, and use it to display textures we want to draw.
 
-```
+This goes into the `draw_geometry()` function, replacing the draw that does the rectangle
 
+^code draw_tex chapter-4/vk_engine.cpp
 
-```
+We allocate a new descriptor set from the frame descriptor set allocator, using the _singleImageDescriptorLayout that the shader uses.
+
+Then we use a descriptor writer to write a single image descriptor on binding 0, which will be the _errorCheckerboardImage. We give it the nearest-sampler, so that it doesnt blend between pixels. Then we update the descriptor set with the writer, and bind the set. Then we proceed with the draw.
+
+The result should be a rectangle with a magenta and black checkerboard pattern on the screen.

@@ -139,7 +139,6 @@ lets go and create those as part of the `init_default_data()` function, after th
 	_errorCheckerboardImage = create_image(pixels.data(), VkExtent3D{16, 16, 1}, VK_FORMAT_R8G8B8A8_UNORM,
 		VK_IMAGE_USAGE_SAMPLED_BIT);
 
-
 	VkSamplerCreateInfo sampl = {.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO};
 
 	sampl.magFilter = VK_FILTER_NEAREST;
@@ -176,7 +175,7 @@ struct FrameData {
 	VkCommandBuffer _mainCommandBuffer;
 
 	DeletionQueue _deletionQueue;
-	DescriptorAllocator _frameDescriptors;
+	DescriptorAllocatorGrowable _frameDescriptors;
 };
 ```
 
@@ -186,15 +185,18 @@ Now, lets initialize it when we initialize the swapchain and create these struct
 ```cpp
 	for (int i = 0; i < FRAME_OVERLAP; i++) {
 		// create a descriptor pool
-		std::vector<DescriptorAllocator::PoolSizeRatio> frame_sizes = { { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 3 },
+		std::vector<DescriptorAllocatorGrowable::PoolSizeRatio> frame_sizes = { 
+			{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 3 },
 			{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 3 },
-			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 3 } };
+			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 3 },
+			{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 4 },
+		};
 
-		_frames[i]._frameDescriptors = DescriptorAllocator{};
-		_frames[i]._frameDescriptors.init_pool(_device, 1000, frame_sizes);
+		_frames[i]._frameDescriptors = DescriptorAllocatorGrowable{};
+		_frames[i]._frameDescriptors.init(_device, 1000, frame_sizes);
 	
 		_mainDeletionQueue.push_function([&, i]() {
-			vkDestroyDescriptorPool(_device, _frames[i]._frameDescriptors.pool, nullptr);
+			_frames[i]._frameDescriptors.destroy_pools(_device);
 		});
 	}
 ```
@@ -207,7 +209,7 @@ And now, we can clear these every frame when we flush the frame deletion queue. 
 	VK_CHECK(vkWaitForFences(_device, 1, &get_current_frame()._renderFence, true, 1000000000));
 
 	get_current_frame()._deletionQueue.flush();
-	get_current_frame()._frameDescriptors.clear_descriptors(_device);
+	get_current_frame()._frameDescriptors.clear_pools(_device);
 ```
 
 We will be modifying the rectangle draw we had before into a draw that displays a image in that rectangle. We need to create a new fragment shader that will show the image. Lets create a new fragment shader for that. We will call it `tex_image.frag`
@@ -265,8 +267,38 @@ void VulkanEngine::init_mesh_pipeline()
 	VK_CHECK(vkWaitForFences(_device, 1, &get_current_frame()._renderFence, true, 1000000000));
 
 	get_current_frame()._deletionQueue.flush();
-	get_current_frame()._frameDescriptors.clear_descriptors(_device);
+	get_current_frame()._frameDescriptors.clear_pools(_device);
 }
 ```
 
 Now, on our draw function, we can dynamically create the descriptor set needed when binding this pipeline, and use it to display textures we want to draw.
+
+This goes into the `draw_geometry()` function, replacing the draw that does the rectangle
+
+<!-- codegen from tag draw_tex on file E:\ProgrammingProjects\vulkan-guide-2\chapter-4/vk_engine.cpp --> 
+```cpp
+	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _meshPipeline);
+
+	//bind a texture
+	VkDescriptorSet imageSet = get_current_frame()._frameDescriptors.allocate(_device, _singleImageDescriptorLayout);
+	{
+		DescriptorWriter writer;
+		writer.write_image(0, _errorCheckerboardImage.imageView, _defaultSamplerNearest, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+
+		writer.update_set(_device,imageSet);
+	}
+
+	vkCmdBindDescriptorSets(cmd,VK_PIPELINE_BIND_POINT_GRAPHICS,_meshPipelineLayout,0,1,&imageSet,0,nullptr);
+
+	vkCmdPushConstants(cmd,_meshPipelineLayout,VK_SHADER_STAGE_VERTEX_BIT,0, sizeof(VkDeviceAddress), &rectangle.vertexBufferAddress);
+	vkCmdBindIndexBuffer(cmd, rectangle.indexBuffer.buffer,0,VK_INDEX_TYPE_UINT32);
+
+	vkCmdDrawIndexed(cmd,6,1,0,0,0);
+```
+
+We allocate a new descriptor set from the frame descriptor set allocator, using the _singleImageDescriptorLayout that the shader uses.
+
+Then we use a descriptor writer to write a single image descriptor on binding 0, which will be the _errorCheckerboardImage. We give it the nearest-sampler, so that it doesnt blend between pixels. Then we update the descriptor set with the writer, and bind the set. Then we proceed with the draw.
+
+The result should be a rectangle with a magenta and black checkerboard pattern on the screen.
+
