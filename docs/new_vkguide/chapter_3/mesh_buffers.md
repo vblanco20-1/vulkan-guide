@@ -309,12 +309,12 @@ For the rest of the function, we do the same as in the triangle pipeline functio
 	//no blending
 	pipelineBuilder.disable_blending();
 
-	//no depth testing
-	pipelineBuilder.disable_depthtest();
+	//pipelineBuilder.disable_depthtest();
+	pipelineBuilder.enable_depthtest(true, VK_COMPARE_OP_GREATER_OR_EQUAL);
 
 	//connect the image format we will draw into, from draw image
 	pipelineBuilder.set_color_attachment_format(_drawImage.imageFormat);
-	pipelineBuilder.set_depth_format(VK_FORMAT_UNDEFINED);
+	pipelineBuilder.set_depth_format(_depthImage.imageFormat);
 
 	//finally build the pipeline
 	_meshPipeline = pipelineBuilder.build_pipeline(_device);
@@ -382,9 +382,6 @@ We create 2 arrays for vertices and indices, and call the uploadMesh function to
 We can now execute the draw. We will add the new draw command `on draw_geometry()` function, after the triangle we had.
 
 ```cpp
-//launch a draw command to draw 3 vertices
-vkCmdDraw(cmd, 3, 1, 0, 0);
-
 	//launch a draw command to draw 3 vertices
 	vkCmdDraw(cmd, 3, 1, 0, 0);
 
@@ -399,7 +396,7 @@ vkCmdDraw(cmd, 3, 1, 0, 0);
 
 	vkCmdDrawIndexed(cmd,6,1,0,0,0);
 
-vkCmdEndRendering(cmd);
+	vkCmdEndRendering(cmd);
 ```
 
 We bind another pipeline, this time the rectangle mesh one.
