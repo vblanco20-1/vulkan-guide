@@ -86,28 +86,13 @@ With this we can create our mesh structure and setup the vertex buffer.
 ## mesh buffers on gpu
 
 vk_types.h
-```cpp
-//our vertex format. Very basic unoptimized vertex with position, normal, color, and UV
-struct Vertex {
-	glm::vec3 position;
-	float uv_x;
-	glm::vec3 normal;
-	float uv_y;
-	glm::vec4 color;
-};
-
-// holds the resources needed for a mesh
-struct GPUMeshBuffers {
-
-    AllocatedBuffer indexBuffer;
-    AllocatedBuffer vertexBuffer;
-    VkDeviceAddress vertexBufferAddress;
-};
-```
+^code vbuf_types shared/vk_types.h
 
 We need a vertex format, so lets use this one. when creating a vertex format its very important to compact the data as much as possible, but for the current stage of the tutorial it wont matter. We will optimize this vertex format later. The reason the uv parameters are interleaved is due to alignement limitations on GPUs. We want this structure to match the shader version so interleaving it like this improves it.
 
 We store our mesh data into a GPUMeshBuffers struct, which will contain the allocated buffer for both indices and vertices, plus the buffer device adress for the vertices. 
+
+We will create a struct for the push-constants we want to draw the mesh, it will contain the transform matrix for the object, and the device adress for the mesh buffer.
 
 Now we need a function to create those buffers and fill them on the gpu.
 
@@ -162,6 +147,7 @@ layout(buffer_reference, std430) readonly buffer VertexBuffer{
 //push constants block
 layout( push_constant ) uniform constants
 {	
+	mat4 render_matrix;
 	VertexBuffer vertexBuffer;
 } PushConstants;
 
@@ -171,7 +157,7 @@ void main()
 	Vertex v = PushConstants.vertexBuffer.vertices[gl_VertexIndex];
 
 	//output data
-	gl_Position = vec4(v.position, 1.0f);
+	gl_Position = PushConstants.render_matrix * vec4(v.position, 1.0f);
 	outColor = v.color.xyz;
 }
 ```
@@ -182,10 +168,10 @@ Then we have the vertex struct, which is the exact same one as the one we have o
 
 After that, we declare the VertexBuffer, which is a readonly buffer that has an array (unsized) of Vertex structures. by having the `buffer_reference` in the layout, that tells the shader that this object is used from buffer adress. `std430` is the alignement rules for the structure. 
 
-We have our push_constant block which holds a single instance of our VertexBuffer. Because the vertex buffer is declared as buffer_reference, this is a uint64 handle. 
+We have our push_constant block which holds a single instance of our VertexBuffer, and a matrix. Because the vertex buffer is declared as buffer_reference, this is a uint64 handle, while the matrix is a normal matrix (no references).
 
 From our main(), we index the vertex array using `gl_VertexIndex`, same as we did with the hardcoded array. We dont have -> like in cpp when accessing pointers, in glsl buffer address is accessed as a reference so it uses `.` to access it 
-With the vertex grabbed, we just output the color and position we want. 
+With the vertex grabbed, we just output the color and position we want, multiplying the position with the render matrix. 
 
 Lets create the pipeline now. We will create a new pipeline function, separate from  `init_triangle_pipeline()` but almost the same. Add this to vulkanEngine class
 
@@ -204,7 +190,7 @@ Its going to be mostly a copypaste of `init_triangle_pipeline()`
 ^code rectangle_shaders chapter-3/vk_engine.cpp
 
 
-We change the vertex shader to load `colored_triangle_mesh.vert.spv`, and we modify the pipeline layout to give it a single int64 worth of data on the vertex shader stage.
+We change the vertex shader to load `colored_triangle_mesh.vert.spv`, and we modify the pipeline layout to give it the push constants struct we defined above.
 
 For the rest of the function, we do the same as in the triangle pipeline function, but changing the pipeline layout and the pipeline name to be the new ones.
 
@@ -234,27 +220,22 @@ We create 2 arrays for vertices and indices, and call the uploadMesh function to
 We can now execute the draw. We will add the new draw command `on draw_geometry()` function, after the triangle we had.
 
 ```cpp
-//launch a draw command to draw 3 vertices
-vkCmdDraw(cmd, 3, 1, 0, 0);
+	//launch a draw command to draw 3 vertices
+	vkCmdDraw(cmd, 3, 1, 0, 0);
 
-vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _meshPipeline);
+^code drawrect chapter-3/vk_engine.cpp
 
-vkCmdPushConstants(cmd,_meshPipelineLayout,VK_SHADER_STAGE_VERTEX_BIT,0, sizeof(VkDeviceAddress), &rectangle.vertexBufferAddress);
-vkCmdBindIndexBuffer(cmd, rectangle.indexBuffer.buffer,0,VK_INDEX_TYPE_UINT32);
-
-vkCmdDrawIndexed(cmd,6,1,0,0,0);
-
-vkCmdEndRendering(cmd);
+	vkCmdEndRendering(cmd);
 ```
 
 We bind another pipeline, this time the rectangle mesh one.
 
-Then, we use push-constants to upload the vertexBufferAdress to the gpu. 
+Then, we use push-constants to upload the vertexBufferAdress to the gpu. For the matrix, we will be defaulting it for now until we implement mesh transformations.
 
-We then need to do a cmdBindIndexBuffer to bind the index buffer for graphics. Sadly there is no way of using device adress here, and you need to give it the VkBuffer  and offsets.
+We then need to do a cmdBindIndexBuffer to bind the index buffer for graphics. Sadly there is no way of using device adress here, and you need to give it the VkBuffer and offsets.
 
 Last, we use `vkCmdDrawIndexed` to draw 2 triangles (6 indices). This is the same as the vkCmdDraw, but it uses the currently bound index buffer to draw meshes.
 
-Thats all, we now have a generic way of rendering any mesh. If you want, you can try to change or add triangles, or have multiple `GPUMeshBuffers` for multiple meshes. We will go further in there in the next chapter.
+Thats all, we now have a generic way of rendering any mesh. 
 
-Last thing in this chapter will be setting up blending and transparency.
+Next we will load mesh files from a GLTF in the most basic way so we can play around with fancier things than a rectangle.

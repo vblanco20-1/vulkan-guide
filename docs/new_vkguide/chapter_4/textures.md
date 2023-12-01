@@ -149,8 +149,6 @@ lets go and create those as part of the `init_default_data()` function, after th
 	sampl.magFilter = VK_FILTER_LINEAR;
 	sampl.minFilter = VK_FILTER_LINEAR;
 	vkCreateSampler(_device, &sampl, nullptr, &_defaultSamplerLinear);
-
-
 ```
 
 for the 3 default color images, we create the image with that color as the single pixel. For the checkerboard, we write a 16x16 array of pixel color data with some simple math for a black/magenta check pattern.
@@ -293,7 +291,7 @@ This goes into the `draw_geometry()` function, replacing the draw that does the 
 	vkCmdPushConstants(cmd,_meshPipelineLayout,VK_SHADER_STAGE_VERTEX_BIT,0, sizeof(VkDeviceAddress), &rectangle.vertexBufferAddress);
 	vkCmdBindIndexBuffer(cmd, rectangle.indexBuffer.buffer,0,VK_INDEX_TYPE_UINT32);
 
-	vkCmdDrawIndexed(cmd,6,1,0,0,0);
+	vkCmdDrawIndexed(cmd,rectangle.indexBuffer.info.size / 4,1,0,0,0);
 ```
 
 We allocate a new descriptor set from the frame descriptor set allocator, using the _singleImageDescriptorLayout that the shader uses.

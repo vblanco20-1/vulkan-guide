@@ -352,8 +352,70 @@ writer.update_set(_device,_drawImageDescriptors);
 
 This abstraction will prove much more useful when we have more complex descriptor sets, specially in combination with the allocator and the layout builder. 
 
-Lets continue with the tutorial drawing a textured rectangle.
+Lets start using the abstraction by using it to create a global scene data descriptor every frame. This is the descriptor set that all of our draws will use. It will contain the camera matrices so that we can do 3d rendering.
 
+Add a new structure that we will use for the uniform buffer of scene data. We will hold view materia and projection matrix separated, and then premultiplied view-projection matrix. We also add some vec4s for a very basic lighting model that we will be building next.
+
+```cpp
+struct GPUSceneData {
+    glm::mat4 view;
+    glm::mat4 proj;
+    glm::mat4 viewproj;
+    glm::vec4 ambientColor;
+    glm::vec4 sunlightDirection; // w for sun power
+    glm::vec4 sunlightColor;
+};
+```
+
+Add a new descriptor Layout on the VulkanEngine class
+```
+GPUSceneData sceneData;
+
+VkDescriptorSetLayout _gpuSceneDataDescriptorLayout;
+```
+
+Create the descriptor set layout as part of init_descriptors. It will be a descriptor set with a single uniform buffer binding. We use uniform buffer here instead of SSBO because this is a small buffer. We arent using it through buffer device adress because we have a single descriptor set for all objects so there isnt any overhead of managing it.
+
+```cpp
+{
+	DescriptorLayoutBuilder builder;
+	builder.add_binding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+	_gpuSceneDataDescriptorLayout = builder.build(_device, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
+}
+```
+
+Now, we will create this descriptor set in a fully realtime fashion, inside the `draw_geometry()` function. We will also dynamically allocate the uniform buffer itself as a way to showcase how you could do temporal per-frame data that is dynamically created. It would be better to hold the buffers cached in our FrameData structure, but we will be doing it this way to show how. There are cases with dynamic draws and passes where you might want to do it this way.
+
+```cpp	
+    //allocate a new uniform buffer for the scene data
+    AllocatedBuffer gpuSceneDataBuffer =  create_buffer(sizeof(GPUSceneData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+
+    //add it to the deletion queue of this frame so it gets deleted once its been used
+    get_current_frame()._deletionQueue.push_function([=,this](){
+        destroy_buffer(gpuSceneDataBuffer);
+    });
+
+    //write the buffer
+    GPUSceneData* sceneUniformData = (GPUSceneData*)gpuSceneDataBuffer.allocation->GetMappedData();
+    *sceneUniformData = sceneData;
+
+    //create a descriptor set that binds that buffer and update it
+    VkDescriptorSet globalDescriptor = get_current_frame()._frameDescriptors.allocate(_device, _gpuSceneDataDescriptorLayout);
+
+	DescriptorWriter writer;
+	writer.write_buffer(0, get_current_frame().cameraBuffer.buffer, sizeof(GPUSceneData), 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+	writer.update_set(_device, globalDescriptor);
+```
+
+First we allocate the unifom buffer using the CPU_TO_GPU memory usage so that its a memory type that the cpu can write and gpu can read. This might be done on CPU RAM, but because its a small amount of data, the gpu is going to have no problem loading it into its caches. We can skip the logic with the staging buffer upload to dedicated gpu memory for cases like this.
+
+Then we add it into the destruction queue of the current frame. This will destroy the buffer after the next frame is rendered, so it gives enough time for the GPU to be done accessing it. All of the resources we dynamically create for a single frame must go here for deletion.
+
+To allocate the descriptor set we allocate it from the _frameDescriptors. That pool gets destroyed every frame, so same as with the deletion queue, it will be deleted automatically when the gpu is done with it 2 frames later. 
+
+Then we write the new buffer into the descriptor set. Now we have the globalDescriptor ready to be used for drawing. 
+
+Before we continue with drawing, lets set up textures.
 
 
 
