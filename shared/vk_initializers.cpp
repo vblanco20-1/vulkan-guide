@@ -141,6 +141,7 @@ VkRenderingAttachmentInfo vkinit::attachment_info(
     return colorAttachment;
 }
 //< color_info
+//> depth_info
 VkRenderingAttachmentInfo vkinit::depth_attachment_info(
     VkImageView view, VkImageLayout layout /*= VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL*/)
 {
@@ -156,6 +157,7 @@ VkRenderingAttachmentInfo vkinit::depth_attachment_info(
 
     return depthAttachment;
 }
+//< depth_info
 //> render_info
 VkRenderingInfo vkinit::rendering_info(VkExtent2D renderExtent, VkRenderingAttachmentInfo* colorAttachment,
     VkRenderingAttachmentInfo* depthAttachment)

@@ -7,16 +7,16 @@
 
 #include "vk_descriptors.h"
 #include <unordered_map>
+#include <filesystem>
 
 class VulkanEngine;
 
 struct GLTFMaterial {
-    MaterialData data;
+    MaterialInstance data;
 };
 
 struct GeoSurface {
     uint32_t startIndex;
-    uint32_t vertexOffset;
     uint32_t count;
     std::shared_ptr<GLTFMaterial> material;
 };
@@ -32,7 +32,7 @@ struct MeshNode : public Node {
 
     std::shared_ptr<MeshAsset> mesh;
 
-    virtual void Draw(const glm::mat4& topMatrix, DrawContext& ctx);
+    virtual void Draw(const glm::mat4& topMatrix, DrawContext& ctx) override;
 };
 
 struct LoadedGLTF : public IRenderable {
@@ -48,12 +48,11 @@ struct LoadedGLTF : public IRenderable {
 
     std::vector<VkSampler> samplers;
 
-    DescriptorAllocator descriptorPool;
+    DescriptorAllocatorGrowable descriptorPool;
 
     AllocatedBuffer materialDataBuffer;
 
-    // gltf defaults to a default white image for things not found
-    AllocatedImage defaultImage;
+    VulkanEngine* creator;
 
     ~LoadedGLTF()
     {
@@ -63,7 +62,13 @@ struct LoadedGLTF : public IRenderable {
     virtual void Draw(const glm::mat4& topMatrix, DrawContext& ctx);
 
 private:
+    
+
     void clearAll();
 };
 
-std::optional<std::shared_ptr<LoadedGLTF>> loadGltf(std::string_view filePath);
+std::optional<std::shared_ptr<LoadedGLTF>> loadGltf(VulkanEngine* engine, std::string_view filePath);
+
+
+std::optional<std::vector<std::shared_ptr<MeshAsset>>> loadGltfMeshes(VulkanEngine* engine, std::filesystem::path filePath);
+

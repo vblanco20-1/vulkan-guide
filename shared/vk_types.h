@@ -57,15 +57,18 @@ enum class MaterialPass :uint8_t {
     Transparent,
     Other
 };
+struct MaterialPipeline {
+	VkPipeline pipeline;
+	VkPipelineLayout layout;
+};
 
-struct MaterialData {
-    VkPipeline pipeline;
-    VkPipelineLayout layout;
+struct MaterialInstance {
+    MaterialPipeline* pipeline;
     VkDescriptorSet materialSet;
-
     MaterialPass passType;
 };
 
+//> vbuf_types
 struct Vertex {
 
 	glm::vec3 position;
@@ -83,10 +86,12 @@ struct GPUMeshBuffers {
     VkDeviceAddress vertexBufferAddress;
 };
 
+// push constants for our mesh object draws
 struct GPUDrawPushConstants {
     glm::mat4 worldMatrix;
     VkDeviceAddress vertexBuffer;
 };
+//< vbuf_types
 
 struct DrawContext;
 

@@ -1,9 +1,7 @@
 #version 450
 
-#extension GL_EXT_scalar_block_layout : require
 #extension GL_GOOGLE_include_directive : require
 #extension GL_EXT_buffer_reference : require
-//#include "scene_data.glsl"
 
 #include "input_structures.glsl"
 

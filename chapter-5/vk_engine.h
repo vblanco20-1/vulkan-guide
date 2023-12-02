@@ -63,7 +63,7 @@ struct RenderObject {
     uint32_t firstIndex;
     VkBuffer indexBuffer;
     
-    MaterialData* material;
+    MaterialInstance* material;
 
     glm::mat4 transform;
     VkDeviceAddress vertexBufferAddress;
@@ -73,7 +73,7 @@ struct FrameData {
 	VkSemaphore _swapchainSemaphore, _renderSemaphore;
 	VkFence _renderFence;
 
-    DescriptorAllocator _frameDescriptors;
+    DescriptorAllocatorGrowable _frameDescriptors;
     DeletionQueue _deletionQueue;
 
     VkCommandPool _commandPool;
@@ -95,6 +95,37 @@ struct EngineStats {
     int triangle_count;
     int drawcall_count;
     float mesh_draw_time;
+};
+
+
+struct GLTFMetallic_Roughness {
+    MaterialPipeline opaquePipeline;
+    MaterialPipeline transparentPipeline;
+
+    VkDescriptorSetLayout materialLayout;
+
+    struct MaterialConstants {
+		glm::vec4 colorFactors;
+		glm::vec4 metal_rough_factors;
+        //padding, we need it anyway for uniform buffers
+		glm::vec4 extra[14];
+    };
+
+    struct MaterialResources {
+        AllocatedImage colorImage; 
+        VkSampler colorSampler;
+        AllocatedImage metalRoughImage;
+        VkSampler metalRoughSampler;
+        VkBuffer dataBuffer; 
+        uint32_t dataBufferOffset;
+    };
+
+    DescriptorWriter writer;
+
+    void build_pipelines(VulkanEngine* engine);
+    void clear_resources(VkDevice device);
+
+    MaterialInstance write_material(VkDevice device,MaterialPass pass,const MaterialResources& resources , DescriptorAllocatorGrowable& descriptorAllocator);
 };
 
 class VulkanEngine {
@@ -141,11 +172,9 @@ public:
 
     VmaAllocator _allocator; // vma lib allocator
 
-    VkDescriptorSetLayout _gpuSceneDataDescriptorLayout;
-    VkDescriptorSetLayout _gltfMatDescriptorLayout;
+	VkDescriptorSetLayout _gpuSceneDataDescriptorLayout;
 
-    MaterialData _gltfDefaultOpaque;
-    MaterialData _gltfDefaultTranslucent;
+    GLTFMetallic_Roughness metalRoughMaterial;
 
     // draw resources
     AllocatedImage _drawImage;
@@ -154,14 +183,19 @@ public:
     // the format for the draw image
     VkFormat _drawFormat;
 
-    // default image for fallback
-    AllocatedImage _whiteImage;
-    VkSampler _defaultSampler;
     // immediate submit structures
     VkFence _immFence;
     VkCommandBuffer _immCommandBuffer;
     VkCommandPool _immCommandPool;
 
+	AllocatedImage _whiteImage;
+	AllocatedImage _blackImage;
+	AllocatedImage _greyImage;
+	AllocatedImage _errorCheckerboardImage;
+
+	VkSampler _defaultSamplerLinear;
+	VkSampler _defaultSamplerNearest;
+    GPUMeshBuffers rectangle;
     DrawContext drawCommands;
 
     GPUSceneData sceneData;
@@ -186,6 +220,8 @@ public:
     void draw();
 	void draw_main(VkCommandBuffer cmd);
 	void draw_imgui(VkCommandBuffer cmd, VkImageView targetImageView);
+
+	void render_nodes();
 
     void draw_geometry(VkCommandBuffer cmd);
 
