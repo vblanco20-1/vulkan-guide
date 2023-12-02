@@ -271,7 +271,6 @@ Its going to be mostly a copypaste of `init_triangle_pipeline()`
 		std::cout << "Triangle vertex shader succesfully loaded" << std::endl;
 	}
 
-
 	VkPushConstantRange bufferRange{};
 	bufferRange.offset = 0;
 	bufferRange.size = sizeof(GPUDrawPushConstants);
@@ -374,6 +373,8 @@ void VulkanEngine::init_default_data() {
 	rectangle = uploadMesh(rect_indices,rect_vertices);
 
 	testMeshes = loadGltfMeshes(this,"..\\..\\assets\\basicmesh.glb").value();
+
+	
 } 
 ```
 

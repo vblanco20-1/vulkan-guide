@@ -312,7 +312,7 @@ void VulkanEngine::init_pipelines()
 
 Now, at the end of init_default_data(), we create the default MaterialData struct using the basic textures we just made. Like we did with the temporal buffer for scene data, we are going to allocate the buffer and then put it into a deletion queue, but its going to be the global deletion queue. We wont need to access the default material constant buffer at any point after creating it
 
-```
+```cpp
 GLTFMetallic_Roughness::MaterialResources materialResources;
 //default the material textures
 materialResources.colorImage = _whiteImage;
@@ -340,7 +340,4 @@ defaultData = metalRoughMaterial.write_material(_device,MaterialPass::MainColor,
 ```
 
 We are going to fill the parameters of the material on MaterialResources with the default white image. Then we create a buffer to hold the material color, and add it for deletion. Then we call write_material to create the descriptor set and initialize that defaultData material properly.
- 
-We now have all that we need to setup the new render loop. Lets now render some meshes. We will not be loading them from file yet, but in the header meshes.h there are some definitions hardcoded for some default meshes like cube, sphere, and monkey
-
 

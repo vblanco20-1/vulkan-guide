@@ -312,4 +312,4 @@ We call the enable_depthtest function on the builder, and we give it depth write
 
 You can run the engine now, and the monkey head will be setup properly. The other draws with the triangle and rectangle render behind it because we have no depth testing set for them so they neither write or read from the depth attachment.
 
-This concludes chapter 3, and now we move into chapter 4 to scale the amount of rendering we can do, and improve the architectures to deal with multiple objects and meshes
+Last thing in this chapter, setting up blending for transparent objects
