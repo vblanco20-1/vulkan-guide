@@ -190,11 +190,13 @@ Lets proceed with making a mesh using all this, and draw it. We will be drawing 
 
 The shader needs to change for our vertex buffer, so while we are still going to be using `colored_triangle.frag` for our fragment shader, we will change the vertex shader to load the data from the push-constants. We will create that shader as `colored_triangle_mesh.vert`, as it will be the same as the hardcoded triangle.
 
-```c
+<!-- codegen from tag all on file E:\ProgrammingProjects\vulkan-guide-2\shaders/colored_triangle_mesh.vert --> 
+```cpp
 #version 450
 #extension GL_EXT_buffer_reference : require
 
 layout (location = 0) out vec3 outColor;
+layout (location = 1) out vec2 outUV;
 
 struct Vertex {
 
@@ -205,7 +207,6 @@ struct Vertex {
 	vec4 color;
 }; 
 
-//SSBO for vertex array
 layout(buffer_reference, std430) readonly buffer VertexBuffer{ 
 	Vertex vertices[];
 };
@@ -223,8 +224,10 @@ void main()
 	Vertex v = PushConstants.vertexBuffer.vertices[gl_VertexIndex];
 
 	//output data
-	gl_Position = PushConstants.render_matrix * vec4(v.position, 1.0f);
+	gl_Position = PushConstants.render_matrix *vec4(v.position, 1.0f);
 	outColor = v.color.xyz;
+	outUV.x = v.uv_x;
+	outUV.y = v.uv_y;
 }
 ```
 

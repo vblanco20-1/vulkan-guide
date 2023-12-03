@@ -39,7 +39,6 @@ Essentially making it into a lerp controlled by dstColor alpha.
 Lets try to use it to see what it does. We dont have alpha set in our shaders, so lets just try the additive one. Change the blending on the `init_mesh_pipeline()` function.
 
 ```cpp
-
 //pipelineBuilder.disable_blending();
 pipelineBuilder.enable_blending_additive();
 ```

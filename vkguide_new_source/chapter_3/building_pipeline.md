@@ -154,33 +154,10 @@ For our triangle, we are going to use hardcoded vertex positions in the vertex s
 These are the shaders: 
 
 triangle.vert
-```glsl
-#version 450
-void main() {
-	//const array of positions for the triangle
-	const vec3 positions[3] = vec3[3](
-		vec3(1.f,1.f, 0.0f),
-		vec3(-1.f,1.f, 0.0f),
-		vec3(0.f,-1.f, 0.0f)
-	);
+^code all shaders/triangle.vert
 
-	//output the position of each vertex
-	gl_Position = vec4(positions[gl_VertexIndex], 1.0f);
-}
-```
 triangle.frag
-```glsl
-#version 450
-
-//output write
-layout (location = 0) out vec4 outFragColor;
-
-void main() {
-	//return red
-	outFragColor = vec4(1.f,0.f,0.f,1.0f);
-}
-
-```
+^code all shaders/triangle.frag
 
 In our vertex shader, we have a hardcoded array of positions, and we index into it from `gl_VertexIndex`. This works in a similar way to LocalThreadID on compute shaders worked. For every invocation of the vertex shader, this will be a different index, and we can use it to process out vertex, which will write into the fixed function gl_Position variable. As the array is only of lenght 3, if we tried to render more than 3 vertices (1 triangle) this will error.
 

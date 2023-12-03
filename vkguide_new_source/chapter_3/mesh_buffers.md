@@ -124,43 +124,7 @@ Lets proceed with making a mesh using all this, and draw it. We will be drawing 
 
 The shader needs to change for our vertex buffer, so while we are still going to be using `colored_triangle.frag` for our fragment shader, we will change the vertex shader to load the data from the push-constants. We will create that shader as `colored_triangle_mesh.vert`, as it will be the same as the hardcoded triangle.
 
-```c
-#version 450
-#extension GL_EXT_buffer_reference : require
-
-layout (location = 0) out vec3 outColor;
-
-struct Vertex {
-
-	vec3 position;
-	float uv_x;
-	vec3 normal;
-	float uv_y;
-	vec4 color;
-}; 
-
-//SSBO for vertex array
-layout(buffer_reference, std430) readonly buffer VertexBuffer{ 
-	Vertex vertices[];
-};
-
-//push constants block
-layout( push_constant ) uniform constants
-{	
-	mat4 render_matrix;
-	VertexBuffer vertexBuffer;
-} PushConstants;
-
-void main() 
-{	
-	//load vertex data from device adress
-	Vertex v = PushConstants.vertexBuffer.vertices[gl_VertexIndex];
-
-	//output data
-	gl_Position = PushConstants.render_matrix * vec4(v.position, 1.0f);
-	outColor = v.color.xyz;
-}
-```
+^code all shaders/colored_triangle_mesh.vert
 
 We need to enable the `GL_EXT_buffer_reference` extension so that the shader compiler knows how to handle these buffer references.
 
