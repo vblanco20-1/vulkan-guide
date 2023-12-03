@@ -2,7 +2,7 @@
 layout: default
 title: Setting up render pipeline
 parent: "New 3. Graphics Pipelines"
-nav_order: 2
+nav_order: 4
 ---
 
 ## VkGraphicsPipelineCreateInfo
