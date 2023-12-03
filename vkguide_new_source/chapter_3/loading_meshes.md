@@ -33,7 +33,7 @@ A given mesh asset will have a name, loaded from the file, and then the mesh buf
 
 Our load function will be this
 ```cpp
-std::optional<std::vector<MeshAsset>> loadGltfMeshes(VulkanEngine* engine, std::string_view filePath);
+std::optional<std::vector<std::shared_ptr<MeshAsset>>> loadGltfMeshes(VulkanEngine* engine, std::string_view filePath);
 ```
 
 This is the first time see see std::optional being used. This is standard class that wraps a type (the vector of mesh assets here) and allows for it to be errored/null. As file loading can fail for many reasons, it returning null is a good idea. We will be using fastGltf library, which uses all of those new stl features for its loading.

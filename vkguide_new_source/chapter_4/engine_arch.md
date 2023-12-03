@@ -5,6 +5,7 @@ parent: "New 4. Textures and Engine Architecture"
 nav_order: 10
 ---
 
+# Engine architecture
 We have all the low level mechanics we need to build an engine. We can draw arbitrary meshes, and send data like buffers and textures to the shaders. What we need now is to make a proper architecture for drawing objects, and stop going with the hardcoded structures on the VulkanEngine class.
 
 The architecture here is meant to mimic GLTF a bit, as in the next chapter we will be loading whole scenes dynamically from GLTF files. We will create our base GLTF pipelines following what GLTF PBR spec gives us, and our first mesh classes.
