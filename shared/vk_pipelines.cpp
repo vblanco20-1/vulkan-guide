@@ -217,6 +217,7 @@ void PipelineBuilder::disable_depthtest()
 }
 //< depth_disable
 
+//> depth_enable
 void PipelineBuilder::enable_depthtest(bool depthWriteEnable,VkCompareOp op)
 {
 	_depthStencil.depthTestEnable = VK_TRUE;
@@ -229,7 +230,7 @@ void PipelineBuilder::enable_depthtest(bool depthWriteEnable,VkCompareOp op)
 	_depthStencil.minDepthBounds = 0.f;
 	_depthStencil.maxDepthBounds = 1.f;
 }
-
+//< depth_enable
 
 //> load_shader
 bool vkutil::load_shader_module(const char* filePath,

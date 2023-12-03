@@ -375,6 +375,7 @@ std::optional<std::shared_ptr<LoadedGLTF>> loadGltf(VulkanEngine* engine,std::st
 #endif
 std::optional<std::vector<std::shared_ptr<MeshAsset>>> loadGltfMeshes(VulkanEngine* engine, std::filesystem::path filePath)
 {
+//> openmesh
 	std::cout << "Loading GLTF: " << filePath << std::endl;	
 
 	fastgltf::GltfDataBuffer data;
@@ -393,7 +394,8 @@ std::optional<std::vector<std::shared_ptr<MeshAsset>>> loadGltfMeshes(VulkanEngi
         fmt::print("Failed to load glTF: {} \n",fastgltf::to_underlying(load.error()));		
 		return {};
      }
-
+//< openmesh
+//> loadmesh
      std::vector<std::shared_ptr<MeshAsset>> meshes;
 
 	// use the same vectors for all meshes so that the memory doesnt reallocate as
@@ -461,23 +463,24 @@ std::optional<std::vector<std::shared_ptr<MeshAsset>>> loadGltfMeshes(VulkanEngi
 				fastgltf::iterateAccessor<glm::vec4>(gltf, gltf.accessors[(*colors).second],
 					[&](glm::vec4 v) { vertices[vidx++].color = v; });
 			}
-
-
-
-
 			newmesh.surfaces.push_back(newSurface);
 		}
 
-		for (Vertex& vtx : vertices) {
-            vtx.color = glm::vec4(vtx.normal, 1.f);
-		}
-
+        //display the vertex normals
+        constexpr bool OverrideColors = false;
+        if(OverrideColors){
+			for (Vertex& vtx : vertices) {
+				vtx.color = glm::vec4(vtx.normal, 1.f);
+			}
+        }
 		newmesh.meshBuffers = engine->uploadMesh(indices, vertices);
 
         meshes.emplace_back(std::make_shared<MeshAsset>(std::move(newmesh)));
 	}
 
 	return meshes;
+
+//< loadmesh
 }
 
 
@@ -492,48 +495,32 @@ void LoadedGLTF::Draw(const glm::mat4& topMatrix, DrawContext& ctx)
 
 void LoadedGLTF::clearAll()
 {
-    // we need to copy all of the data that has to be destroyed into arrays to
-    // pass into the lambda. shared_ptr deletes the actual objects for us once all
-    // references are gone (after the destruction callback is run)
-
-    std::vector<std::shared_ptr<MeshAsset>> meshesToDestroy;
-    std::vector<AllocatedImage> imagesToDestroy;
-    std::vector<std::shared_ptr<GLTFMaterial>> materialsToDestroy;
+    VkDevice dv = creator->_device;
 
     for (auto& [k, v] : meshes) {
-        meshesToDestroy.push_back(v);
+
+		creator->destroy_buffer(v->meshBuffers.indexBuffer);
+		creator->destroy_buffer(v->meshBuffers.vertexBuffer);
     }
 
     for (auto& [k, v] : images) {
-        imagesToDestroy.push_back(v);
+        
+        if (v.image == creator->_errorCheckerboardImage.image) {
+            //dont destroy the default images
+            continue;
+        }
+        creator->destroy_image(v);
     }
 
-    for (auto& [k, v] : materials) {
-        materialsToDestroy.push_back(v);
-    }
+	for (auto& sampler : samplers) {
+		vkDestroySampler(dv, sampler, nullptr);
+	}
 
     auto materialBuffer = materialDataBuffer;
-    auto samplersToDestroy = samplers;
-
-
-	VkDevice dv = creator->_device;
+    auto samplersToDestroy = samplers;	
 
 	descriptorPool.destroy_pools(dv);
 
-	for (auto& i : imagesToDestroy) {
-        creator->destroy_image(i);
-	}
-	for (auto& mesh : meshesToDestroy) {
-		creator->destroy_buffer(mesh->meshBuffers.indexBuffer);
-		creator->destroy_buffer(mesh->meshBuffers.vertexBuffer);
-	}
-
     creator->destroy_buffer(materialBuffer);
-
-	for (auto& sampler : samplersToDestroy) {
-		vkDestroySampler(dv, sampler, nullptr);
-	}
 }
-
-
 #endif
