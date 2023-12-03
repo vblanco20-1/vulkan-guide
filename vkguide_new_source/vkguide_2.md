@@ -8,6 +8,3 @@ permalink: /docs/new_vkguide/
 
 # Vkguide 2
 Work in progress version of vkguide update.
-
-
-{% include comments.html term="Vkguide 2 Beta Comments" %}
