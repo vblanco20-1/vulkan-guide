@@ -569,22 +569,8 @@ void VulkanEngine::run()
         // imgui commands
         // ImGui::ShowDemoWindow();
 
-        mainCamera.update();
+        update_scene();
 
-        glm::mat4 view = mainCamera.getViewMatrix();
-
-        // camera projection
-        glm::mat4 projection = glm::perspective(glm::radians(70.f), 1700.f / 900.f, 10000.f, 0.1f);
-
-        // invert the Y direction on projection matrix so that we are more similar
-        // to opengl and gltf axis
-        projection[1][1] *= -1;
-
-        sceneData.view = view;
-        sceneData.proj = projection;
-        sceneData.viewproj = projection * view;
-
-         loadedScenes["structure"]->Draw(glm::mat4{1.f}, drawCommands);
 
         draw();
 
@@ -593,6 +579,26 @@ void VulkanEngine::run()
 
         stats.frametime = elapsed.count() / 1000.f;
     }
+}
+
+void VulkanEngine::update_scene()
+{
+	mainCamera.update();
+
+	glm::mat4 view = mainCamera.getViewMatrix();
+
+	// camera projection
+	glm::mat4 projection = glm::perspective(glm::radians(70.f), 1700.f / 900.f, 10000.f, 0.1f);
+
+	// invert the Y direction on projection matrix so that we are more similar
+	// to opengl and gltf axis
+	projection[1][1] *= -1;
+
+	sceneData.view = view;
+	sceneData.proj = projection;
+	sceneData.viewproj = projection * view;
+
+	loadedScenes["structure"]->Draw(glm::mat4{ 1.f }, drawCommands);
 }
 
 AllocatedBuffer VulkanEngine::create_buffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage)

@@ -157,7 +157,6 @@ void VulkanEngine::draw_background(VkCommandBuffer cmd)
 //> draw_geo
 void VulkanEngine::draw_geometry(VkCommandBuffer cmd)
 {
-	
 	//begin a render pass  connected to our draw image
 	VkRenderingAttachmentInfo colorAttachment = vkinit::attachment_info(_drawImage.imageView, nullptr, VK_IMAGE_LAYOUT_GENERAL);
 	VkRenderingAttachmentInfo depthAttachment = vkinit::depth_attachment_info(_depthImage.imageView, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);

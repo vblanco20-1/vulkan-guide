@@ -149,7 +149,7 @@ std::optional<std::shared_ptr<LoadedGLTF>> loadGltf(VulkanEngine* engine,std::st
         { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 3 },
         { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1 } };
 
-    file.descriptorPool.init(engine->_device, gltf.meshes.size() + gltf.materials.size(), sizes);
+    file.descriptorPool.init(engine->_device, gltf.materials.size(), sizes);
 
     // load samplers
     for (fastgltf::Sampler& sampler : asset->samplers) {
@@ -189,7 +189,7 @@ std::optional<std::shared_ptr<LoadedGLTF>> loadGltf(VulkanEngine* engine,std::st
     file.materialDataBuffer = engine->create_buffer(sizeof(GLTFMetallic_Roughness::MaterialConstants) * asset->materials.size(),
         VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
     int data_index = 0;
-    GLTFMetallic_Roughness::MaterialConstants* materialData = (GLTFMetallic_Roughness::MaterialConstants*)file.materialDataBuffer.info.pMappedData;
+    GLTFMetallic_Roughness::MaterialConstants* sceneMaterialConstants = (GLTFMetallic_Roughness::MaterialConstants*)file.materialDataBuffer.info.pMappedData;
 
     for (fastgltf::Material& mat : asset->materials) {
         std::shared_ptr<GLTFMaterial> newMat = std::make_shared<GLTFMaterial>();
@@ -205,7 +205,7 @@ std::optional<std::shared_ptr<LoadedGLTF>> loadGltf(VulkanEngine* engine,std::st
         constants.metal_rough_factors.x = mat.pbrData.metallicFactor;
         constants.metal_rough_factors.y = mat.pbrData.roughnessFactor;
         //write material parameters to buffer
-        materialData[data_index] = constants;
+        sceneMaterialConstants[data_index] = constants;
 
         MaterialPass passType = MaterialPass::MainColor;
         if (mat.alphaMode == fastgltf::AlphaMode::Blend) {
@@ -321,6 +321,7 @@ std::optional<std::shared_ptr<LoadedGLTF>> loadGltf(VulkanEngine* engine,std::st
     for (fastgltf::Node& node : asset->nodes) {
         std::shared_ptr<Node> newNode;
 
+        //find if the node has a mesh, and if it does hook it to the mesh pointer and allocate it with the meshnode class
         if (node.meshIndex.has_value()) {
             newNode = std::make_shared<MeshNode>();
             static_cast<MeshNode*>(newNode.get())->mesh = meshes[*node.meshIndex];

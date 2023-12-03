@@ -357,6 +357,15 @@ void VulkanEngine::update_scene()
 		m.second->Draw(glm::mat4{1.f}, mainDrawContext);
 	}
 
+	for (int x = -3; x < 3; x++) {
+
+		glm::mat4 scale = glm::scale(glm::vec3{0.2});
+		glm::mat4 translation =  glm::translate(glm::vec3{x, 1, 0});
+
+		loadedNodes["Cube"]->Draw(translation * scale, mainDrawContext);
+	}
+
+
 	sceneData.view = glm::translate(glm::vec3{ 0,0,-5 });
 	// camera projection
 	sceneData.proj = glm::perspective(glm::radians(70.f), (float)_windowExtent.width / (float)_windowExtent.height, 10000.f, 0.1f);
@@ -943,7 +952,7 @@ void VulkanEngine::init_triangle_pipeline()
 
 	//connect the image format we will draw into, from draw image
 	pipelineBuilder.set_color_attachment_format(_drawImage.imageFormat);
-	pipelineBuilder.set_depth_format(VK_FORMAT_UNDEFINED);
+	pipelineBuilder.set_depth_format(_depthImage.imageFormat);
 
 	//finally build the pipeline
 	_trianglePipeline = pipelineBuilder.build_pipeline(_device);
@@ -1285,11 +1294,11 @@ void GLTFMetallic_Roughness::build_pipelines(VulkanEngine* engine)
 
 	pipelineBuilder.disable_blending();
 
-	//pipelineBuilder.enable_depthtest(true, VK_COMPARE_OP_GREATER_OR_EQUAL);
+	pipelineBuilder.enable_depthtest(true, VK_COMPARE_OP_GREATER_OR_EQUAL);
 
 	//render format
 	pipelineBuilder.set_color_attachment_format(engine->_drawImage.imageFormat);
-	//pipelineBuilder.set_depth_format(engine->_depthImage.imageFormat);
+	pipelineBuilder.set_depth_format(engine->_depthImage.imageFormat);
 
 	// use the triangle layout we created
 	pipelineBuilder._pipelineLayout = newLayout;

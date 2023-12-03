@@ -228,6 +228,8 @@ public:
     // run main loop
     void run();
 
+    void update_scene();
+
     // upload a mesh into a pair of gpu buffers. If descriptor allocator is not
     // null, it will also create a descriptor that points to the vertex buffer
 	GPUMeshBuffers uploadMesh(std::span<uint32_t> indices, std::span<Vertex> vertices);

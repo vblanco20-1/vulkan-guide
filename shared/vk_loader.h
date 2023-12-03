@@ -54,15 +54,11 @@ struct LoadedGLTF : public IRenderable {
 
     VulkanEngine* creator;
 
-    ~LoadedGLTF()
-    {
-        clearAll();
-    };
+    ~LoadedGLTF() { clearAll(); };
 
     virtual void Draw(const glm::mat4& topMatrix, DrawContext& ctx);
 
 private:
-    
 
     void clearAll();
 };
