@@ -1,6 +1,6 @@
 ---
 layout: default
-title: GLTF Textures
+title: Faster Draw
 parent: "New 5. GLTF loading"
 nav_order: 10
 ---
@@ -11,7 +11,7 @@ When we made the draw loop on chapter 4, we did not try to skip vulkan calls if 
 
 We need to keep track of what state we are binding, and only call it again if we have to as it changes with the draw. 
 
-Lets use lambdas for it, creating a draw() function within the `draw_geometry` function. Then  we call it while looping through the RenderObjects. This lambda will keep track of the state as we want to. We could add it as function to Vulkan Engine, but we would need to keep track of that state in the class. Better to have it limited to the function only
+We are going to modify the draw() lambda seen in the last article, and give it state tracking. It will only call the vulkan functions if the parameters change.
 
 ```cpp
 //defined outside of the draw function, this is the state we will try to skip
@@ -74,10 +74,27 @@ We begin by checking if the pipeline has changed, and if it did, we bind the pip
 Then, we bind the descriptor set it for material parameters and textures if the material instance changed. 
 And last, the index buffer gets bound again if it changed.
 
-The render object loop now looks like this
+We now should get a performance win, specially as we only have 2 pipelines, so a lot of those calls to VkCmdBindPipeline now dissapear. But lets improve it further.
+
+We are going to sort the render objects by those parameters to minimize the number of calls. We will only do it this way for the opaque objects, as the transparent objects need a different type of sorting (depth sort) that we arent doing as we dont have the information about whats the center of the object.
+
+At the beggining of the draw_geometry() function, add this
 
 ```cpp
-for (auto& r : drawCommands.OpaqueSurfaces) {
-    draw(r);
-}
-``
+// sort the opaque surfaces by material and mesh
+std::sort(drawCommands.OpaqueSurfaces.begin(), drawCommands.OpaqueSurfaces.end(), [](const auto& A, const auto& B) {
+    if (A.material == B.material) {
+        return A.indexBuffer < B.indexBuffer;
+    } else {
+        return A.material < B.material;
+    }
+});
+```
+
+std::algorithms has a very handy sort function we can use to sort the OpaqueSurfaces vector. We give it a lambda that defines a `<` operator, and it sorts it efficiently for us. 
+
+We will first check if the material is the same, and if it is, sort by indexBuffer. But if its not, then we directly compare the material pointer.
+
+With this the renderer will minimize the number of descriptor set bindings, as it will go material by material. We still have the index buffer binding to deal with but thats faster to switch.
+
+By doing this, the engine should now have significantly more performance. If you run it in release mode, you should be able to draw scenes with tens of thousands of meshes no problem. We arent doing frustrum culling, so the GPU gets a lot of wasted work which does affect its perf

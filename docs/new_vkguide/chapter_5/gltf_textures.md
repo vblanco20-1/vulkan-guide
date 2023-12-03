@@ -168,6 +168,71 @@ Last, we loop the samplers and destroy each of them.
 
 Important detail with this. You cant delete a LoadedGLTF within the same frame its being used. Those structures are still around. If you want to destroy a LoadedGLTF at runtime, either do a VkQueueWait like we have in the cleanup function, or add it into the per-frame deletion queue and defer it. We are storing the shared_ptrs to hold LoadedGLTF, so it can abuse the lambda capture functionality to do this.
 
+
+# Transparent objects
+
+We omitted those before, but gltf files not only have opaque draws, they also have transparent objects. When we created the GLTF main material and compiled its pipeline, we enabled blending for it. Lets make that load.
+
+We have to modify the loop that iterates the file materials to check if the material is opaque or transparent, and set the MaterialPass correctly to have the correct pipeline selected.
+
+This goes in the middle of the materials loop in loadGLTF
+```cpp
+    MaterialPass passType = MaterialPass::MainColor;
+    if (mat.alphaMode == fastgltf::AlphaMode::Blend) {
+        passType = MaterialPass::Transparent;
+    }
+```
+
+When the write_material call is done later, it will select the correct pipeline. Now we need to modify the rendering to take the transparent objects into account.
+Transparent objects do not write to the depth buffer, so if a transparent object is drawn, it can then have a opaque object drawn on top of it, causing visual glitches. We need to move the transparent objects so that they draw at the end of the frame. 
+
+For that, we could do sorting on the RenderObjects, but transparent objects also sort in a different way to opaque objects, so a better option is to make the DrawContext structure hold 2 different arrays of RenderObjects, one for opaque, and other for transparent. Separating the objects like this is very useful for various reasons like doing a depth pass only on the opaque surfaces, or other shader logic. Its also common to see things like rendering the transparent objects into a different image and then compositing them on top.
+
+```cpp
+struct DrawContext {
+    std::vector<RenderObject> OpaqueSurfaces;
+    std::vector<RenderObject> TransparentSurfaces;
+};
+```
+
+Now we change the `draw_geometry` function. As we need to call the vulkan call from 2 loops, we are going to move the inner draw loop into a draw() lambda, and then call it from the loops.
+
+```cpp
+ auto draw = [&](const RenderObject& r) { 
+ 		vkCmdBindPipeline(cmd,VK_PIPELINE_BIND_POINT_GRAPHICS, draw.material->pipeline->pipeline);
+		vkCmdBindDescriptorSets(cmd,VK_PIPELINE_BIND_POINT_GRAPHICS,draw.material->pipeline->layout, 0,1, &globalDescriptor,0,nullptr );
+		vkCmdBindDescriptorSets(cmd,VK_PIPELINE_BIND_POINT_GRAPHICS,draw.material->pipeline->layout, 1,1, &draw.material->materialSet,0,nullptr );
+
+		vkCmdBindIndexBuffer(cmd, draw.indexBuffer,0,VK_INDEX_TYPE_UINT32);
+
+		GPUDrawPushConstants pushConstants;
+		pushConstants.vertexBuffer = draw.vertexBufferAddress;
+		pushConstants.worldMatrix = draw.transform;
+		vkCmdPushConstants(cmd,draw.material->pipeline->layout ,VK_SHADER_STAGE_VERTEX_BIT,0, sizeof(GPUDrawPushConstants), &pushConstants);
+
+		vkCmdDrawIndexed(cmd,draw.indexCount,1,draw.firstIndex,0,0);
+ };
+
+ for (auto& r : drawCommands.OpaqueSurfaces) {
+     draw(r);
+ }
+
+ for (auto& r : drawCommands.TransparentSurfaces) {
+     draw(r);
+ }
+```
+
+By doing this, we now have proper transparent objects. If you load the structure gltf, you will see that the light halos should not glitch anymore. 
+
+Make sure to reset the array of transparent draws too at the end of the function
+
+```
+// we delete the draw commands now that we processed them
+drawCommands.OpaqueSurfaces.clear();
+drawCommands.TransparentSurfaces.clear();
+```
+
+
 The engine is now done. You can use this as a base to implement games. But we are going to do some tweaks that are optional as part of this chapter, improving its performance.
 
 

@@ -1,6 +1,6 @@
 ---
 layout: default
-title: GLTF Textures
+title: Faster Draw
 parent: "New 5. GLTF loading"
 nav_order: 10
 ---
