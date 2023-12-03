@@ -214,4 +214,20 @@ If you draw the engine now, you will see that the objects from the mesh asset ar
 
 Now, to demonstrate it, we are going to manipulate the nodes and drawing a bit.
 
-First, we are going to draw the objects more times by calling their Draw function with different matrices.
+First, we are going to draw the objects more times by grabbing the Node that draws a cube, and making it draw a line made of cubes. We have the Nodes stored on the hashmap, so we can access and render them individually however we want to.
+
+On the update_scene() function.
+```cpp
+	for (int x = -3; x < 3; x++) {
+
+		glm::mat4 scale = glm::scale(glm::vec3{0.2});
+		glm::mat4 translation =  glm::translate(glm::vec3{x, 1, 0});
+
+		loadedNodes["Cube"]->Draw(translation * scale, mainDrawContext);
+	}
+```
+
+We make the cubes smaller, and give them a translation from left to right of the screen. Then we call Draw on them. Every time Draw is called it will add the RenderObject into the context with a different matrix, so it we can render the objects multiple times on different positions. 
+
+This concludes chapter 4. On the next chapter, we will upgrade the gltf loader to load scenes with textures and multiple objects, and set up a interactive FPS camera.
+
