@@ -107,7 +107,7 @@ First we do is to calculate how big the buffers need to be. Then, we create our 
 
  With the buffers allocated, we need to write the data into them. For that, we will be using a staging buffer. This is a very common pattern with vulkan. As GPU_ONLY memory cant be written on CPU, we first write the memory on a temporal staging buffer that is CPU writeable, and then execute a copy command to copy this buffer into the GPU buffers. Its not necesary for meshes to use GPU_ONLY vertex buffers, but its highly recomended unless its something like a CPU side particle system or other dynamic effects.
 
- ^code mesh_create_2 chapter-3/vk_engine.cpp
+^code mesh_create_2 chapter-3/vk_engine.cpp
 
 We first create the staging buffer, which will be 1 buffer for both of the copies to index and vertex buffers. Its memory type is CPU_ONLY, and its usage flag is `VK_BUFFER_USAGE_TRANSFER_SRC_BIT` as the only thing we will do with it is a copy command.
 
@@ -181,7 +181,7 @@ Next we need to create and upload the mesh. We create a new initialization funct
 
 We create 2 arrays for vertices and indices, and call the uploadMesh function to convert it all into buffers.
 
-We can now execute the draw. We will add the new draw command `on draw_geometry()` function, after the triangle we had.
+We can now execute the draw. We will add the new draw command on `draw_geometry()` function, after the triangle we had.
 
 ```cpp
 	//launch a draw command to draw 3 vertices

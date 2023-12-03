@@ -175,7 +175,15 @@ testMeshes = loadGltfMeshes(this,"..\\..\\assets\\structure.glb").value();
 
 In the file provided, index 0 is a cube, index 1 is a sphere, and index 2 is a blender monkeyhead. we will be drawing that last one, draw it right after drawing the rectangle from before
 
-^code meshdraw chapter-3/vk_engine.cpp
+<!-- codegen from tag meshdraw on file E:\ProgrammingProjects\vulkan-guide-2\chapter-3/vk_engine.cpp --> 
+```cpp
+	push_constants.vertexBuffer = testMeshes[2]->meshBuffers.vertexBufferAddress;
+
+	vkCmdPushConstants(cmd, _meshPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(GPUDrawPushConstants), &push_constants);
+	vkCmdBindIndexBuffer(cmd, testMeshes[2]->meshBuffers.indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
+
+	vkCmdDrawIndexed(cmd, testMeshes[2]->surfaces[0].count, 1, testMeshes[2]->surfaces[0].startIndex, 0, 0);
+```
 
 You will see that the monkey head is completely white due to the vertex color.  By changing the `OverrideColors` on the loader function, we will store the vertex normals as vertex colors, which will give some colors to the mesh.
 
@@ -185,7 +193,18 @@ In GLTF, the axis are meant to be for opengl, which has the Y up. Vulkan has Y d
 
 From the render code, lets give it a better matrix for rendering.
 
-^code matview chapter-3/vk_engine.cpp
+<!-- codegen from tag matview on file E:\ProgrammingProjects\vulkan-guide-2\chapter-3/vk_engine.cpp --> 
+```cpp
+	glm::mat4 view = glm::translate(glm::vec3{ 0,0,-5 });
+	// camera projection
+	glm::mat4 projection = glm::perspective(glm::radians(70.f), (float)_windowExtent.width / (float)_windowExtent.height, 10000.f, 0.1f);
+
+	// invert the Y direction on projection matrix so that we are more similar
+	// to opengl and gltf axis
+	projection[1][1] *= -1;
+
+	push_constants.worldMatrix = projection * view;
+```
 
 First we calculate the view matrix, which is from the camera. a translation matrix that moves backwards will be fine for now. 
 

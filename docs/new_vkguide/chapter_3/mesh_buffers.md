@@ -173,7 +173,37 @@ First we do is to calculate how big the buffers need to be. Then, we create our 
 
  With the buffers allocated, we need to write the data into them. For that, we will be using a staging buffer. This is a very common pattern with vulkan. As GPU_ONLY memory cant be written on CPU, we first write the memory on a temporal staging buffer that is CPU writeable, and then execute a copy command to copy this buffer into the GPU buffers. Its not necesary for meshes to use GPU_ONLY vertex buffers, but its highly recomended unless its something like a CPU side particle system or other dynamic effects.
 
- ^code mesh_create_2 chapter-3/vk_engine.cpp
+<!-- codegen from tag mesh_create_2 on file E:\ProgrammingProjects\vulkan-guide-2\chapter-3/vk_engine.cpp --> 
+```cpp
+	AllocatedBuffer staging = create_buffer(vertexBufferSize + indexBufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
+
+	void* data = staging.allocation->GetMappedData();
+
+	// copy vertex buffer
+	memcpy(data, vertices.data(), vertexBufferSize);
+	// copy index buffer
+	memcpy((char*)data + vertexBufferSize, indices.data(), indexBufferSize);
+
+	immediate_submit([&](VkCommandBuffer cmd) {
+		VkBufferCopy vertexCopy{ 0 };
+		vertexCopy.dstOffset = 0;
+		vertexCopy.srcOffset = 0;
+		vertexCopy.size = vertexBufferSize;
+
+		vkCmdCopyBuffer(cmd, staging.buffer, newSurface.vertexBuffer.buffer, 1, &vertexCopy);
+
+		VkBufferCopy indexCopy{ 0 };
+		indexCopy.dstOffset = 0;
+		indexCopy.srcOffset = vertexBufferSize;
+		indexCopy.size = indexBufferSize;
+
+		vkCmdCopyBuffer(cmd, staging.buffer, newSurface.indexBuffer.buffer, 1, &indexCopy);
+	});
+
+	destroy_buffer(staging);
+
+	return newSurface;
+```
 
 We first create the staging buffer, which will be 1 buffer for both of the copies to index and vertex buffers. Its memory type is CPU_ONLY, and its usage flag is `VK_BUFFER_USAGE_TRANSFER_SRC_BIT` as the only thing we will do with it is a copy command.
 
@@ -350,7 +380,6 @@ Next we need to create and upload the mesh. We create a new initialization funct
 
 <!-- codegen from tag init_data on file E:\ProgrammingProjects\vulkan-guide-2\chapter-3/vk_engine.cpp --> 
 ```cpp
-void VulkanEngine::init_default_data() {
 	std::array<Vertex,4> rect_vertices;
 
 	rect_vertices[0].position = {0.5,-0.5, 0};
@@ -375,21 +404,26 @@ void VulkanEngine::init_default_data() {
 
 	rectangle = uploadMesh(rect_indices,rect_vertices);
 
-	testMeshes = loadGltfMeshes(this,"..\\..\\assets\\basicmesh.glb").value();
-
-	
-} 
 ```
 
 We create 2 arrays for vertices and indices, and call the uploadMesh function to convert it all into buffers.
 
-We can now execute the draw. We will add the new draw command `on draw_geometry()` function, after the triangle we had.
+We can now execute the draw. We will add the new draw command on `draw_geometry()` function, after the triangle we had.
 
 ```cpp
 	//launch a draw command to draw 3 vertices
 	vkCmdDraw(cmd, 3, 1, 0, 0);
 
-^code drawrect chapter-3/vk_engine.cpp
+	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _meshPipeline);
+
+	GPUDrawPushConstants push_constants;
+	push_constants.worldMatrix = glm::mat4{ 1.f };
+	push_constants.vertexBuffer = rectangle.vertexBufferAddress;
+
+	vkCmdPushConstants(cmd, _meshPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(GPUDrawPushConstants), &push_constants);
+	vkCmdBindIndexBuffer(cmd, rectangle.indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
+
+	vkCmdDrawIndexed(cmd, 6, 1, 0, 0, 0);
 
 	vkCmdEndRendering(cmd);
 ```
