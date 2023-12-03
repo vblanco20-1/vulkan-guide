@@ -491,7 +491,6 @@ Now fill the draw_geometry function
 ```cpp
 void VulkanEngine::draw_geometry(VkCommandBuffer cmd)
 {
-	
 	//begin a render pass  connected to our draw image
 	VkRenderingAttachmentInfo colorAttachment = vkinit::attachment_info(_drawImage.imageView, nullptr, VK_IMAGE_LAYOUT_GENERAL);
 	VkRenderingAttachmentInfo depthAttachment = vkinit::depth_attachment_info(_depthImage.imageView, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
@@ -546,12 +545,12 @@ void VulkanEngine::draw_geometry(VkCommandBuffer cmd)
 	projection[1][1] *= -1;
 
 	push_constants.worldMatrix = projection * view;
-	push_constants.vertexBuffer = testMeshes[2].meshBuffers.vertexBufferAddress;
+	push_constants.vertexBuffer = testMeshes[2]->meshBuffers.vertexBufferAddress;
 
 	vkCmdPushConstants(cmd, _meshPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(GPUDrawPushConstants), &push_constants);
-	vkCmdBindIndexBuffer(cmd, testMeshes[2].meshBuffers.indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
+	vkCmdBindIndexBuffer(cmd, testMeshes[2]->meshBuffers.indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
 
-	vkCmdDrawIndexed(cmd, testMeshes[2].surfaces[0].count, 1, testMeshes[2].surfaces[0].startIndex, 0, 0);
+	vkCmdDrawIndexed(cmd, testMeshes[2]->surfaces[0].count, 1, testMeshes[2]->surfaces[0].startIndex, 0, 0);
 
 	vkCmdEndRendering(cmd);
 }

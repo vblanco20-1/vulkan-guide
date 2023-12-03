@@ -4,7 +4,7 @@ title: "New 5. GLTF loading"
 parent: "Vkguide 2 (WIP)"
 nav_order: 8
 has_children: true
-permalink: /docs/new_vkguide/chapter_4
+permalink: /docs/new_vkguide/chapter_5
 ---
 # Chapter 5 : GLTF Loading
 
