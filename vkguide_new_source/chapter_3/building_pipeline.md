@@ -201,3 +201,6 @@ To draw our triangle we need to begin a renderpass with cmdBeginRendering. This 
 We do a CmdBindPipeline, but instead of using the BIND_POINT_COMPUTE, we now use `VK_PIPELINE_BIND_POINT_GRAPHICS`. Then, we have to set our viewport and scissor. This is required before we left them undefined when creating the pipeline as we were using dynamic pipeline state. With that set, we can do a vkCmdDraw() to draw the triangle. With that done, we can finish the render pass to end our drawing.
 
 If you run the program at this point, you should see a triangle being rendered on top of the compute based background
+
+
+{% include comments.html term="Vkguide 2 Beta Comments" %}

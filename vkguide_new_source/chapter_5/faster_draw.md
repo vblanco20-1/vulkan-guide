@@ -98,3 +98,6 @@ We will first check if the material is the same, and if it is, sort by indexBuff
 With this the renderer will minimize the number of descriptor set bindings, as it will go material by material. We still have the index buffer binding to deal with but thats faster to switch.
 
 By doing this, the engine should now have significantly more performance. If you run it in release mode, you should be able to draw scenes with tens of thousands of meshes no problem. We arent doing frustrum culling, so the GPU gets a lot of wasted work which does affect its perf.
+
+
+{% include comments.html term="Vkguide 2 Beta Comments" %}

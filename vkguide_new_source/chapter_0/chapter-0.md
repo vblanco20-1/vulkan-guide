@@ -15,3 +15,6 @@ permalink: /docs/new_vkguide/chapter_0
 In this chapter, we setup the build toolchain to compile the project
 
 {: .fs-6 .fw-300 }
+
+
+{% include comments.html term="Vkguide 2 Beta Comments" %}

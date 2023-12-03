@@ -210,3 +210,5 @@ Before we continue with drawing, lets set up textures.
 
 
 
+
+{% include comments.html term="Vkguide 2 Beta Comments" %}

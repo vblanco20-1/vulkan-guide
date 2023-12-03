@@ -69,3 +69,5 @@ A trick we will be doing too is that once we add GLTF, we will also have a Loade
 
 Loading the GLTF itself will be done next chapter, but we will ready the mechanics of the RenderObjects and gltf material now.
 
+
+{% include comments.html term="Vkguide 2 Beta Comments" %}

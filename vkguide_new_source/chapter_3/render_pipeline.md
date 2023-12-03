@@ -32,3 +32,6 @@ The fragment shader takes care of turning those pixels into real colored pixels 
 With the final colored pixels, we put them on the output framebuffer with the Render Output stage. There are multiple fixed-function hardware configuration steps here, that let us do things like blending pixels or depth-testing.
 
 Next article we will draw a triangle using all this.
+
+
+{% include comments.html term="Vkguide 2 Beta Comments" %}

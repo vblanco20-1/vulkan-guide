@@ -437,3 +437,6 @@ in the init() function. This will be a good default location.
 
 Lets complete it by loading textures in the next article.
 
+
+{% include comments.html term="Vkguide 2 Beta Comments" %}
+

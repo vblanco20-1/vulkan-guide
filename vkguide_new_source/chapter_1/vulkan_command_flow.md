@@ -55,3 +55,6 @@ As we will want to continue drawing the next frame while the command buffer is e
 For more detailed information on the command buffer lifecycle, refer to the Vulkan specification chapter on them
 <https://www.khronos.org/registry/vulkan/specs/1.2-extensions/html/chap6.html#commandbuffers-lifecycle>.
 
+
+{% include comments.html term="Vkguide 2 Beta Comments" %}
+

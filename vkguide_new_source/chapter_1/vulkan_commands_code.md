@@ -151,3 +151,6 @@ It's not possible to individually destroy VkCommandBuffer, destroying their pare
 VkQueue-s also can't be destroyed, as, like with the VkPhysicalDevice, they aren't really created objects, more like a handle to something that already exists as part of the VkInstance. 
 
 We now have a way to send commands to the gpu, but we still need another piece, which is the syncronization structures to syncronize GPU execution with CPU.
+
+
+{% include comments.html term="Vkguide 2 Beta Comments" %}

@@ -146,3 +146,6 @@ We allocate a new descriptor set from the frame descriptor set allocator, using 
 Then we use a descriptor writer to write a single image descriptor on binding 0, which will be the _errorCheckerboardImage. We give it the nearest-sampler, so that it doesnt blend between pixels. Then we update the descriptor set with the writer, and bind the set. Then we proceed with the draw.
 
 The result should be a rectangle with a magenta and black checkerboard pattern on the screen.
+
+
+{% include comments.html term="Vkguide 2 Beta Comments" %}

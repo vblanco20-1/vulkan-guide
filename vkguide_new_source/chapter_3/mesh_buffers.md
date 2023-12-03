@@ -203,3 +203,6 @@ Last, we use `vkCmdDrawIndexed` to draw 2 triangles (6 indices). This is the sam
 Thats all, we now have a generic way of rendering any mesh. 
 
 Next we will load mesh files from a GLTF in the most basic way so we can play around with fancier things than a rectangle.
+
+
+{% include comments.html term="Vkguide 2 Beta Comments" %}

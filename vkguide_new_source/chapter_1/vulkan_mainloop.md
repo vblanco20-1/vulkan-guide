@@ -86,3 +86,5 @@ On older versions of vulkan, these layout transitions would be done as part of a
 
 Let's begin the code for the renderloop.
 
+
+{% include comments.html term="Vkguide 2 Beta Comments" %}

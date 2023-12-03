@@ -231,3 +231,5 @@ We make the cubes smaller, and give them a translation from left to right of the
 
 This concludes chapter 4. On the next chapter, we will upgrade the gltf loader to load scenes with textures and multiple objects, and set up a interactive FPS camera.
 
+
+{% include comments.html term="Vkguide 2 Beta Comments" %}

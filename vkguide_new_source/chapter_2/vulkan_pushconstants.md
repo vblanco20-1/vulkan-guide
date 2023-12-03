@@ -140,3 +140,5 @@ Not much of a change, we are just hooking into the compute effect array and uplo
 
 Try to run the app now, and you will see a debug window where it lets you select the shader, and edit its parameters.
 
+
+{% include comments.html term="Vkguide 2 Beta Comments" %}

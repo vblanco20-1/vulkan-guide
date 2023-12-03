@@ -171,3 +171,5 @@ Thats it, we now have a basic interactive camera. Try to use it and look around,
 
 
 
+
+{% include comments.html term="Vkguide 2 Beta Comments" %}

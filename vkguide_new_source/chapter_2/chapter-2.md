@@ -12,3 +12,5 @@ In this chapter, we are going to begin drawing using compute shaders. As part of
 
 {: .fs-6 .fw-300 }
 
+
+{% include comments.html term="Vkguide 2 Beta Comments" %}

@@ -11,3 +11,6 @@ permalink: /docs/new_vkguide/chapter_5
 With the basics of the engine done, this chapter focuses on loading GLTF files and setting up more advanced rendering features.
 
 {: .fs-6 .fw-300 }
+
+
+{% include comments.html term="Vkguide 2 Beta Comments" %}

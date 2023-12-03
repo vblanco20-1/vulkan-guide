@@ -60,3 +60,4 @@ In this guide, we will be using the FIFO_RELAXED mode, because it implements a u
 
 
 
+{% include comments.html term="Vkguide 2 Beta Comments" %}
