@@ -211,6 +211,6 @@ This will now provide us a way to render images outside of the swapchain itself.
 
 With that done, we can now move into the actual compute shader execution steps.
 
-
+^nextlink
 
 {% include comments.html term="Vkguide 2 Beta Comments" %}

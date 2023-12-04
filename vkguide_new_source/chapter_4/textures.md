@@ -147,5 +147,6 @@ Then we use a descriptor writer to write a single image descriptor on binding 0,
 
 The result should be a rectangle with a magenta and black checkerboard pattern on the screen.
 
+^nextlink
 
 {% include comments.html term="Vkguide 2 Beta Comments" %}

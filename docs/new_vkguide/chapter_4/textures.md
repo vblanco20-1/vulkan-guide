@@ -300,5 +300,6 @@ Then we use a descriptor writer to write a single image descriptor on binding 0,
 
 The result should be a rectangle with a magenta and black checkerboard pattern on the screen.
 
+Next: [ Engine Architecture]({{ site.baseurl }}{% link docs/new_vkguide/chapter_4/engine_arch.md %})  
 
 {% include comments.html term="Vkguide 2 Beta Comments" %}

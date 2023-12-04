@@ -533,5 +533,6 @@ We do a CmdBindPipeline, but instead of using the BIND_POINT_COMPUTE, we now use
 
 If you run the program at this point, you should see a triangle being rendered on top of the compute based background
 
+Next: [ Mesh buffers]({{ site.baseurl }}{% link docs/new_vkguide/chapter_3/mesh_buffers.md %})  
 
 {% include comments.html term="Vkguide 2 Beta Comments" %}

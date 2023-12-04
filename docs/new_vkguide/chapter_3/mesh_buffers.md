@@ -440,5 +440,6 @@ Thats all, we now have a generic way of rendering any mesh.
 
 Next we will load mesh files from a GLTF in the most basic way so we can play around with fancier things than a rectangle.
 
+Next: [ Mesh Loading]({{ site.baseurl }}{% link docs/new_vkguide/chapter_3/loading_meshes.md %})  
 
 {% include comments.html term="Vkguide 2 Beta Comments" %}

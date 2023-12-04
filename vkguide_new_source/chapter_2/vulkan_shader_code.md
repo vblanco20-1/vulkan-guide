@@ -252,5 +252,6 @@ If you run the program at this point, it should display this image.
 
 ![chapter2]({{site.baseurl}}/diagrams/compute_grid.png)
 
+^nextlink
 
 {% include comments.html term="Vkguide 2 Beta Comments" %}

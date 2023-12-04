@@ -33,5 +33,6 @@ With the final colored pixels, we put them on the output framebuffer with the Re
 
 Next article we will draw a triangle using all this.
 
+^nextlink
 
 {% include comments.html term="Vkguide 2 Beta Comments" %}

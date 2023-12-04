@@ -48,6 +48,6 @@ From now on, we will be doing our rendering commands into a image that has the f
 
 Lets now set all of this up in the code and get our first shaders working.
 
-
+^nextlink
 
 {% include comments.html term="Vkguide 2 Beta Comments" %}

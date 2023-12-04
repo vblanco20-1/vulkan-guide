@@ -330,5 +330,6 @@ You can run the engine now, and the monkey head will be setup properly. The othe
 
 Last thing in this chapter, setting up blending for transparent objects.
 
+Next: [ Blending]({{ site.baseurl }}{% link docs/new_vkguide/chapter_3/blending.md %})  
 
 {% include comments.html term="Vkguide 2 Beta Comments" %}

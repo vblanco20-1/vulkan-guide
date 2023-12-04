@@ -171,6 +171,7 @@ If you run the application at this point, you will have the imgui demo window yo
 
 Lets continue and hook our new debug UI to the shaders.
 
+^nextlink
 
 {% include comments.html term="Vkguide 2 Beta Comments" %}
  
