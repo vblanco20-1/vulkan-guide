@@ -140,5 +140,6 @@ Not much of a change, we are just hooking into the compute effect array and uplo
 
 Try to run the app now, and you will see a debug window where it lets you select the shader, and edit its parameters.
 
+Next: [Chapter 3: The graphics pipeline]({{ site.baseurl }}{% link docs/new_vkguide/chapter_3/render_pipeline.md %})
 
 {% include comments.html term="Vkguide 2 Beta Comments" %}

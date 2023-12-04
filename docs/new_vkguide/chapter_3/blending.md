@@ -74,5 +74,6 @@ If you want, try also using it on the monkey head mesh, and see how it looks. Pl
 
 This concludes chapter 3, and we now move forward to chapter 4 with setting up a more advanced render architecture
 
+Next: [Chapter 4: New Descriptor Abstractions]({{ site.baseurl }}{% link docs/new_vkguide/chapter_4/descriptor_abstractions.md %})
 
 {% include comments.html term="Vkguide 2 Beta Comments" %}
