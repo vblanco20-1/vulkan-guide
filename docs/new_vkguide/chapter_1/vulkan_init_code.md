@@ -336,6 +336,6 @@ Validation Error: [ VUID-vkDestroyInstance-instance-00629 ] Object 0: handle = 0
 
 With the Vulkan initialization completed and the layers working, we can begin to prepare the command structures so that we can make the gpu do something.
 
-Next: [ Executing Vulkan Commands]({{ site.baseurl }}{% link docs/new_vkguide/chapter_1/vulkan_command_flow.md% })  
+Next: [ Executing Vulkan Commands]({{ site.baseurl }}{% link docs/new_vkguide/chapter_1/vulkan_command_flow.md %})  
 
 {% include comments.html term="Vkguide 2 Beta Comments" %}

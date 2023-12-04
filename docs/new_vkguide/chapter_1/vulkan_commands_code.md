@@ -201,6 +201,6 @@ VkQueue-s also can't be destroyed, as, like with the `VkPhysicalDevice`, they ar
 
 We now have a way to send commands to the gpu, but we still need another piece, which is the syncronization structures to syncronize GPU execution with CPU.
 
-Next: [ Rendering Loop]({{ site.baseurl }}{% link docs/new_vkguide/chapter_1/vulkan_mainloop.md% })  
+Next: [ Rendering Loop]({{ site.baseurl }}{% link docs/new_vkguide/chapter_1/vulkan_mainloop.md %})  
 
 {% include comments.html term="Vkguide 2 Beta Comments" %}
