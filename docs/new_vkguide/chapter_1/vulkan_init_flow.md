@@ -48,17 +48,17 @@ The most important thing when creating a swapchain is to select a Present Mode, 
 You can see the full list of them with detialed explanation on the vulkan spec page here [Vulkan Spec: VkPresentModeKHR](https://registry.khronos.org/vulkan/specs/1.3-extensions/html/chap34.html#VkPresentModeKHR)
 
 - VK_PRESENT_MODE_IMMEDIATE_KHR Makes the swapchain not wait for anything, and accept instant pushing of images. This will likely result in tearing, generally not recommended.
-- VK_PRESENT_MODE_FIFO_KHR This will have a queue of images to present on refresh intervals. Once the queue is full the application will have to wait until the queue is popped by displaying the image. This is the "strong VSync" present mode, and it will lock your application to the FPS of your screen.
-- VK_PRESENT_MODE_FIFO_RELAXED_KHR . Mostly the same as Fifo VSync, but the VSync is adaptive. If the FPS of your application are lower than the optimal FPS of the screen, it will push the images immediately, likely resulting in tearing. For example, if your screen is a 60 HZ screen, and you are rendering at 55 HZ, this will not drop to the next vsync interval, making your general FPS drop to 30 like Fifo does, instead it will just display the images as still 55 FPS, but with tearing.
-- VK_PRESENT_MODE_MAILBOX_KHR . This one has a list of images, and while one of them is being displayed by the screen, you will be continuously rendering to the others in the list. Whenever it's time to display an image, it will select the most recent one. This is the one you use if you want Triple-buffering without hard vsync.
+- `VK_PRESENT_MODE_FIFO_KHR` This will have a queue of images to present on refresh intervals. Once the queue is full the application will have to wait until the queue is popped by displaying the image. This is the "strong VSync" present mode, and it will lock your application to the FPS of your screen.
+- `VK_PRESENT_MODE_FIFO_RELAXED_KHR` . Mostly the same as Fifo VSync, but the VSync is adaptive. If the FPS of your application are lower than the optimal FPS of the screen, it will push the images immediately, likely resulting in tearing. For example, if your screen is a 60 HZ screen, and you are rendering at 55 HZ, this will not drop to the next vsync interval, making your general FPS drop to 30 like Fifo does, instead it will just display the images as still 55 FPS, but with tearing.
+- `VK_PRESENT_MODE_MAILBOX_KHR` . This one has a list of images, and while one of them is being displayed by the screen, you will be continuously rendering to the others in the list. Whenever it's time to display an image, it will select the most recent one. This is the one you use if you want Triple-buffering without hard vsync.
 
-VK_PRESENT_MODE_IMMEDIATE_KHR is rarely used due to its tearing. Only in extreme low latency scenarios it might be useful to allow the tearing.
+`VK_PRESENT_MODE_IMMEDIATE_KHR` is rarely used due to its tearing. Only in extreme low latency scenarios it might be useful to allow the tearing.
 
 Normal applications will use either MAILBOX or one of the 2 FIFO modes. Mostly depends if you want a hard-vsync or you prefer triple-buffering.
 
 In this guide, we will be using the FIFO_RELAXED mode, because it implements a upper cap on our rendering speed, and as we aren't going to render many objects, it's best if the framerate is capped and not reaching 5000 FPS which can cause issues like overheating. On real applications that have some work to do, MAILBOX is likely going to be a better default.
 
-
+Next: [ Vulkan Initialization Code]({{ site.baseurl }}{% link docs/new_vkguide/chapter_1/vulkan_init_code.md% })  
 
 {% include comments.html term="Vkguide 2 Beta Comments" %}
 

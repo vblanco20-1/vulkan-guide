@@ -28,7 +28,7 @@ Queues in Vulkan are an "execution port" for GPUs. Every GPU has multiple queues
 
 All queues in Vulkan come from a Queue Family. A Queue Family is the "type" of queue it is, and what type of commands it supports. 
 
-Different GPUs support different Queue Families. An example is this NVidia GT 750ti from Vulkan Hardware Info (Link)[https://vulkan.gpuinfo.org/displayreport.php?id=8859#queuefamilies]. It has 2 Queue families, one that supports up to 16 queues that have all features, and then a family that can support 1 queue for transfer only. [Here](https://vulkan.gpuinfo.org/displayreport.php?id=24407#queuefamilies) you have an example for a high end AMD card, there are 5 queue families, and only up to 2 queues per type. It has 1 queue that supports everything, up to 2 queues that support compute and transfer, 2 dedicated transfer queues, and then 2 other queues for present alone. As you can see, the queues supported by each GPU can vary significantly.
+Different GPUs support different Queue Families. An example is this NVidia GT 750ti from Vulkan Hardware Info [Link](https://vulkan.gpuinfo.org/displayreport.php?id=8859#queuefamilies). It has 2 Queue families, one that supports up to 16 queues that have all features, and then a family that can support 1 queue for transfer only. [Here](https://vulkan.gpuinfo.org/displayreport.php?id=24407#queuefamilies) you have an example for a high end AMD card, there are 5 queue families, and only up to 2 queues per type. It has 1 queue that supports everything, up to 2 queues that support compute and transfer, 2 dedicated transfer queues, and then 2 other queues for present alone. As you can see, the queues supported by each GPU can vary significantly.
 
 It is common to see engines using 3 queue families. One for drawing the frame, other for async compute, and other for data transfer. In this tutorial, we use a single queue that will run all our commands for simplicity.
 
@@ -55,6 +55,8 @@ As we will want to continue drawing the next frame while the command buffer is e
 For more detailed information on the command buffer lifecycle, refer to the Vulkan specification chapter on them
 <https://www.khronos.org/registry/vulkan/specs/1.2-extensions/html/chap6.html#commandbuffers-lifecycle>.
 
+
+^nextlink
 
 {% include comments.html term="Vkguide 2 Beta Comments" %}
 

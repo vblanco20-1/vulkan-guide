@@ -145,7 +145,7 @@ struct DescriptorAllocator {
 
 Descriptor allocation happens through `VkDescriptorPool`. Those are objects that need to be pre-initialized with some size and types of descriptors for it. Think of it like a memory allocator for some specific descriptors. Its possible to have 1 very big descriptor pool that handles the entire engine, but that means we need to know what descriptors we will be using for everything ahead of time. That can be very tricky to do at scale. Instead, we will keep it simpler, and we will have multiple descriptor pools for different parts of the project, and try to be more accurate with them.
 
-One very important thing to do with pools is that when you reset a pool, it destroys all of the descriptor sets allocated from it. This is very useful for things like per-frame descriptors. That way we can have descriptors that are used just for one frame, allocated dynamically, and then before we start the frame we completely delete all of them in one go. This is confirmed to be a fast path by GPU vendors, and recomended to use when you need to handle per-frame descriptor sets. 
+One very important thing to do with pools is that when you reset a pool, it destroys all of the descriptor sets allocated from it. This is very useful for things like per-frame descriptors. That way we can have descriptors that are used just for one frame, allocated dynamically, and then before we start the frame we completely delete all of them in one go. This is confirmed to be a fast path by GPU vendors, and recommended to use when you need to handle per-frame descriptor sets. 
 
 The DescriptorAllocator we have just has functions to initialize a pool, clear the pool, and allocate a descriptor set from it.
 

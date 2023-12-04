@@ -32,7 +32,7 @@ vk_engine.h
 class VulkanEngine {
 public:
 
-    // --- omitted ---
+// --- omitted ---
 
 ^code inst_init chapter-1/vk_engine.h
 
@@ -68,7 +68,7 @@ void VulkanEngine::init_sync_structures()
 }
 ```
 
-We have added 4 handles to the main class, VkDevice, VkPhysicalDevice, VkInstance, VkDebugUtilsMessengerEXT.
+We have added 4 handles to the main class, `VkDevice`, `VkPhysicalDevice`, `VkInstance`, `VkDebugUtilsMessengerEXT`.
 
 ## Instance
 
@@ -84,11 +84,11 @@ void VulkanEngine::init_vulkan()
 }
 ```
 
-We are going to create a vkb::InstanceBuilder, which is from the VkBootstrap library, and abstracts the creation of a Vulkan VkInstance.
+We are going to create a `vkb::InstanceBuilder`, which is from the VkBootstrap library, and abstracts the creation of a Vulkan `VkInstance`.
 
 For the creation of the instance, we want it to have the name "Example Vulkan Application", have validation layers enabled, and use default debug logger.
 The "Example Vulkan Application" name does not matter. You can set the name to whatever you want. 
-When initializing a VkInstance, the name of the application and engine is supplied. This is so that driver vendors have a easier time finding the name of the game/engine, so they can tweak internal driver logic for them alone. For us, it's not really important.
+When initializing a `VkInstance`, the name of the application and engine is supplied. This is so that driver vendors have a easier time finding the name of the game/engine, so they can tweak internal driver logic for them alone. For us, it's not really important.
 
 We want to enable validation layers by default. With what we are going to do during the guide, there is no need to ever turn them off, as they will catch our errors very nicely. On a more advanced engine, you would only enable the layers in debug mode, or with a specific configuration parameter. Vulkan validation layers can slow down the performance of the vulkan calls significantly, so once we begin loading complex scenes with lots of data, we will want to disable them to see what the real performance of the code is.
 
@@ -96,8 +96,8 @@ We also require the Vulkan api version 1.3. This should be supported on gpus tha
 
 Lastly, we tell the library that we want the debug messenger. This is what catches the log messages that the validation layers will output. Because we have no need for a dedicated one, we will just let the library use the default one, which outputs to console window.
 
-Then we just grab the actual VkInstance handle and the VkDebugUtilsMessengerEXT handle from the vkb::Instance object.
-We store the VkDebugUtilsMessengerEXT so we can destroy it at program exit, otherwise we would leak it.
+Then we just grab the actual VkInstance handle and the `VkDebugUtilsMessengerEXT` handle from the `vkb::Instance` object.
+We store the `VkDebugUtilsMessengerEXT` so we can destroy it at program exit, otherwise we would leak it.
 
 
 ## Device
@@ -109,11 +109,11 @@ void VulkanEngine::init_vulkan()
 ^code init_device chapter-1/vk_engine.cpp
 }
 ```
-To select a GPU to use, we are going to use vkb::PhysicalDeviceSelector.
+To select a GPU to use, we are going to use `vkb::PhysicalDeviceSelector`.
 
-First of all, we need to create a VkSurfaceKHR object from the SDL window. This is the actual window we will be rendering to, so we need to tell the physical device selector to grab a GPU that can render to said window.
+First of all, we need to create a `VkSurfaceKHR` object from the SDL window. This is the actual window we will be rendering to, so we need to tell the physical device selector to grab a GPU that can render to said window.
 
-We need to enable some features. For now, those are dynamic rendering, and syncronization 2. Those are optional features provided in vulkan 1.3 that change a few things. dynamic rendering allows us to completely skip renderpasses/framebuffers (if you want to learn about them, they are explained in the old version of vkguide), and also use a new upgraded version of the syncronization functions. By giving the vkb::PhysicalDeviceSelector the `VkPhysicalDeviceVulkan13Features` structure , we can tell vkbootstrap to find a gpu that has those features. 
+We need to enable some features. For now, those are dynamic rendering, and syncronization 2. Those are optional features provided in vulkan 1.3 that change a few things. dynamic rendering allows us to completely skip renderpasses/framebuffers (if you want to learn about them, they are explained in the old version of vkguide), and also use a new upgraded version of the syncronization functions. By giving the `vkb::PhysicalDeviceSelector` the `VkPhysicalDeviceVulkan13Features` structure , we can tell vkbootstrap to find a gpu that has those features. 
 
 There are multiple levels of feature structs you can use depending on your vulkan version, you can find their info here: 
 
@@ -123,7 +123,7 @@ There are multiple levels of feature structs you can use depending on your vulka
 [Vulkan Spec: 1.3 physical device features](https://registry.khronos.org/vulkan/specs/1.3-extensions/html/chap47.html#VkPhysicalDeviceVulkan13Features)
 
 
-Once we have a VkPhysicalDevice, we can directly build a VkDevice from it.
+Once we have a `VkPhysicalDevice`, we can directly build a VkDevice from it.
 
 And at the end, we store the handles in the class.
 
@@ -147,11 +147,11 @@ public:
 
 ```
 
-We are storing the VkSwapchainKHR itself, alongside the format that the swapchain images use when rendering to them.
+We are storing the `VkSwapchainKHR` itself, alongside the format that the swapchain images use when rendering to them.
 
 We also store 2 arrays, one of Images, and another of ImageViews.
 
-A VkImage is a handle to the actual image object to use as texture or to render into. A VkImageView is a wrapper for that image. It allows to do things like swap the colors. We will go into detail about it later.
+A `VkImage` is a handle to the actual image object to use as texture or to render into. A `VkImageView` is a wrapper for that image. It allows to do things like swap the colors. We will go into detail about it later.
 
 Like with the other initialization functions, we are going to use the vkb library to create a swapchain. It uses a builder similar to the ones we used for instance and device.
 
@@ -195,7 +195,7 @@ Objects have dependencies on each other, and we need to delete them in the corre
 
 Destroying the swapchain will also destroy the images for that swapchain, but the image-views need to be destroyed separately.
 
-VkPhysicalDevice can't be destroyed, as it's not a Vulkan resource per-se, it's more like just a handle to a GPU in the system.
+`VkPhysicalDevice` can't be destroyed, as it's not a Vulkan resource per-se, it's more like just a handle to a GPU in the system.
 
 Because our initialization order was SDL Window -> Instance -> Surface -> Device -> Swapchain, we are doing exactly the opposite order for destruction.
 
@@ -239,5 +239,6 @@ Validation Error: [ VUID-vkDestroyInstance-instance-00629 ] Object 0: handle = 0
 
 With the Vulkan initialization completed and the layers working, we can begin to prepare the command structures so that we can make the gpu do something.
 
+^nextlink
 
 {% include comments.html term="Vkguide 2 Beta Comments" %}

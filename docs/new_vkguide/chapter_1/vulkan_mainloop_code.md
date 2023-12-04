@@ -409,5 +409,6 @@ Try running the engine at this moment. If everything is correct, you should have
 
 This concludes chapter 1, and the next we are going to do is to begin using some compute shaders to draw other things than a simple flashing screen.
 
+Next: [Chapter 2: Improving the render loop]({{ site.baseurl }}{% link docs/chapter-2/vulkan_new_rendering.md %})
 
 {% include comments.html term="Vkguide 2 Beta Comments" %}

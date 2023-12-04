@@ -48,7 +48,6 @@ This is the list of libraries we are using.
 - fastgltf: High performance GLTF loading library. 
 
 
-
 Next: [Chapter 0 code walkthrough]({{ site.baseurl }}{% link docs/new_vkguide/chapter_0/code_walkthrough.md %})
 
 {% include comments.html term="Vkguide 2 Beta Comments" %}

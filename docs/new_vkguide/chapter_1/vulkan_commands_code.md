@@ -5,7 +5,7 @@ parent:  "New 1. Initializing Vulkan"
 nav_order: 21
 ---
 
-We will begin by writing our FrameData struct, on the vk_engine.h header. This will hold the structures and commands we will need to draw a given frame, as we will be double-buffering, with the GPU running some commands while we write into others. 
+We will begin by writing our `FrameData` struct, on the vk_engine.h header. This will hold the structures and commands we will need to draw a given frame, as we will be double-buffering, with the GPU running some commands while we write into others. 
 ```cpp
 struct FrameData {
 
@@ -29,7 +29,7 @@ public:
 }
 ```
 
-We will not be accessing the _frames array directly outside of initialization logic. So we add a getter that will use the _frameNumber member we use to count the frames to access it. This way it will flip between the 2 structures we have. 
+We will not be accessing the `_frames` array directly outside of initialization logic. So we add a getter that will use the `_frameNumber` member we use to count the frames to access it. This way it will flip between the 2 structures we have. 
 
 
 ## Grabbing the Queue
@@ -95,25 +95,25 @@ VkCommandPoolCreateInfo commandPoolInfo = {};
 
 By doing that ` = {}` thing, we are letting the compiler initialize the entire struct to zero. This is critical, as in general Vulkan structs will have their defaults set in a way that 0 is relatively safe. By doing that, we make sure we don't leave uninitialized data in the struct.
 
-We set queueFamilyIndex to the _graphicsQueueFamily that we grabbed before. This means that the command pool will create commands that are compatible with any queue of that "graphics" family.
+We set `queueFamilyIndex` to the `_graphicsQueueFamily` that we grabbed before. This means that the command pool will create commands that are compatible with any queue of that "graphics" family.
 
-We are also setting something in the .flags parameter. A lot of Vulkan structures will have that .flags parameter, for extra options. We are sending VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT , which tells Vulkan that we expect to be able to reset individual command buffers made from that pool. An alternative approach would be to reset the whole Command Pool at once, which resets all command buffers. In that case we would not need that flag.
+We are also setting something in the .flags parameter. A lot of Vulkan structures will have that .flags parameter, for extra options. We are sending `VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT` , which tells Vulkan that we expect to be able to reset individual command buffers made from that pool. An alternative approach would be to reset the whole Command Pool at once, which resets all command buffers. In that case we would not need that flag.
 
-At the end, we finally call VkCreateCommandPool, giving it our VkDevice, the commandPoolInfo for create parameters, and a pointer to the _commandPool member, which will get overwritten if it succeeds.
+At the end, we finally call `VkCreateCommandPool`, giving it our `VkDevice`, the commandPoolInfo for create parameters, and a pointer to the `_commandPool` member, which will get overwritten if it succeeds.
 
-To check if the command succeeds, we use the VK_CHECK() macro. It will just immediately abort if something happens.
+To check if the command succeeds, we use the `VK_CHECK()` macro. It will just immediately abort if something happens.
 
-Now that we have the VkCommandPool created, and stored in the _commandPool member, we can allocate our command buffer from it.```
+Now that we have the `VkCommandPool` created, and stored in the `_commandPool` member, we can allocate our command buffer from it.
 
 As with the command pool, we need to fill the sType and pNext parameters, and then continue the rest of the Info struct.
 
-We let Vulkan know that the parent of our command will be the _commandPool we just created, and we want to create only one command buffer.
+We let Vulkan know that the parent of our command will be the `_commandPool` we just created, and we want to create only one command buffer.
 
 The .commandBufferCount parameter allows you to allocate multiple buffers at once. Make sure that the pointer you send to VkAllocateCommandBuffer has space for those.
 
-The .level is set to Primary . Command buffers can be Primary of Secondary level.
+The .level is set to Primary . Command buffers can be Primary or Secondary level.
 Primary level are the ones that are sent into a VkQueue, and do all of the work. This is what we will use in the guide.
-Secondary level are ones that can act as "subcommands" to a primary buffer. They are most commonly used when you want to record commands for a single pass from multiple cores. We are not going to use them.
+Secondary level are ones that can act as "subcommands" to a primary buffer. They are most commonly used when you want to record commands for a single pass from multiple threads. We are not going to use them as with the architecture we will do, we wont need to multithread command recording.
 
 You can find the details and parameters for those info structures here:
 * [VkCommandPoolCreateInfo](https://registry.khronos.org/vulkan/specs/1.3-extensions/html/chap6.html#VkCommandPoolCreateInfo)
@@ -173,7 +173,7 @@ void VulkanEngine::init_commands()
 }
 ```
 
-Much better and shorter. Over the guide, we will keep using that vkinit namespace. You will be able to reuse that module in other projects safely given how simple it is. Remember that the starting_point branch has it written, as recomended on chapter 0.
+Much better and shorter. Over the guide, we will keep using that vkinit namespace. You will be able to reuse that module in other projects safely given how simple it is. Remember that the starting_point branch has it written, as recommended on chapter 0.
 
 ## Cleanup
 Same as before, what we have created, we have to delete
@@ -195,11 +195,12 @@ void VulkanEngine::cleanup()
 ```
 
 As the command pool is the most recent Vulkan object, we need to destroy it before the other objects.
-It's not possible to individually destroy VkCommandBuffer, destroying their parent pool will destroy all of the command buffers allocated from it.
+It's not possible to individually destroy `VkCommandBuffer`, destroying their parent pool will destroy all of the command buffers allocated from it.
 
-VkQueue-s also can't be destroyed, as, like with the VkPhysicalDevice, they aren't really created objects, more like a handle to something that already exists as part of the VkInstance. 
+VkQueue-s also can't be destroyed, as, like with the `VkPhysicalDevice`, they aren't really created objects, more like a handle to something that already exists as part of the VkInstance. 
 
 We now have a way to send commands to the gpu, but we still need another piece, which is the syncronization structures to syncronize GPU execution with CPU.
 
+Next: [ Rendering Loop]({{ site.baseurl }}{% link docs/new_vkguide/chapter_1/vulkan_mainloop.md% })  
 
 {% include comments.html term="Vkguide 2 Beta Comments" %}
