@@ -5,7 +5,7 @@ parent:  "New 1. Initializing Vulkan"
 nav_order: 41
 ---
 
-The first thing we need to do is to add the syncronization structures that we are going to need into our FrameData structure
+The first thing we need to do is to add the syncronization structures that we are going to need into our FrameData structure. We add the new members into the struct.
 
 ```cpp
 struct FrameData {
@@ -24,7 +24,7 @@ Lets initialize them. Check the functions to make a VkFenceCreateInfo and a VkSe
 
 ^code init_sync shared/vk_initializers.cpp
 
-Both of these structures are pretty simple and need almost no options other than to give them some flags. For more info on the structures, here are the spec links (VkFenceCreateInfo)[https://registry.khronos.org/vulkan/specs/1.3-extensions/html/chap7.html#VkFenceCreateInfo], (VkSemaphoreCreateInfo)[https://registry.khronos.org/vulkan/specs/1.3-extensions/html/chap7.html#VkSemaphoreCreateInfo]
+Both of these structures are pretty simple and need almost no options other than to give them some flags. For more info on the structures, here are the spec links [VkFenceCreateInfo](https://registry.khronos.org/vulkan/specs/1.3-extensions/html/chap7.html#VkFenceCreateInfo), [VkSemaphoreCreateInfo](https://registry.khronos.org/vulkan/specs/1.3-extensions/html/chap7.html#VkSemaphoreCreateInfo)
 
 Lets write the actual creation now. 
 
@@ -66,7 +66,7 @@ We will need to use another one of the initializer functions.
 
 ^code init_cmd_draw shared/vk_initializers.cpp
 
-when a command buffer is started, we need to give it an info struct with some properties. We will not be using inheritance info so we can keep it nullptr, but we do need the flags. 
+When a command buffer is started, we need to give it an info struct with some properties. We will not be using inheritance info so we can keep it nullptr, but we do need the flags. 
 
 Here is the link to the spec for this structure [VkCommandBufferBeginInfo](https://registry.khronos.org/vulkan/specs/1.3-extensions/html/chap6.html#VkCommandBufferBeginInfo)
 
@@ -74,7 +74,7 @@ Back to `VulkanEngine::draw()`, we start by resetting the command buffer and res
 
 ^code draw_3 chapter-1/vk_engine.cpp
 
-We are going to copy the command buffer handle from our FrameData into a variable named `cmd`. this is to shorten all other references to it. Vulkan handles are just a 64 bit handle/pointer, so its fine to copy them around, but remember that their actual data is handled by vulkan itself.
+We are going to copy the command buffer handle from our FrameData into a variable named `cmd`. This is to shorten all other references to it. Vulkan handles are just a 64 bit handle/pointer, so its fine to copy them around, but remember that their actual data is handled by vulkan itself.
 
 Now we call `vkResetCommandBuffer` to clear the buffer. This will completly remove all commands and free its memory. We can now start the command buffer again with `vkBeginCommandBuffer`. On the cmdBeginInfo, we will give it the flag `VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT`. This is optional, but we might get a small speedup from our command encoding if we can tell the drivers that this buffer will only be submitted and executed once. We are only doing 1 submit per frame before the command buffer is reset, so this is perfectly good for us.
 
@@ -93,7 +93,7 @@ void transition_image(VkCommandBuffer cmd, VkImage image, VkImageLayout currentL
 }
 ```
 
-transitioning a image has loads of possible options. We are going to do the absolute simplest way of implementing this, by only using currentLayout + newLayout.
+Transitioning an image has loads of possible options. We are going to do the absolute simplest way of implementing this, by only using currentLayout + newLayout.
 
 We will be doing a pipeline barrier, using the syncronization 2 feature/extension which is part of vulkan 1.3 . A pipeline barrier can be used for many different things like syncronizing read/write operation between commands and controlling things like one command drawing into a image and other command using that image for reading.  
 
@@ -102,7 +102,7 @@ Add the function to vk_images.cpp.
 ^code transition shared/vk_images.cpp
 
 VkImageMemoryBarrier2 contains the information for a given *image* barrier. On here, is where we set the old and new layouts.
-In the StageMask, we are doing ALL_COMMANDs. This is inneficient, as it will stall the GPU pipeline a bit. For our needs, its going to be fine as we are only going to do a few transitions per frame. If you are doing many transitions per frame as part of a post-process chain, you want to avoid doing this, and instead use much better StageMasks. 
+In the StageMask, we are doing ALL_COMMANDS. This is inefficient, as it will stall the GPU pipeline a bit. For our needs, its going to be fine as we are only going to do a few transitions per frame. If you are doing many transitions per frame as part of a post-process chain, you want to avoid doing this, and instead use much better StageMasks. 
 AllCommands stage mask on the barrier means that the barrier will stop the gpu commands completely when it arrives at the barrier. By using more finegrained stage masks, its possible to overlap the GPU pipeline across the barrier a bit. 
 AccessMask is similar, it controls how the barrier stops different parts of the GPU. we are going to use `VK_ACCESS_2_MEMORY_WRITE_BIT` for our source, and add `VK_ACCESS_2_MEMORY_READ_BIT` to our destination. Those are generic options that will be fine.
 

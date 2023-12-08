@@ -89,6 +89,17 @@ With the deletion queue set, now whenever we create new vulkan objects we can ju
 
 To improve the render loop, we will need to allocate a image, and this gets us into how to allocate objects in vulkan. We are going to skip that entire chapter, because we will be using Vulkan Memory Allocator library. Dealing with the different memory heaps and object restrictions such as image alignement is very error prone and really hard to get right, specially if you want to get it right at a decent performance. By using VMA, we skip all that, and we get a battle tested way that is guaranteed to work well. There are cases like the PCSX3 emulator project, where they replaced their attempt at allocation to VMA, and won 20% extra framerate. 
 
+vk_types.h already holds the include needed for the VMA library, but we need to do something else too.
+
+On vk_engine.cpp we include it too, but with `VMA_IMPLEMENTATION` defined.
+
+```cpp
+#define VMA_IMPLEMENTATION
+#include "vk_mem_alloc.h"
+```
+
+VMA holds both the normal header, and the implementation of the functions into the same header file. We need to define `VMA_IMPLEMENTATION` exactly into only one of the .cpp files of our project, and that will store and compile the definitions for the VMA functions. 
+
 Add the allocator to the VulkanEngine class
 ```cpp
 class VulkanEngine{
@@ -134,7 +145,18 @@ We have already dealt superficially with images when setting up the swapchain, b
 
 
 Lets begin by adding the new members we will need to the VulkanEngine class.
-We have an AllocatedImage structure that already holds format, size, imageview, and the image itself
+
+On vk_types.h, add this structure which holds the data needed for a image. We will hold a `VkImage` alongside its default `VkImageView`, then the allocation for the image memory, and last, the image size and its format, which will be useful when dealing with the image.
+
+```cpp
+struct AllocatedImage {
+    VkImage image;
+    VkImageView imageView;
+    VmaAllocation allocation;
+    VkExtent3D imageExtent;
+    VkFormat imageFormat;
+};
+```
 
 ```cpp
 class VulkanEngine{
@@ -158,7 +180,7 @@ Now, at the end of init_swapchain, lets create it.
 
 We begin by creating a VkExtent3d structure with the size of the image we want, which will match our window size.
 
-Then, we need to fill our usage flags. In vulkan, all images and buffers must fill a UsageFlags with what they will be used for. This allows the driver to perform optimizations in the background depending on what that buffer or image is going to do later. In our case, we want TransferSRC because we will have it as a copy source to the swapchain, Storage because thats the "compute shader can write to it" layout, and Color Attachment so that we can use graphics pipelines to draw geometry into it.
+Then, we need to fill our usage flags. In vulkan, all images and buffers must fill a UsageFlags with what they will be used for. This allows the driver to perform optimizations in the background depending on what that buffer or image is going to do later. In our case, we want TransferSRC and TransferDST so that we can copy from and into the image,  Storage because thats the "compute shader can write to it" layout, and Color Attachment so that we can use graphics pipelines to draw geometry into it.
 
 The format is going to be VK_FORMAT_R16G16B16A16_SFLOAT. This is 16 bit floats for all 4 channels, and will use 64 bits per pixel. Thats a fair amount of data, 2x what a 8 bit color image uses, but its going to be useful.
 
@@ -170,7 +192,7 @@ In vulkan, there are multiple memory regions we can allocate images and buffers 
 
 With the image allocated, we create an imageview to pair with it. In vulkan, you need a imageview to access images. This is generally a thin wrapper over the image itself that lets you do things like limit access to only 1 mipmap. We will always be pairing vkimages with their "default" imageview in this tutorial.
 
-# new draw loop
+# New draw loop
 
 Now that we have a new draw image, lets add it into the render loop.
 
@@ -178,9 +200,9 @@ We will need a way to copy images, so add this into vk_images.cpp
 
 ^code copyimg shared/vk_images.cpp
  
-Vulkan has 2 main ways of copying one image to another. you can use VkCmdCopyImage or VkCmdBlitImage
+Vulkan has 2 main ways of copying one image to another. you can use VkCmdCopyImage or VkCmdBlitImage.
 CopyImage is faster, but its much more restricted, for example the resolution on both images must match.
-Meanwhile, blit image lets you copy images of different formats and different sizes into one another. You have a source rectangle and a target rectangle, and the system copies it into its position.
+Meanwhile, blit image lets you copy images of different formats and different sizes into one another. You have a source rectangle and a target rectangle, and the system copies it into its position. Those two functions are useful when setting up the engine, but later its best to ignore them and write your own version that can do extra logic on a fullscreen fragment shader.
 
 With it, we can now update the render loop. As draw() is getting too big, we are going to leave the syncronization, command buffer management, and transitions in the draw() function, but we are going to add the draw commands themselves into a draw_main() function.
 
@@ -205,7 +227,7 @@ The new code is this.
 	VK_CHECK(vkEndCommandBuffer(cmd));
 ```
 
-The main diference we have in the render loop is that we no longer do the clear on the swapchain image. Instead, we do it on the `_drawImage.image`. Once we have cleared the image, we transition both the swapchain and the draw image into their layouts for transfer, and we execute the copy command. Once we are done with the copy command, we transition the swapchain image into present layout for display. As we are always drawing on the same image, our draw_image does not need to access swapchain index, it just clears the draw image.
+The main difference we have in the render loop is that we no longer do the clear on the swapchain image. Instead, we do it on the `_drawImage.image`. Once we have cleared the image, we transition both the swapchain and the draw image into their layouts for transfer, and we execute the copy command. Once we are done with the copy command, we transition the swapchain image into present layout for display. As we are always drawing on the same image, our draw_image does not need to access swapchain index, it just clears the draw image.
 
 This will now provide us a way to render images outside of the swapchain itself. We now get significantly higher pixel precision, and we unlock some other techniques.
 

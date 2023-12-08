@@ -40,7 +40,7 @@ void main()
 
 We begin by specifying a default glsl version, 460 which maps to GLSL 4.6 will do just fine.
 
-Next we have the layout statement that defines the workgroup size. As explained in the article before, when executing compute shaders, they will get executed in groups of N lanes/threads. We are specifyinf sizes x=16, y=16, z=1 (default). Which means that in the shader, each group will be of 16x16 lanes working together. 
+Next we have the layout statement that defines the workgroup size. As explained in the article before, when executing compute shaders, they will get executed in groups of N lanes/threads. We are specifying sizes x=16, y=16, z=1 (default). Which means that in the shader, each group will be of 16x16 lanes working together. 
 
 The next layout statement is for the shader input through descriptor sets. We are setting a single image2D as set 0 and binding 0 within that set. With vulkan, each descriptor *set* can have a number of bindings, which are the things bound by that set when you bind that set. So this is 1 set, at index 0, which will contain a single image at binding #0.
 
@@ -95,7 +95,7 @@ To initialize a pool, we use `vkCreateDescriptorPool` and give it an array of Po
 maxSets controls how many VkDescriptorSets we can create from the pool in total, and the pool sizes give how many individual bindings of a given type are owned.
 
 
-# initializing the layout and descriptors
+# Initializing the layout and descriptors
 Lets add a new function to VulkanEngine and some new members we will use.
 
 ```cpp
@@ -111,7 +111,7 @@ private:
 }
 ```
 
-we will be storing one of those descriptor allocators in our engine as the global allocator. Then we need to store the descriptor set that will bind our render image, and the descriptor layout for that type of descriptor, which we will need later for creating the pipeline.
+We will be storing one of those descriptor allocators in our engine as the global allocator. Then we need to store the descriptor set that will bind our render image, and the descriptor layout for that type of descriptor, which we will need later for creating the pipeline.
 
 Remember to add the `init_descriptors()` function to the init() function of the engine, after sync_structures.
 
