@@ -326,7 +326,7 @@ std::optional<std::shared_ptr<LoadedGLTF>> loadGltf(VulkanEngine* engine, std::s
             glm::vec3 maxpos = vertices[initial_vtx].position;
             for (int i = initial_vtx; i < vertices.size(); i++) {
                 minpos = glm::min(minpos, vertices[i].position);
-                maxpos = glm::max(minpos, vertices[i].position);
+                maxpos = glm::max(maxpos, vertices[i].position);
             }
 
             newSurface.bounds.origin = (maxpos + minpos) / 2.f;
@@ -337,7 +337,7 @@ std::optional<std::shared_ptr<LoadedGLTF>> loadGltf(VulkanEngine* engine, std::s
 
         newmesh->meshBuffers = engine->uploadMesh(indices, vertices);
     }
-
+//> load_nodes
     // load all nodes and their meshes
     for (fastgltf::Node& node : gltf.nodes) {
         std::shared_ptr<Node> newNode;
@@ -371,13 +371,14 @@ std::optional<std::shared_ptr<LoadedGLTF>> loadGltf(VulkanEngine* engine, std::s
                        } },
             node.transform);
     }
-
+//< load_nodes
+//> load_graph
     // run loop again to setup transform hierarchy
     for (int i = 0; i < gltf.nodes.size(); i++) {
         fastgltf::Node& node = gltf.nodes[i];
         std::shared_ptr<Node>& sceneNode = nodes[i];
 
-        for (auto c : node.children) {
+        for (auto& c : node.children) {
             sceneNode->children.push_back(nodes[c]);
             nodes[c]->parent = sceneNode;
         }
@@ -390,8 +391,8 @@ std::optional<std::shared_ptr<LoadedGLTF>> loadGltf(VulkanEngine* engine, std::s
             node->refreshTransform(glm::mat4 { 1.f });
         }
     }
-
     return scene;
+//< load_graph
 }
 
 void LoadedGLTF::Draw(const glm::mat4& topMatrix, DrawContext& ctx)

@@ -140,6 +140,7 @@ void VulkanEngine::init_default_data() {
 	vkCreateSampler(_device, &sampl, nullptr, &_defaultSamplerLinear);
 //< default_img
 
+//> default_mat
 	GLTFMetallic_Roughness::MaterialResources materialResources;
 	//default the material textures
 	materialResources.colorImage = _whiteImage;
@@ -163,8 +164,9 @@ void VulkanEngine::init_default_data() {
 	materialResources.dataBufferOffset = 0;
 
 	defaultData = metalRoughMaterial.write_material(_device,MaterialPass::MainColor,materialResources, globalDescriptorAllocator);
+//< default_mat
 
-
+//> default_meshes
 	testMeshes = loadGltfMeshes(this,"..\\..\\assets\\basicmesh.glb").value();
 
 	for (auto& m : testMeshes) {
@@ -180,6 +182,7 @@ void VulkanEngine::init_default_data() {
 
 		loadedNodes[m->name] = std::move(newNode);
 	}
+//< default_meshes
 }
 void VulkanEngine::cleanup()
 {	
@@ -353,7 +356,7 @@ void VulkanEngine::update_scene()
 {
 	mainDrawContext.OpaqueSurfaces.clear();
 
-	for (auto&& m : loadedNodes) {
+	for (auto& m : loadedNodes) {
 		m.second->Draw(glm::mat4{1.f}, mainDrawContext);
 	}
 
@@ -364,7 +367,6 @@ void VulkanEngine::update_scene()
 
 		loadedNodes["Cube"]->Draw(translation * scale, mainDrawContext);
 	}
-
 
 	sceneData.view = glm::translate(glm::vec3{ 0,0,-5 });
 	// camera projection
@@ -1322,6 +1324,7 @@ void GLTFMetallic_Roughness::clear_resources(VkDevice device)
 
 }
 
+//> write_mat
 MaterialInstance GLTFMetallic_Roughness::write_material(VkDevice device, MaterialPass pass, const MaterialResources& resources, DescriptorAllocatorGrowable& descriptorAllocator)
 {
 	MaterialInstance matData;
@@ -1345,7 +1348,8 @@ MaterialInstance GLTFMetallic_Roughness::write_material(VkDevice device, Materia
 
 	return matData;
 }
-
+//< write_mat
+//> meshdraw
 void MeshNode::Draw(const glm::mat4& topMatrix, DrawContext& ctx)
 {
 	glm::mat4 nodeMatrix = topMatrix * worldTransform;
@@ -1366,3 +1370,4 @@ void MeshNode::Draw(const glm::mat4& topMatrix, DrawContext& ctx)
 	// recurse down
 	Node::Draw(topMatrix, ctx);
 }
+//< meshdraw

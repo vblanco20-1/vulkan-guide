@@ -419,8 +419,53 @@ void VulkanEngine::draw()
 
 void VulkanEngine::draw_geometry(VkCommandBuffer cmd)
 {
+    std::vector<uint32_t> opaque_draws;
+    opaque_draws.reserve(drawCommands.OpaqueSurfaces.size());
+
+    for (int i = 0; i < drawCommands.OpaqueSurfaces.size(); i++) {
+        RenderObject& ro = drawCommands.OpaqueSurfaces[i];
+
+        std::array<glm::vec3, 8> corners {
+            glm::vec3 { 1, 1, 1 },
+            glm::vec3 { 1, 1, -1 },
+            glm::vec3 { 1, -1, 1 },
+            glm::vec3 { 1, -1, -1 },
+            glm::vec3 { -1, 1, 1 },
+            glm::vec3 { -1, 1, -1 },
+            glm::vec3 { -1, -1, 1 },
+            glm::vec3 { -1, -1, -1 },
+        };
+
+        glm::mat4 matrix = sceneData.viewproj * ro.transform;
+
+        glm::vec3 min = { 1.5, 1.5, 1.5 };
+        glm::vec3 max = { -1.5, -1.5, -1.5 };
+
+        for (int c = 0; c < 8; c++) {
+            // project each corner into clip space
+            glm::vec4 v = matrix * glm::vec4(ro.bounds.origin + (corners[c] * ro.bounds.extents), 1.f);
+
+            // perspective correction
+            v.x = v.x / v.w;
+            v.y = v.y / v.w;
+            v.z = v.z / v.w;
+
+            min = glm::min(glm::vec3 { v.x, v.y, v.z }, min);
+            max = glm::max(glm::vec3 { v.x, v.y, v.z }, max);
+        }
+
+        // check the clip space box is within the view
+        if (min.z > 1.f || max.z < 0.f || min.x > 1.f || max.x < -1.f || min.y > 1.f || max.y < -1.f) {
+            continue;
+        }
+
+        opaque_draws.push_back(i);
+    }
+
     // sort the opaque surfaces by material and mesh
-    std::sort(drawCommands.OpaqueSurfaces.begin(), drawCommands.OpaqueSurfaces.end(), [](const auto& A, const auto& B) {
+    std::sort(opaque_draws.begin(), opaque_draws.end(), [&](const auto& iA, const auto& iB) {
+		const RenderObject& A = drawCommands.OpaqueSurfaces[iA];
+		const RenderObject& B = drawCommands.OpaqueSurfaces[iB];
         if (A.material == B.material) {
             return A.indexBuffer < B.indexBuffer;
         } else {
@@ -502,8 +547,8 @@ void VulkanEngine::draw_geometry(VkCommandBuffer cmd)
     stats.drawcall_count = 0;
     stats.triangle_count = 0;
 
-    for (auto& r : drawCommands.OpaqueSurfaces) {
-        draw(r);
+    for (auto& r : opaque_draws) {
+        draw(drawCommands.OpaqueSurfaces[r]);
     }
 
     for (auto& r : drawCommands.TransparentSurfaces) {
@@ -1231,7 +1276,7 @@ void MeshNode::Draw(const glm::mat4& topMatrix, DrawContext& ctx)
 
 		def.transform = nodeMatrix;
 		def.vertexBufferAddress = mesh->meshBuffers.vertexBufferAddress;
-
+        def.bounds = s.bounds;
 		if (s.material->data.passType == MaterialPass::Transparent) {
 			ctx.TransparentSurfaces.push_back(def);
 		}

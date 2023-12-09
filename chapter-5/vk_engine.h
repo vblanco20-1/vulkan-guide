@@ -64,7 +64,7 @@ struct RenderObject {
     VkBuffer indexBuffer;
     
     MaterialInstance* material;
-
+    Bounds bounds;
     glm::mat4 transform;
     VkDeviceAddress vertexBufferAddress;
 };
@@ -97,7 +97,6 @@ struct EngineStats {
     float mesh_draw_time;
 };
 
-
 struct GLTFMetallic_Roughness {
     MaterialPipeline opaquePipeline;
     MaterialPipeline transparentPipeline;
@@ -126,6 +125,13 @@ struct GLTFMetallic_Roughness {
     void clear_resources(VkDevice device);
 
     MaterialInstance write_material(VkDevice device,MaterialPass pass,const MaterialResources& resources , DescriptorAllocatorGrowable& descriptorAllocator);
+};
+
+struct MeshNode : public Node {
+
+	std::shared_ptr<MeshAsset> mesh;
+
+	virtual void Draw(const glm::mat4& topMatrix, DrawContext& ctx) override;
 };
 
 class VulkanEngine {
