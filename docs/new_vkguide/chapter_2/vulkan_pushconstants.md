@@ -7,7 +7,7 @@ nav_order: 9
 
 We have a way to run compute shaders to display, and a way to add debug-UI to the engine. Lets use that to send data to the shaders through the UI, and have an interactive thing.
 
-we will be using PushConstants to send data to the shader. PushConstants are a feature unique to vulkan that allows for some small amount of data to be sent to the GPU. Keeping this data small is important, as most drivers will have a fast-path if the data is below some bytes (consult gpu vendor documentation). Its main use case is to send some per-object indexes or a couple matrices that change for every object. If you have data that is bigger than a handful of floats or ints, you should be using other systems that we will show next chapter.
+We will be using PushConstants to send data to the shader. PushConstants are a feature unique to vulkan that allows for some small amount of data to be sent to the GPU. Keeping this data small is important, as most drivers will have a fast-path if the data is below some bytes (consult gpu vendor documentation). Its main use case is to send some per-object indexes or a couple matrices that change for every object. If you have data that is bigger than a handful of floats or ints, you should be using other systems that we will show next chapter.
 
 Push constants are configured when you create a pipeline layout. To keep things simple and not have to change too much code, we are going to default our pushconstants for compute effects to 4 vec4 vectors. 16 floats will be enough for playing around with the shaders.
 
@@ -224,23 +224,22 @@ Now we can add the imgui debug window for this. This goes on run() function. We 
 <!-- codegen from tag imgui_bk on file E:\ProgrammingProjects\vulkan-guide-2\chapter-2/vk_engine.cpp --> 
 ```cpp
 		ImGui::NewFrame();
-
+		
 		if (ImGui::Begin("background")) {
 			
 			ComputeEffect& selected = backgroundEffects[currentBackgroundEffect];
-
+		
 			ImGui::Text("Selected effect: ", selected.name);
-
+		
 			ImGui::SliderInt("Effect Index", &currentBackgroundEffect,0, backgroundEffects.size() - 1);
-
+		
 			ImGui::InputFloat4("data1",(float*)& selected.data.data1);
 			ImGui::InputFloat4("data2",(float*)& selected.data.data2);
 			ImGui::InputFloat4("data3",(float*)& selected.data.data3);
 			ImGui::InputFloat4("data4",(float*)& selected.data.data4);
-
+		
 			ImGui::End();
 		}
-
 		ImGui::Render();
 
 ```

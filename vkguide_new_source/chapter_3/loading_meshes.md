@@ -40,13 +40,13 @@ This is the first time see see std::optional being used. This is standard class 
 
 Lets begin by opening the file
 
-^code openmesh shared/vk_loader.cpp
+^code openmesh chapter-3/vk_loader.cpp
 
 We will only be supporting binary GLTF for this for now. So first we open the file with `loadFromFile` and then we call loadBinaryGLTF to open it. This requires the parent path to find relative paths even if we wont have it yet.
 
 Next we will loop each mesh, copy the vertices and indices into temporary std::vector, and upload them as a mesh to the engine. We will be building an array of `MeshAsset` from this.
 
-^code loadmesh shared/vk_loader.cpp
+^code loadmesh chapter-3/vk_loader.cpp
 
 As we iterate each primitive within a mesh, we use the iterateAccessor functions to access the vertex data we want. We also build the index buffer properly while appending the different primitives into the vertex arrays. At the end, we call uploadMesh to create the final buffers, then we return the mesh list.
 
@@ -153,6 +153,8 @@ Now time to use it from the place where we build the mesh pipeline. `init_mesh_p
 ```
 
 We call the enable_depthtest function on the builder, and we give it depth write, and as operator GREATER_OR_EQUAL. As mentioned, because 0 is far and 1 is near, we will want to only render the pixels if the current depth value is greater than the depth value on the depth image.
+
+Modify that `set_depth_format` call on the `init_triangle_pipeline` function too. Even if depth testing is disabled for a draw, we still need to set the format correctly for the render pass to work.
 
 You can run the engine now, and the monkey head will be setup properly. The other draws with the triangle and rectangle render behind it because we have no depth testing set for them so they neither write or read from the depth attachment.
 

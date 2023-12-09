@@ -101,8 +101,7 @@ VkDescriptorSetLayout DescriptorLayoutBuilder::build(VkDevice device, VkShaderSt
         b.stageFlags |= shaderStages;
     }
 
-    VkDescriptorSetLayoutCreateInfo info = {};
-    info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    VkDescriptorSetLayoutCreateInfo info = {.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO};
     info.pNext = nullptr;
 
     info.pBindings = bindings.data();
@@ -163,8 +162,7 @@ void DescriptorAllocator::init_pool(VkDevice device, uint32_t maxSets, std::span
         });
     }
 
-	VkDescriptorPoolCreateInfo pool_info = {};
-	pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+	VkDescriptorPoolCreateInfo pool_info = {.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO};
 	pool_info.flags = 0;
 	pool_info.maxSets = maxSets;
 	pool_info.poolSizeCount = (uint32_t)poolSizes.size();
@@ -189,6 +187,26 @@ We add creation and destruction functions. The clear function is not a delete, b
 To initialize a pool, we use `vkCreateDescriptorPool` and give it an array of PoolSizeRatio. Thats a structure that contains a type of descriptor (same VkDescriptorType as on the bindings above ), alongside a ratio to multiply the maxSets parameter is. This lets us directly control how big the pool is going to be. 
 maxSets controls how many VkDescriptorSets we can create from the pool in total, and the pool sizes give how many individual bindings of a given type are owned.
 
+Now we need the last function, `DescriptorAllocator::allocate`. Here it is.
+
+<!-- codegen from tag descriptor_alloc on file E:\ProgrammingProjects\vulkan-guide-2\shared/vk_descriptors.cpp --> 
+```cpp
+VkDescriptorSet DescriptorAllocator::allocate(VkDevice device, VkDescriptorSetLayout layout)
+{
+    VkDescriptorSetAllocateInfo allocInfo = {.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO};
+    allocInfo.pNext = nullptr;
+    allocInfo.descriptorPool = pool;
+    allocInfo.descriptorSetCount = 1;
+    allocInfo.pSetLayouts = &layout;
+
+    VkDescriptorSet ds;
+    VK_CHECK(vkAllocateDescriptorSets(device, &allocInfo, &ds));
+
+    return ds;
+}
+```
+
+We need to fill the `VkDescriptorSetAllocateInfo`. It needs the descriptor pool we will allocate from, how many descriptor sets to allocate, and the set layout. 
 
 # Initializing the layout and descriptors
 Lets add a new function to VulkanEngine and some new members we will use.
@@ -268,7 +286,7 @@ void VulkanEngine::init_descriptors()
 First we allocate a descriptor set object with the help of the allocator, of layout _drawImageDescriptorLayout which we created above. Then we need to update that descriptor set with our draw image. To do that, we need to use the `vkUpdateDescriptorSets` function. This function takes an array of `VkWriteDescriptorSet` which are the individual updates to perform.
 We create a single write, which points to binding 0 on the set we just allocated, and it has the correct type. It also points to a `VkDescriptorImageInfo` holding the actual image data we want to bind, which is going to be the imageview for our draw image.
 
-With this done, we now have a descriptor set we can use to bind our draw image, and the layou we needed. We can finally proceed to creating the compute pipeline
+With this done, we now have a descriptor set we can use to bind our draw image, and the layout we needed. We can finally proceed to creating the compute pipeline
 
 ## The compute pipeline
 
@@ -340,9 +358,11 @@ private:
 }
 ```
 
-Add it  to the init function.
+Add it  to the init function, and add the vk_pipelines.h include to the top of the file.
 
 ```cpp
+#include <vk_pipelines.h>
+
 void VulkanEngine::init()
 {
 	//other code
@@ -374,7 +394,7 @@ void VulkanEngine::init_pipelines()
 }
 ```
 
-To create a pipeline, we need an array of descriptor set layouts to use, and other configuration such as push-constants. On this shader we have, we wont need those so we can skip them, leaving only the DescriptorSetLayout.
+To create a pipeline, we need an array of descriptor set layouts to use, and other configuration such as push-constants. On this shader we wont need those so we can skip them, leaving only the DescriptorSetLayout.
 
 Now, we are going to create the pipeline object itself by loading the shader module and adding it plus other options into a VkComputePipelineCreateInfo.
 ```cpp
@@ -382,7 +402,7 @@ void VulkanEngine::init_pipelines()
 {
 	//layout code
 	VkShaderModule computeDrawShader;
-	if (!vkutil::load_shader_module("../../shaders/gradient_color.comp.spv", _device, &computeDrawShader))
+	if (!vkutil::load_shader_module("../../shaders/gradient.comp.spv", _device, &computeDrawShader))
 	{
 		std::cout << "Error when building the compute shader" << std::endl;
 	}
@@ -412,7 +432,6 @@ Last, we fill the `VkComputePipelineCreateInfo`. We will need the stage info for
 
 At the end of the function, we will do proper cleanup of the structures so that they get deleted at the end of the program through the deletion queue.
 
-
 <!-- codegen from tag comp_pipeline_3 on file E:\ProgrammingProjects\vulkan-guide-2\chapter-2/vk_engine.cpp --> 
 ```cpp
 	vkDestroyShaderModule(_device, computeDrawShader, nullptr);
@@ -425,12 +444,11 @@ At the end of the function, we will do proper cleanup of the structures so that 
 
 We can destroy the shader module directly on the function, we created the pipeline so we have no need for it anymore. With the pipeline and its layout, we need to wait until the end of the program.
 
-We are now ready to draw with it
+We are now ready to draw with it.
 
 # Drawing with compute
 
-Go back to the draw() function, we will replace the vkCmdClear with a compute shader invocation.
-
+Go back to the draw_main() function, we will replace the vkCmdClear with a compute shader invocation.
 
 <!-- codegen from tag draw_comp on file E:\ProgrammingProjects\vulkan-guide-2\chapter-2/vk_engine.cpp --> 
 ```cpp
@@ -447,7 +465,7 @@ Go back to the draw() function, we will replace the vkCmdClear with a compute sh
 First we need to bind the pipeline using `vkCmdBindPipeline`. As the pipeline is a compute shader, we use `VK_PIPELINE_BIND_POINT_COMPUTE`. Then, we need to bind the descriptor set that holds the draw image so that the shader can access it.
 Finally, we use `vkCmdDispatch` to launch the compute shader. We will decide how many invocations of the shader to launch (remember, the shader is 16x16 per workgroup) by dividing the resolution of our draw image by 16, and rounding up.
 
-If you run the program at this point, it should display this image.
+If you run the program at this point, it should display this image. If you have an error when loading the shader, make sure you have the shaders built by re-running CMake, and rebuilding the Shaders target. This target will not build automatically when building engine, so you must rebuild it every time shaders change.
 
 ![chapter2]({{site.baseurl}}/diagrams/compute_grid.png)
 

@@ -83,6 +83,7 @@ Now to the initialization function
 
 ^code imgui_init chapter-2/vk_engine.cpp
 
+Call this function at the end of VulkanEngine::init(), after `init_pipelines();'       
 This code is adapted from the imgui demos. We first need to create some structures that imgui wants, like its own descriptor pool. The descriptor pool here is storing data for 1000 of a lot of different types of descriptors, so its a bit overkill. It wont be a problem, just slightly less efficient space-wise.
 
 We then call `CreateContext()` , `ImGui_ImplSDL2_InitForVulkan`, and `ImGui_ImplVulkan_Init`. These functions will initialize the different parts of imgui we need. 
@@ -130,7 +131,7 @@ Once that is done, we can now do our UI commands. We are going to leave it on th
 When we call `ImGui::Render()`, that calculates the vertices/draws/etc that imgui requires to draw the frame, but it does not do any drawing on its own. To draw it we will continue it from within our draw() function.
 
 # Dynamic Rendering
-Imgui will draw using actual gpu draws with meshes and shaders, it will not do a compute draw like we are doing at te moment.
+Imgui will draw using actual gpu draws with meshes and shaders, it will not do a compute draw like we are doing at the moment.
 To draw geometry, it needs to be done withing a renderpass. But we are not using renderpasses as we will use dynamic rendering, a vulkan 1.3 feature. Instead of calling VkCmdBeginRenderpass, and giving it a VkRenderPass object, we call VkBeginRendering, with a VkRenderingInfo that contains the settings needed for the images to draw into.
 
 The VkRenderingInfo points into multiple VkRenderingAttachmentInfo for our target images to draw into, so lets begin writing that one into the initializers.
@@ -143,15 +144,11 @@ We need to hook imageview and layout as usual with all these rendering commands.
 
 For our store op, we are going to use store hardcoded, as we will want our draw commands to be saved.
 
-With the attachment info done, we can make the VkRenderingInfo.
-
-^code color_info shared/vk_initializers.cpp
-
-We are going to take a render extent to setup a rectangle of pixels to draw, and we will send a color attachment and a depth attachment. We dont need the depth attachment right now, thats for later.
-
-We now go change the render loop so that we can call the imgui draw commands. We will begin by adding a new function draw_imgui() to the VulkanEngine class, and putting our imgui drawing code inside it.
+With the attachment info done, we can make the VkRenderingInfo. Add a new function `draw_imgui()` to the VulkanEngine class, to draw a renderpass that renders imgui. 
 
 ^code imgui_draw_fn chapter-2/vk_engine.cpp
+
+We are going to take a render extent to setup a rectangle of pixels to draw, and we will send a color attachment and a depth attachment. We dont need the depth attachment right now, thats for later.
 
 Then we need to call it from our draw() function.
 

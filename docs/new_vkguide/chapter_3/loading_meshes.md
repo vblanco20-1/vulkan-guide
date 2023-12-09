@@ -40,117 +40,130 @@ This is the first time see see std::optional being used. This is standard class 
 
 Lets begin by opening the file
 
-<!-- codegen from tag openmesh on file E:\ProgrammingProjects\vulkan-guide-2\shared/vk_loader.cpp --> 
+<!-- codegen from tag openmesh on file E:\ProgrammingProjects\vulkan-guide-2\chapter-3/vk_loader.cpp --> 
 ```cpp
-	std::cout << "Loading GLTF: " << filePath << std::endl;	
+    std::cout << "Loading GLTF: " << filePath << std::endl;
 
-	fastgltf::GltfDataBuffer data;
-	data.loadFromFile(filePath);
+    fastgltf::GltfDataBuffer data;
+    data.loadFromFile(filePath);
 
-    constexpr auto gltfOptions = fastgltf::Options::LoadGLBBuffers | fastgltf::Options::LoadExternalBuffers;
+    constexpr auto gltfOptions = fastgltf::Options::LoadGLBBuffers
+        | fastgltf::Options::LoadExternalBuffers;
 
-	fastgltf::Asset gltf;
-    fastgltf::Parser parser{};
+    fastgltf::Asset gltf;
+    fastgltf::Parser parser {};
 
-	auto load = parser.loadBinaryGLTF(&data, filePath.parent_path(), gltfOptions);
-	if (load) {
-		gltf = std::move(load.get());
-	}
-	else {
-        fmt::print("Failed to load glTF: {} \n",fastgltf::to_underlying(load.error()));		
-		return {};
-     }
+    auto load = parser.loadBinaryGLTF(&data, filePath.parent_path(), gltfOptions);
+    if (load) {
+        gltf = std::move(load.get());
+    } else {
+        fmt::print("Failed to load glTF: {} \n", fastgltf::to_underlying(load.error()));
+        return {};
+    }
 ```
 
 We will only be supporting binary GLTF for this for now. So first we open the file with `loadFromFile` and then we call loadBinaryGLTF to open it. This requires the parent path to find relative paths even if we wont have it yet.
 
 Next we will loop each mesh, copy the vertices and indices into temporary std::vector, and upload them as a mesh to the engine. We will be building an array of `MeshAsset` from this.
 
-<!-- codegen from tag loadmesh on file E:\ProgrammingProjects\vulkan-guide-2\shared/vk_loader.cpp --> 
+<!-- codegen from tag loadmesh on file E:\ProgrammingProjects\vulkan-guide-2\chapter-3/vk_loader.cpp --> 
 ```cpp
-     std::vector<std::shared_ptr<MeshAsset>> meshes;
+    std::vector<std::shared_ptr<MeshAsset>> meshes;
 
-	// use the same vectors for all meshes so that the memory doesnt reallocate as
-	// often
-	std::vector<uint32_t> indices;
-	std::vector<Vertex> vertices;
-	for (fastgltf::Mesh& mesh : gltf.meshes) {
-		MeshAsset newmesh;
-		
-		newmesh.name = mesh.name;
+    // use the same vectors for all meshes so that the memory doesnt reallocate as
+    // often
+    std::vector<uint32_t> indices;
+    std::vector<Vertex> vertices;
+    for (fastgltf::Mesh& mesh : gltf.meshes) {
+        MeshAsset newmesh;
 
-		// clear the mesh arrays each mesh, we dont want to merge them by error
-		indices.clear();
-		vertices.clear();
+        newmesh.name = mesh.name;
 
-		for (auto&& p : mesh.primitives) {
-			GeoSurface newSurface;
-			newSurface.startIndex = (uint32_t)indices.size();
-			newSurface.count = (uint32_t)gltf.accessors[p.indicesAccessor.value()].count;
+        // clear the mesh arrays each mesh, we dont want to merge them by error
+        indices.clear();
+        vertices.clear();
+
+        for (auto&& p : mesh.primitives) {
+            GeoSurface newSurface;
+            newSurface.startIndex = (uint32_t)indices.size();
+            newSurface.count = (uint32_t)gltf.accessors[p.indicesAccessor.value()].count;
 
             size_t initial_vtx = vertices.size();
-			{
-				fastgltf::Accessor& indexaccessor = gltf.accessors[p.indicesAccessor.value()];
 
-				fastgltf::iterateAccessor<std::uint32_t>(gltf, indexaccessor, [&](std::uint32_t idx) {
-					indices.push_back(idx + initial_vtx);
-				});
-			}
+            // load indexes
+            {
+                fastgltf::Accessor& indexaccessor = gltf.accessors[p.indicesAccessor.value()];
+                indices.reserve(indices.size() + indexaccessor.count);
 
-			fastgltf::Accessor& posAccessor =gltf.accessors[p.findAttribute("POSITION")->second];
+                fastgltf::iterateAccessor<std::uint32_t>(gltf, indexaccessor,
+                    [&](std::uint32_t idx) {
+                        indices.push_back(idx + initial_vtx);
+                    });
+            }
 
-			size_t vidx = initial_vtx;
-			fastgltf::iterateAccessor<glm::vec3>(gltf, posAccessor,
-				[&](glm::vec3 v) { 
-                    Vertex newvtx;
-                    newvtx.position = v;
-                    newvtx.normal = {1,0,0};
-                    newvtx.color = glm::vec4{1.f};
-                    newvtx.uv_x = 0;
-                    newvtx.uv_y = 0;
-                    vertices.push_back(newvtx);
-             });
+            // load vertex positions
+            {
+                fastgltf::Accessor& posAccessor = gltf.accessors[p.findAttribute("POSITION")->second];
+                vertices.resize(vertices.size() + posAccessor.count);
 
-			auto normals = p.findAttribute("NORMAL");
-			if (normals != p.attributes.end()) {
-				vidx = initial_vtx;
-				fastgltf::iterateAccessor<glm::vec3>(gltf, gltf.accessors[(*normals).second],
-					[&](glm::vec3 v) { vertices[vidx++].normal = v; });
-			}
+                fastgltf::iterateAccessorWithIndex<glm::vec3>(gltf, posAccessor,
+                    [&](glm::vec3 v, size_t index) {
+                        Vertex newvtx;
+                        newvtx.position = v;
+                        newvtx.normal = { 1, 0, 0 };
+                        newvtx.color = glm::vec4 { 1.f };
+                        newvtx.uv_x = 0;
+                        newvtx.uv_y = 0;
+                        vertices[initial_vtx + index] = newvtx;
+                    });
+            }
 
-			auto uv = p.findAttribute("TEXCOORD_0");
-			if (uv != p.attributes.end()) {
-				vidx = initial_vtx;
-				fastgltf::iterateAccessor<glm::vec2>(gltf, gltf.accessors[(*uv).second], [&](glm::vec2 v) {
+            // load vertex normals
+            auto normals = p.findAttribute("NORMAL");
+            if (normals != p.attributes.end()) {
 
-					vertices[vidx].uv_x = v.x;
-					vertices[vidx].uv_y = v.y;
-					vidx++;
-				});
-			}
+                fastgltf::iterateAccessorWithIndex<glm::vec3>(gltf, gltf.accessors[(*normals).second],
+                    [&](glm::vec3 v, size_t index) {
+                        vertices[initial_vtx + index].normal = v;
+                    });
+            }
 
-			auto colors = p.findAttribute("COLOR_0");
-			if (colors != p.attributes.end()) {
-				vidx = initial_vtx;
-				fastgltf::iterateAccessor<glm::vec4>(gltf, gltf.accessors[(*colors).second],
-					[&](glm::vec4 v) { vertices[vidx++].color = v; });
-			}
-			newmesh.surfaces.push_back(newSurface);
-		}
+            // load UVs
+            auto uv = p.findAttribute("TEXCOORD_0");
+            if (uv != p.attributes.end()) {
 
-        //display the vertex normals
-        constexpr bool OverrideColors = false;
-        if(OverrideColors){
-			for (Vertex& vtx : vertices) {
-				vtx.color = glm::vec4(vtx.normal, 1.f);
-			}
+                fastgltf::iterateAccessorWithIndex<glm::vec2>(gltf, gltf.accessors[(*uv).second],
+                    [&](glm::vec2 v, size_t index) {
+                        vertices[initial_vtx + index].uv_x = v.x;
+                        vertices[initial_vtx + index].uv_y = v.y;
+                    });
+            }
+
+            // load vertex colors
+            auto colors = p.findAttribute("COLOR_0");
+            if (colors != p.attributes.end()) {
+
+                fastgltf::iterateAccessorWithIndex<glm::vec4>(gltf, gltf.accessors[(*colors).second],
+                    [&](glm::vec4 v, size_t index) {
+                        vertices[initial_vtx + index].color = v;
+                    });
+            }
+            newmesh.surfaces.push_back(newSurface);
         }
-		newmesh.meshBuffers = engine->uploadMesh(indices, vertices);
+
+        // display the vertex normals
+        constexpr bool OverrideColors = true;
+        if (OverrideColors) {
+            for (Vertex& vtx : vertices) {
+                vtx.color = glm::vec4(vtx.normal, 1.f);
+            }
+        }
+        newmesh.meshBuffers = engine->uploadMesh(indices, vertices);
 
         meshes.emplace_back(std::make_shared<MeshAsset>(std::move(newmesh)));
-	}
+    }
 
-	return meshes;
+    return meshes;
 
 ```
 
@@ -325,6 +338,8 @@ Now time to use it from the place where we build the mesh pipeline. `init_mesh_p
 ```
 
 We call the enable_depthtest function on the builder, and we give it depth write, and as operator GREATER_OR_EQUAL. As mentioned, because 0 is far and 1 is near, we will want to only render the pixels if the current depth value is greater than the depth value on the depth image.
+
+Modify that `set_depth_format` call on the `init_triangle_pipeline` function too. Even if depth testing is disabled for a draw, we still need to set the format correctly for the render pass to work.
 
 You can run the engine now, and the monkey head will be setup properly. The other draws with the triangle and rectangle render behind it because we have no depth testing set for them so they neither write or read from the depth attachment.
 
