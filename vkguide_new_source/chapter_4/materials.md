@@ -266,31 +266,7 @@ This is the kind of lighting you would see on very old games, simple function wi
 
 Lets go back to the `GLTFMetallic_Roughness` and fill the write_material function that will create the descriptor sets and set the parameters.
 
-```cpp
-MaterialInstance GLTFMetallic_Roughness::write_material(VkDevice device, MaterialPass pass, const MaterialResources& resources, DescriptorAllocatorGrowable& descriptorAllocator)
-{
-	MaterialInstance matData;
-	matData.passType = pass;
-	if (pass == MaterialPass::Transparent) {
-		matData.pipeline = &transparentPipeline;
-	}
-	else {
-		matData.pipeline = &opaquePipeline;
-	}
-
-	matData.materialSet = descriptorAllocator.allocate(device,materialLayout);
-    
-   
-    writer.clear();
-    writer.write_buffer(0,resources.dataBuffer,sizeof(MaterialConstants),resources.dataBufferOffset,VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
-    writer.write_image(1, resources.colorImage.imageView, resources.colorSampler,VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
-    writer.write_image(2, resources.metalRoughImage.imageView, resources.metalRoughSampler,VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
-
-    writer.update_set(device,matData.materialSet);
-
-    return matData;
-}
-```
+^code write_mat chapter-4/vk_engine.cpp
 
 Depending on what the material pass is, we will select either the opaque or the transparent pipeline for it, then we allocate the descriptor set, and we write it using the images and buffer from MaterialResources.
 
@@ -316,32 +292,7 @@ void VulkanEngine::init_pipelines()
 
 Now, at the end of init_default_data(), we create the default MaterialInstance struct using the basic textures we just made. Like we did with the temporal buffer for scene data, we are going to allocate the buffer and then put it into a deletion queue, but its going to be the global deletion queue. We wont need to access the default material constant buffer at any point after creating it
 
-```cpp
-GLTFMetallic_Roughness::MaterialResources materialResources;
-//default the material textures
-materialResources.colorImage = _whiteImage;
-materialResources.colorSampler = _defaultSamplerLinear;
-materialResources.metalRoughImage = _whiteImage;
-materialResources.metalRoughSampler = _defaultSamplerLinear;
-
-//set the uniform buffer for the material data
-AllocatedBuffer materialConstants = create_buffer(sizeof(GLTFMetallic_Roughness::MaterialConstants), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
-
-//write the buffer
-GLTFMetallic_Roughness::MaterialConstants* sceneUniformData = (GLTFMetallic_Roughness::MaterialConstants*)materialConstants.allocation->GetMappedData();
-sceneUniformData->colorFactors = glm::vec4{1,1,1,1};
-sceneUniformData->metal_rough_factors = glm::vec4{1,0.5,0,0};
-
-_mainDeletionQueue.push_function([=, this]() {
-	destroy_buffer(materialConstants);
-});
-
-materialResources.dataBuffer = materialConstants.buffer;
-materialResources.dataBufferOffset = 0;
-
-//create the material instance
-defaultData = metalRoughMaterial.write_material(_device,MaterialPass::MainColor,materialResources, globalDescriptorAllocator);
-```
+^code default_mat chapter-4/vk_engine.cpp
 
 We are going to fill the parameters of the material on MaterialResources with the default white image. Then we create a buffer to hold the material color, and add it for deletion. Then we call write_material to create the descriptor set and initialize that defaultData material properly.
  

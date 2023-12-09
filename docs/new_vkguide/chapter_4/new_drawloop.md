@@ -89,26 +89,27 @@ The RenderObject is the core of our rendering. The engine itself will not call a
 
 With those defined, the Draw() function of the meshnode looks like this
 
+<!-- codegen from tag meshdraw on file E:\ProgrammingProjects\vulkan-guide-2\chapter-4/vk_engine.cpp --> 
 ```cpp
 void MeshNode::Draw(const glm::mat4& topMatrix, DrawContext& ctx)
 {
-    glm::mat4 nodeMatrix = topMatrix * worldTransform;
+	glm::mat4 nodeMatrix = topMatrix * worldTransform;
 
-    for (auto& s : mesh->surfaces) {
-        RenderObject def;
-        def.indexCount = s.count;
-        def.firstIndex = s.startIndex;
-        def.indexBuffer = mesh->meshBuffers.indexBuffer.buffer;
-        def.material = &s.material->data;
+	for (auto& s : mesh->surfaces) {
+		RenderObject def;
+		def.indexCount = s.count;
+		def.firstIndex = s.startIndex;
+		def.indexBuffer = mesh->meshBuffers.indexBuffer.buffer;
+		def.material = &s.material->data;
 
 		def.transform = nodeMatrix;
 		def.vertexBufferAddress = mesh->meshBuffers.vertexBufferAddress;
-       
-        ctx.OpaqueSurfaces.push_back(def);
-    }
+		
+		ctx.OpaqueSurfaces.push_back(def);
+	}
 
-    // recurse down
-    Node::Draw(topMatrix, ctx);
+	// recurse down
+	Node::Draw(topMatrix, ctx);
 }
 ```
 
@@ -124,7 +125,7 @@ To hold the draw list, we add the DrawContext structure into the VulkanEngine cl
 ```cpp
 class VulkanEngine{
     DrawContext mainDrawContext;
-    std::unordered_map<std::string, shared_ptr<Node*>> loadedNodes;
+    std::unordered_map<std::string, std::shared_ptr<Node>> loadedNodes;
 
     void update_scene();
 }
@@ -150,15 +151,33 @@ We will add the code to the renderer on draw_geometry, right after creating the 
 	}
 ```
 
-When the RenderObject was designed, it was meant to directly convert into a single draw command on vulkan. So there is no logic other than directly binding the stuff and calling VkCmdDraw. We are binding the data every draw which is inneficient but we will fix that later. 
+When the RenderObject was designed, it was meant to directly convert into a single draw command on vulkan. So there is no logic other than directly binding the stuff and calling VkCmdDraw. We are binding the data every draw which is inefficient but we will fix that later. 
 
 Last thing is going to be using the mesh load we loaded last chapter to create some Nodes, and then drawing them so they add the meshes into the draw context. The loadGltfMeshes is not loading material properly, but we can give it the default material. 
 
-```cpp
-	for (auto& m : testMeshes) {
+Lets first update the GeoSurface structure in vk_loader.h so that it can hold a material.
 
+```cpp
+struct GLTFMaterial {
+	MaterialInstance data;
+};
+
+struct GeoSurface {
+	uint32_t startIndex;
+	uint32_t count;
+	std::shared_ptr<GLTFMaterial> material;
+};
+```
+
+Next, on vk_engine.cpp `init_default_data`, right after we load the meshes from the GLTF.
+
+<!-- codegen from tag default_meshes on file E:\ProgrammingProjects\vulkan-guide-2\chapter-4/vk_engine.cpp --> 
+```cpp
+	testMeshes = loadGltfMeshes(this,"..\\..\\assets\\basicmesh.glb").value();
+
+	for (auto& m : testMeshes) {
 		std::shared_ptr<MeshNode> newNode = std::make_shared<MeshNode>();
-		newNode->mesh = std::make_shared<MeshAsset>(m);
+		newNode->mesh = m;
 
 		newNode->localTransform = glm::mat4{ 1.f };
 		newNode->worldTransform = glm::mat4{ 1.f };
@@ -167,7 +186,7 @@ Last thing is going to be using the mesh load we loaded last chapter to create s
 			s.material = std::make_shared<GLTFMaterial>(defaultData);
 		}
 
-		loadedNodes[m.name] = std::move(newNode);
+		loadedNodes[m->name] = std::move(newNode);
 	}
 ```
 
@@ -182,7 +201,7 @@ void VulkanEngine::update_scene()
 {
 	mainDrawContext.OpaqueSurfaces.clear();
 
-	for (auto&& m : loadedNodes) {
+	for (auto& m : loadedNodes) {
 		m.second->Draw(glm::mat4{1.f}, mainDrawContext);
 	}
 

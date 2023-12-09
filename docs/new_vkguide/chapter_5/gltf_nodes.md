@@ -376,7 +376,7 @@ With the nodes loaded, we need to setup their parenting relationships to build t
         fastgltf::Node& node = gltf.nodes[i];
         std::shared_ptr<Node>& sceneNode = nodes[i];
 
-        for (auto c : node.children) {
+        for (auto& c : node.children) {
             sceneNode->children.push_back(nodes[c]);
             nodes[c]->parent = sceneNode;
         }
