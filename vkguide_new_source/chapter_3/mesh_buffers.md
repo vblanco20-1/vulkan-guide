@@ -37,7 +37,7 @@ We will be using this for our vertices because accessing a SSBO through device a
 ## Creating buffers
 Lets begin writing the code needed to upload a mesh to gpu. First we need a way to create buffers.
 
-
+Add this to vk_types.h
 ```cpp
 struct AllocatedBuffer {
     VkBuffer buffer;
@@ -97,11 +97,18 @@ We will create a struct for the push-constants we want to draw the mesh, it will
 Now we need a function to create those buffers and fill them on the gpu.
 
 ^code mesh_create_1 chapter-3/vk_engine.cpp
+Add it to VulkanEngine class declaration too.
 
 The function will take a std::span of integers for its indices, and of Vertex for vertices. A span is a pointer + size pair. You can convert from C style arrays or std::vector into it, so its great to use here to avoid data copies.
 
-First we do is to calculate how big the buffers need to be. Then, we create our buffers on GPU-only memory. On the vertex buffer we use these Usage flags: 
- `VK_BUFFER_USAGE_STORAGE_BUFFER_BIT` because its a SSBO, `VK_BUFFER_USAGE_TRANSFER_DST_BIT` because we will do buffer transfer to it, and `VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT` because will be taking its adress. On the index buffer we use `VK_BUFFER_USAGE_INDEX_BUFFER_BIT` to signal that we are going to be using that buffer for indexed draws.
+First we do is to calculate how big the buffers need to be. Then, we create our buffers on GPU-only memory.
+
+ On the vertex buffer we use these Usage flags: 
+ `VK_BUFFER_USAGE_STORAGE_BUFFER_BIT` because its a SSBO, and `VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT` because will be taking its adress. 
+ 
+ On the index buffer we use `VK_BUFFER_USAGE_INDEX_BUFFER_BIT` to signal that we are going to be using that buffer for indexed draws.
+
+ We also have `VK_BUFFER_USAGE_TRANSFER_DST_BIT` on both buffers as we will be doing memory copy commands to them.
 
  To take the buffer address, we need to call `vkGetBufferDeviceAddress`, giving it the VkBuffer we want to do that on. Once we have the VkDeviceAddress, we can do pointer math with it if we want, which is useful if we are sub-allocating from a bigger buffer.
 
@@ -150,9 +157,7 @@ void init_mesh_pipeline();
 
 Its going to be mostly a copypaste of `init_triangle_pipeline()`
 
-
 ^code rectangle_shaders chapter-3/vk_engine.cpp
-
 
 We change the vertex shader to load `colored_triangle_mesh.vert.spv`, and we modify the pipeline layout to give it the push constants struct we defined above.
 

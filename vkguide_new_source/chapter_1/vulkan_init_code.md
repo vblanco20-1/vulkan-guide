@@ -113,7 +113,11 @@ To select a GPU to use, we are going to use `vkb::PhysicalDeviceSelector`.
 
 First of all, we need to create a `VkSurfaceKHR` object from the SDL window. This is the actual window we will be rendering to, so we need to tell the physical device selector to grab a GPU that can render to said window.
 
-We need to enable some features. For now, those are dynamic rendering, and syncronization 2. Those are optional features provided in vulkan 1.3 that change a few things. dynamic rendering allows us to completely skip renderpasses/framebuffers (if you want to learn about them, they are explained in the old version of vkguide), and also use a new upgraded version of the syncronization functions. By giving the `vkb::PhysicalDeviceSelector` the `VkPhysicalDeviceVulkan13Features` structure , we can tell vkbootstrap to find a gpu that has those features. 
+We need to enable some features. First some vulkan 1.3 features, those are dynamic rendering, and syncronization 2. Those are optional features provided in vulkan 1.3 that change a few things. dynamic rendering allows us to completely skip renderpasses/framebuffers (if you want to learn about them, they are explained in the old version of vkguide), and also use a new upgraded version of the syncronization functions. 
+We are also going to use the vulkan 1.2 features `bufferDeviceAddress` and `descriptorIndexing`. Buffer device adress will let us use GPU pointers without binding buffers, and descriptorIndexing gives us bindless textures.
+
+By giving the `vkb::PhysicalDeviceSelector` the `VkPhysicalDeviceVulkan13Features` structure , we can tell vkbootstrap to find a gpu that has those features. 
+
 
 There are multiple levels of feature structs you can use depending on your vulkan version, you can find their info here: 
 

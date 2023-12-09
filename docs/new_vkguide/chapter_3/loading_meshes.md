@@ -13,9 +13,13 @@ A GLTF file will contain a list of meshes, each mesh with multiple primitives on
 
 Our loading code will all be on the files vk_loader.cpp/h . 
 
-Lets start by adding a couple classes for the loaded meshes
+Lets start by adding a couple classes for the loaded meshes and the includes we will need.
 
 ```cpp
+#include <vk_types.h>
+#include <unordered_map>
+#include <filesystem>
+
 struct GeoSurface {
     uint32_t startIndex;
     uint32_t count;
@@ -31,9 +35,27 @@ struct MeshAsset {
 
 A given mesh asset will have a name, loaded from the file, and then the mesh buffers. But it will also have an array of GeoSurface that has the sub-meshes of this specific mesh. When rendering each submesh will be its own draw.  We will use StartIndex and count for that drawcall as we will be appending all the vertex data of each surface into the same buffer.
 
+Add these includes to vk_loader.cpp. We will need them eventually
+
+```cpp
+#include "stb_image.h"
+#include <iostream>
+#include <vk_loader.h>
+
+#include "vk_engine.h"
+#include "vk_initializers.h"
+#include "vk_types.h"
+#include <glm/gtx/quaternion.hpp>
+
+#include <fastgltf/glm_element_traits.hpp>
+#include <fastgltf/parser.hpp>
+#include <fastgltf/tools.hpp>
+```
+
+
 Our load function will be this
 ```cpp
-std::optional<std::vector<std::shared_ptr<MeshAsset>>> loadGltfMeshes(VulkanEngine* engine, std::string_view filePath);
+std::optional<std::vector<std::shared_ptr<MeshAsset>>> loadGltfMeshes(VulkanEngine* engine, std::filesystem::path filePath);
 ```
 
 This is the first time see see std::optional being used. This is standard class that wraps a type (the vector of mesh assets here) and allows for it to be errored/null. As file loading can fail for many reasons, it returning null is a good idea. We will be using fastGltf library, which uses all of those new stl features for its loading.

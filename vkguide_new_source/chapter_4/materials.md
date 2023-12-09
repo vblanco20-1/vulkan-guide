@@ -8,6 +8,7 @@ nav_order: 10
 
 Lets begin with setting up the structures we need to build MaterialData and the GLTF shaders we use.
 
+Add this ones to vk_types.h
 ```cpp
 enum class MaterialPass :uint8_t {
     MainColor,
