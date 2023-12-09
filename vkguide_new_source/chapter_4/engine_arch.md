@@ -18,20 +18,20 @@ struct RenderObject {
     uint32_t firstIndex;
     VkBuffer indexBuffer;
     
-    MaterialData* material;
+    MaterialInstance* material;
 
     glm::mat4 transform;
     VkDeviceAddress vertexBufferAddress;
 };
 ```
 
-This structure is a completely flattened abstraction of the parameters we need for a single VkCmdDrawIndexed call. We have the structures needed for the indexing of the mesh, then a MaterialData pointer, which will point to the Pipeline and DescriptorSet for a given material. After that, we have the matrix of the object for 3d rendering, and its vertex buffer pointer. Those 2 will go into push-constants as they are per-object dynamic data.
+This structure is a completely flattened abstraction of the parameters we need for a single VkCmdDrawIndexed call. We have the structures needed for the indexing of the mesh, then a MaterialInstance pointer, which will point to the Pipeline and DescriptorSet for a given material. After that, we have the matrix of the object for 3d rendering, and its vertex buffer pointer. Those 2 will go into push-constants as they are per-object dynamic data.
 
 This structure will be written dynamically every frame, and the renderer logic will go through an array of these RenderObject structures and directly record the draw commands.
 
-The MaterialData struct looks like this.
+The MaterialInstance struct looks like this.
 ```cpp
-struct MaterialData {
+struct MaterialInstance {
     VkPipeline pipeline;
     VkPipelineLayout layout;
     VkDescriptorSet materialSet;
@@ -40,7 +40,7 @@ struct MaterialData {
 };
 ```
 
-For the material system, we are going to hardcode into 2 pipelines, GLTF PBR Opaque, and GLTF PBR Transparent. They all use the same pair of vertex and fragment shader. We will be using 2 descriptor sets only. Slot 0 will be our "global" descriptor set, which gets bound once, and then used for all draws, and will contain the global data such as camera and environment information. Later we will also add things like lights into it.  The slot 1 will be a per-material descriptor set, and it will bind textures and material parameters. We will directly mirror gltf, and have the textures the PBR GLTF material demands, plus a uniform buffer with the color constants such as object color. the GLTF PBR material allows textures to not be set, but in those cases we will be binding the default white or default black texture, depending on what we need there. The MaterialData struct also has a MaterialPass enum which lets us separate between a opaque render object and a transparent one.
+For the material system, we are going to hardcode into 2 pipelines, GLTF PBR Opaque, and GLTF PBR Transparent. They all use the same pair of vertex and fragment shader. We will be using 2 descriptor sets only. Slot 0 will be our "global" descriptor set, which gets bound once, and then used for all draws, and will contain the global data such as camera and environment information. Later we will also add things like lights into it.  The slot 1 will be a per-material descriptor set, and it will bind textures and material parameters. We will directly mirror gltf, and have the textures the PBR GLTF material demands, plus a uniform buffer with the color constants such as object color. the GLTF PBR material allows textures to not be set, but in those cases we will be binding the default white or default black texture, depending on what we need there. The MaterialInstance struct also has a MaterialPass enum which lets us separate between a opaque render object and a transparent one.
 
 The reason why we have exclusively 2 pipelines is because we want to keep pipeline amount to the absolute minimum. If we have less pipelines, we can preload them at startup, and it makes the renderer much faster, specially once we start doing bindless and draw-indirect logic. Our goal is that we will have a small amount of pipelines for each material type we have, such as GLTF PBR material. The number of pipelines a engine needs to use directly affects performance. A engine like the Doom Eternal one has ~200 total pipelines for the game, while unreal engine projects often end up at 100.000+ pipelines, and compiling that many pipelines causes lots of stutters, uses lots of space, and prevents advanced render functionality like draw-indirect.
 

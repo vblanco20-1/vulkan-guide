@@ -9,6 +9,7 @@ We will begin by setting up the new draw loop using the RenderObjects explained 
 
 We will begin creating the architecture by defining the scene-node classes as explained in the article before.
 
+All this on vk_types.h
 ```cpp
 struct DrawContext; //forward declaration
 // base class for a renderable dynamic object
@@ -53,7 +54,7 @@ The Node class will hold the object matrix for the transforms. Both local and wo
 
 The draw function will do nothing, only call Draw() on children. 
 
-This base node class does nothing, so we need to add a MeshNode class that displays a mesh.
+This base node class does nothing, so we need to add a MeshNode class to vk_engine.h that displays a mesh.
 
 ```cpp
 struct MeshNode : public Node {
@@ -66,7 +67,7 @@ struct MeshNode : public Node {
 
 The MeshNode holds a pointer to a mesh asset, and overrides the draw function to add commands into the draw context.
 
-Lets write the DrawContext too. 
+Lets write the DrawContext too. All on vk_engine.h 
 ```cpp
 struct RenderObject {
     uint32_t indexCount;

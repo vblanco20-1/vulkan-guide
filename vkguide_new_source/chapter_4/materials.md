@@ -6,9 +6,9 @@ nav_order: 10
 ---
 
 
-Lets begin with setting up the structures we need to build MaterialData and the GLTF shaders we use.
+Lets begin with setting up the structures we need to build MaterialInstance and the GLTF shaders we use.
 
-Add this ones to vk_types.h
+Add these structures to vk_types.h
 ```cpp
 enum class MaterialPass :uint8_t {
     MainColor,
@@ -19,17 +19,18 @@ struct MaterialPipeline {
 	VkPipeline pipeline;
 	VkPipelineLayout layout;
 };
-struct MaterialData {
+struct MaterialInstance {
     MaterialPipeline* pipeline;
     VkDescriptorSet materialSet;
     MaterialPass passType;
 };
 ```
 
-This is the structs we need for the material data. MaterialData will hold a raw pointer (non owning) into its MaterialPipeline which contains the real pipeline. It holds a descriptor set too.
+This is the structs we need for the material data. MaterialInstance will hold a raw pointer (non owning) into its MaterialPipeline which contains the real pipeline. It holds a descriptor set too.
 
 For creating those objects, we are going to wrap the logic into a struct, as VulkanEngine is getting too big, and we will want to have multiple materials later.
 
+Add this into vk_engine.h
 ```cpp
 struct GLTFMetallic_Roughness {
     MaterialPipeline opaquePipeline;
@@ -58,7 +59,7 @@ struct GLTFMetallic_Roughness {
     void build_pipelines(VulkanEngine* engine);
     void clear_resources(VkDevice device);
 
-    MaterialData write_material(VkDevice device,MaterialPass pass,const MaterialResources& resources , DescriptorAllocatorGrowable& descriptorAllocator);
+    MaterialInstance write_material(VkDevice device,MaterialPass pass,const MaterialResources& resources , DescriptorAllocatorGrowable& descriptorAllocator);
 };
 ```
 
@@ -70,7 +71,7 @@ We have also a bunch of vec4s for padding. In vulkan, when you want to bind a un
 
 When we create the descriptor set, there are some textures we want to bind, and the uniform buffer with the color factors and other properties. We will hold those in the MaterialResources struct, so that its easy to send them to the write_material function.
  
-The `build_pipelines` function will compile the pipelines. `clear_resources` will delete everything, and write_material is where we will create the descriptor set and return a fully built MaterialData struct we can then use when rendering.
+The `build_pipelines` function will compile the pipelines. `clear_resources` will delete everything, and write_material is where we will create the descriptor set and return a fully built MaterialInstance struct we can then use when rendering.
 
 Lets look at the implementation of those functions.
 
@@ -266,9 +267,9 @@ This is the kind of lighting you would see on very old games, simple function wi
 Lets go back to the `GLTFMetallic_Roughness` and fill the write_material function that will create the descriptor sets and set the parameters.
 
 ```cpp
-MaterialData GLTFMetallic_Roughness::write_material(VkDevice device, MaterialPass pass, const MaterialResources& resources, DescriptorAllocatorGrowable& descriptorAllocator)
+MaterialInstance GLTFMetallic_Roughness::write_material(VkDevice device, MaterialPass pass, const MaterialResources& resources, DescriptorAllocatorGrowable& descriptorAllocator)
 {
-	MaterialData matData;
+	MaterialInstance matData;
 	matData.passType = pass;
 	if (pass == MaterialPass::Transparent) {
 		matData.pipeline = &transparentPipeline;
@@ -295,23 +296,25 @@ Depending on what the material pass is, we will select either the opaque or the 
 
 Lets create a default material we can use for testing as part of the load sequence of the engine.
 
-Lets first add the material structure to VulkanEngine, and a MaterialData struct to use for default. 
+Lets first add the material structure to VulkanEngine, and a MaterialInstance struct to use for default. 
 
 ```cpp
-MaterialData defaultData;
+MaterialInstance defaultData;
 GLTFMetallic_Roughness metalRoughMaterial;
 ```
 
-From init-pipelines we call the build_pipelines function on the material structure to compile it.
+At the end of init-pipelines we call the build_pipelines function on the material structure to compile it.
 
 ```cpp
 void VulkanEngine::init_pipelines()
 {
+	//rest of initializing functions
+
     metalRoughMaterial.build_pipelines(this);
 }
 ```
 
-Now, at the end of init_default_data(), we create the default MaterialData struct using the basic textures we just made. Like we did with the temporal buffer for scene data, we are going to allocate the buffer and then put it into a deletion queue, but its going to be the global deletion queue. We wont need to access the default material constant buffer at any point after creating it
+Now, at the end of init_default_data(), we create the default MaterialInstance struct using the basic textures we just made. Like we did with the temporal buffer for scene data, we are going to allocate the buffer and then put it into a deletion queue, but its going to be the global deletion queue. We wont need to access the default material constant buffer at any point after creating it
 
 ```cpp
 GLTFMetallic_Roughness::MaterialResources materialResources;
