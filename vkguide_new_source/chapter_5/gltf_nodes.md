@@ -11,7 +11,7 @@ The old function for GLTF loading is going to be removed, and we will replace it
 
 The first thing we are going to need is to create the LoadedGLTF class. This will contain ALL resources needed for handling a single GLTF file worth of data. We werent doing resource management properly before for simpicity purposes, but with this class, it will release the mesh buffers and textures when it gets destroyed. By doing that, we move from having to deal with resources on an individual basis (like keeping track of individual meshes/textures to unload) into a much simpler scheme where we have them grouped. The goal with this is that a user would load one GLTF as a level, and that gltf contains all of the textures, meshes, objects needed for that entire level. The user would then also load another GLTF with characters or objects, and keep it loaded for the game. Just because we load an scene into 1 class doesnt mean its not possible to call the Draw() function on indivual nodes within that LoadedGLTF.
 
-It looks like this
+It looks like this, Add it to vk_loader.h
 
 ```cpp
 struct LoadedGLTF : public IRenderable {
@@ -57,7 +57,7 @@ The materialDataBuffer will contain the material data as seen in the GLTFMetalli
 
 The rest is some destruction function, the Draw() function, and storing the VulkanEngine in the file so that clearAll can release resources properly. We could be using a singleton instead to avoid storing this pointer if we wanted.
 
-Lets begin writing the loader. We will make it from scratch, and will leave all the materials as default for now.
+Lets begin writing the new loader code in vk_loader.cpp . We will make it from scratch, and will leave all the materials as default for now. 
 
 ```cpp
 std::optional<std::shared_ptr<LoadedGLTF>> loadGltf(VulkanEngine* engine,std::string_view filePath)

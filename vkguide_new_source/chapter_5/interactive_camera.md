@@ -74,7 +74,7 @@ When calculating the position update, we are using the rotation matrix, this is 
 
 On the input logic, SDL gives us input events, for key up/down, and mouse movement. We will set the velocity to the correct values from key down event, and key up sets it to 0. This is not handling the input fully correctly, as if you press W and S at the same time, and then release one of them, the movement stops, which makes it feel a bit awkward. Improving it is an excersise to the reader.
 
-For mouse motion, we acumulate horizontal and vertical movement of the mouse into the pitch and yaw properties. 
+For mouse motion, we accumulate horizontal and vertical movement of the mouse into the pitch and yaw properties. 
 
 Movement in this code is frame-dependant, as we arent taking the speed of the engine into account. This is done for simplicity in the case, if you want to improve it, you would need to pass deltaTime (time between frames) to the update() function, and multiply the velocity by that. In the tutorial, we are more or less FPS locked to monitor speed due to the options we have used in the swapchain, and we arent rendering enough data to slow down the engine. 
 
