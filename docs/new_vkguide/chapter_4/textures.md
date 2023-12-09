@@ -261,11 +261,34 @@ A descriptor set with just a single image-sampler descriptor. We can now update 
 ```cpp
 void VulkanEngine::init_mesh_pipeline()
 {
-	//wait until the gpu has finished rendering the last frame. Timeout of 1 second
-	VK_CHECK(vkWaitForFences(_device, 1, &get_current_frame()._renderFence, true, 1000000000));
+	VkShaderModule triangleFragShader;
+	if (!vkutil::load_shader_module("../../shaders/tex_image.frag.spv", _device, &triangleFragShader)) {
+		std::cout << "Error when building the mesh fragment shader module" << std::endl;
+	}
+	else {
+		std::cout << "Triangle fragment shader succesfully loaded" << std::endl;
+	}
 
-	get_current_frame()._deletionQueue.flush();
-	get_current_frame()._frameDescriptors.clear_pools(_device);
+	VkShaderModule triangleVertexShader;
+	if (!vkutil::load_shader_module("../../shaders/colored_triangle_mesh.vert.spv", _device, &triangleVertexShader)) {
+		std::cout << "Error when building the mesh vertex shader module" << std::endl;
+	}
+	else {
+		std::cout << "Triangle vertex shader succesfully loaded" << std::endl;
+	}
+
+	VkPushConstantRange bufferRange{};
+	bufferRange.offset = 0;
+	bufferRange.size = sizeof(VkDeviceAddress);
+	bufferRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+	VkPipelineLayoutCreateInfo pipeline_layout_info = vkinit::pipeline_layout_create_info();
+	pipeline_layout_info.pPushConstantRanges = &bufferRange;
+	pipeline_layout_info.pushConstantRangeCount = 1;
+	pipeline_layout_info.pSetLayouts = &_singleImageDescriptorLayout;
+	pipeline_layout_info.setLayoutCount = 1;
+	VK_CHECK(vkCreatePipelineLayout(_device, &pipeline_layout_info, nullptr, &_meshPipelineLayout));
+
 }
 ```
 

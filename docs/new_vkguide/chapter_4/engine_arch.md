@@ -46,9 +46,9 @@ The reason why we have exclusively 2 pipelines is because we want to keep pipeli
 
 Those RenderObject are very low level, so we need a way to write them. We will use a scene-graph for this. This way we can have a hierarchy where some meshes are children of other meshes, and we have empty non-mesh scenenodes too. This is typical on engines to be able to build levels. 
 
-The type of scene-graph we will have is a medium/low performance design (we will improve tis later), but with the bonus of being very dynamic and easy to extend. Its also still fast enough to render tens of thousands of objects. 
+The type of scene-graph we will have is a medium/low performance design (we will improve this later), but with the bonus of being very dynamic and easy to extend. Its also still fast enough to render tens of thousands of objects. 
 
-```
+```cpp
 // base class for a renderable dynamic object
 class IRenderable {
 

@@ -131,7 +131,7 @@ A descriptor set with just a single image-sampler descriptor. We can now update 
 ```cpp
 void VulkanEngine::init_mesh_pipeline()
 {
-^code frame_clear chapter-4/vk_engine.cpp
+^code mesh_shader chapter-4/vk_engine.cpp
 }
 ```
 
