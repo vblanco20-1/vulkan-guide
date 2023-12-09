@@ -99,9 +99,11 @@ Now we have the monkey head and its visible, but its also upside down. Lets fix 
 
 In GLTF, the axis are meant to be for opengl, which has the Y up. Vulkan has Y down, so its flipped. We have 2 possibilities here. One would be to use negative viewport height, which is supported and will flip the entire rendering, this would make it closer to directx. On the other side, we can apply a flip that changes the objects as part of our projection matrix. We will be doing that.
 
-From the render code, lets give it a better matrix for rendering.
+From the render code, lets give it a better matrix for rendering. 
 
 ^code matview chapter-3/vk_engine.cpp
+
+Add the `#include <glm/gtx/transform.hpp>` to the top of vk_engine.cpp so we have access to those transform functions.
 
 First we calculate the view matrix, which is from the camera. a translation matrix that moves backwards will be fine for now. 
 
@@ -141,7 +143,7 @@ vkutil::transition_image(cmd, _drawImage.image, VK_IMAGE_LAYOUT_GENERAL, VK_IMAG
 vkutil::transition_image(cmd, _depthImage.image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
 ```
 
-Now we need to change the render pass begin info to use this depth attachment and clear it correctly.
+Now we need to change the render pass begin info to use this depth attachment and clear it correctly. Change this at the top of `draw_geometry()`
 
 ```cpp
 	VkRenderingAttachmentInfo colorAttachment = vkinit::attachment_info(_drawImage.imageView, nullptr, VK_IMAGE_LAYOUT_GENERAL);
@@ -157,7 +159,7 @@ We already left space for the depth attachment on the vkinit structure for rende
 Its similar to what we had for color attachment, but we make the loadOP to be clear, and set the depth value on the clear structure to 0.f. As explained above, we are going to use depth 0 as the "far" value, and depth 1 as the near value. 
 
 The last thing is to enable depth testing as part of the pipeline.
-We made the depth option when the pipelinebuilder was made, buit left it dsiabled. Lets fill that now. Add this function to PipelineBuilder
+We made the depth option when the pipelinebuilder was made, buit left it disabled. Lets fill that now. Add this function to PipelineBuilder
 
 ^code depth_enable shared/vk_pipelines.cpp
 

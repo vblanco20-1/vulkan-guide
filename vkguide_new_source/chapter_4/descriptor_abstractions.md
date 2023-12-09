@@ -51,7 +51,7 @@ When we needed to create a descriptor set for our compute shader, we did the vul
 
 ^code writer shared/vk_descriptors.h 
 
-We are doing some memory tricks with the use of std::deque here. std::deque is guaranteed to keep pointers to elements valid, so we can take advante of that mechanic when we add new `VkWriteDescriptorSet` into the writes array. 
+We are doing some memory tricks with the use of std::deque here. std::deque is guaranteed to keep pointers to elements valid, so we can take advantage of that mechanic when we add new `VkWriteDescriptorSet` into the writes array. 
 
 Lets look at the definition of `VkWriteDescriptorSet`
 ```cpp
@@ -145,7 +145,7 @@ This abstraction will prove much more useful when we have more complex descripto
 
 Lets start using the abstraction by using it to create a global scene data descriptor every frame. This is the descriptor set that all of our draws will use. It will contain the camera matrices so that we can do 3d rendering.
 
-Add a new structure that we will use for the uniform buffer of scene data. We will hold view materia and projection matrix separated, and then premultiplied view-projection matrix. We also add some vec4s for a very basic lighting model that we will be building next.
+Add a new structure that we will use for the uniform buffer of scene data. We will hold view and projection matrix separated, and then premultiplied view-projection matrix. We also add some vec4s for a very basic lighting model that we will be building next.
 
 ```cpp
 struct GPUSceneData {
