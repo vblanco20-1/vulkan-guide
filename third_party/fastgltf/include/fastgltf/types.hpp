@@ -31,7 +31,6 @@
 #include <cstring>
 #include <cstdint>
 #include <filesystem>
-#include <memory_resource>
 #include <optional>
 #include <utility>
 #include <variant>
@@ -39,6 +38,43 @@
 
 // Utils header already includes some headers, which we'll try and avoid including twice.
 #include "util.hpp"
+
+#if defined(_GLIBCXX_USE_CXX11_ABI) && !_GLIBCXX_USE_CXX11_ABI
+// polymorphic allocators are only supported with the 'new' GCC ABI.
+// Older compilers (older than GCC 5.1) default to the old ABI and sometimes the old ABI is
+// explicitly selected on even the newest compilers, which we want to support.
+#define FASTGLTF_DISABLE_CUSTOM_MEMORY_POOL 1
+#endif
+
+#ifndef FASTGLTF_DISABLE_CUSTOM_MEMORY_POOL
+#define FASTGLTF_DISABLE_CUSTOM_MEMORY_POOL 0
+#endif
+
+#if __has_include(<memory_resource>)
+#define FASTGLTF_MISSING_MEMORY_RESOURCE 0
+#else
+#define FASTGLTF_MISSING_MEMORY_RESOURCE 1
+#if defined(FASTGLTF_DISABLE_CUSTOM_MEMORY_POOL)
+#undef FASTGLTF_DISABLE_CUSTOM_MEMORY_POOL
+#endif
+#define FASTGLTF_DISABLE_CUSTOM_MEMORY_POOL 1
+#endif
+
+#if !FASTGLTF_DISABLE_CUSTOM_MEMORY_POOL
+#include <memory_resource>
+#endif
+
+#if FASTGLTF_DISABLE_CUSTOM_MEMORY_POOL
+#define FASTGLTF_STD_PMR_NS ::std
+#define FASTGLTF_FG_PMR_NS ::fastgltf
+
+#define FASTGLTF_CONSTRUCT_PMR_RESOURCE(type, memoryResource, ...) type(__VA_ARGS__)
+#else
+#define FASTGLTF_STD_PMR_NS ::std::pmr
+#define FASTGLTF_FG_PMR_NS ::fastgltf::pmr
+
+#define FASTGLTF_CONSTRUCT_PMR_RESOURCE(type, memoryResource, ...) type(__VA_ARGS__, memoryResource)
+#endif
 
 #if FASTGLTF_CPP_20
 #include <span>
@@ -54,9 +90,15 @@
 #define FASTGLTF_QUOTE(x) FASTGLTF_QUOTE_Q(x)
 
 // fastgltf version string. Use FASTGLTF_QUOTE to stringify.
-#define FASTGLTF_VERSION 0.5.0
+#define FASTGLTF_VERSION 0.6.1
 
 namespace fastgltf {
+#if defined(FASTGLTF_USE_64BIT_FLOAT) && FASTGLTF_USE_64BIT_FLOAT
+	using num = double;
+#else
+	using num = float;
+#endif
+
 #pragma region Enums
     // clang-format off
     enum class PrimitiveType : std::uint8_t {
@@ -688,10 +730,12 @@ namespace fastgltf {
         }
     };
 
+#if !FASTGLTF_MISSING_MEMORY_RESOURCE
 	namespace pmr {
 		template<typename T, std::size_t N>
 		using SmallVector = SmallVector<T, N, std::pmr::polymorphic_allocator<T>>;
 	} // namespace pmr
+#endif
 
 #ifndef FASTGLTF_USE_CUSTOM_SMALLVECTOR
 #define FASTGLTF_USE_CUSTOM_SMALLVECTOR 0
@@ -705,6 +749,7 @@ namespace fastgltf {
 	using MaybeSmallVector = std::vector<T>;
 #endif
 
+#if !FASTGLTF_MISSING_MEMORY_RESOURCE
 	namespace pmr {
 #if FASTGLTF_USE_CUSTOM_SMALLVECTOR
 		template <typename T, std::size_t N = initialSmallVectorStorage>
@@ -714,6 +759,7 @@ namespace fastgltf {
 		using MaybeSmallVector = std::pmr::vector<T>;
 #endif
 	} // namespace pmr
+#endif
 
 	template<typename, typename = void>
 	struct OptionalFlagValue {
@@ -1066,7 +1112,7 @@ namespace fastgltf {
 	 * also decodes any percent-encoded characters.
 	 */
 	class URI {
-		std::pmr::string uri;
+		std::string uri;
 		URIView view;
 
 		void readjustViews(const URIView& other);
@@ -1075,7 +1121,6 @@ namespace fastgltf {
 		explicit URI() noexcept;
 
 		explicit URI(std::string uri) noexcept;
-		explicit URI(std::pmr::string uri) noexcept;
 		explicit URI(std::string_view uri) noexcept;
 		explicit URI(URIView view) noexcept;
 
@@ -1088,7 +1133,7 @@ namespace fastgltf {
 
 		operator URIView() const noexcept;
 
-		static void decodePercents(std::pmr::string& x) noexcept;
+		static void decodePercents(std::string& x) noexcept;
 
 		[[nodiscard]] auto string() const noexcept -> std::string_view;
 
@@ -1197,6 +1242,8 @@ namespace fastgltf {
             span<const std::byte> bytes;
             MimeType mimeType;
         };
+
+		struct Fallback {};
     } // namespace sources
 
     /**
@@ -1209,7 +1256,7 @@ namespace fastgltf {
      *
      * @note For buffers, this variant will never hold a sources::BufferView, as only images are able to reference buffer views as a source.
      */
-    using DataSource = std::variant<std::monostate, sources::BufferView, sources::URI, sources::Vector, sources::CustomBuffer, sources::ByteView>;
+    using DataSource = std::variant<std::monostate, sources::BufferView, sources::URI, sources::Vector, sources::CustomBuffer, sources::ByteView, sources::Fallback>;
 
     struct AnimationChannel {
         std::size_t samplerIndex;
@@ -1224,31 +1271,31 @@ namespace fastgltf {
     };
 
     struct Animation {
-	    pmr::MaybeSmallVector<AnimationChannel> channels;
-	    pmr::MaybeSmallVector<AnimationSampler> samplers;
+	    FASTGLTF_FG_PMR_NS::MaybeSmallVector<AnimationChannel> channels;
+	    FASTGLTF_FG_PMR_NS::MaybeSmallVector<AnimationSampler> samplers;
 
-        std::pmr::string name;
+        FASTGLTF_STD_PMR_NS::string name;
     };
 
     struct AssetInfo {
-        std::pmr::string gltfVersion;
-        std::pmr::string copyright;
-        std::pmr::string generator;
+        FASTGLTF_STD_PMR_NS::string gltfVersion;
+        FASTGLTF_STD_PMR_NS::string copyright;
+        FASTGLTF_STD_PMR_NS::string generator;
     };
 
     struct Camera {
         struct Orthographic {
-            float xmag;
-            float ymag;
-            float zfar;
-            float znear;
+            num xmag;
+            num ymag;
+            num zfar;
+            num znear;
         };
         struct Perspective {
-            Optional<float> aspectRatio;
-            float yfov;
+            Optional<num> aspectRatio;
+            num yfov;
             // If omitted, use an infinite projection matrix.
-            Optional<float> zfar;
-            float znear;
+            Optional<num> zfar;
+            num znear;
         };
 
         /**
@@ -1256,15 +1303,15 @@ namespace fastgltf {
          * and/or std::get_if to figure out which camera type is being used.
          */
         std::variant<Perspective, Orthographic> camera;
-        std::pmr::string name;
+        FASTGLTF_STD_PMR_NS::string name;
     };
 
     struct Skin {
-	    pmr::MaybeSmallVector<std::size_t> joints;
+	    FASTGLTF_FG_PMR_NS::MaybeSmallVector<std::size_t> joints;
 	    Optional<std::size_t> skeleton;
 	    Optional<std::size_t> inverseBindMatrices;
 
-        std::pmr::string name;
+        FASTGLTF_STD_PMR_NS::string name;
     };
 
     struct Sampler {
@@ -1273,13 +1320,13 @@ namespace fastgltf {
         Wrap wrapS;
         Wrap wrapT;
 
-        std::pmr::string name;
+        FASTGLTF_STD_PMR_NS::string name;
     };
 
     struct Scene {
-	    pmr::MaybeSmallVector<std::size_t> nodeIndices;
+	    FASTGLTF_FG_PMR_NS::MaybeSmallVector<std::size_t> nodeIndices;
 
-        std::pmr::string name;
+        FASTGLTF_STD_PMR_NS::string name;
     };
 
     struct Node {
@@ -1292,15 +1339,15 @@ namespace fastgltf {
          */
         Optional<std::size_t> lightIndex;
 
-	    pmr::MaybeSmallVector<std::size_t> children;
-	    pmr::MaybeSmallVector<float> weights;
+	    FASTGLTF_FG_PMR_NS::MaybeSmallVector<std::size_t> children;
+	    FASTGLTF_FG_PMR_NS::MaybeSmallVector<num> weights;
 
         struct TRS {
-            std::array<float, 3> translation;
-            std::array<float, 4> rotation;
-            std::array<float, 3> scale;
+            std::array<num, 3> translation;
+            std::array<num, 4> rotation;
+            std::array<num, 3> scale;
         };
-        using TransformMatrix = std::array<float, 16>;
+        using TransformMatrix = std::array<num, 16>;
 
         /**
          * Variant holding either the three TRS components; transform, rotation, and scale, or a
@@ -1312,9 +1359,9 @@ namespace fastgltf {
         /**
          * Only ever non-empty when EXT_mesh_gpu_instancing is enabled and used by the asset.
          */
-        std::pmr::vector<std::pair<std::pmr::string, std::size_t>> instancingAttributes;
+        FASTGLTF_STD_PMR_NS::vector<std::pair<FASTGLTF_STD_PMR_NS::string, std::size_t>> instancingAttributes;
 
-        std::pmr::string name;
+        FASTGLTF_STD_PMR_NS::string name;
  
         [[nodiscard]] auto findInstancingAttribute(std::string_view attributeName) noexcept {
             for (auto it = instancingAttributes.begin(); it != instancingAttributes.end(); ++it) {
@@ -1334,14 +1381,14 @@ namespace fastgltf {
    };
 
     struct Primitive {
-		using attribute_type = std::pair<std::pmr::string, std::size_t>;
+		using attribute_type = std::pair<FASTGLTF_STD_PMR_NS::string, std::size_t>;
 
 		// Instead of a map, we have a list of attributes here. Each pair contains
 		// the name of the attribute and the corresponding accessor index.
-		pmr::SmallVector<attribute_type, 4> attributes;
+		FASTGLTF_FG_PMR_NS::SmallVector<attribute_type, 4> attributes;
         PrimitiveType type;
 
-        std::pmr::vector<pmr::SmallVector<attribute_type, 4>> targets;
+        FASTGLTF_STD_PMR_NS::vector<FASTGLTF_FG_PMR_NS::SmallVector<attribute_type, 4>> targets;
 
         Optional<std::size_t> indicesAccessor;
         Optional<std::size_t> materialIndex;
@@ -1382,10 +1429,10 @@ namespace fastgltf {
 	};
 
     struct Mesh {
-		pmr::MaybeSmallVector<Primitive, 2> primitives;
-		pmr::MaybeSmallVector<float> weights;
+		FASTGLTF_FG_PMR_NS::MaybeSmallVector<Primitive, 2> primitives;
+	    FASTGLTF_FG_PMR_NS::MaybeSmallVector<num> weights;
 
-        std::pmr::string name;
+        FASTGLTF_STD_PMR_NS::string name;
     };
 
     /**
@@ -1395,17 +1442,17 @@ namespace fastgltf {
         /**
          * The offset of the UV coordinate origin as a factor of the texture dimensions.
          */
-        float rotation;
+        num rotation;
 
         /**
          * Rotate the UVs by this many radians counter-clockwise around the origin. This is equivalent to a similar rotation of the image clockwise.
          */
-        std::array<float, 2> uvOffset;
+        std::array<num, 2> uvOffset;
 
         /**
          * The scale factor applied to the components of the UV coordinates.
          */
-        std::array<float, 2> uvScale;
+        std::array<num, 2> uvScale;
 
         /**
          * Overrides the textureInfo texCoord value if supplied.
@@ -1424,36 +1471,36 @@ namespace fastgltf {
     };
 
 	struct NormalTextureInfo : TextureInfo {
-		float scale;
+		num scale;
 	};
 
 	struct OcclusionTextureInfo : TextureInfo {
-		float strength;
+		num strength;
 	};
 
     struct PBRData {
         /**
          * The factors for the base color of then material.
          */
-        std::array<float, 4> baseColorFactor = {{ 1, 1, 1, 1 }};
+        std::array<num, 4> baseColorFactor = {{ 1, 1, 1, 1 }};
 
         /**
          * The factor for the metalness of the material.
          */
-        float metallicFactor = 1.0f;
+        num metallicFactor = 1.0f;
 
         /**
          * The factor for the roughness of the material.
          */
-        float roughnessFactor = 1.0f;
+        num roughnessFactor = 1.0f;
 
         Optional<TextureInfo> baseColorTexture;
         Optional<TextureInfo> metallicRoughnessTexture;
     };
 
 	struct MaterialAnisotropy {
-		float anisotropyStrength;
-		float anisotropyRotation;
+		num anisotropyStrength;
+		num anisotropyRotation;
 		Optional<TextureInfo> anisotropyTexture;
 	};
 
@@ -1461,9 +1508,9 @@ namespace fastgltf {
      * Specular information from KHR_materials_specular.
      */
     struct MaterialSpecular {
-        float specularFactor;
+        num specularFactor;
         Optional<TextureInfo> specularTexture;
-        std::array<float, 3> specularColorFactor;
+        std::array<num, 3> specularColorFactor;
         Optional<TextureInfo> specularColorTexture;
     };
 
@@ -1471,11 +1518,11 @@ namespace fastgltf {
      * Iridescence information from KHR_materials_iridescence
      */
     struct MaterialIridescence {
-        float iridescenceFactor;
+        num iridescenceFactor;
         Optional<TextureInfo> iridescenceTexture;
-        float iridescenceIor;
-        float iridescenceThicknessMinimum;
-        float iridescenceThicknessMaximum;
+        num iridescenceIor;
+        num iridescenceThicknessMinimum;
+        num iridescenceThicknessMaximum;
         Optional<TextureInfo> iridescenceThicknessTexture;
     };
 
@@ -1483,29 +1530,29 @@ namespace fastgltf {
      * Volume information from KHR_materials_volume
      */
     struct MaterialVolume {
-        float thicknessFactor;
+        num thicknessFactor;
         Optional<TextureInfo> thicknessTexture;
-        float attenuationDistance;
-        std::array<float, 3> attenuationColor;
+        num attenuationDistance;
+        std::array<num, 3> attenuationColor;
     };
 
     struct MaterialTransmission {
-        float transmissionFactor;
+        num transmissionFactor;
         Optional<TextureInfo> transmissionTexture;
     };
 
     struct MaterialClearcoat {
-        float clearcoatFactor;
+        num clearcoatFactor;
         Optional<TextureInfo> clearcoatTexture;
-        float clearcoatRoughnessFactor;
+        num clearcoatRoughnessFactor;
         Optional<TextureInfo> clearcoatRoughnessTexture;
         Optional<TextureInfo> clearcoatNormalTexture;
     };
 
     struct MaterialSheen {
-        std::array<float, 3> sheenColorFactor;
+        std::array<num, 3> sheenColorFactor;
         Optional<TextureInfo> sheenColorTexture;
-        float sheenRoughnessFactor;
+        num sheenRoughnessFactor;
         Optional<TextureInfo> sheenRoughnessTexture;
     };
 
@@ -1514,13 +1561,19 @@ namespace fastgltf {
      * Specular/Glossiness information from KHR_materials_pbrSpecularGlossiness.
      */
     struct MaterialSpecularGlossiness {
-        std::array<float, 4> diffuseFactor;
+        std::array<num, 4> diffuseFactor;
         Optional<TextureInfo> diffuseTexture;
-        std::array<float, 3> specularFactor;
-        float glossinessFactor;
+        std::array<num, 3> specularFactor;
+        num glossinessFactor;
         Optional<TextureInfo> specularGlossinessTexture;
     };
 #endif
+
+	struct MaterialPackedTextures {
+		Optional<TextureInfo> occlusionRoughnessMetallicTexture;
+		Optional<TextureInfo> roughnessMetallicOcclusionTexture;
+		Optional<TextureInfo> normalTexture;
+	};
 
     struct Material {
         /**
@@ -1539,7 +1592,7 @@ namespace fastgltf {
         /**
          * The factors for the emissive color of the material. Defaults to 0,0,0
          */
-        std::array<float, 3> emissiveFactor;
+        std::array<num, 3> emissiveFactor;
 
         /**
          * The values used to determine the transparency of the material.
@@ -1551,7 +1604,7 @@ namespace fastgltf {
 		 * The alpha value that determines the upper limit for fragments that
 		 * should be discarded for transparency. Defaults to 0.5.
 		 */
-        float alphaCutoff;
+        num alphaCutoff;
 
         /**
          * Determines whether back-face culling should be disabled when using this material.
@@ -1594,46 +1647,64 @@ namespace fastgltf {
         /**
          * The emissive strength from the KHR_materials_emissive_strength extension.
          */
-        Optional<float> emissiveStrength;
+        Optional<num> emissiveStrength;
 
         /**
          * The index of refraction as specified through KHR_materials_ior.
          */
-        Optional<float> ior;
+        Optional<num> ior;
+
+		/**
+		 * The index of a packed texture from the MSFT_packing_normalRoughnessMetallic extension,
+		 * providing normal, roughness and metallic data.
+		 */
+		Optional<TextureInfo> packedNormalMetallicRoughnessTexture;
+
+		std::unique_ptr<MaterialPackedTextures> packedOcclusionRoughnessMetallicTextures;
 
         /**
          * Only applicable if KHR_materials_unlit is enabled.
          */
         bool unlit;
 
-        std::pmr::string name;
+        FASTGLTF_STD_PMR_NS::string name;
     };
 
     struct Texture {
-        /**
-         * When empty, an extension or other mechanism SHOULD supply an alternate texture source,
-         * otherwise behavior is undefined.
-         */
-        Optional<std::size_t> imageIndex;
+		/**
+		 * If no sampler is specified, use a default sampler with repeat wrap and auto filter.
+		 */
+		 Optional<std::size_t> samplerIndex;
 
-        /**
-         * If the imageIndex is specified by the KTX2 or DDS glTF extensions, this is supposed to
-         * be used as a fallback if those file containers are not supported.
-         */
-        Optional<std::size_t> fallbackImageIndex;
+		/**
+		 * The index of the image used by this texture. Either this will have a value,
+		 * or one of the following extensions will define a texture index. If no extensions
+		 * were enabled while parsing, this will always have a value.
+		 */
+		Optional<std::size_t> imageIndex;
 
-        /**
-         * If no sampler is specified, use a default sampler with repeat wrap and auto filter.
-         */
-        Optional<std::size_t> samplerIndex;
+		/**
+		 * An optional texture index from the KHR_texture_basisu extension.
+		 */
+		Optional<std::size_t> basisuImageIndex;
 
-        std::pmr::string name;
+		/**
+		 * An optional texture index from the MSFT_texture_dds extension.
+		 */
+		Optional<std::size_t> ddsImageIndex;
+
+		/**
+		 * An optional texture index from the EXT_texture_webp extension.
+		 */
+		Optional<std::size_t> webpImageIndex;
+
+        FASTGLTF_STD_PMR_NS::string name;
     };
 
     struct Image {
         DataSource data;
 
-        std::pmr::string name;
+        FASTGLTF_STD_PMR_NS::string name;
     };
 
     struct SparseAccessor {
@@ -1652,15 +1723,15 @@ namespace fastgltf {
         ComponentType componentType;
         bool normalized;
         
-        std::variant<std::monostate, std::pmr::vector<double>, std::pmr::vector<std::int64_t>> max;
-        std::variant<std::monostate, std::pmr::vector<double>, std::pmr::vector<std::int64_t>> min;
+        std::variant<std::monostate, FASTGLTF_STD_PMR_NS::vector<double>, FASTGLTF_STD_PMR_NS::vector<std::int64_t>> max;
+        std::variant<std::monostate, FASTGLTF_STD_PMR_NS::vector<double>, FASTGLTF_STD_PMR_NS::vector<std::int64_t>> min;
 
         // Could have no value for sparse morph targets
         Optional<std::size_t> bufferViewIndex;
 
         Optional<SparseAccessor> sparse;
 
-        std::pmr::string name;
+        FASTGLTF_STD_PMR_NS::string name;
     };
 
     struct CompressedBufferView {
@@ -1687,7 +1758,7 @@ namespace fastgltf {
          */
         std::unique_ptr<CompressedBufferView> meshoptCompression;
 
-        std::pmr::string name;
+        FASTGLTF_STD_PMR_NS::string name;
     };
 
     struct Buffer {
@@ -1695,23 +1766,23 @@ namespace fastgltf {
 
         DataSource data;
 
-        std::pmr::string name;
+        FASTGLTF_STD_PMR_NS::string name;
     };
 
     struct Light {
         LightType type;
         /** RGB light color in linear space. */
-        std::array<float, 3> color;
+        std::array<num, 3> color;
 
         /** Point and spot lights use candela (lm/sr) while directional use lux (lm/m^2) */
-        float intensity;
+        num intensity;
         /** Range for point and spot lights. If not present, range is infinite. */
-        Optional<float> range;
+        Optional<num> range;
 
-        Optional<float> innerConeAngle;
-        Optional<float> outerConeAngle;
+        Optional<num> innerConeAngle;
+        Optional<num> outerConeAngle;
 
-        std::pmr::string name;
+        FASTGLTF_STD_PMR_NS::string name;
     };
 
 	class ChunkMemoryResource;
@@ -1720,17 +1791,19 @@ namespace fastgltf {
 	class Asset {
 		friend class Parser;
 
+#if !FASTGLTF_DISABLE_CUSTOM_MEMORY_POOL
 		// This has to be first in this struct so that it gets destroyed last, leaving all allocations
 		// alive until the end.
 		std::shared_ptr<ChunkMemoryResource> memoryResource;
+#endif
 
 	public:
         /**
          * This will only ever have no value if #Options::DontRequireValidAssetMember was specified.
          */
         Optional<AssetInfo> assetInfo;
-		std::pmr::vector<std::pmr::string> extensionsUsed;
-		std::pmr::vector<std::pmr::string> extensionsRequired;
+		FASTGLTF_STD_PMR_NS::vector<FASTGLTF_STD_PMR_NS::string> extensionsUsed;
+		FASTGLTF_STD_PMR_NS::vector<FASTGLTF_STD_PMR_NS::string> extensionsRequired;
 
         Optional<std::size_t> defaultScene;
         std::vector<Accessor> accessors;
@@ -1754,7 +1827,9 @@ namespace fastgltf {
         explicit Asset() = default;
         explicit Asset(const Asset& other) = delete;
         Asset(Asset&& other) noexcept :
+#if !FASTGLTF_DISABLE_CUSTOM_MEMORY_POOL
 				memoryResource(std::move(other.memoryResource)),
+#endif
 				assetInfo(std::move(other.assetInfo)),
 				extensionsUsed(std::move(other.extensionsUsed)),
 				extensionsRequired(std::move(other.extensionsRequired)),
@@ -1777,7 +1852,9 @@ namespace fastgltf {
 
 		Asset& operator=(const Asset& other) = delete;
 		Asset& operator=(Asset&& other) noexcept {
+#if !FASTGLTF_DISABLE_CUSTOM_MEMORY_POOL
 			memoryResource = std::move(other.memoryResource);
+#endif
 			assetInfo = std::move(other.assetInfo);
 			extensionsUsed = std::move(other.extensionsUsed);
 			extensionsRequired = std::move(other.extensionsRequired);

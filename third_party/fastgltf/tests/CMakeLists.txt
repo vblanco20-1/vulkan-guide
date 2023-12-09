@@ -7,7 +7,7 @@ add_executable(fastgltf_tests EXCLUDE_FROM_ALL
 target_compile_features(fastgltf_tests PRIVATE cxx_std_17)
 target_link_libraries(fastgltf_tests PRIVATE fastgltf fastgltf_simdjson)
 target_link_libraries(fastgltf_tests PRIVATE glm::glm Catch2::Catch2WithMain)
-compiler_flags(fastgltf_tests)
+fastgltf_compiler_flags(fastgltf_tests)
 
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/deps/catch2")
     add_subdirectory(deps/catch2)
@@ -48,4 +48,16 @@ if (FASTGLTF_ENABLE_GLTF_RS AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/gltf-rs/src/
     target_compile_definitions(fastgltf_tests PRIVATE HAS_GLTFRS=1)
 endif()
 
-add_source_directory(TARGET fastgltf_tests FOLDER ".")
+if(FASTGLTF_ENABLE_ASSIMP AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/gltf_loaders/assimp")
+    message(STATUS "fastgltf: Found assimp")
+    # Only enable glTF importer
+    set(ASSIMP_NO_EXPORT ON CACHE BOOL "")
+    set(ASSIMP_BUILD_TESTS OFF CACHE BOOL "")
+    set(ASSIMP_BUILD_ALL_IMPORTERS_BY_DEFAULT OFF CACHE BOOL "")
+    set(ASSIMP_BUILD_GLTF_IMPORTER ON CACHE BOOL "")
+    add_subdirectory(gltf_loaders/assimp)
+    target_link_libraries(fastgltf_tests PRIVATE assimp::assimp)
+    target_compile_definitions(fastgltf_tests PRIVATE HAS_ASSIMP=1)
+endif()
+
+fastgltf_add_source_directory(TARGET fastgltf_tests FOLDER ".")

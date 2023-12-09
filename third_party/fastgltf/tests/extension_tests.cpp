@@ -25,9 +25,10 @@ TEST_CASE("Loading KHR_texture_basisu glTF files", "[gltf-loader]") {
         REQUIRE(!asset->images.empty());
 
         auto& texture = asset->textures[1];
-        REQUIRE(texture.imageIndex == 1);
+        REQUIRE(!texture.imageIndex.has_value());
         REQUIRE(texture.samplerIndex == 0);
-        REQUIRE(!texture.fallbackImageIndex.has_value());
+		REQUIRE(texture.basisuImageIndex.has_value());
+		REQUIRE(texture.basisuImageIndex.value() == 1);
 
         auto& image = asset->images.front();
         auto* filePath = std::get_if<fastgltf::sources::URI>(&image.data);

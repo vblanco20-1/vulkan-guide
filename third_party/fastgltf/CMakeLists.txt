@@ -6,7 +6,7 @@ if ("${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}" VERSION_GREATER_EQUAL "3.24"
     cmake_policy(SET CMP0135 NEW)
 endif()
 
-project(fastgltf VERSION 0.5.0 LANGUAGES C CXX)
+project(fastgltf VERSION 0.6.1 LANGUAGES C CXX)
 
 option(FASTGLTF_DOWNLOAD_SIMDJSON "Downloads a copy of simdjson itself to satisfy the dependency" ON)
 option(FASTGLTF_USE_CUSTOM_SMALLVECTOR "Uses a custom SmallVector type optimised for small arrays" OFF)
@@ -14,7 +14,10 @@ option(FASTGLTF_ENABLE_TESTS "Enables test targets for fastlgtf" OFF)
 option(FASTGLTF_ENABLE_EXAMPLES "Enables example targets for fastgltf" OFF)
 option(FASTGLTF_ENABLE_DOCS "Enables the configuration of targets that build/generate documentation" OFF)
 option(FASTGLTF_ENABLE_GLTF_RS "Enables the benchmark usage of gltf-rs" OFF)
+option(FASTGLTF_ENABLE_ASSIMP "Enables the benchmark usage of assimp" OFF)
 option(FASTGLTF_ENABLE_DEPRECATED_EXT "Enables support for deprecated extensions" OFF)
+option(FASTGLTF_DISABLE_CUSTOM_MEMORY_POOL "Disables the memory allocation algorithm based on polymorphic resources" OFF)
+option(FASTGLTF_USE_64BIT_FLOAT "Default to 64-bit double precision floats for everything" OFF)
 
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/add_source_directory.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/compiler_flags.cmake)
@@ -54,8 +57,8 @@ if (FASTGLTF_DOWNLOAD_SIMDJSON)
     add_library(fastgltf_simdjson ${SIMDJSON_HEADER_FILE} ${SIMDJSON_SOURCE_FILE})
     target_compile_features(fastgltf_simdjson PRIVATE cxx_std_17)
     target_include_directories(fastgltf_simdjson PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/deps/simdjson> $<INSTALL_INTERFACE:include>)
-    compiler_flags(fastgltf_simdjson)
-    enable_debug_inlining(fastgltf_simdjson)
+    fastgltf_compiler_flags(fastgltf_simdjson)
+    fastgltf_enable_debug_inlining(fastgltf_simdjson)
 
     install(
         FILES deps/simdjson/simdjson.h
@@ -85,8 +88,8 @@ add_library(fastgltf
     "include/fastgltf/base64.hpp" "include/fastgltf/glm_element_traits.hpp" "include/fastgltf/parser.hpp" "include/fastgltf/tools.hpp" "include/fastgltf/types.hpp" "include/fastgltf/util.hpp")
 add_library(fastgltf::fastgltf ALIAS fastgltf)
 
-compiler_flags(fastgltf)
-enable_debug_inlining(fastgltf)
+fastgltf_compiler_flags(fastgltf)
+fastgltf_enable_debug_inlining(fastgltf)
 target_compile_features(fastgltf PUBLIC cxx_std_17)
 target_include_directories(fastgltf PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include> $<INSTALL_INTERFACE:include>)
 
@@ -105,6 +108,8 @@ endif()
 
 target_compile_definitions(fastgltf PUBLIC "FASTGLTF_USE_CUSTOM_SMALLVECTOR=$<BOOL:${FASTGLTF_USE_CUSTOM_SMALLVECTOR}>")
 target_compile_definitions(fastgltf PUBLIC "FASTGLTF_ENABLE_DEPRECATED_EXT=$<BOOL:${FASTGLTF_ENABLE_DEPRECATED_EXT}>")
+target_compile_definitions(fastgltf PUBLIC "FASTGLTF_DISABLE_CUSTOM_MEMORY_POOL=$<BOOL:${FASTGLTF_DISABLE_CUSTOM_MEMORY_POOL}>")
+target_compile_definitions(fastgltf PUBLIC "FASTGLTF_USE_64BIT_FLOAT=$<BOOL:${FASTGLTF_USE_64BIT_FLOAT}>")
 
 if (ANDROID)
     target_link_libraries(fastgltf PRIVATE android)

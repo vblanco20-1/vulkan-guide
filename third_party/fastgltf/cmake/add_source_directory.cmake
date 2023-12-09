@@ -1,6 +1,6 @@
 # This will search for all files with .c, .cpp, .h, .hpp extensions in the given folder directory but no subdirectories and add them as
 # sources to the target.
-function(add_source_directory)
+function(fastgltf_add_source_directory)
     cmake_parse_arguments(PARAM "" "TARGET;FOLDER" "CONDITIONAL" ${ARGN})
 
     # Generic C/C++/ObjC file extensions

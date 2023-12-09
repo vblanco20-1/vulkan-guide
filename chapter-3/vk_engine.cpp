@@ -554,7 +554,7 @@ void VulkanEngine::init_vulkan()
 	vkb::PhysicalDevice physicalDevice = selector
 		.set_minimum_version(1, 3)
 		.set_required_features_13(features)
-.set_required_features_12(features12)
+		.set_required_features_12(features12)
 		.set_surface(_surface)
 		.select()
 		.value();
@@ -575,6 +575,7 @@ void VulkanEngine::init_vulkan()
 
 	_graphicsQueueFamily = vkbDevice.get_queue_index(vkb::QueueType::graphics).value();
 
+//> vma_init
 	//initialize the memory allocator
 	VmaAllocatorCreateInfo allocatorInfo = {};
 	allocatorInfo.physicalDevice = _chosenGPU;
@@ -585,7 +586,8 @@ void VulkanEngine::init_vulkan()
 
 	_mainDeletionQueue.push_function([&]() {
 		vmaDestroyAllocator(_allocator);
-		});
+	});
+//< vma_init
 }
 
 void VulkanEngine::init_swapchain()
@@ -966,7 +968,46 @@ void VulkanEngine::init_mesh_pipeline()
 
 //< rectangle_shaders
 
+#if CHAPTER_STAGE == 0
 //> rectangle_shaders2
+	PipelineBuilder pipelineBuilder;
+
+	//use the triangle layout we created
+	pipelineBuilder._pipelineLayout = _meshPipelineLayout;
+	//connecting the vertex and pixel shaders to the pipeline
+	pipelineBuilder.set_shaders(triangleVertexShader, triangleFragShader);
+	//it will draw triangles
+	pipelineBuilder.set_input_topology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
+	//filled triangles
+	pipelineBuilder.set_polygon_mode(VK_POLYGON_MODE_FILL);
+	//no backface culling
+	pipelineBuilder.set_cull_mode(VK_CULL_MODE_NONE, VK_FRONT_FACE_CLOCKWISE);
+	//no multisampling
+	pipelineBuilder.set_multisampling_none();
+	//no blending
+	pipelineBuilder.disable_blending();
+
+	//pipelineBuilder.disable_depthtest();
+	pipelineBuilder.enable_depthtest(true, VK_COMPARE_OP_GREATER_OR_EQUAL);
+
+	//connect the image format we will draw into, from draw image
+	pipelineBuilder.set_color_attachment_format(_drawImage.imageFormat);
+	pipelineBuilder.set_depth_format(VK_FORMAT_UNDEFINED);
+
+	//finally build the pipeline
+	_meshPipeline = pipelineBuilder.build_pipeline(_device);
+
+	//clean structures
+	vkDestroyShaderModule(_device, triangleFragShader, nullptr);
+	vkDestroyShaderModule(_device, triangleVertexShader, nullptr);
+
+	_mainDeletionQueue.push_function([&]() {
+		vkDestroyPipelineLayout(_device, _meshPipelineLayout, nullptr);
+		vkDestroyPipeline(_device, _meshPipeline, nullptr);
+	});
+//< rectangle_shaders2
+#else
+	//exactly same as above but with the depth testing set
 	PipelineBuilder pipelineBuilder;
 
 	//use the triangle layout we created
@@ -1001,8 +1042,8 @@ void VulkanEngine::init_mesh_pipeline()
 	_mainDeletionQueue.push_function([&]() {
 		vkDestroyPipelineLayout(_device, _meshPipelineLayout, nullptr);
 		vkDestroyPipeline(_device, _meshPipeline, nullptr);
-	});
-//< rectangle_shaders2
+		});
+#endif
 }
 
 void VulkanEngine::init_descriptors()

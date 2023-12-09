@@ -385,32 +385,44 @@ static constexpr std::array<std::uint8_t, 128> base64lut = {
 };
 // clang-format on
 
+namespace fastgltf::base64 {
+	[[gnu::always_inline]] FORCEINLINE void decode_block(std::array<std::uint8_t, 4>& sixBitChars, std::uint8_t* output) {
+		for (std::size_t i = 0; i < 4; i++) {
+			assert(static_cast<std::size_t>(sixBitChars[i]) < base64lut.size());
+			sixBitChars[i] = base64lut[sixBitChars[i]];
+		}
+
+		output[0] = (sixBitChars[0] << 2) + ((sixBitChars[1] & 0x30) >> 4);
+		output[1] = ((sixBitChars[1] & 0xf) << 4) + ((sixBitChars[2] & 0x3c) >> 2);
+		output[2] = ((sixBitChars[2] & 0x3) << 6) + sixBitChars[3];
+	}
+} // namespace fastgltf::base64
+
 void fg::base64::fallback_decode_inplace(std::string_view encoded, std::uint8_t* output, std::size_t padding) {
-    std::array<std::uint8_t, 4> sixBitChars = {};
-    std::array<std::uint8_t, 3> eightBitChars = {};
+    constexpr std::size_t blockSize = 4 * sizeof(char);
+	std::array<std::uint8_t, 4> sixBitChars = {};
 
     // We use i here to track how many we've parsed and to batch 4 chars together.
     const auto encodedSize = encoded.size();
     std::size_t cursor = 0U;
-    for (auto pos = 0U; pos < encodedSize; pos += 4) {
-		std::memcpy(sixBitChars.data(), &encoded[pos], 4 * sizeof(char));
+    for (auto pos = 0U; pos + 4 < encodedSize; pos += 4) {
+		std::memcpy(sixBitChars.data(), &encoded[pos], blockSize);
 
-        for (std::size_t i = 0; i < 4; i++) {
-            assert(static_cast<std::size_t>(sixBitChars[i]) < base64lut.size());
-            sixBitChars[i] = base64lut[sixBitChars[i]];
-        }
-
-        eightBitChars[0] = (sixBitChars[0] << 2) + ((sixBitChars[1] & 0x30) >> 4);
-        eightBitChars[1] = ((sixBitChars[1] & 0xf) << 4) + ((sixBitChars[2] & 0x3c) >> 2);
-        eightBitChars[2] = ((sixBitChars[2] & 0x3) << 6) + sixBitChars[3];
-
-        // Write the 3 chars to the output memory, making sure to not write over the end, assuming
-		// that the array is correctly sized.
-        std::size_t charsToWrite = 3 - ((pos + 4 == encodedSize) ? padding : 0);
-        for (std::size_t j = 0; j < charsToWrite; ++j) {
-            output[cursor++] = eightBitChars[j];
-        }
+		decode_block(sixBitChars, &output[cursor]);
+		cursor += 3;
     }
+
+	// Decode the last (possibly) padded characters
+	std::memcpy(sixBitChars.data(), &encoded[encodedSize - 4], blockSize);
+
+	std::array<std::uint8_t, 4> eightBitChars = {};
+	decode_block(sixBitChars, eightBitChars.data());
+
+	// Write the last characters, making sure not to write over the end.
+	const std::size_t charsToWrite = 3 - padding;
+	for (std::size_t j = 0; j < charsToWrite; ++j) {
+		output[cursor++] = eightBitChars[j];
+	}
 }
 
 std::vector<std::uint8_t> fg::base64::fallback_decode(std::string_view encoded) {

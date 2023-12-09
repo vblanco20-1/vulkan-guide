@@ -11,6 +11,12 @@
 
 class VulkanEngine;
 
+struct Bounds {
+    glm::vec3 origin;
+    float sphereRadius;
+    glm::vec3 extents;
+};
+
 struct GLTFMaterial {
     MaterialInstance data;
 };
@@ -18,21 +24,16 @@ struct GLTFMaterial {
 struct GeoSurface {
     uint32_t startIndex;
     uint32_t count;
-    std::shared_ptr<GLTFMaterial> material;
+    Bounds bounds;
+	std::shared_ptr<GLTFMaterial> material;
 };
 
 struct MeshAsset {
     std::string name;
 
+   
     std::vector<GeoSurface> surfaces;
     GPUMeshBuffers meshBuffers;
-};
-
-struct MeshNode : public Node {
-
-    std::shared_ptr<MeshAsset> mesh;
-
-    virtual void Draw(const glm::mat4& topMatrix, DrawContext& ctx) override;
 };
 
 struct LoadedGLTF : public IRenderable {
@@ -64,7 +65,3 @@ private:
 };
 
 std::optional<std::shared_ptr<LoadedGLTF>> loadGltf(VulkanEngine* engine, std::string_view filePath);
-
-
-std::optional<std::vector<std::shared_ptr<MeshAsset>>> loadGltfMeshes(VulkanEngine* engine, std::filesystem::path filePath);
-

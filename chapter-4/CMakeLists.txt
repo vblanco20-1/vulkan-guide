@@ -4,8 +4,8 @@ add_executable (chapter_4
   main.cpp
   vk_engine.cpp
   vk_engine.h
-    "${CMAKE_CURRENT_SOURCE_DIR}/../shared/vk_loader.h"
-  "${CMAKE_CURRENT_SOURCE_DIR}/../shared/vk_loader.cpp"
+  vk_loader.h
+  vk_loader.cpp
 )
 
 set_property(TARGET chapter_4 PROPERTY CXX_STANDARD 20)
@@ -13,7 +13,6 @@ set_property(TARGET chapter_4 PROPERTY VS_DEBUGGER_WORKING_DIRECTORY $<TARGET_FI
 
 target_include_directories(chapter_4 PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 
-target_compile_definitions(chapter_4 PUBLIC LOADER_STAGE=1)
 target_link_libraries(chapter_4 vkguide_shared vkbootstrap imgui fastgltf::fastgltf)
 
 add_custom_command(TARGET chapter_4 POST_BUILD

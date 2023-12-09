@@ -1,6 +1,8 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <glm/vec3.hpp>
+#include <glm/gtc/epsilon.hpp>
+#include <glm/ext/scalar_constants.hpp>
 
 #include <fastgltf/parser.hpp>
 #include <fastgltf/tools.hpp>
@@ -23,6 +25,30 @@ static const std::byte* getBufferData(const fastgltf::Buffer& buffer) {
 	}, buffer.data);
 	
 	return result;
+}
+
+TEST_CASE("Test data type conversion", "[gltf-tools]") {
+	// normalized int-to-float and normalized float-to-int
+	for (auto i = std::numeric_limits<std::int8_t>::min(); i < std::numeric_limits<std::int8_t>::max(); ++i) {
+		auto converted = fastgltf::internal::convertComponent<float>(i, true);
+		REQUIRE(glm::epsilonEqual<float>(converted, fastgltf::max<float>(i / 127.0f, -1), glm::epsilon<float>()));
+		REQUIRE(fastgltf::internal::convertComponent<std::int8_t>(converted, true) == std::round(converted * 127.0f));
+	}
+	for (auto i = std::numeric_limits<std::uint8_t>::min(); i < std::numeric_limits<std::uint8_t>::max(); ++i) {
+		auto converted = fastgltf::internal::convertComponent<float>(i, true);
+		REQUIRE(glm::epsilonEqual<float>(converted, i / 255.0f, glm::epsilon<float>()));
+		REQUIRE(fastgltf::internal::convertComponent<std::uint8_t>(converted, true) == std::round(converted * 255.0f));
+	}
+	for (auto i = std::numeric_limits<std::int16_t>::min(); i < std::numeric_limits<std::int16_t>::max(); ++i) {
+		auto converted = fastgltf::internal::convertComponent<float>(i, true);
+		REQUIRE(glm::epsilonEqual<float>(converted, fastgltf::max<float>(i / 32767.0f, -1), glm::epsilon<float>()));
+		REQUIRE(fastgltf::internal::convertComponent<std::int16_t>(converted, true) == std::round(converted * 32767.0f));
+	}
+	for (auto i = std::numeric_limits<std::uint16_t>::min(); i < std::numeric_limits<std::uint16_t>::max(); ++i) {
+		auto converted = fastgltf::internal::convertComponent<float>(i, true);
+		REQUIRE(glm::epsilonEqual<float>(converted, i / 65535.0f, glm::epsilon<float>()));
+		REQUIRE(fastgltf::internal::convertComponent<std::uint16_t>(converted, true) == std::round(converted * 65535.0f));
+	}
 }
 
 TEST_CASE("Test accessor", "[gltf-tools]") {
