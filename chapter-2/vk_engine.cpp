@@ -25,7 +25,7 @@
 constexpr bool bUseValidationLayers = true;
 
 //chapter stage for refactors/changes
-#define CHAPTER_STAGE 3
+#define CHAPTER_STAGE 2
 
 //we want to immediately abort when there is an error. In normal engines this would give an error message to the user, or perform a dump of state.
 using namespace std;
@@ -213,7 +213,7 @@ void VulkanEngine::draw()
 
 	draw_main(cmd);
 
-	//transtion the draw image and the swapchain image into their correct transfer layouts
+	//transition the draw image and the swapchain image into their correct transfer layouts
 	vkutil::transition_image(cmd, _drawImage.image, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 	vkutil::transition_image(cmd, _swapchainImages[swapchainImageIndex], VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
@@ -307,23 +307,22 @@ void VulkanEngine::run()
 
 //> imgui_bk
 		ImGui::NewFrame();
-
+		
 		if (ImGui::Begin("background")) {
 			
 			ComputeEffect& selected = backgroundEffects[currentBackgroundEffect];
-
+		
 			ImGui::Text("Selected effect: ", selected.name);
-
+		
 			ImGui::SliderInt("Effect Index", &currentBackgroundEffect,0, backgroundEffects.size() - 1);
-
+		
 			ImGui::InputFloat4("data1",(float*)& selected.data.data1);
 			ImGui::InputFloat4("data2",(float*)& selected.data.data2);
 			ImGui::InputFloat4("data3",(float*)& selected.data.data3);
 			ImGui::InputFloat4("data4",(float*)& selected.data.data4);
-
+		
 			ImGui::End();
 		}
-
 		ImGui::Render();
 
 //< imgui_bk
@@ -376,6 +375,7 @@ void VulkanEngine::rebuild_swapchain()
 
 	VkImageUsageFlags drawImageUsages{};
 	drawImageUsages |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+	drawImageUsages |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 	drawImageUsages |= VK_IMAGE_USAGE_STORAGE_BIT;
 
 	VkImageCreateInfo rimg_info = vkinit::image_create_info(_drawImage.imageFormat, drawImageUsages, drawImageExtent);
@@ -503,6 +503,7 @@ void VulkanEngine::init_swapchain()
 
 	VkImageUsageFlags drawImageUsages{};
 	drawImageUsages |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+	drawImageUsages |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 	drawImageUsages |= VK_IMAGE_USAGE_STORAGE_BIT;
 
 	VkImageCreateInfo rimg_info = vkinit::image_create_info(_drawImage.imageFormat, drawImageUsages, drawImageExtent);
@@ -711,7 +712,7 @@ VK_CHECK(vkCreatePipelineLayout(_device, &computeLayout, nullptr, &_gradientPipe
 #if CHAPTER_STAGE < 2
 //> comp_pipeline_2
 	VkShaderModule computeDrawShader;
-	if (!vkutil::load_shader_module("../../shaders/gradient_color.comp.spv", _device, &computeDrawShader))
+	if (!vkutil::load_shader_module("../../shaders/gradient.comp.spv", _device, &computeDrawShader))
 	{
 		std::cout << "Error when building the compute shader" << std::endl;
 	}
@@ -731,7 +732,7 @@ VK_CHECK(vkCreatePipelineLayout(_device, &computeLayout, nullptr, &_gradientPipe
 	
 	VK_CHECK(vkCreateComputePipelines(_device,VK_NULL_HANDLE,1,&computePipelineCreateInfo, nullptr, &_gradientPipeline));
 //< comp_pipeline_2
-/
+
 //> comp_pipeline_3
 	vkDestroyShaderModule(_device, computeDrawShader, nullptr);
 
