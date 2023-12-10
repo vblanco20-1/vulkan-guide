@@ -34,6 +34,8 @@ constexpr bool bUseValidationLayers = true;
 // would give an error message to the user, or perform a dump of state.
 using namespace std;
 
+#define CHAPTER_STAGE 1
+
 VulkanEngine* loadedEngine = nullptr;
 
 VulkanEngine& VulkanEngine::Get()
@@ -417,49 +419,55 @@ void VulkanEngine::draw()
 	_frameNumber++;
 }
 
+//> visfn
+bool is_visible(const RenderObject& obj, const glm::mat4& viewproj) {
+    std::array<glm::vec3, 8> corners {
+        glm::vec3 { 1, 1, 1 },
+        glm::vec3 { 1, 1, -1 },
+        glm::vec3 { 1, -1, 1 },
+        glm::vec3 { 1, -1, -1 },
+        glm::vec3 { -1, 1, 1 },
+        glm::vec3 { -1, 1, -1 },
+        glm::vec3 { -1, -1, 1 },
+        glm::vec3 { -1, -1, -1 },
+    };
+
+    glm::mat4 matrix = viewproj * obj.transform;
+
+    glm::vec3 min = { 1.5, 1.5, 1.5 };
+    glm::vec3 max = { -1.5, -1.5, -1.5 };
+
+    for (int c = 0; c < 8; c++) {
+        // project each corner into clip space
+        glm::vec4 v = matrix * glm::vec4(obj.bounds.origin + (corners[c] * obj.bounds.extents), 1.f);
+
+        // perspective correction
+        v.x = v.x / v.w;
+        v.y = v.y / v.w;
+        v.z = v.z / v.w;
+
+        min = glm::min(glm::vec3 { v.x, v.y, v.z }, min);
+        max = glm::max(glm::vec3 { v.x, v.y, v.z }, max);
+    }
+
+    // check the clip space box is within the view
+    if (min.z > 1.f || max.z < 0.f || min.x > 1.f || max.x < -1.f || min.y > 1.f || max.y < -1.f) {
+        return false;
+    } else {
+        return true;
+    }
+}
+//< visfn
+
 void VulkanEngine::draw_geometry(VkCommandBuffer cmd)
 {
     std::vector<uint32_t> opaque_draws;
     opaque_draws.reserve(drawCommands.OpaqueSurfaces.size());
 
     for (int i = 0; i < drawCommands.OpaqueSurfaces.size(); i++) {
-        RenderObject& ro = drawCommands.OpaqueSurfaces[i];
-
-        std::array<glm::vec3, 8> corners {
-            glm::vec3 { 1, 1, 1 },
-            glm::vec3 { 1, 1, -1 },
-            glm::vec3 { 1, -1, 1 },
-            glm::vec3 { 1, -1, -1 },
-            glm::vec3 { -1, 1, 1 },
-            glm::vec3 { -1, 1, -1 },
-            glm::vec3 { -1, -1, 1 },
-            glm::vec3 { -1, -1, -1 },
-        };
-
-        glm::mat4 matrix = sceneData.viewproj * ro.transform;
-
-        glm::vec3 min = { 1.5, 1.5, 1.5 };
-        glm::vec3 max = { -1.5, -1.5, -1.5 };
-
-        for (int c = 0; c < 8; c++) {
-            // project each corner into clip space
-            glm::vec4 v = matrix * glm::vec4(ro.bounds.origin + (corners[c] * ro.bounds.extents), 1.f);
-
-            // perspective correction
-            v.x = v.x / v.w;
-            v.y = v.y / v.w;
-            v.z = v.z / v.w;
-
-            min = glm::min(glm::vec3 { v.x, v.y, v.z }, min);
-            max = glm::max(glm::vec3 { v.x, v.y, v.z }, max);
-        }
-
-        // check the clip space box is within the view
-        if (min.z > 1.f || max.z < 0.f || min.x > 1.f || max.x < -1.f || min.y > 1.f || max.y < -1.f) {
-            continue;
-        }
-
-        opaque_draws.push_back(i);
+       if (is_visible(drawCommands.OpaqueSurfaces[i], sceneData.viewproj)) {
+            opaque_draws.push_back(i);
+       }
     }
 
     // sort the opaque surfaces by material and mesh

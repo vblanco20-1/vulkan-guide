@@ -331,7 +331,7 @@ std::optional<std::shared_ptr<LoadedGLTF>> loadGltf(VulkanEngine* engine, std::s
 
             newSurface.bounds.origin = (maxpos + minpos) / 2.f;
             newSurface.bounds.extents = (maxpos - minpos) / 2.f;
-
+            newSurface.bounds.sphereRadius = glm::length(newSurface.bounds.extents);
             newmesh->surfaces.push_back(newSurface);
         }
 
