@@ -78,26 +78,112 @@ We now should get a performance win, specially as we only have 2 pipelines, so a
 
 We are going to sort the render objects by those parameters to minimize the number of calls. We will only do it this way for the opaque objects, as the transparent objects need a different type of sorting (depth sort) that we arent doing as we dont have the information about whats the center of the object.
 
+To implement the sorting, we wont be sorting the draw array itself, as the objects are big. Instead, we are going to sort an array of indices to this draw array. This is a common technique in big engines.
+
 At the beggining of the draw_geometry() function, add this
 
 ```cpp
-// sort the opaque surfaces by material and mesh
-std::sort(drawCommands.OpaqueSurfaces.begin(), drawCommands.OpaqueSurfaces.end(), [](const auto& A, const auto& B) {
+    std::vector<uint32_t> opaque_draws;
+    opaque_draws.reserve(drawCommands.OpaqueSurfaces.size());
+
+    for (uint32_t i = 0; i < drawCommands.OpaqueSurfaces.size(); i++) {
+        opaque_draws.push_back(i);
+    }
+
+    // sort the opaque surfaces by material and mesh
+    std::sort(opaque_draws.begin(), opaque_draws.end(), [&](const auto& iA, const auto& iB) {
+    const RenderObject& A = drawCommands.OpaqueSurfaces[iA];
+    const RenderObject& B = drawCommands.OpaqueSurfaces[iB];
     if (A.material == B.material) {
         return A.indexBuffer < B.indexBuffer;
     } else {
         return A.material < B.material;
     }
-});
+    });
 ```
 
-std::algorithms has a very handy sort function we can use to sort the OpaqueSurfaces vector. We give it a lambda that defines a `<` operator, and it sorts it efficiently for us. 
+std::algorithms has a very handy sort function we can use to sort the opaque_draws vector. We give it a lambda that defines a `<` operator, and it sorts it efficiently for us. 
 
-We will first check if the material is the same, and if it is, sort by indexBuffer. But if its not, then we directly compare the material pointer.
+We will first index the draw array, and check if the material is the same, and if it is, sort by indexBuffer. But if its not, then we directly compare the material pointer. Another way of doing this is that we would calculate a sort key , and then our opaque_draws would be something like 20 bits draw index, and 44 bits for sort key/hash. That way would be faster than this as it can be sorted through faster methods.
+
+Now, for the draws, we draw from the sorted array. Replace the draw loop with this one.
+
+```cpp
+for (auto& r : opaque_draws) {
+    draw(drawCommands.OpaqueSurfaces[r]);
+}
+```
+
 
 With this the renderer will minimize the number of descriptor set bindings, as it will go material by material. We still have the index buffer binding to deal with but thats faster to switch.
 
 By doing this, the engine should now have significantly more performance. If you run it in release mode, you should be able to draw scenes with tens of thousands of meshes no problem. We arent doing frustrum culling, so the GPU gets a lot of wasted work which does affect its perf.
 
+## Frustum Culling
+
+There is another big issue the engine has at the moment. We are drawing the entire scene, even things that are outside of the view. As we have the draw list, we will filter it to check what objects are in view, and skip the ones that dont.
+
+There are multiple ways of doing Frustum culling, but with the data and architecture we have, we will use oriented bounding boxes. We will calculate bounds for each GeoSurface, and then check if the bounds are in view.
+
+Update the structures in vk_loader.h with the bounds.
+```cpp
+struct Bounds {
+    glm::vec3 origin;
+    float sphereRadius;
+    glm::vec3 extents;
+};
+
+struct GeoSurface {
+    uint32_t startIndex;
+    uint32_t count;
+    Bounds bounds;
+	std::shared_ptr<GLTFMaterial> material;
+};
+```
+
+Our bounds are a origin, extent (box size), and sphere radius. The sphere radius can be used in case we want to use other frustum culling algorithms and has other uses.
+
+To calculate it, we must add it to the loader code. 
+
+This code goes inside the loadGLTF function, at the end of the loop that loads the mesh data.
+
+```cpp
+//code that writes vertex buffers
+
+//loop the vertices of this surface, find min/max bounds
+glm::vec3 minpos = vertices[initial_vtx].position;
+glm::vec3 maxpos = vertices[initial_vtx].position;
+for (int i = initial_vtx; i < vertices.size(); i++) {
+    minpos = glm::min(minpos, vertices[i].position);
+    maxpos = glm::max(maxpos, vertices[i].position);
+}
+// calculate origin and extents from the min/max, use extent lenght for radius
+newSurface.bounds.origin = (maxpos + minpos) / 2.f;
+newSurface.bounds.extents = (maxpos - minpos) / 2.f;
+newSurface.bounds.sphereRadius = glm::length(newSurface.bounds.extents);
+
+newmesh->surfaces.push_back(newSurface);
+```
+
+Now we have the bounds on the GeoSurface, and just need to check for visibility on the RenderObject. Add this function to vk_engine.cpp, its a global function.
+
+
+^code visfn chapter-5/vk_engine.cpp
+
+This is just one of the multiple possible functions we could be using for frustum culling. The way this works is that we are transforming each of the 8 corners of the mesh-space bounding box into screenspace, using object matrix and view-projection matrix. For those, we find the screen-space box bounds, and we check if that box is inside the clip-space view. This way of calculating bounds is on the slow side compared to other formulas, and can have false-positives where it things objects are visible when they arent. All the functions have different tradeoffs, and this one was selected for code simplicity and parallels with the functions we are doing on the vertex shaders.
+ 
+To use it, we change the loop we added to fill the opaque_draws array.
+
+```cpp
+for (int i = 0; i < drawCommands.OpaqueSurfaces.size(); i++) {
+    if (is_visible(drawCommands.OpaqueSurfaces[i], sceneData.viewproj)) {
+        opaque_draws.push_back(i);
+    }
+}
+```
+
+Now instead of adding `i` to it, we check for visibility. 
+
+The renderer now will skip objects outside of the view. It should look the same as it did, but run faster and with less draws. If you get visual glitches, double-check the building of the bounding box for the `GeoSurface` and see if there is a typo in the is_visible function.
 
 {% include comments.html term="Vkguide 2 Beta Comments" %}
