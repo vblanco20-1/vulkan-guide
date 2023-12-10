@@ -141,6 +141,21 @@ struct GeoSurface {
 };
 ```
 
+Also add the Bounds structure to RenderObject
+
+```cpp
+struct RenderObject {
+    uint32_t indexCount;
+    uint32_t firstIndex;
+    VkBuffer indexBuffer;
+    
+    MaterialInstance* material;
+    Bounds bounds;
+    glm::mat4 transform;
+    VkDeviceAddress vertexBufferAddress;
+};
+```
+
 Our bounds are a origin, extent (box size), and sphere radius. The sphere radius can be used in case we want to use other frustum culling algorithms and has other uses.
 
 To calculate it, we must add it to the loader code. 
@@ -165,6 +180,34 @@ newSurface.bounds.sphereRadius = glm::length(newSurface.bounds.extents);
 newmesh->surfaces.push_back(newSurface);
 ```
 
+From the MeshNode::Draw() function, make sure that the bounds are copied to the RenderObject. It should look like this now.
+
+```
+void MeshNode::Draw(const glm::mat4& topMatrix, DrawContext& ctx) {
+    glm::mat4 nodeMatrix = topMatrix * worldTransform;
+
+    for (auto& s : mesh->surfaces) {
+        RenderObject def;
+        def.indexCount = s.count;
+        def.firstIndex = s.startIndex;
+        def.indexBuffer = mesh->meshBuffers.indexBuffer.buffer;
+        def.material = &s.material->data;
+        def.bounds = s.bounds;
+        def.transform = nodeMatrix;
+        def.vertexBufferAddress = mesh->meshBuffers.vertexBufferAddress;
+
+        if (s.material->data.passType == MaterialPass::Transparent) {
+            ctx.TransparentSurfaces.push_back(def);
+        } else {
+            ctx.OpaqueSurfaces.push_back(def);
+        }
+    }
+
+    // recurse down
+    Node::Draw(topMatrix, ctx);
+}
+```
+
 Now we have the bounds on the GeoSurface, and just need to check for visibility on the RenderObject. Add this function to vk_engine.cpp, its a global function.
 
 
@@ -185,5 +228,7 @@ for (int i = 0; i < drawCommands.OpaqueSurfaces.size(); i++) {
 Now instead of adding `i` to it, we check for visibility. 
 
 The renderer now will skip objects outside of the view. It should look the same as it did, but run faster and with less draws. If you get visual glitches, double-check the building of the bounding box for the `GeoSurface` and see if there is a typo in the is_visible function.
+
+The code for doing the same cull and sort but on the transparent objects has been skipped, but its the same as with the opaque objects, so you can try doing it yourself.
 
 {% include comments.html term="Vkguide 2 Beta Comments" %}
