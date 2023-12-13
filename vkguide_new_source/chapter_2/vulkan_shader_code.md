@@ -157,7 +157,6 @@ We continue the function by allocating one of them, and writing it so that it po
 void VulkanEngine::init_descriptors()
 {
 	// other code
-
 ^code init_desc_2 chapter-2/vk_engine.cpp
 }
 ```
