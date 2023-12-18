@@ -35,7 +35,7 @@ std::optional<AllocatedImage> load_image(VulkanEngine* engine, fastgltf::Asset& 
                     imagesize.height = height;
                     imagesize.depth = 1;
 
-                    newImage = engine->create_image(data, imagesize, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT);
+                    newImage = engine->create_image(data, imagesize, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT,true);
 
                     stbi_image_free(data);
                 }
@@ -49,7 +49,7 @@ std::optional<AllocatedImage> load_image(VulkanEngine* engine, fastgltf::Asset& 
                     imagesize.height = height;
                     imagesize.depth = 1;
 
-                    newImage = engine->create_image(data, imagesize, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT);
+                    newImage = engine->create_image(data, imagesize, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT,true);
 
                     stbi_image_free(data);
                 }
@@ -73,7 +73,7 @@ std::optional<AllocatedImage> load_image(VulkanEngine* engine, fastgltf::Asset& 
                                        imagesize.depth = 1;
 
                                        newImage = engine->create_image(data, imagesize, VK_FORMAT_R8G8B8A8_UNORM,
-                                           VK_IMAGE_USAGE_SAMPLED_BIT);
+                                           VK_IMAGE_USAGE_SAMPLED_BIT,true);
 
                                        stbi_image_free(data);
                                    }
@@ -151,6 +151,50 @@ std::optional<std::shared_ptr<LoadedGLTF>> loadGltf(VulkanEngine* engine, std::s
 
         VkSamplerCreateInfo sampl = { .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
         sampl.pNext = nullptr;
+        sampl.maxLod = VK_LOD_CLAMP_NONE;
+        sampl.minLod = 0;
+
+        switch (sampler.magFilter.value_or(fastgltf::Filter::Nearest)) {
+            //nearest samplers
+        case fastgltf::Filter::Nearest:
+        case fastgltf::Filter::NearestMipMapNearest:
+        case fastgltf::Filter::NearestMipMapLinear:
+            sampl.magFilter = VK_FILTER_NEAREST;
+            break;
+            //linear samplers
+        case fastgltf::Filter::Linear:
+        case fastgltf::Filter::LinearMipMapNearest:
+        case fastgltf::Filter::LinearMipMapLinear:
+            sampl.magFilter = VK_FILTER_LINEAR;
+            break;
+        }
+
+		switch (sampler.minFilter.value_or(fastgltf::Filter::Nearest)) {
+			//nearest samplers
+		case fastgltf::Filter::Nearest:
+		case fastgltf::Filter::NearestMipMapNearest:
+		case fastgltf::Filter::NearestMipMapLinear:
+			sampl.minFilter = VK_FILTER_NEAREST;
+			break;
+			//linear samplers
+		case fastgltf::Filter::Linear:
+		case fastgltf::Filter::LinearMipMapNearest:
+		case fastgltf::Filter::LinearMipMapLinear:
+			sampl.minFilter = VK_FILTER_LINEAR;
+			break;
+		}
+
+        switch (sampler.minFilter.value_or(fastgltf::Filter::Nearest)) {
+
+        case fastgltf::Filter::NearestMipMapNearest:
+        case fastgltf::Filter::LinearMipMapNearest:
+            sampl.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+            break;
+        case fastgltf::Filter::NearestMipMapLinear:
+        case fastgltf::Filter::LinearMipMapLinear:
+            sampl.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+            break;
+        }
 
         vkCreateSampler(engine->_device, &sampl, nullptr, &newSampler);
 

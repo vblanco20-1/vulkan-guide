@@ -201,6 +201,8 @@ public:
 
 	VkSampler _defaultSamplerLinear;
 	VkSampler _defaultSamplerNearest;
+    VkSampler _defaultSamplerLinearMipmapped;
+	
     GPUMeshBuffers rectangle;
     DrawContext drawCommands;
 
@@ -244,9 +246,9 @@ public:
     FrameData& get_last_frame();
 
     AllocatedBuffer create_buffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage);
-    AllocatedImage create_image(VkExtent3D size, VkFormat format, VkImageUsageFlags usage);
+    AllocatedImage create_image(VkExtent3D size, VkFormat format, VkImageUsageFlags usage , bool mipmapped = false);
 
-    AllocatedImage create_image(void* data, VkExtent3D size, VkFormat format, VkImageUsageFlags usage);
+    AllocatedImage create_image(void* data, VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool mipmapped = false);
 
     void immediate_submit(std::function<void(VkCommandBuffer cmd)>&& function);
 
@@ -256,10 +258,13 @@ public:
     void destroy_image(const AllocatedImage& img);
     void destroy_buffer(const AllocatedBuffer& buffer);
 
+    bool resize_requested;
+    bool freeze_rendering;
 private:
     void init_vulkan();
 
     void init_swapchain();
+    void resize_swapchain();
 
     void init_commands();
 

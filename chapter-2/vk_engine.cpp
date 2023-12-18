@@ -856,7 +856,7 @@ void VulkanEngine::init_descriptors()
 	}
 //< init_desc_1
 // 
-//> init_desc_2	
+//> init_desc_2
 	//allocate a descriptor set for our draw image
 	_drawImageDescriptors = globalDescriptorAllocator.allocate(_device,_drawImageDescriptorLayout);	
 
@@ -875,5 +875,5 @@ void VulkanEngine::init_descriptors()
 	drawImageWrite.pImageInfo = &imgInfo;
 
 	vkUpdateDescriptorSets(_device, 1, &drawImageWrite, 0, nullptr);
-// init_desc_2
+//< init_desc_2
 }
