@@ -47,10 +47,11 @@ public:
 	
 //> swap_init
 	VkSwapchainKHR _swapchain;
-	VkFormat _swachainImageFormat;
+	VkFormat _swapchainImageFormat;
 
 	std::vector<VkImage> _swapchainImages;
 	std::vector<VkImageView> _swapchainImageViews;
+	VkExtent2D _swapchainExtent;
 //< swap_init
 
 	//initializes everything in the engine
@@ -65,11 +66,15 @@ public:
 	//run main loop
 	void run();
 
+	bool stop_rendering{false};
 private:
 
 	void init_vulkan();
 
 	void init_swapchain();
+
+	void create_swapchain(uint32_t width, uint32_t height);
+	void destroy_swapchain();
 
 	void init_commands();
 

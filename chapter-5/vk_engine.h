@@ -78,8 +78,6 @@ struct FrameData {
 
     VkCommandPool _commandPool;
     VkCommandBuffer _mainCommandBuffer;
-
-    AllocatedBuffer cameraBuffer;
 };
 
 constexpr unsigned int FRAME_OVERLAP = 2;
@@ -165,11 +163,9 @@ public:
 
     VkPipeline _gradientPipeline;
     VkPipelineLayout _gradientPipelineLayout;
-
-    std::vector<VkFramebuffer> _framebuffers;
+    
     std::vector<VkImage> _swapchainImages;
     std::vector<VkImageView> _swapchainImageViews;
-    VkDescriptorSet _defaultGLTFdescriptor;
 
 	VkDescriptorSet _drawImageDescriptors;
 	VkDescriptorSetLayout _drawImageDescriptorLayout;
@@ -186,9 +182,6 @@ public:
     AllocatedImage _drawImage;
     AllocatedImage _depthImage;
 
-    // the format for the draw image
-    VkFormat _drawFormat;
-
     // immediate submit structures
     VkFence _immFence;
     VkCommandBuffer _immCommandBuffer;
@@ -201,7 +194,6 @@ public:
 
 	VkSampler _defaultSamplerLinear;
 	VkSampler _defaultSamplerNearest;
-    VkSampler _defaultSamplerLinearMipmapped;
 	
     GPUMeshBuffers rectangle;
     DrawContext drawCommands;
@@ -264,7 +256,12 @@ private:
     void init_vulkan();
 
     void init_swapchain();
+
+    void create_swapchain();
+
     void resize_swapchain();
+
+    void destroy_swapchain();
 
     void init_commands();
 

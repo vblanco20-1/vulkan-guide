@@ -10,9 +10,8 @@
 
 #include "VkBootstrap.h"
 #include <array>
-
-//we want to immediately abort when there is an error. In normal engines this would give an error message to the user, or perform a dump of state.
-using namespace std;
+#include <thread>
+#include <chrono>
 
 //> init_fn
 void VulkanEngine::init()
@@ -43,6 +42,19 @@ void VulkanEngine::init()
 	_isInitialized = true;
 }
 //< init_fn
+//> destroy_sc
+void VulkanEngine::destroy_swapchain()
+{
+	vkDestroySwapchainKHR(_device, _swapchain, nullptr);
+
+	// destroy swapchain resources
+	for (int i = 0; i < _swapchainImageViews.size(); i++) {
+
+		vkDestroyImageView(_device, _swapchainImageViews[i], nullptr);
+	}
+}
+//< destroy_sc
+
 void VulkanEngine::cleanup()
 {	
 	if (_isInitialized) {
@@ -60,13 +72,7 @@ void VulkanEngine::cleanup()
 			vkDestroySemaphore(_device ,_frames[i]._swapchainSemaphore, nullptr);
 		}
 
-		vkDestroySwapchainKHR(_device, _swapchain, nullptr);
-
-		//destroy swapchain resources
-		for (int i = 0; i < _swapchainImageViews.size(); i++) {
-
-			vkDestroyImageView(_device, _swapchainImageViews[i], nullptr);
-		}
+		destroy_swapchain();
 
 		vkDestroySurfaceKHR(_instance, _surface, nullptr);
 
@@ -186,9 +192,26 @@ void VulkanEngine::run()
 		{
 			//close the window when user alt-f4s or clicks the X button			
 			if (e.type == SDL_QUIT) bQuit = true;
+
+			if (e.type == SDL_WINDOWEVENT) {
+
+				if (e.window.event == SDL_WINDOWEVENT_MINIMIZED) {
+					stop_rendering = true;
+				}
+				if (e.window.event == SDL_WINDOWEVENT_RESTORED) {
+					stop_rendering = false;
+				}
+			}
 		}
 
-		draw();
+		//do not draw if we are minimized
+		if (stop_rendering) {
+			//throttle the speed to avoid the endless spinning
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		}
+		else {
+			draw();
+		}
 	}
 }
 
@@ -253,30 +276,36 @@ void VulkanEngine::init_vulkan()
 	// use vkbootstrap to get a Graphics queue
 	_graphicsQueue = vkbDevice.get_queue(vkb::QueueType::graphics).value();
 	_graphicsQueueFamily = vkbDevice.get_queue_index(vkb::QueueType::graphics).value();
-
 //< init_queue
-
 }
+
 //> init_swap
-void VulkanEngine::init_swapchain()
+void VulkanEngine::create_swapchain(uint32_t width, uint32_t height)
 {
-	vkb::SwapchainBuilder swapchainBuilder{_chosenGPU,_device,_surface };
+	vkb::SwapchainBuilder swapchainBuilder{ _chosenGPU,_device,_surface };
+
+	_swapchainImageFormat = VK_FORMAT_B8G8R8A8_UNORM;
 
 	vkb::Swapchain vkbSwapchain = swapchainBuilder
-		.use_default_format_selection()
+		//.use_default_format_selection()
+		.set_desired_format(VkSurfaceFormatKHR{ .format = _swapchainImageFormat, .colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR })
 		//use vsync present mode
 		.set_desired_present_mode(VK_PRESENT_MODE_FIFO_KHR)
-		.set_desired_extent(_windowExtent.width, _windowExtent.height)
+		.set_desired_extent(width, height)
 		.add_image_usage_flags(VK_IMAGE_USAGE_TRANSFER_DST_BIT)
 		.build()
 		.value();
 
+	_swapchainExtent = vkbSwapchain.extent;
 	//store swapchain and its related images
 	_swapchain = vkbSwapchain.swapchain;
 	_swapchainImages = vkbSwapchain.get_images().value();
 	_swapchainImageViews = vkbSwapchain.get_image_views().value();
+}
 
-	_swachainImageFormat = vkbSwapchain.image_format;
+void VulkanEngine::init_swapchain()
+{
+	create_swapchain(_windowExtent.width, _windowExtent.height);
 }
 //< init_swap
 

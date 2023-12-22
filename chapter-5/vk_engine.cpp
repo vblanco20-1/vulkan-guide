@@ -1,6 +1,10 @@
 ﻿
 #include "vk_engine.h"
 
+#include "vk_images.h"
+#include "vk_loader.h"
+#include "vk_descriptors.h"
+
 #include <SDL.h>
 #include <SDL_vulkan.h>
 
@@ -8,25 +12,14 @@
 #include <vk_types.h>
 
 #include "VkBootstrap.h"
-#include <array>
-#include <fstream>
-
-#include "vk_images.h"
-#include "vk_loader.h"
-#include <iostream>
-
-#define VMA_IMPLEMENTATION
-#include "vk_descriptors.h"
-#include "vk_mem_alloc.h"
-#include <filesystem>
-
-#include "stb_image.h"
 
 #include "imgui_impl_sdl2.h"
 #include "imgui_impl_vulkan.h"
-#include <fastgltf/parser.hpp>
-#include <fastgltf/tools.hpp>
+
 #include <glm/gtx/transform.hpp>
+
+#define VMA_IMPLEMENTATION
+#include "vk_mem_alloc.h"
 
 constexpr bool bUseValidationLayers = true;
 
@@ -74,8 +67,6 @@ void VulkanEngine::init()
     init_renderables();
 
     init_imgui();
-
-    
 
     // everything went fine
     _isInitialized = true;
@@ -172,13 +163,7 @@ void VulkanEngine::cleanup()
 
         _mainDeletionQueue.flush();
 
-        vkDestroySwapchainKHR(_device, _swapchain, nullptr);
-
-        // destroy swapchain resources
-        for (int i = 0; i < _swapchainImageViews.size(); i++) {
-
-            vkDestroyImageView(_device, _swapchainImageViews[i], nullptr);
-        }
+        destroy_swapchain();
 
         vkDestroySurfaceKHR(_instance, _surface, nullptr);
 
@@ -212,12 +197,12 @@ void VulkanEngine::init_background_pipelines()
 
 	VkShaderModule gradientShader;
 	if (!vkutil::load_shader_module("../../shaders/gradient_color.comp.spv", _device, &gradientShader)) {
-		std::cout << "Error when building the compute shader" << std::endl;
+		fmt::print("Error when building the compute shader \n");
 	}
 
 	VkShaderModule skyShader;
 	if (!vkutil::load_shader_module("../../shaders/sky.comp.spv", _device, &skyShader)) {
-		std::cout << "Error when building the compute shader" << std::endl;
+        fmt::print("Error when building the compute shader\n");
 	}
 
 	VkPipelineShaderStageCreateInfo stageinfo{};
@@ -328,7 +313,7 @@ void VulkanEngine::draw()
 
 	VkResult e = vkAcquireNextImageKHR(_device, _swapchain, 1000000000, get_current_frame()._swapchainSemaphore, nullptr, &swapchainImageIndex);
 	if (e == VK_ERROR_OUT_OF_DATE_KHR) {
-        resize_requested = true;
+        //resize_requested = true;
 
 		freeze_rendering = true;
 		return ;
@@ -366,7 +351,7 @@ void VulkanEngine::draw()
 	//< draw_first
 	//> imgui_draw
 	// execute a copy from the draw image into the swapchain
-	vkutil::copy_image_to_image(cmd, _drawImage.image, _swapchainImages[swapchainImageIndex], extent);
+	vkutil::copy_image_to_image(cmd, _drawImage.image, _swapchainImages[swapchainImageIndex],extent,extent);
 
 	// set swapchain image layout to Attachment Optimal so we can draw it
 	vkutil::transition_image(cmd, _swapchainImages[swapchainImageIndex], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
@@ -413,7 +398,7 @@ void VulkanEngine::draw()
 
 	VkResult presentResult = vkQueuePresentKHR(_graphicsQueue, &presentInfo);
 	if (e == VK_ERROR_OUT_OF_DATE_KHR) {
-		resize_requested = true;
+		//resize_requested = true;
         freeze_rendering = true;
 	}
 	//increase the number of frames drawn
@@ -584,10 +569,19 @@ void VulkanEngine::run()
             if (e.type == SDL_QUIT)
                 bQuit = true;
 
-            if (e.type == SDL_WINDOWEVENT_RESIZED) {
-                resize_requested = true;
-            }
+            if (e.type == SDL_WINDOWEVENT) {
 
+				if (e.window.event == SDL_WINDOWEVENT_RESIZED) {
+					resize_requested = true;
+				}
+				if (e.window.event == SDL_WINDOWEVENT_MINIMIZED) {
+					freeze_rendering = true;
+				}
+				if (e.window.event == SDL_WINDOWEVENT_RESTORED) {
+					freeze_rendering = false;
+				}
+            }
+            
             mainCamera.processSDLEvent(e);
             ImGui_ImplSDL2_ProcessEvent(&e);
         }
@@ -595,7 +589,7 @@ void VulkanEngine::run()
 		if (resize_requested) {
 			resize_swapchain();
 		}
-        if(freeze_rendering) continue;
+        if (freeze_rendering) continue;
 
         // imgui new frame
         ImGui_ImplVulkan_NewFrame();
@@ -637,10 +631,6 @@ void VulkanEngine::run()
 
         draw();
 
-        if (resize_requested) {
-            resize_swapchain();
-        }
-
         auto end = std::chrono::system_clock::now();
         auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
 
@@ -655,7 +645,7 @@ void VulkanEngine::update_scene()
 	glm::mat4 view = mainCamera.getViewMatrix();
 
 	// camera projection
-	glm::mat4 projection = glm::perspective(glm::radians(70.f), 1700.f / 900.f, 10000.f, 0.1f);
+	glm::mat4 projection = glm::perspective(glm::radians(70.f), (float)_windowExtent.width / (float)_windowExtent.height, 10000.f, 0.1f);
 
 	// invert the Y direction on projection matrix so that we are more similar
 	// to opengl and gltf axis
@@ -924,24 +914,7 @@ void VulkanEngine::init_vulkan()
 
 void VulkanEngine::init_swapchain()
 {
-	vkb::SwapchainBuilder swapchainBuilder{ _chosenGPU,_device,_surface };
-
-	vkb::Swapchain vkbSwapchain = swapchainBuilder
-		//.use_default_format_selection()
-		.set_desired_format(VkSurfaceFormatKHR{ .format = VK_FORMAT_B8G8R8A8_UNORM, .colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR })
-		//use vsync present mode
-		.set_desired_present_mode(VK_PRESENT_MODE_FIFO_KHR)
-		.set_desired_extent(_windowExtent.width, _windowExtent.height)
-		.add_image_usage_flags(VK_IMAGE_USAGE_TRANSFER_DST_BIT)
-		.build()
-		.value();
-
-	//store swapchain and its related images
-	_swapchain = vkbSwapchain.swapchain;
-	_swapchainImages = vkbSwapchain.get_images().value();
-	_swapchainImageViews = vkbSwapchain.get_image_views().value();
-
-	_swapchainImageFormat = vkbSwapchain.image_format;
+    create_swapchain();
 
 	//depth image size will match the window
 	VkExtent3D drawImageExtent = {
@@ -1001,28 +974,15 @@ void VulkanEngine::init_swapchain()
 	});
 }
 
-void VulkanEngine::resize_swapchain()
+void VulkanEngine::create_swapchain()
 {
-    vkDeviceWaitIdle(_device);
+	vkb::SwapchainBuilder swapchainBuilder{ _chosenGPU,_device,_surface };
 
-	vkDestroySwapchainKHR(_device, _swapchain, nullptr);
-
-	// destroy swapchain resources
-	for (int i = 0; i < _swapchainImageViews.size(); i++) {
-
-		vkDestroyImageView(_device, _swapchainImageViews[i], nullptr);
-	}
-
-    vkb::SwapchainBuilder swapchainBuilder{ _chosenGPU,_device,_surface };
-
-    int w,h;
-    SDL_GetWindowSize(_window,&w, &h);
-    _windowExtent.width=w;
-    _windowExtent.height=h;
+    _swapchainImageFormat = VK_FORMAT_B8G8R8A8_UNORM;
 
 	vkb::Swapchain vkbSwapchain = swapchainBuilder
 		//.use_default_format_selection()
-		.set_desired_format(VkSurfaceFormatKHR{ .format = VK_FORMAT_B8G8R8A8_UNORM, .colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR })
+		.set_desired_format(VkSurfaceFormatKHR{ .format = _swapchainImageFormat, .colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR })
 		//use vsync present mode
 		.set_desired_present_mode(VK_PRESENT_MODE_FIFO_KHR)
 		.set_desired_extent(_windowExtent.width, _windowExtent.height)
@@ -1034,11 +994,37 @@ void VulkanEngine::resize_swapchain()
 	_swapchain = vkbSwapchain.swapchain;
 	_swapchainImages = vkbSwapchain.get_images().value();
 	_swapchainImageViews = vkbSwapchain.get_image_views().value();
+}
+void VulkanEngine::destroy_swapchain()
+{
+	vkDestroySwapchainKHR(_device, _swapchain, nullptr);
+
+	// destroy swapchain resources
+	for (int i = 0; i < _swapchainImageViews.size(); i++) {
+
+		vkDestroyImageView(_device, _swapchainImageViews[i], nullptr);
+	}
+}
+
+void VulkanEngine::resize_swapchain()
+{
+    vkDeviceWaitIdle(_device);
+
+    destroy_swapchain();
+
+    int w,h;
+    SDL_GetWindowSize(_window,&w, &h);
+    _windowExtent.width=w;
+    _windowExtent.height=h;
+
+	create_swapchain();
 
     resize_requested = false;
 
 	freeze_rendering = false;
 }
+
+
 
 void VulkanEngine::init_commands()
 {
@@ -1225,7 +1211,6 @@ void VulkanEngine::init_descriptors()
 
 		_frames[i]._frameDescriptors = DescriptorAllocatorGrowable{};
 		_frames[i]._frameDescriptors.init(_device, 1000, frame_sizes);
-        _frames[i].cameraBuffer = create_buffer(sizeof(GPUSceneData),VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,VMA_MEMORY_USAGE_CPU_TO_GPU);
 		_mainDeletionQueue.push_function([&, i]() {
 			_frames[i]._frameDescriptors.destroy_pools(_device);
 		});

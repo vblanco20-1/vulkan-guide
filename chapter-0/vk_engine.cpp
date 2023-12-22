@@ -6,6 +6,9 @@
 
 #include <vk_types.h>
 #include <vk_initializers.h>
+
+#include <thread>
+#include <chrono>
 //< includes
 
 //> init
@@ -62,16 +65,30 @@ void VulkanEngine::run()
 	bool bQuit = false;
 
 	//main loop
-	while (!bQuit)
-	{
+	while (!bQuit) {
 		//Handle events on queue
-		while (SDL_PollEvent(&e) != 0)
-		{
+		while (SDL_PollEvent(&e) != 0) {
 			//close the window when user alt-f4s or clicks the X button			
 			if (e.type == SDL_QUIT) bQuit = true;
+
+			if (e.type == SDL_WINDOWEVENT) {
+				if (e.window.event == SDL_WINDOWEVENT_MINIMIZED) {
+					stop_rendering = true;
+				}
+				if (e.window.event == SDL_WINDOWEVENT_RESTORED) {
+					stop_rendering = false;
+				}
+			}
 		}
 
-		draw();
+		//do not draw if we are minimized
+		if (stop_rendering) {
+			//throttle the speed to avoid the endless spinning
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		}
+		else {
+			draw();
+		}
 	}
 }
 //< drawloop

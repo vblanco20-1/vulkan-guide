@@ -11,7 +11,7 @@
 #include <fastgltf/parser.hpp>
 #include <fastgltf/tools.hpp>
 #include <fastgltf/util.hpp>
-
+//> loadimg
 std::optional<AllocatedImage> load_image(VulkanEngine* engine, fastgltf::Asset& asset, fastgltf::Image& image)
 {
     AllocatedImage newImage {};
@@ -91,6 +91,40 @@ std::optional<AllocatedImage> load_image(VulkanEngine* engine, fastgltf::Asset& 
         return newImage;
     }
 }
+//< loadimg
+//> filters
+VkFilter extract_filter(fastgltf::Filter filter)
+{
+    switch (filter) {
+    // nearest samplers
+    case fastgltf::Filter::Nearest:
+    case fastgltf::Filter::NearestMipMapNearest:
+    case fastgltf::Filter::NearestMipMapLinear:
+        return VK_FILTER_NEAREST;
+
+    // linear samplers
+    case fastgltf::Filter::Linear:
+    case fastgltf::Filter::LinearMipMapNearest:
+    case fastgltf::Filter::LinearMipMapLinear:
+    default:
+        return VK_FILTER_LINEAR;
+    }
+}
+
+VkSamplerMipmapMode extract_mipmap_mode(fastgltf::Filter filter)
+{
+    switch (filter) {
+    case fastgltf::Filter::NearestMipMapNearest:
+    case fastgltf::Filter::LinearMipMapNearest:
+        return VK_SAMPLER_MIPMAP_MODE_NEAREST;
+
+    case fastgltf::Filter::NearestMipMapLinear:
+    case fastgltf::Filter::LinearMipMapLinear:
+    default:
+        return VK_SAMPLER_MIPMAP_MODE_LINEAR;
+    }
+}
+//< filters
 
 std::optional<std::shared_ptr<LoadedGLTF>> loadGltf(VulkanEngine* engine, std::string_view filePath)
 {
@@ -147,55 +181,17 @@ std::optional<std::shared_ptr<LoadedGLTF>> loadGltf(VulkanEngine* engine, std::s
 
     // load samplers
     for (fastgltf::Sampler& sampler : gltf.samplers) {
-        VkSampler newSampler;
 
-        VkSamplerCreateInfo sampl = { .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
-        sampl.pNext = nullptr;
+        VkSamplerCreateInfo sampl = { .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO, .pNext = nullptr};
         sampl.maxLod = VK_LOD_CLAMP_NONE;
         sampl.minLod = 0;
 
-        switch (sampler.magFilter.value_or(fastgltf::Filter::Nearest)) {
-            //nearest samplers
-        case fastgltf::Filter::Nearest:
-        case fastgltf::Filter::NearestMipMapNearest:
-        case fastgltf::Filter::NearestMipMapLinear:
-            sampl.magFilter = VK_FILTER_NEAREST;
-            break;
-            //linear samplers
-        case fastgltf::Filter::Linear:
-        case fastgltf::Filter::LinearMipMapNearest:
-        case fastgltf::Filter::LinearMipMapLinear:
-            sampl.magFilter = VK_FILTER_LINEAR;
-            break;
-        }
+        sampl.magFilter = extract_filter(sampler.magFilter.value_or(fastgltf::Filter::Nearest));
+        sampl.minFilter = extract_filter(sampler.minFilter.value_or(fastgltf::Filter::Nearest));
 
-		switch (sampler.minFilter.value_or(fastgltf::Filter::Nearest)) {
-			//nearest samplers
-		case fastgltf::Filter::Nearest:
-		case fastgltf::Filter::NearestMipMapNearest:
-		case fastgltf::Filter::NearestMipMapLinear:
-			sampl.minFilter = VK_FILTER_NEAREST;
-			break;
-			//linear samplers
-		case fastgltf::Filter::Linear:
-		case fastgltf::Filter::LinearMipMapNearest:
-		case fastgltf::Filter::LinearMipMapLinear:
-			sampl.minFilter = VK_FILTER_LINEAR;
-			break;
-		}
+        sampl.mipmapMode= extract_mipmap_mode(sampler.minFilter.value_or(fastgltf::Filter::Nearest));
 
-        switch (sampler.minFilter.value_or(fastgltf::Filter::Nearest)) {
-
-        case fastgltf::Filter::NearestMipMapNearest:
-        case fastgltf::Filter::LinearMipMapNearest:
-            sampl.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
-            break;
-        case fastgltf::Filter::NearestMipMapLinear:
-        case fastgltf::Filter::LinearMipMapLinear:
-            sampl.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-            break;
-        }
-
+        VkSampler newSampler;
         vkCreateSampler(engine->_device, &sampl, nullptr, &newSampler);
 
         file.samplers.push_back(newSampler);
