@@ -117,11 +117,10 @@ for (auto& r : opaque_draws) {
 
 With this the renderer will minimize the number of descriptor set bindings, as it will go material by material. We still have the index buffer binding to deal with but thats faster to switch.
 
-By doing this, the engine should now have significantly more performance. If you run it in release mode, you should be able to draw scenes with tens of thousands of meshes no problem. We arent doing frustrum culling, so the GPU gets a lot of wasted work which does affect its perf.
+By doing this, the engine should now have significantly more performance. If you run it in release mode, you should be able to draw scenes with tens of thousands of meshes no problem. But out GPU cost is high as we are processing meshes outside the view. That gets improved by doing Frustum Culling.
 
 ## Frustum Culling
-
-There is another big issue the engine has at the moment. We are drawing the entire scene, even things that are outside of the view. As we have the draw list, we will filter it to check what objects are in view, and skip the ones that dont.
+Right now we render every object in the map, but we dont have to draw things that are ouside of the view. As we have the draw list, we will filter it to check what objects are in view, and skip the ones that dont. As long as the cost of the filtering is cheaper than the cost of rendering objects, we have a win.
 
 There are multiple ways of doing Frustum culling, but with the data and architecture we have, we will use oriented bounding boxes. We will calculate bounds for each GeoSurface, and then check if the bounds are in view.
 
@@ -182,7 +181,7 @@ newmesh->surfaces.push_back(newSurface);
 
 From the MeshNode::Draw() function, make sure that the bounds are copied to the RenderObject. It should look like this now.
 
-```
+```cpp
 void MeshNode::Draw(const glm::mat4& topMatrix, DrawContext& ctx) {
     glm::mat4 nodeMatrix = topMatrix * worldTransform;
 
@@ -269,5 +268,7 @@ Now instead of adding `i` to it, we check for visibility.
 The renderer now will skip objects outside of the view. It should look the same as it did, but run faster and with less draws. If you get visual glitches, double-check the building of the bounding box for the `GeoSurface` and see if there is a typo in the is_visible function.
 
 The code for doing the same cull and sort but on the transparent objects has been skipped, but its the same as with the opaque objects, so you can try doing it yourself.
+
+With the transparent objects, you want to also change the sorting code so that it checks distance from bounds to the camera, so that objects draw more correct. But sorting by depth is incompatible with sorting by pipeline, so you will need to decide what works better for your case.
 
 {% include comments.html term="Vkguide 2 Beta Comments" %}

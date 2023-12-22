@@ -108,7 +108,6 @@ Now that our new init_Vulkan function is added, we can start filling it with the
 ```cpp
 void VulkanEngine::init_vulkan()
 {
-
 	vkb::InstanceBuilder builder;
 
 	bool bUseValidationLayers = true;
@@ -125,7 +124,6 @@ void VulkanEngine::init_vulkan()
 	//grab the instance 
 	_instance = vkb_inst.instance;
 	_debug_messenger = vkb_inst.debug_messenger;
-
 
 }
 ```
@@ -224,12 +222,16 @@ public:
 	// --- other code ---
 
 	VkSwapchainKHR _swapchain;
-	VkFormat _swachainImageFormat;
+	VkFormat _swapchainImageFormat;
 
 	std::vector<VkImage> _swapchainImages;
 	std::vector<VkImageView> _swapchainImageViews;
-}
+	VkExtent2D _swapchainExtent;
 
+private: 
+	void create_swapchain(uint32_t width, uint32_t height);
+	void destroy_swapchain();
+}
 ```
 
 We are storing the `VkSwapchainKHR` itself, alongside the format that the swapchain images use when rendering to them.
@@ -238,38 +240,66 @@ We also store 2 arrays, one of Images, and another of ImageViews.
 
 A `VkImage` is a handle to the actual image object to use as texture or to render into. A `VkImageView` is a wrapper for that image. It allows to do things like swap the colors. We will go into detail about it later.
 
+We are also adding create and destroy functions for the swapchain. 
+
 Like with the other initialization functions, we are going to use the vkb library to create a swapchain. It uses a builder similar to the ones we used for instance and device.
 
 <!-- codegen from tag init_swap on file E:\ProgrammingProjects\vulkan-guide-2\chapter-1/vk_engine.cpp --> 
 ```cpp
-void VulkanEngine::init_swapchain()
+void VulkanEngine::create_swapchain(uint32_t width, uint32_t height)
 {
-	vkb::SwapchainBuilder swapchainBuilder{_chosenGPU,_device,_surface };
+	vkb::SwapchainBuilder swapchainBuilder{ _chosenGPU,_device,_surface };
+
+	_swapchainImageFormat = VK_FORMAT_B8G8R8A8_UNORM;
 
 	vkb::Swapchain vkbSwapchain = swapchainBuilder
-		.use_default_format_selection()
+		//.use_default_format_selection()
+		.set_desired_format(VkSurfaceFormatKHR{ .format = _swapchainImageFormat, .colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR })
 		//use vsync present mode
 		.set_desired_present_mode(VK_PRESENT_MODE_FIFO_KHR)
-		.set_desired_extent(_windowExtent.width, _windowExtent.height)
+		.set_desired_extent(width, height)
 		.add_image_usage_flags(VK_IMAGE_USAGE_TRANSFER_DST_BIT)
 		.build()
 		.value();
 
+	_swapchainExtent = vkbSwapchain.extent;
 	//store swapchain and its related images
 	_swapchain = vkbSwapchain.swapchain;
 	_swapchainImages = vkbSwapchain.get_images().value();
 	_swapchainImageViews = vkbSwapchain.get_image_views().value();
+}
 
-	_swachainImageFormat = vkbSwapchain.image_format;
+void VulkanEngine::init_swapchain()
+{
+	create_swapchain(_windowExtent.width, _windowExtent.height);
 }
 ```
 
+From create_swapchain, we make the swapchain structures, and then we call the function from `init_swapchain()`
+
 The most important detail here is the present mode, which we have set to `VK_PRESENT_MODE_FIFO_KHR`. This way we are doing a hard VSync, which will limit the FPS of the entire engine to the speed of the monitor.
 
-We also send the window sizes to the swapchain. This is important as creating a swapchain will also create the images for it, so the size is locked. If you need to resize the window, the swapchain will need to be rebuild.
+We also send the window sizes to the swapchain. This is important as creating a swapchain will also create the images for it, so the size is locked. Later in the tutorial we will need to rebuild the swapchain as the window resizes, so we have them separated from the init flow, but in the init flow we default that size to the window size.
 
 Once the swapchain is built, we just store all of its stuff into the members of VulkanEngine class.
 
+Lets write the `destroy_swapchain()` function too.
+
+<!-- codegen from tag destroy_sc on file E:\ProgrammingProjects\vulkan-guide-2\chapter-1/vk_engine.cpp --> 
+```cpp
+void VulkanEngine::destroy_swapchain()
+{
+	vkDestroySwapchainKHR(_device, _swapchain, nullptr);
+
+	// destroy swapchain resources
+	for (int i = 0; i < _swapchainImageViews.size(); i++) {
+
+		vkDestroyImageView(_device, _swapchainImageViews[i], nullptr);
+	}
+}
+```
+
+We first delete the swapchain object, which will delete the images it holds internally. We then have to destroy the ImageViews for those images.
 
 ## Cleaning up resources
 We need to make sure that all of the Vulkan resources we create are correctly deleted, when the app exists.
@@ -281,16 +311,11 @@ void VulkanEngine::cleanup()
 {
 	if (_isInitialized) {
 
-		vkDestroySwapchainKHR(_device, _swapchain, nullptr);
+		destroy_swapchain();
 
-		//destroy swapchain resources
-		for (int i = 0; i < _swapchainImageViews.size(); i++) {
-
-			vkDestroyImageView(_device, _swapchainImageViews[i], nullptr);
-		}
-
-		vkDestroyDevice(_device, nullptr);
 		vkDestroySurfaceKHR(_instance, _surface, nullptr);
+		vkDestroyDevice(_device, nullptr);
+		
 		vkb::destroy_debug_utils_messenger(_instance, _debug_messenger);
 		vkDestroyInstance(_instance, nullptr);
 		SDL_DestroyWindow(_window);
@@ -300,8 +325,6 @@ void VulkanEngine::cleanup()
 
 Objects have dependencies on each other, and we need to delete them in the correct order. Deleting them in the opposite order they were created is a good way of doing it. In some cases, if you know what you are doing, the order can be changed a bit and it will be fine.
 
-Destroying the swapchain will also destroy the images for that swapchain, but the image-views need to be destroyed separately.
-
 `VkPhysicalDevice` can't be destroyed, as it's not a Vulkan resource per-se, it's more like just a handle to a GPU in the system.
 
 Because our initialization order was SDL Window -> Instance -> Surface -> Device -> Swapchain, we are doing exactly the opposite order for destruction.
@@ -309,7 +332,6 @@ Because our initialization order was SDL Window -> Instance -> Surface -> Device
 If you try to run the program now, it should do nothing, but that nothing also includes not emitting errors.
 
 There is no need to destroy the Images in this specific case, because the images are owned and destroyed with the swapchain.
-
 
 ## Validation layer errors
 Just to check that our validation layers are working, let's try to call the destruction functions in the wrong order
@@ -321,13 +343,7 @@ void VulkanEngine::cleanup()
 		//ERROR - Instance destroyed before others
 		vkDestroyInstance(_instance, nullptr);
 
-		vkDestroySwapchainKHR(_device, _swapchain, nullptr);
-
-		//destroy swapchain resources
-		for (int i = 0; i < _swapchainImageViews.size(); i++) {
-
-			vkDestroyImageView(_device, _swapchainImageViews[i], nullptr);
-		}
+		destroy_swapchain();
 
 		vkDestroyDevice(_device, nullptr);
 		vkDestroySurfaceKHR(_instance, _surface, nullptr);

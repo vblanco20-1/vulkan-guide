@@ -284,18 +284,16 @@ We will need a way to copy images, so add this into vk_images.cpp
 
 <!-- codegen from tag copyimg on file E:\ProgrammingProjects\vulkan-guide-2\shared/vk_images.cpp --> 
 ```cpp
-void vkutil::copy_image_to_image(VkCommandBuffer cmd, VkImage source, VkImage destination, VkExtent3D imageSize)
+void vkutil::copy_image_to_image(VkCommandBuffer cmd, VkImage source, VkImage destination, VkExtent3D srcSize, VkExtent3D dstSize)
 {
-    VkImageBlit2 blitRegion{};
-	blitRegion.sType = VK_STRUCTURE_TYPE_IMAGE_BLIT_2;
-	blitRegion.pNext = nullptr;
+	VkImageBlit2 blitRegion{ .sType = VK_STRUCTURE_TYPE_IMAGE_BLIT_2, .pNext = nullptr };
 
-    blitRegion.srcOffsets[1].x = imageSize.width;
-    blitRegion.srcOffsets[1].y = imageSize.height;
-    blitRegion.srcOffsets[1].z = 1;
+	blitRegion.srcOffsets[1].x = srcSize.width;
+	blitRegion.srcOffsets[1].y = srcSize.height;
+	blitRegion.srcOffsets[1].z = 1;
 
-    blitRegion.dstOffsets[1].x = imageSize.width;
-    blitRegion.dstOffsets[1].y = imageSize.height;
+	blitRegion.dstOffsets[1].x = dstSize.width;
+	blitRegion.dstOffsets[1].y = dstSize.height;
 	blitRegion.dstOffsets[1].z = 1;
 
 	blitRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -308,18 +306,17 @@ void vkutil::copy_image_to_image(VkCommandBuffer cmd, VkImage source, VkImage de
 	blitRegion.dstSubresource.layerCount = 1;
 	blitRegion.dstSubresource.mipLevel = 0;
 
-    VkBlitImageInfo2 blitInfo{};
-	blitInfo.sType = VK_STRUCTURE_TYPE_BLIT_IMAGE_INFO_2;
-	blitInfo.pNext = nullptr;
+	VkBlitImageInfo2 blitInfo{ .sType = VK_STRUCTURE_TYPE_BLIT_IMAGE_INFO_2, .pNext = nullptr };
+
 	blitInfo.dstImage = destination;
 	blitInfo.dstImageLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 	blitInfo.srcImage = source;
 	blitInfo.srcImageLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-    blitInfo.filter = VK_FILTER_NEAREST;
-    blitInfo.regionCount = 1;
-    blitInfo.pRegions = &blitRegion;
+	blitInfo.filter = VK_FILTER_LINEAR;
+	blitInfo.regionCount = 1;
+	blitInfo.pRegions = &blitRegion;
 
-    vkCmdBlitImage2(cmd, &blitInfo);
+	vkCmdBlitImage2(cmd, &blitInfo);
 }
 ```
  

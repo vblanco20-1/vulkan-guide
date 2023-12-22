@@ -176,8 +176,7 @@ Add the function to vk_images.cpp.
 ```cpp
 void vkutil::transition_image(VkCommandBuffer cmd, VkImage image, VkImageLayout currentLayout, VkImageLayout newLayout)
 {
-    VkImageMemoryBarrier2 imageBarrier {};
-    imageBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
+    VkImageMemoryBarrier2 imageBarrier {.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2};
     imageBarrier.pNext = nullptr;
 
     imageBarrier.srcStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
@@ -220,9 +219,9 @@ VkImageSubresourceRange vkinit::image_subresource_range(VkImageAspectFlags aspec
     VkImageSubresourceRange subImage {};
     subImage.aspectMask = aspectMask;
     subImage.baseMipLevel = 0;
-    subImage.levelCount = 1;
+    subImage.levelCount = VK_REMAINING_MIP_LEVELS;
     subImage.baseArrayLayer = 0;
-    subImage.layerCount = 1;
+    subImage.layerCount = VK_REMAINING_ARRAY_LAYERS;
 
     return subImage;
 }

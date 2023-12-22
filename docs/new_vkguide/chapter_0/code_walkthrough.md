@@ -57,6 +57,7 @@ vk_types.h holds this
 #include <string>
 #include <vector>
 #include <span>
+#include <array>
 
 #include <vulkan/vulkan.h>
 #include <vulkan/vk_enum_string_helper.h>
@@ -103,7 +104,7 @@ public:
 
 	bool _isInitialized{ false };
 	int _frameNumber {0};
-
+	bool stop_rendering{ false };
 	VkExtent2D _windowExtent{ 1700 , 900 };
 
 	struct SDL_Window* _window{ nullptr };
@@ -146,10 +147,13 @@ vk_engine.cpp line 1
 
 #include <vk_types.h>
 #include <vk_initializers.h>
+
+#include <thread>
+#include <chrono>
 ```
 
 Unlike in the other files, in this one we include a few more things.
-We include both `<SDL.h>` and `<SDL_vulkan.h>`. SDL.h holds the main SDL library data  for opening a window and input, while SDL_vulkan.h holds the Vulkan-specific flags and functionality for opening a Vulkan-compatible window and other Vulkan-specific things.
+We include both `<SDL.h>` and `<SDL_vulkan.h>`. SDL.h holds the main SDL library data  for opening a window and input, while SDL_vulkan.h holds the Vulkan-specific flags and functionality for opening a Vulkan-compatible window and other Vulkan-specific things. We also add some STL headers we will need.
 
 vk_engine.cpp, line 10
 
@@ -226,25 +230,39 @@ void VulkanEngine::run()
 	bool bQuit = false;
 
 	//main loop
-	while (!bQuit)
-	{
+	while (!bQuit) {
 		//Handle events on queue
-		while (SDL_PollEvent(&e) != 0)
-		{
+		while (SDL_PollEvent(&e) != 0) {
 			//close the window when user alt-f4s or clicks the X button			
 			if (e.type == SDL_QUIT) bQuit = true;
+
+			if (e.type == SDL_WINDOWEVENT) {
+				if (e.window.event == SDL_WINDOWEVENT_MINIMIZED) {
+					stop_rendering = true;
+				}
+				if (e.window.event == SDL_WINDOWEVENT_RESTORED) {
+					stop_rendering = false;
+				}
+			}
 		}
 
-		draw();
+		//do not draw if we are minimized
+		if (stop_rendering) {
+			//throttle the speed to avoid the endless spinning
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		}
+		else {
+			draw();
+		}
 	}
 }
 ```
 
-This is our application main loop. We have an endless loop in the `while()`, that is only stopped when SDL receives the SDL_QUIT event
+This is our application main loop. We have an endless loop in the `while()`, that is only stopped when SDL receives the SDL_QUIT event.
 
-On every iteration of the inner loop, we do SDL_PollEvent. This will ask SDL for all of the events the OS has sent to the application during the last frame. In here, we can check for things like keyboard events, mouse movement, window moving, minimization, and many others. For now we are only interested on the SDL_QUIT event. This event is called when the OS requests that the window needs to be closed.
+On every iteration of the inner loop, we do SDL_PollEvent. This will ask SDL for all of the events the OS has sent to the application during the last frame. In here, we can check for things like keyboard events, mouse movement, window moving, minimization, and many others. For now we are only interested on the SDL_QUIT event and window minimize/restore. When we receive the event that makes the window minimized, we set the stop_rendering bool to true to avoid drawing when the window is minimized. Restoring the window will set it back to false which lets it continue drawing.
 
-And finally, every iteration of the main loop we call `draw();`
+And finally, every iteration of the main loop we call either `draw();`, or `std::this_thread::sleep_for` if drawing is disabled. This way we save performance as we dont want the application spinning at full speed if the user has it minimized.
 
 We now have seen how to open a window with SDL, and basically not much else.
 

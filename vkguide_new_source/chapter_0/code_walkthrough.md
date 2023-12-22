@@ -65,7 +65,7 @@ vk_engine.cpp line 1
 ^code includes chapter-0/vk_engine.cpp
 
 Unlike in the other files, in this one we include a few more things.
-We include both `<SDL.h>` and `<SDL_vulkan.h>`. SDL.h holds the main SDL library data  for opening a window and input, while SDL_vulkan.h holds the Vulkan-specific flags and functionality for opening a Vulkan-compatible window and other Vulkan-specific things.
+We include both `<SDL.h>` and `<SDL_vulkan.h>`. SDL.h holds the main SDL library data  for opening a window and input, while SDL_vulkan.h holds the Vulkan-specific flags and functionality for opening a Vulkan-compatible window and other Vulkan-specific things. We also add some STL headers we will need.
 
 vk_engine.cpp, line 10
 
@@ -91,11 +91,11 @@ Our draw function is empty for now, but here is where we will add the rendering 
 
 ^code drawloop chapter-0/vk_engine.cpp
 
-This is our application main loop. We have an endless loop in the `while()`, that is only stopped when SDL receives the SDL_QUIT event
+This is our application main loop. We have an endless loop in the `while()`, that is only stopped when SDL receives the SDL_QUIT event.
 
-On every iteration of the inner loop, we do SDL_PollEvent. This will ask SDL for all of the events the OS has sent to the application during the last frame. In here, we can check for things like keyboard events, mouse movement, window moving, minimization, and many others. For now we are only interested on the SDL_QUIT event. This event is called when the OS requests that the window needs to be closed.
+On every iteration of the inner loop, we do SDL_PollEvent. This will ask SDL for all of the events the OS has sent to the application during the last frame. In here, we can check for things like keyboard events, mouse movement, window moving, minimization, and many others. For now we are only interested on the SDL_QUIT event and window minimize/restore. When we receive the event that makes the window minimized, we set the stop_rendering bool to true to avoid drawing when the window is minimized. Restoring the window will set it back to false which lets it continue drawing.
 
-And finally, every iteration of the main loop we call `draw();`
+And finally, every iteration of the main loop we call either `draw();`, or `std::this_thread::sleep_for` if drawing is disabled. This way we save performance as we dont want the application spinning at full speed if the user has it minimized.
 
 We now have seen how to open a window with SDL, and basically not much else.
 

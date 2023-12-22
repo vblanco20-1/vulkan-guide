@@ -13,9 +13,8 @@ fastgltf has a few different possibilites when loading images, so we need to sup
 
 Lets write the logic into a load_image function
 
+<!-- codegen from tag loadimg on file E:\ProgrammingProjects\vulkan-guide-2\chapter-5/vk_loader.cpp --> 
 ```cpp
-
-
 std::optional<AllocatedImage> load_image(VulkanEngine* engine, fastgltf::Asset& asset, fastgltf::Image& image)
 {
     AllocatedImage newImage {};
@@ -31,7 +30,7 @@ std::optional<AllocatedImage> load_image(VulkanEngine* engine, fastgltf::Asset& 
                                                     // local files.
 
                 const std::string path(filePath.uri.path().begin(),
-                    filePath.uri.path().end()); 
+                    filePath.uri.path().end()); // Thanks C++.
                 unsigned char* data = stbi_load(path.c_str(), &width, &height, &nrChannels, 4);
                 if (data) {
                     VkExtent3D imagesize;
@@ -39,7 +38,7 @@ std::optional<AllocatedImage> load_image(VulkanEngine* engine, fastgltf::Asset& 
                     imagesize.height = height;
                     imagesize.depth = 1;
 
-                    newImage = engine->create_image(data, imagesize, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT);
+                    newImage = engine->create_image(data, imagesize, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT,true);
 
                     stbi_image_free(data);
                 }
@@ -53,7 +52,7 @@ std::optional<AllocatedImage> load_image(VulkanEngine* engine, fastgltf::Asset& 
                     imagesize.height = height;
                     imagesize.depth = 1;
 
-                    newImage = engine->create_image(data, imagesize, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT);
+                    newImage = engine->create_image(data, imagesize, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT,true);
 
                     stbi_image_free(data);
                 }
@@ -77,7 +76,7 @@ std::optional<AllocatedImage> load_image(VulkanEngine* engine, fastgltf::Asset& 
                                        imagesize.depth = 1;
 
                                        newImage = engine->create_image(data, imagesize, VK_FORMAT_R8G8B8A8_UNORM,
-                                           VK_IMAGE_USAGE_SAMPLED_BIT);
+                                           VK_IMAGE_USAGE_SAMPLED_BIT,true);
 
                                        stbi_image_free(data);
                                    }
@@ -95,8 +94,6 @@ std::optional<AllocatedImage> load_image(VulkanEngine* engine, fastgltf::Asset& 
         return newImage;
     }
 }
-
-
 ```
 
 Long function, but its really just 3 versions of the same thing.

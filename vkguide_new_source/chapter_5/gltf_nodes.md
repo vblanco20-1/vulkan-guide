@@ -72,11 +72,20 @@ We will begin by loading the file. As this is going to be more generic than the 
 
 Next, we initialize the descriptor pool with an stimate of the amount of descriptors we need. In case we overflow the pool, its using the growable pool so it will just add more VkDescriptorPool as needed.
 
-Lets load the samplers. For now, we are not going to deal to deal with them properly, and just use default settings for each.
+Lets load the samplers. GLTF samplers are using the numbers and properties from OpenGL, which do not match the vulkan ones, so we are going to have to create some conversion functions.
+
+^code filters chapter-5/vk_loader.cpp
+
+Those 2 functions are global functions on vk_loader.cpp. We wont be needed them outside. 
+In vulkan, sampler filter is separated from mipmap mode. So we begin by extracting the filter from the GLTF filter option. `extract_filter()` only looks at the filtering, so it returns either `VK_FILTER_NEAREST` or  `VK_FILTER_LINEAR`. On `extract_mipmap_mode()` we look at the mipmap part, which we return as `VK_SAMPLER_MIPMAP_MODE_NEAREST` or `VK_SAMPLER_MIPMAP_MODE_LINEAR`. Linear will blend mipmaps, while nearest will use a single one with no blending.
+
+Now we can load the samplers from the gltf file.
 
 ^code load_samplers chapter-5/vk_loader.cpp
 
-Before we begin loading everything, We are going to create some arrays to hold the structures. In GLTF files, everything works through indices, so we need a way to handle that . For example a mesh node will give the mesh index, not name or anything similar.
+We make a `VkSamplerCreateInfo`, default its max/min LOD setting, and set its filtering settings using the above extract functions. Unlike the default samplers from last chapter, we are setting min/max lod so that we can have them use mipmaps. We will be storing the VkSamplers directly on the LoadedGLTF struct.
+
+Before we begin loading meshes, We are going to create some arrays to hold the structures. In GLTF files, everything works through indices, so we need a way to handle that . For example a mesh node will give the mesh index, not name or anything similar.
 
 ^code load_arrays chapter-5/vk_loader.cpp
 
