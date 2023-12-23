@@ -136,7 +136,7 @@ We have already dealt superficially with images when setting up the swapchain, b
 
 Lets begin by adding the new members we will need to the VulkanEngine class.
 
-On vk_types.h, add this structure which holds the data needed for a image. We will hold a `VkImage` alongside its default `VkImageView`, then the allocation for the image memory, and last, the image size and its format, which will be useful when dealing with the image.
+On vk_types.h, add this structure which holds the data needed for a image. We will hold a `VkImage` alongside its default `VkImageView`, then the allocation for the image memory, and last, the image size and its format, which will be useful when dealing with the image. We also add a `_drawExtent` that we can use to decide what size to render.
 
 ```cpp
 struct AllocatedImage {
@@ -153,6 +153,7 @@ class VulkanEngine{
 
 	//draw resources
 	AllocatedImage _drawImage;
+	VkExtent2D _drawExtent;
 }
 ```
 
@@ -168,15 +169,15 @@ Now, at the end of init_swapchain, lets create it.
 
 ^code init_swap chapter-2/vk_engine.cpp
 
-We begin by creating a VkExtent3d structure with the size of the image we want, which will match our window size.
+We begin by creating a VkExtent3d structure with the size of the image we want, which will match our window size. We copy it into the AllocatedImage
 
 Then, we need to fill our usage flags. In vulkan, all images and buffers must fill a UsageFlags with what they will be used for. This allows the driver to perform optimizations in the background depending on what that buffer or image is going to do later. In our case, we want TransferSRC and TransferDST so that we can copy from and into the image,  Storage because thats the "compute shader can write to it" layout, and Color Attachment so that we can use graphics pipelines to draw geometry into it.
 
-The format is going to be VK_FORMAT_R16G16B16A16_SFLOAT. This is 16 bit floats for all 4 channels, and will use 64 bits per pixel. Thats a fair amount of data, 2x what a 8 bit color image uses, but its going to be useful.
+The format is going to be `VK_FORMAT_R16G16B16A16_SFLOAT`. This is 16 bit floats for all 4 channels, and will use 64 bits per pixel. Thats a fair amount of data, 2x what a 8 bit color image uses, but its going to be useful.
 
 When creating the image itself, we need to send the image info and an alloc info to VMA. VMA will do the vulkan create calls for us and directly give us the vulkan image. 
 The interesting thing in here is Usage and the required memory flags.
-With VMA_MEMORY_USAGE_GPU_ONLY usage, we are letting VMA know that this is a gpu texture that wont ever be accessed from CPU, which lets it put it into gpu VRAM. To make extra sure of that, we are also setting VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT as a memory flag. This is a flag that only gpu-side VRAM has, and guarantees the fastest access.
+With VMA_MEMORY_USAGE_GPU_ONLY usage, we are letting VMA know that this is a gpu texture that wont ever be accessed from CPU, which lets it put it into gpu VRAM. To make extra sure of that, we are also setting `VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT` as a memory flag. This is a flag that only gpu-side VRAM has, and guarantees the fastest access.
 
 In vulkan, there are multiple memory regions we can allocate images and buffers from. PC implementations with dedicated GPUs will generally have a cpu ram region, a GPU Vram region, and a "upload heap" which is a special region of gpu vram that allows cpu writes. If you have resizable bar enabled, the upload heap can be the entire gpu vram. Else it will be much smaller, generally only 256 megabytes. We tell VMA to put it on GPU_ONLY which will prioritize it to be on the gpu vram but outside of that upload heap region.
 
@@ -208,7 +209,7 @@ The new code is this.
 ^code draw_first chapter-2/vk_engine.cpp
 
 	// execute a copy from the draw image into the swapchain
-	vkutil::copy_image_to_image(cmd, _drawImage.image, _swapchainImages[swapchainImageIndex], extent);
+	vkutil::copy_image_to_image(cmd, _drawImage.image, _swapchainImages[swapchainImageIndex], _drawExtent, _swapchainExtent);
 
 	// set swapchain image layout to Present so we can show it on the screen
 	vkutil::transition_image(cmd, _swapchainImages[swapchainImageIndex], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
@@ -217,7 +218,7 @@ The new code is this.
 	VK_CHECK(vkEndCommandBuffer(cmd));
 ```
 
-The main difference we have in the render loop is that we no longer do the clear on the swapchain image. Instead, we do it on the `_drawImage.image`. Once we have cleared the image, we transition both the swapchain and the draw image into their layouts for transfer, and we execute the copy command. Once we are done with the copy command, we transition the swapchain image into present layout for display. As we are always drawing on the same image, our draw_image does not need to access swapchain index, it just clears the draw image.
+The main difference we have in the render loop is that we no longer do the clear on the swapchain image. Instead, we do it on the `_drawImage.image`. Once we have cleared the image, we transition both the swapchain and the draw image into their layouts for transfer, and we execute the copy command. Once we are done with the copy command, we transition the swapchain image into present layout for display. As we are always drawing on the same image, our draw_image does not need to access swapchain index, it just clears the draw image. We are also writing the _drawExtent that we will use for our draw region.
 
 This will now provide us a way to render images outside of the swapchain itself. We now get significantly higher pixel precision, and we unlock some other techniques.
 
