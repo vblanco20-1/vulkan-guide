@@ -238,8 +238,8 @@ public:
     FrameData& get_last_frame();
 
     AllocatedBuffer create_buffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage);
-    AllocatedImage create_image(VkExtent3D size, VkFormat format, VkImageUsageFlags usage , bool mipmapped = false);
 
+    AllocatedImage create_image(VkExtent3D size, VkFormat format, VkImageUsageFlags usage , bool mipmapped = false);
     AllocatedImage create_image(void* data, VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool mipmapped = false);
 
     void immediate_submit(std::function<void(VkCommandBuffer cmd)>&& function);
@@ -257,9 +257,10 @@ private:
 
     void init_swapchain();
 
-    void create_swapchain();
+    void create_swapchain(uint32_t width, uint32_t height);
 
-    void resize_swapchain();
+
+	void resize_swapchain();
 
     void destroy_swapchain();
 

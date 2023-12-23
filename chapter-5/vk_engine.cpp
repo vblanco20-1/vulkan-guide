@@ -313,9 +313,7 @@ void VulkanEngine::draw()
 
 	VkResult e = vkAcquireNextImageKHR(_device, _swapchain, 1000000000, get_current_frame()._swapchainSemaphore, nullptr, &swapchainImageIndex);
 	if (e == VK_ERROR_OUT_OF_DATE_KHR) {
-        //resize_requested = true;
-
-		freeze_rendering = true;
+        resize_requested = true;
 		return ;
 	}
 
@@ -398,8 +396,8 @@ void VulkanEngine::draw()
 
 	VkResult presentResult = vkQueuePresentKHR(_graphicsQueue, &presentInfo);
 	if (e == VK_ERROR_OUT_OF_DATE_KHR) {
-		//resize_requested = true;
-        freeze_rendering = true;
+        resize_requested = true;
+        return;
 	}
 	//increase the number of frames drawn
 	_frameNumber++;
@@ -572,7 +570,7 @@ void VulkanEngine::run()
             if (e.type == SDL_WINDOWEVENT) {
 
 				if (e.window.event == SDL_WINDOWEVENT_RESIZED) {
-					resize_requested = true;
+                    resize_requested = true;
 				}
 				if (e.window.event == SDL_WINDOWEVENT_MINIMIZED) {
 					freeze_rendering = true;
@@ -586,10 +584,11 @@ void VulkanEngine::run()
             ImGui_ImplSDL2_ProcessEvent(&e);
         }
 
+        if (freeze_rendering) continue;
+
 		if (resize_requested) {
 			resize_swapchain();
 		}
-        if (freeze_rendering) continue;
 
         // imgui new frame
         ImGui_ImplVulkan_NewFrame();
@@ -688,7 +687,7 @@ AllocatedImage VulkanEngine::create_image(VkExtent3D size, VkFormat format, VkIm
 {
     AllocatedImage newImage;
     newImage.imageFormat = format;
-    newImage.imageExtent = size;    
+    newImage.imageExtent = size;
 
     VkImageCreateInfo img_info = vkinit::image_create_info(format, usage, size);
     if (mipmapped) {
@@ -719,6 +718,7 @@ AllocatedImage VulkanEngine::create_image(VkExtent3D size, VkFormat format, VkIm
     return newImage;
 }
 
+//> create_mip_2
 AllocatedImage VulkanEngine::create_image(void* data, VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool mipmapped)
 {
     size_t data_size = size.depth * size.width * size.height * 4;
@@ -747,19 +747,16 @@ AllocatedImage VulkanEngine::create_image(void* data, VkExtent3D size, VkFormat 
             &copyRegion);
 
         if (mipmapped) {
-            vkutil::generate_mipmaps(cmd, new_image.image,size);
+            vkutil::generate_mipmaps(cmd, new_image.image, size);
+        } else {
+            vkutil::transition_image(cmd, new_image.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
         }
-        else {
-			vkutil::transition_image(cmd, new_image.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-				VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-        }
-
     });
-
     destroy_buffer(uploadbuffer);
-
     return new_image;
 }
+//< create_mip_2
 
 GPUMeshBuffers VulkanEngine::uploadMesh(std::span<uint32_t> indices, std::span<Vertex> vertices)
 {
@@ -974,22 +971,24 @@ void VulkanEngine::init_swapchain()
 	});
 }
 
-void VulkanEngine::create_swapchain()
+
+void VulkanEngine::create_swapchain(uint32_t width, uint32_t height)
 {
 	vkb::SwapchainBuilder swapchainBuilder{ _chosenGPU,_device,_surface };
 
-    _swapchainImageFormat = VK_FORMAT_B8G8R8A8_UNORM;
+	_swapchainImageFormat = VK_FORMAT_B8G8R8A8_UNORM;
 
 	vkb::Swapchain vkbSwapchain = swapchainBuilder
 		//.use_default_format_selection()
 		.set_desired_format(VkSurfaceFormatKHR{ .format = _swapchainImageFormat, .colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR })
 		//use vsync present mode
 		.set_desired_present_mode(VK_PRESENT_MODE_FIFO_KHR)
-		.set_desired_extent(_windowExtent.width, _windowExtent.height)
+		.set_desired_extent(width, height)
 		.add_image_usage_flags(VK_IMAGE_USAGE_TRANSFER_DST_BIT)
 		.build()
 		.value();
 
+	_swapchainExtent = vkbSwapchain.extent;
 	//store swapchain and its related images
 	_swapchain = vkbSwapchain.swapchain;
 	_swapchainImages = vkbSwapchain.get_images().value();
@@ -1008,23 +1007,19 @@ void VulkanEngine::destroy_swapchain()
 
 void VulkanEngine::resize_swapchain()
 {
-    vkDeviceWaitIdle(_device);
+	vkDeviceWaitIdle(_device);
 
-    destroy_swapchain();
+	destroy_swapchain();
 
-    int w,h;
-    SDL_GetWindowSize(_window,&w, &h);
-    _windowExtent.width=w;
-    _windowExtent.height=h;
+	int w, h;
+	SDL_GetWindowSize(_window, &w, &h);
+	_windowExtent.width = w;
+	_windowExtent.height = h;
 
-	create_swapchain();
+	create_swapchain(_windowExtent.width, _windowExtent.height);
 
-    resize_requested = false;
-
-	freeze_rendering = false;
+	resize_requested = false;
 }
-
-
 
 void VulkanEngine::init_commands()
 {

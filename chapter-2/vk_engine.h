@@ -82,6 +82,8 @@ public:
 	VkSurfaceKHR _surface;
 	VkSwapchainKHR _swapchain;
 	VkFormat _swapchainImageFormat;
+	VkExtent2D _swapchainExtent;
+	VkExtent2D _drawExtent;
 
 	DescriptorAllocator globalDescriptorAllocator;
 
@@ -132,6 +134,8 @@ private:
 	void init_vulkan();
 
 	void init_swapchain();
+	void create_swapchain(uint32_t width, uint32_t height);
+	void destroy_swapchain();
 
 	void init_commands();
 

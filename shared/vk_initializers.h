@@ -49,11 +49,4 @@ VkPipelineLayoutCreateInfo pipeline_layout_create_info();
 VkPipelineShaderStageCreateInfo pipeline_shader_stage_create_info(VkShaderStageFlagBits stage,
     VkShaderModule shaderModule,
     const char * entry = "main");
-VkPipelineVertexInputStateCreateInfo vertex_input_state_create_info();
-VkPipelineInputAssemblyStateCreateInfo input_assembly_create_info(VkPrimitiveTopology topology);
-VkPipelineRasterizationStateCreateInfo rasterization_state_create_info(VkPolygonMode polygonMode);
-VkPipelineMultisampleStateCreateInfo multisampling_state_create_info();
-VkPipelineColorBlendAttachmentState color_blend_attachment_state();
-VkPipelineRenderingCreateInfo pipeline_render_info(VkFormat* colorFormat);
-VkPipelineDepthStencilStateCreateInfo pipeline_depth_stencil_create_info();
 } // namespace vkinit

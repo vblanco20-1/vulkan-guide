@@ -83,6 +83,9 @@ public:
 	VkSurfaceKHR _surface;
 	VkSwapchainKHR _swapchain;
 	VkFormat _swapchainImageFormat;
+	VkExtent2D _swapchainExtent;
+	VkExtent2D _drawExtent;
+	float renderScale = 1.f;
 
 	DescriptorAllocator globalDescriptorAllocator;
 
@@ -147,12 +150,17 @@ public:
 
 	AllocatedBuffer create_buffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage);
 	void destroy_buffer(const AllocatedBuffer& buffer);
+
+	bool resize_requested{false};
+	bool freeze_rendering{false};
 private:
 
 	void init_vulkan();
 
 	void init_swapchain();
-
+	void create_swapchain(uint32_t width, uint32_t height);
+	void destroy_swapchain();
+	void resize_swapchain();
 	void init_commands();
 	
 	void init_background_pipelines();
