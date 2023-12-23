@@ -97,12 +97,13 @@ Transitioning an image has loads of possible options. We are going to do the abs
 
 We will be doing a pipeline barrier, using the syncronization 2 feature/extension which is part of vulkan 1.3 . A pipeline barrier can be used for many different things like syncronizing read/write operation between commands and controlling things like one command drawing into a image and other command using that image for reading.  
 
-Add the function to vk_images.cpp.
+Add the function to vk_images.cpp. 
 
 ^code transition shared/vk_images.cpp
 
 VkImageMemoryBarrier2 contains the information for a given *image* barrier. On here, is where we set the old and new layouts.
-In the StageMask, we are doing ALL_COMMANDS. This is inefficient, as it will stall the GPU pipeline a bit. For our needs, its going to be fine as we are only going to do a few transitions per frame. If you are doing many transitions per frame as part of a post-process chain, you want to avoid doing this, and instead use much better StageMasks. 
+In the StageMask, we are doing ALL_COMMANDS. This is inefficient, as it will stall the GPU pipeline a bit. For our needs, its going to be fine as we are only going to do a few transitions per frame. If you are doing many transitions per frame as part of a post-process chain, you want to avoid doing this, and instead use StageMasks more accurate to what you are doing. 
+
 AllCommands stage mask on the barrier means that the barrier will stop the gpu commands completely when it arrives at the barrier. By using more finegrained stage masks, its possible to overlap the GPU pipeline across the barrier a bit. 
 AccessMask is similar, it controls how the barrier stops different parts of the GPU. we are going to use `VK_ACCESS_2_MEMORY_WRITE_BIT` for our source, and add `VK_ACCESS_2_MEMORY_READ_BIT` to our destination. Those are generic options that will be fine.
 
@@ -117,7 +118,7 @@ An thing we care in that structure is the AspectMask. This is going to be either
 
 Once we have the range and the barrier, we pack them into a VkDependencyInfo struct and call `VkCmdPipelineBarrier2`. It is possible to layout transitions multiple images at once by sending more imageMemoryBarriers into the dependency info, which is likely to improve performance if we are doing transitions or barriers for multiple things at once. 
 
-With the transition function implemented, we can now draw things.
+With the transition function implemented, we can now draw things, add `vk_images.h` to the includes on top of `vk_engine.cpp` so we can use the function we just wrote.
 
 ^code draw_4 chapter-1/vk_engine.cpp
 
