@@ -41,11 +41,6 @@ Inside the shader itself, we can see  `layout (local_size_x = 16, local_size_y =
 
 On the shader code, we can access what the lane index is through `gl_LocalInvocationID` variable. There is also `gl_GlobalInvocationID` and `gl_WorkGroupID`.  By using those variables we can find out what pixel exactly do we write from each lane.
 
-# Writing into images
-For now, we have done the VkCmdClear on the swapchain image. But swapchain images have the problem that they are an OS provided construct, and they are generally limited in various ways. There are cases where we wouldnt be able to use a compute shader to directly write into a swapchain image, and their format can vary. We need the format of the target image from the shader itself for it to work (outside of extensions), so directly writing into the swapchain image is going to be a problem. We could do it by setting the correct flags, but the normal thing to do is that we dont draw into the swapchain images. Instead, we create our own image on the format and size we want, and after rendering it we copy it to the swapchain image. This way we can lower latency by decoupling the direct connection between asking the OS for an image and the drawing, and we can use other formats that the ones the OS windowing system wants.
-
-From now on, we will be doing our rendering commands into a image that has the format RGBA 16f. which means that we have 4 channels each of them a half-width float. This format is relatively overkill in precision, but it will be ok for our needs. If you know exactly what you want from your draw shaders and postprocess chain, you can use packed formats which have RGB only at 32 bits, which tend to be enough extra precision but low size. 
-
 Lets now set all of this up in the code and get our first shaders working.
 
 Next: [ Vulkan Shaders - Code]({{ site.baseurl }}{% link docs/new_vkguide/chapter_2/vulkan_shader_code.md %})  
