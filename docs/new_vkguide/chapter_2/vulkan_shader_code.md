@@ -5,8 +5,9 @@ parent:  "New 2. Drawing with Compute"
 nav_order: 5
 ---
 
-Lets now write the code necesary for our compute shader. We will begin with a very simple shader that has an image as input, and writes a color to it, based on the thread ID, forming a gradient.
+Lets now write the code necesary for our compute shader. We will begin with a very simple shader that has an image as input, and writes a color to it, based on the thread ID, forming a gradient. This one is already on the code, in the shaders folder. From now on, all the shaders we add will go into that folder as the CMake script will build them.
 
+gradient.comp
 ```c
 //GLSL version to use
 #version 460
@@ -66,7 +67,7 @@ struct DescriptorLayoutBuilder {
 };
 ```
 
-We will be storing `VkDescriptorSetLayoutBinding`, a coinfiguration/info struct, into an array, and then have a build() function which creates the `VkDescriptorSetLayout`, which is a vulkan object, not a info/config structure.
+We will be storing `VkDescriptorSetLayoutBinding`, a configuration/info struct, into an array, and then have a build() function which creates the `VkDescriptorSetLayout`, which is a vulkan object, not a info/config structure.
 
 Lets write the functions for that builder
 
@@ -122,7 +123,6 @@ Next we need to build the `VkDescriptorSetLayoutCreateInfo`, which we dont do mu
 # Descriptor Allocator
 
 With the layout, we can now allocate the descriptor sets. Lets also write a allocator struct that will abstract it so that we can keep using it through the codebase.
-
 <!-- codegen from tag descriptor_allocator on file E:\ProgrammingProjects\vulkan-guide-2\shared/vk_descriptors.h --> 
 ```cpp
 struct DescriptorAllocator {
@@ -212,6 +212,8 @@ We need to fill the `VkDescriptorSetAllocateInfo`. It needs the descriptor pool 
 Lets add a new function to VulkanEngine and some new members we will use.
 
 ```cpp
+#include <vk_descriptors.h>
+
 struct VulkanEngine{
 public:
 	DescriptorAllocator globalDescriptorAllocator;
@@ -309,6 +311,14 @@ With this done, we now have a descriptor set we can use to bind our draw image, 
 With the descriptor set layout, we now have a way of creating the pipeline layout. There is one last thing we have to do before creating the pipeline, which is to load the shader code to the driver.
 In vulkan pipelines, to set shaders you need to build a `VkShaderModule`. We are going to add a function to load those as part of vk_pipelines.h/cpp
 
+Add these includes to vk_pipelines.cpp
+```cpp
+#include <vk_pipelines.h>
+#include <fstream>
+#include <vk_initializers.h>
+```
+
+Now add this function. Add it also to the header.
 <!-- codegen from tag load_shader on file E:\ProgrammingProjects\vulkan-guide-2\shared/vk_pipelines.cpp --> 
 ```cpp
 bool vkutil::load_shader_module(const char* filePath,
@@ -420,7 +430,7 @@ void VulkanEngine::init_pipelines()
 	VkShaderModule computeDrawShader;
 	if (!vkutil::load_shader_module("../../shaders/gradient.comp.spv", _device, &computeDrawShader))
 	{
-		std::cout << "Error when building the compute shader" << std::endl;
+		fmt::print("Error when building the compute shader \n");
 	}
 
 	VkPipelineShaderStageCreateInfo stageinfo{};
@@ -475,7 +485,7 @@ Go back to the draw_main() function, we will replace the vkCmdClear with a compu
 	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, _gradientPipelineLayout, 0, 1, &_drawImageDescriptors, 0, nullptr);
 
 	// execute the compute pipeline dispatch. We are using 16x16 workgroup size so we need to divide by it
-	vkCmdDispatch(cmd, std::ceil(_swapchainExtent.width / 16.0), std::ceil(_swapchainExtent.height / 16.0), 1);
+	vkCmdDispatch(cmd, std::ceil(_drawExtent.width / 16.0), std::ceil(_drawExtent.height / 16.0), 1);
 ```
 
 First we need to bind the pipeline using `vkCmdBindPipeline`. As the pipeline is a compute shader, we use `VK_PIPELINE_BIND_POINT_COMPUTE`. Then, we need to bind the descriptor set that holds the draw image so that the shader can access it.

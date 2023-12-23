@@ -5,8 +5,9 @@ parent:  "New 2. Drawing with Compute"
 nav_order: 5
 ---
 
-Lets now write the code necesary for our compute shader. We will begin with a very simple shader that has an image as input, and writes a color to it, based on the thread ID, forming a gradient.
+Lets now write the code necesary for our compute shader. We will begin with a very simple shader that has an image as input, and writes a color to it, based on the thread ID, forming a gradient. This one is already on the code, in the shaders folder. From now on, all the shaders we add will go into that folder as the CMake script will build them.
 
+gradient.comp
 ```c
 //GLSL version to use
 #version 460
@@ -56,7 +57,7 @@ To build a descriptor layout, we need to store an array of bindings. Lets create
 
 ^code descriptor_layout shared/vk_descriptors.h
 
-We will be storing `VkDescriptorSetLayoutBinding`, a coinfiguration/info struct, into an array, and then have a build() function which creates the `VkDescriptorSetLayout`, which is a vulkan object, not a info/config structure.
+We will be storing `VkDescriptorSetLayoutBinding`, a configuration/info struct, into an array, and then have a build() function which creates the `VkDescriptorSetLayout`, which is a vulkan object, not a info/config structure.
 
 Lets write the functions for that builder
 
@@ -76,7 +77,6 @@ Next we need to build the `VkDescriptorSetLayoutCreateInfo`, which we dont do mu
 # Descriptor Allocator
 
 With the layout, we can now allocate the descriptor sets. Lets also write a allocator struct that will abstract it so that we can keep using it through the codebase.
-
 ^code descriptor_allocator shared/vk_descriptors.h
 
 Descriptor allocation happens through `VkDescriptorPool`. Those are objects that need to be pre-initialized with some size and types of descriptors for it. Think of it like a memory allocator for some specific descriptors. Its possible to have 1 very big descriptor pool that handles the entire engine, but that means we need to know what descriptors we will be using for everything ahead of time. That can be very tricky to do at scale. Instead, we will keep it simpler, and we will have multiple descriptor pools for different parts of the project, and try to be more accurate with them.
@@ -104,6 +104,8 @@ We need to fill the `VkDescriptorSetAllocateInfo`. It needs the descriptor pool 
 Lets add a new function to VulkanEngine and some new members we will use.
 
 ```cpp
+#include <vk_descriptors.h>
+
 struct VulkanEngine{
 public:
 	DescriptorAllocator globalDescriptorAllocator;
@@ -171,6 +173,14 @@ With this done, we now have a descriptor set we can use to bind our draw image, 
 With the descriptor set layout, we now have a way of creating the pipeline layout. There is one last thing we have to do before creating the pipeline, which is to load the shader code to the driver.
 In vulkan pipelines, to set shaders you need to build a `VkShaderModule`. We are going to add a function to load those as part of vk_pipelines.h/cpp
 
+Add these includes to vk_pipelines.cpp
+```cpp
+#include <vk_pipelines.h>
+#include <fstream>
+#include <vk_initializers.h>
+```
+
+Now add this function. Add it also to the header.
 ^code load_shader shared/vk_pipelines.cpp
 
 With this function, we first load the file into a `std::vector<uint32_t>`. This will store the compiled shader data, which we can then use on the call to `vkCreateShaderModule`. The create-info for a shader module needs nothing except the shader data as an int array. Shader modules are only needed when building a pipeline, and once the pipeline is built they can be safely destroyed, so we wont be storing them in the VulkanEngine class.

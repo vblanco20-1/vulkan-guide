@@ -158,12 +158,12 @@ With 2 shaders, we need to create 2 different VkShaderModule.
 ```cpp
 VkShaderModule gradientShader;
 if (!vkutil::load_shader_module("../../shaders/gradient_color.comp.spv", _device, &gradientShader)) {
-	std::cout << "Error when building the compute shader" << std::endl;
+	fmt::print("Error when building the compute shader \n");
 }
 
 VkShaderModule skyShader;
 if (!vkutil::load_shader_module("../../shaders/sky.comp.spv", _device, &skyShader)) {
-	std::cout << "Error when building the compute shader" << std::endl;
+	fmt::print("Error when building the compute shader \n");
 }
 
 VkPipelineShaderStageCreateInfo stageinfo{};

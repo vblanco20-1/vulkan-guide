@@ -83,7 +83,7 @@ Now to the initialization function
 
 ^code imgui_init chapter-2/vk_engine.cpp
 
-Call this function at the end of VulkanEngine::init(), after `init_pipelines();'       
+Call this function at the end of `VulkanEngine::init()`, after `init_pipelines();`       
 This code is adapted from the imgui demos. We first need to create some structures that imgui wants, like its own descriptor pool. The descriptor pool here is storing data for 1000 of a lot of different types of descriptors, so its a bit overkill. It wont be a problem, just slightly less efficient space-wise.
 
 We then call `CreateContext()` , `ImGui_ImplSDL2_InitForVulkan`, and `ImGui_ImplVulkan_Init`. These functions will initialize the different parts of imgui we need. 
@@ -101,18 +101,35 @@ First thing we have to do is to add its code into the run() function
 
 ```cpp
 //Handle events on queue
-while (SDL_PollEvent(&e) != 0)
-{
+while (SDL_PollEvent(&e) != 0) {
     //close the window when user alt-f4s or clicks the X button			
     if (e.type == SDL_QUIT) bQuit = true;
-    
+
+    if (e.type == SDL_WINDOWEVENT) {
+
+        if (e.window.event == SDL_WINDOWEVENT_MINIMIZED) {
+            stop_rendering = true;
+        }
+        if (e.window.event == SDL_WINDOWEVENT_RESTORED) {
+            stop_rendering = false;
+        }
+    }
+
     //send SDL event to imgui for handling
     ImGui_ImplSDL2_ProcessEvent(&e);
 }
 
+//do not draw if we are minimized
+if (stop_rendering) {
+    //throttle the speed to avoid the endless spinning
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    continue;
+}		
+
 // imgui new frame
 ImGui_ImplVulkan_NewFrame();
 ImGui_ImplSDL2_NewFrame(_window);
+
 ImGui::NewFrame();
 
 //some imgui UI to test
