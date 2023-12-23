@@ -74,6 +74,6 @@ If you want, try also using it on the monkey head mesh, and see how it looks. Pl
 
 Before we move to chapter 4, lets implement window resizing.
 
-Next: [ Blending]({{ site.baseurl }}{% link docs/new_vkguide/chapter_3/resizing_window.md %})  
+Next: [ Window Resizing]({{ site.baseurl }}{% link docs/new_vkguide/chapter_3/resizing_window.md %})  
 
 {% include comments.html term="Vkguide 2 Beta Comments" %}

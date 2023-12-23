@@ -1,6 +1,6 @@
 ---
 layout: default
-title: Blending
+title: Window Resizing
 parent: "New 3. Graphics Pipelines"
 nav_order: 25
 ---
