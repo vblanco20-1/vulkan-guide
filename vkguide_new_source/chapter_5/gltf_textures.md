@@ -148,7 +148,6 @@ drawCommands.OpaqueSurfaces.clear();
 drawCommands.TransparentSurfaces.clear();
 ```
 
-
 The engine is now done. You can use this as a base to implement games. But we are going to do some tweaks that are optional as part of this chapter, improving its performance.
 
 ^nextlink

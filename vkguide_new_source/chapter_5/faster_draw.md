@@ -209,7 +209,6 @@ void MeshNode::Draw(const glm::mat4& topMatrix, DrawContext& ctx) {
 
 Now we have the bounds on the GeoSurface, and just need to check for visibility on the RenderObject. Add this function to vk_engine.cpp, its a global function.
 
-
 ^code visfn chapter-5/vk_engine.cpp
 
 This is just one of the multiple possible functions we could be using for frustum culling. The way this works is that we are transforming each of the 8 corners of the mesh-space bounding box into screenspace, using object matrix and view-projection matrix. For those, we find the screen-space box bounds, and we check if that box is inside the clip-space view. This way of calculating bounds is on the slow side compared to other formulas, and can have false-positives where it things objects are visible when they arent. All the functions have different tradeoffs, and this one was selected for code simplicity and parallels with the functions we are doing on the vertex shaders.
@@ -231,5 +230,55 @@ The renderer now will skip objects outside of the view. It should look the same 
 The code for doing the same cull and sort but on the transparent objects has been skipped, but its the same as with the opaque objects, so you can try doing it yourself.
 
 With the transparent objects, you want to also change the sorting code so that it checks distance from bounds to the camera, so that objects draw more correct. But sorting by depth is incompatible with sorting by pipeline, so you will need to decide what works better for your case.
+
+## Creating Mipmaps
+
+When we added the texture loading, we didnt make mipmaps. Unlike in OpenGL, there isnt a direct one-call to generate them. We need to do it ourselves.
+
+`create_image` already had mipmap support, but we need to change the version that uploads the data so that it generates the mipmaps. For that we will change the function
+
+^code create_mip_2 chapter-5/vk_engine.cpp
+
+`immediate_submit` now can call into `vkutil::generate_mipmaps()` function if we want to use mipmapping on this image. Lets add that one to vk_images.h
+
+```cpp
+namespace vkutil {
+void generate_mipmaps(VkCommandBuffer cmd, VkImage image, VkExtent3D imageSize);
+}
+```
+
+There are multiple options for generating the mipmaps. We also dont have to generate them at load time, and could use formats like KTX or DDS which can have the mipmaps pregenerated. A popular option is to generate them in a compute shader that generates multiple levels at once, and that can improve performance. The way we are going to do mipmaps is with a chain of VkCmdImageBlit calls.
+
+For each level, we need to copy the image from the level before it into the next level, lowering the resolution by half each time. On each copy, we transition the mipmap level to `VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL` . Once all copies are done, we add another barrier, this time for all the mipmap levels at once, to transition the image into `VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL`. 
+
+The pseudocode looks like this.
+
+```cpp
+//image already comes with layout VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL on all mipmap levels from image creation
+
+int miplevels = calculate_mip_levels(imageSize);
+for (int mip = 0; mip < mipLevels; mip++) {
+
+    barrier( image.mips[mip] , VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL)
+
+    //not the last level
+    if (mip < mipLevels - 1)
+    {
+        copy_image(image.mips[mip], image.mips[mip+1];)
+    }
+}
+
+barrier( image , VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+```
+
+Lets now look at the actual code
+
+^code mipgen shared/vk_images.cpp
+
+The barrier is very similar to the one we have on `transition_image`, and the blit is similar to what we have in `copy_image_to_image` but with mip levels. In a way, this function combines the two.
+
+At each loop, we divide the image size by two, transition the mip level we copy from, and perform a VkCmdBlit from one mip level to the next.
+
+With this, now we automatically generate the mipmaps needed. We were already creating the samplers with the correct options, so it should work directly. 
 
 {% include comments.html term="Vkguide 2 Beta Comments" %}

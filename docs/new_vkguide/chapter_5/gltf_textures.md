@@ -229,7 +229,6 @@ drawCommands.OpaqueSurfaces.clear();
 drawCommands.TransparentSurfaces.clear();
 ```
 
-
 The engine is now done. You can use this as a base to implement games. But we are going to do some tweaks that are optional as part of this chapter, improving its performance.
 
 Next: [ Faster Draw]({{ site.baseurl }}{% link docs/new_vkguide/chapter_5/faster_draw.md %})  

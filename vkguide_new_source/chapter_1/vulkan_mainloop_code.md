@@ -109,7 +109,7 @@ AccessMask is similar, it controls how the barrier stops different parts of the 
 If you want to read about what would be the optimal way of using pipeline barriers for different use cases, you can find a great reference in here [Khronos Vulkan Documentation: Syncronization examples](https://github.com/KhronosGroup/Vulkan-Docs/wiki/Synchronization-Examples) 
 This layout transition is going to work just fine for the whole tutorial, but if you want, you can add more complicated transition functions that are more accurate/lightweight.
 
-As part of the barrier, we need to use a `VkImageSubresourceRange` too. This lets us target a part of the image with the barrier. Its most useful for things like array images or mipmapped images, where we would only need to barrier on a given layer or mipmap level. We are going to completely default it as we only need to transition mip level 0 here. 
+As part of the barrier, we need to use a `VkImageSubresourceRange` too. This lets us target a part of the image with the barrier. Its most useful for things like array images or mipmapped images, where we would only need to barrier on a given layer or mipmap level. We are going to completely default it and have it transition all mipmap levels and layers.
 
 ^code subresource shared/vk_initializers.cpp
 

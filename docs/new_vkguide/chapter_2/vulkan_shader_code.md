@@ -475,7 +475,7 @@ Go back to the draw_main() function, we will replace the vkCmdClear with a compu
 	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, _gradientPipelineLayout, 0, 1, &_drawImageDescriptors, 0, nullptr);
 
 	// execute the compute pipeline dispatch. We are using 16x16 workgroup size so we need to divide by it
-	vkCmdDispatch(cmd, std::ceil(_windowExtent.width / 16.0), std::ceil(_windowExtent.height / 16.0), 1);
+	vkCmdDispatch(cmd, std::ceil(_swapchainExtent.width / 16.0), std::ceil(_swapchainExtent.height / 16.0), 1);
 ```
 
 First we need to bind the pipeline using `vkCmdBindPipeline`. As the pipeline is a compute shader, we use `VK_PIPELINE_BIND_POINT_COMPUTE`. Then, we need to bind the descriptor set that holds the draw image so that the shader can access it.

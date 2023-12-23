@@ -9,15 +9,28 @@ We already showed how to use images when we did compute based rendering, but the
 
 First, we need to add functions to the VulkanEngine class to deal with creating images.
 
+Add this 2 functions to the class in the header.
+
+```cpp
+class VulkanEngine {
+
+AllocatedImage create_image(VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool mipmapped = false);
+AllocatedImage create_image(void* data, VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool mipmapped = false);
+}
+```
+
 <!-- codegen from tag create_image on file E:\ProgrammingProjects\vulkan-guide-2\chapter-4/vk_engine.cpp --> 
 ```cpp
-AllocatedImage VulkanEngine::create_image(VkExtent3D size, VkFormat format, VkImageUsageFlags usage)
+AllocatedImage VulkanEngine::create_image(VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool mipmapped)
 {
 	AllocatedImage newImage;
 	newImage.imageFormat = format;
 	newImage.imageExtent = size;
 
 	VkImageCreateInfo img_info = vkinit::image_create_info(format, usage, size);
+	if (mipmapped) {
+		img_info.mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(size.width, size.height)))) + 1;
+	}
 
 	// always allocate images on dedicated GPU memory
 	VmaAllocationCreateInfo allocinfo = {};
@@ -36,6 +49,7 @@ AllocatedImage VulkanEngine::create_image(VkExtent3D size, VkFormat format, VkIm
 
 	// build a image-view for the image
 	VkImageViewCreateInfo view_info = vkinit::imageview_create_info(format, newImage.image, aspectFlag);
+	view_info.subresourceRange.levelCount = img_info.mipLevels;
 
 	VK_CHECK(vkCreateImageView(_device, &view_info, nullptr, &newImage.imageView));
 
@@ -49,14 +63,14 @@ To write image data, it works very similar to what we did last chapter with the 
 
 <!-- codegen from tag upload_image on file E:\ProgrammingProjects\vulkan-guide-2\chapter-4/vk_engine.cpp --> 
 ```cpp
-AllocatedImage VulkanEngine::create_image(void* data, VkExtent3D size, VkFormat format, VkImageUsageFlags usage)
+AllocatedImage VulkanEngine::create_image(void* data, VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool mipmapped)
 {
 	size_t data_size = size.depth * size.width * size.height * 4;
 	AllocatedBuffer uploadbuffer = create_buffer(data_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
 
 	memcpy(uploadbuffer.info.pMappedData, data, data_size);
 
-	AllocatedImage new_image = create_image(size, format, usage | VK_IMAGE_USAGE_TRANSFER_DST_BIT);
+	AllocatedImage new_image = create_image(size, format, usage | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, mipmapped);
 
 	immediate_submit([&](VkCommandBuffer cmd) {
 		vkutil::transition_image(cmd, new_image.image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
@@ -88,14 +102,13 @@ AllocatedImage VulkanEngine::create_image(void* data, VkExtent3D size, VkFormat 
 
 We start by allocating a staging buffer with enough space for the pixel data, on the CPU_TO_GPU memory type. We then memcpy the pixel data into it.
 
-After that, we call the normal create_image function, but we add the `VK_IMAGE_USAGE_TRANSFER_DST_BIT` so that its allowed to copy data into it.
+After that, we call the normal create_image function, but we add the `VK_IMAGE_USAGE_TRANSFER_DST_BIT` and `VK_IMAGE_USAGE_TRANSFER_SRC_BIT` so that its allowed to copy data into and from it.
 
 Once we have the image and the staging buffer, we run an immediate submit that will copy the staging buffer pixel data into the image. 
 
 Similar to how we do it with the swapchain images, we first transition the image into `VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL`. Then we create a copyRegion structure, where we have the parameters for the copy command. This will require the image size and the target image layers and mip levels. Image layers is for textures that have multiple layers, one of the most common examples is a cubemap texture, which will have 6 layers, one per each cubemap face. We will do that later when we setup reflection cubemaps.
 
-For mip level, we will copy the data into mip level 0 which is the top level. The image doesnt have any more mip levels.
-
+For mip level, we will copy the data into mip level 0 which is the top level. The image doesnt have any more mip levels. For now we are just passing the mipmapped boolean into the other create_image, but we arent doing anything else. We will handle that later.
 
 With those 2 functions, we can set up some default textures. We will create a default-white, default-black, default-grey, and a checkerboard texture. This way we have some textures we can use when something fails to load.
 
@@ -246,7 +259,6 @@ VkDescriptorSetLayout _singleImageDescriptorLayout;
 ```
 
 On init_descriptors(), lets create it alongside the rest
-
 
 ```cpp
 {

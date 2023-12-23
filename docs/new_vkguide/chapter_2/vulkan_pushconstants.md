@@ -115,7 +115,7 @@ This is all we need to add pushconstants to a shader. lets now use them from the
 
 	vkCmdPushConstants(cmd, _gradientPipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(ComputePushConstants), &pc);
 	// execute the compute pipeline dispatch. We are using 16x16 workgroup size so we need to divide by it
-	vkCmdDispatch(cmd, std::ceil(_windowExtent.width / 16.0), std::ceil(_windowExtent.height / 16.0), 1);
+	vkCmdDispatch(cmd, std::ceil(_drawExtent.width / 16.0), std::ceil(_drawExtent.height / 16.0), 1);
 ```
 
 To update pushconstants, we call VkCmdPushConstants. it requires the pipeline layout, an offset for the data to be written to (we use just offset 0), and the size of the data + the pointer to copy. It also requires the shader stage flags as one can update pushconstants for different stages on different commands.
@@ -260,7 +260,7 @@ Last we need to do is to change the render loop to select the shader selected wi
 
 	vkCmdPushConstants(cmd, _gradientPipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(ComputePushConstants), &effect.data);
 	// execute the compute pipeline dispatch. We are using 16x16 workgroup size so we need to divide by it
-	vkCmdDispatch(cmd, std::ceil(_windowExtent.width / 16.0), std::ceil(_windowExtent.height / 16.0), 1);
+	vkCmdDispatch(cmd, std::ceil(_drawExtent.width / 16.0), std::ceil(_drawExtent.height / 16.0), 1);
 ```
 
 Not much of a change, we are just hooking into the compute effect array and uploading the pushconstants from there.

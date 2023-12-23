@@ -72,8 +72,8 @@ You should now see the rectangle we had as semi-transparent, letting the color b
 
 If you want, try also using it on the monkey head mesh, and see how it looks. Play around with the blending modes to see what effects they result on.
 
-This concludes chapter 3, and we now move forward to chapter 4 with setting up a more advanced render architecture
+Before we move to chapter 4, lets implement window resizing.
 
-Next: [Chapter 4: New Descriptor Abstractions]({{ site.baseurl }}{% link docs/new_vkguide/chapter_4/descriptor_abstractions.md %})
+Next: [ Blending]({{ site.baseurl }}{% link docs/new_vkguide/chapter_3/resizing_window.md %})  
 
 {% include comments.html term="Vkguide 2 Beta Comments" %}

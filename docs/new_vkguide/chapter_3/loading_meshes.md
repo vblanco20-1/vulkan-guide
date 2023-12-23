@@ -232,7 +232,7 @@ From the render code, lets give it a better matrix for rendering.
 ```cpp
 	glm::mat4 view = glm::translate(glm::vec3{ 0,0,-5 });
 	// camera projection
-	glm::mat4 projection = glm::perspective(glm::radians(70.f), (float)_windowExtent.width / (float)_windowExtent.height, 10000.f, 0.1f);
+	glm::mat4 projection = glm::perspective(glm::radians(70.f), (float)_drawExtent.width / (float)_drawExtent.height, 10000.f, 0.1f);
 
 	// invert the Y direction on projection matrix so that we are more similar
 	// to opengl and gltf axis
@@ -261,7 +261,7 @@ Now we will initialize it alongside the drawImage, in the init_swapchain functio
 <!-- codegen from tag depthimg on file E:\ProgrammingProjects\vulkan-guide-2\chapter-3/vk_engine.cpp --> 
 ```cpp
 	_depthImage.imageFormat = VK_FORMAT_D32_SFLOAT;
-
+	_depthImage.imageExtent = drawImageExtent;
 	VkImageUsageFlags depthImageUsages{};
 	depthImageUsages |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
 

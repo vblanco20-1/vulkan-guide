@@ -496,7 +496,7 @@ void VulkanEngine::draw_geometry(VkCommandBuffer cmd)
 	//begin a render pass  connected to our draw image
 	VkRenderingAttachmentInfo colorAttachment = vkinit::attachment_info(_drawImage.imageView, nullptr, VK_IMAGE_LAYOUT_GENERAL);
 
-	VkRenderingInfo renderInfo = vkinit::rendering_info(_windowExtent, &colorAttachment, nullptr);
+	VkRenderingInfo renderInfo = vkinit::rendering_info(_drawExtent, &colorAttachment, nullptr);
 	vkCmdBeginRendering(cmd, &renderInfo);
 
 	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _trianglePipeline);
@@ -505,8 +505,8 @@ void VulkanEngine::draw_geometry(VkCommandBuffer cmd)
 	VkViewport viewport = {};
 	viewport.x = 0;
 	viewport.y = 0;
-	viewport.width = _windowExtent.width;
-	viewport.height = _windowExtent.height;
+	viewport.width = _drawExtent.width;
+	viewport.height = _drawExtent.height;
 	viewport.minDepth = 0.f;
 	viewport.maxDepth = 1.f;
 
@@ -515,8 +515,8 @@ void VulkanEngine::draw_geometry(VkCommandBuffer cmd)
 	VkRect2D scissor = {};
 	scissor.offset.x = 0;
 	scissor.offset.y = 0;
-	scissor.extent.width = _windowExtent.width;
-	scissor.extent.height = _windowExtent.height;
+	scissor.extent.width = _drawExtent.width;
+	scissor.extent.height = _drawExtent.height;
 
 	vkCmdSetScissor(cmd, 0, 1, &scissor);
 

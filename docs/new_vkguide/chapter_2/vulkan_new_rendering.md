@@ -284,7 +284,7 @@ We will need a way to copy images, so add this into vk_images.cpp
 
 <!-- codegen from tag copyimg on file E:\ProgrammingProjects\vulkan-guide-2\shared/vk_images.cpp --> 
 ```cpp
-void vkutil::copy_image_to_image(VkCommandBuffer cmd, VkImage source, VkImage destination, VkExtent3D srcSize, VkExtent3D dstSize)
+void vkutil::copy_image_to_image(VkCommandBuffer cmd, VkImage source, VkImage destination, VkExtent2D srcSize, VkExtent2D dstSize)
 {
 	VkImageBlit2 blitRegion{ .sType = VK_STRUCTURE_TYPE_IMAGE_BLIT_2, .pNext = nullptr };
 
@@ -307,7 +307,6 @@ void vkutil::copy_image_to_image(VkCommandBuffer cmd, VkImage source, VkImage de
 	blitRegion.dstSubresource.mipLevel = 0;
 
 	VkBlitImageInfo2 blitInfo{ .sType = VK_STRUCTURE_TYPE_BLIT_IMAGE_INFO_2, .pNext = nullptr };
-
 	blitInfo.dstImage = destination;
 	blitInfo.dstImageLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 	blitInfo.srcImage = source;
@@ -343,6 +342,9 @@ void VulkanEngine::draw_main(VkCommandBuffer cmd)
 We will be changing the code that records the command buffer. You can now delete the older one. 
 The new code is this.
 ```cpp
+	_drawExtent.width = _drawImage.imageExtent.width;
+	_drawExtent.height = _drawImage.imageExtent.height;
+
 	VK_CHECK(vkBeginCommandBuffer(cmd, &cmdBeginInfo));	
 
 	// transition our main draw image into general layout so we can write into it
@@ -354,11 +356,6 @@ The new code is this.
 	//transition the draw image and the swapchain image into their correct transfer layouts
 	vkutil::transition_image(cmd, _drawImage.image, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 	vkutil::transition_image(cmd, _swapchainImages[swapchainImageIndex], VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-
-	VkExtent3D extent;
-	extent.height = _windowExtent.height;
-	extent.width = _windowExtent.width;
-	extent.depth = 1;
 
 	// execute a copy from the draw image into the swapchain
 	vkutil::copy_image_to_image(cmd, _drawImage.image, _swapchainImages[swapchainImageIndex], extent);

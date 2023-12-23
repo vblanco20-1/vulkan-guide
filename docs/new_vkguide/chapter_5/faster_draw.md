@@ -209,7 +209,6 @@ void MeshNode::Draw(const glm::mat4& topMatrix, DrawContext& ctx) {
 
 Now we have the bounds on the GeoSurface, and just need to check for visibility on the RenderObject. Add this function to vk_engine.cpp, its a global function.
 
-
 <!-- codegen from tag visfn on file E:\ProgrammingProjects\vulkan-guide-2\chapter-5/vk_engine.cpp --> 
 ```cpp
 bool is_visible(const RenderObject& obj, const glm::mat4& viewproj) {
@@ -270,5 +269,166 @@ The renderer now will skip objects outside of the view. It should look the same 
 The code for doing the same cull and sort but on the transparent objects has been skipped, but its the same as with the opaque objects, so you can try doing it yourself.
 
 With the transparent objects, you want to also change the sorting code so that it checks distance from bounds to the camera, so that objects draw more correct. But sorting by depth is incompatible with sorting by pipeline, so you will need to decide what works better for your case.
+
+## Creating Mipmaps
+
+When we added the texture loading, we didnt make mipmaps. Unlike in OpenGL, there isnt a direct one-call to generate them. We need to do it ourselves.
+
+`create_image` already had mipmap support, but we need to change the version that uploads the data so that it generates the mipmaps. For that we will change the function
+
+<!-- codegen from tag create_mip_2 on file E:\ProgrammingProjects\vulkan-guide-2\chapter-5/vk_engine.cpp --> 
+```cpp
+AllocatedImage VulkanEngine::create_image(void* data, VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool mipmapped)
+{
+    size_t data_size = size.depth * size.width * size.height * 4;
+    AllocatedBuffer uploadbuffer = create_buffer(data_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+
+    memcpy(uploadbuffer.info.pMappedData, data, data_size);
+
+    AllocatedImage new_image = create_image(size, format, usage | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, mipmapped);
+
+    immediate_submit([&](VkCommandBuffer cmd) {
+        vkutil::transition_image(cmd, new_image.image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+
+        VkBufferImageCopy copyRegion = {};
+        copyRegion.bufferOffset = 0;
+        copyRegion.bufferRowLength = 0;
+        copyRegion.bufferImageHeight = 0;
+
+        copyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        copyRegion.imageSubresource.mipLevel = 0;
+        copyRegion.imageSubresource.baseArrayLayer = 0;
+        copyRegion.imageSubresource.layerCount = 1;
+        copyRegion.imageExtent = size;
+
+        // copy the buffer into the image
+        vkCmdCopyBufferToImage(cmd, uploadbuffer.buffer, new_image.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1,
+            &copyRegion);
+
+        if (mipmapped) {
+            vkutil::generate_mipmaps(cmd, new_image.image, size);
+        } else {
+            vkutil::transition_image(cmd, new_image.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+        }
+    });
+    destroy_buffer(uploadbuffer);
+    return new_image;
+}
+```
+
+`immediate_submit` now can call into `vkutil::generate_mipmaps()` function if we want to use mipmapping on this image. Lets add that one to vk_images.h
+
+```cpp
+namespace vkutil {
+void generate_mipmaps(VkCommandBuffer cmd, VkImage image, VkExtent3D imageSize);
+}
+```
+
+There are multiple options for generating the mipmaps. We also dont have to generate them at load time, and could use formats like KTX or DDS which can have the mipmaps pregenerated. A popular option is to generate them in a compute shader that generates multiple levels at once, and that can improve performance. The way we are going to do mipmaps is with a chain of VkCmdImageBlit calls.
+
+For each level, we need to copy the image from the level before it into the next level, lowering the resolution by half each time. On each copy, we transition the mipmap level to `VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL` . Once all copies are done, we add another barrier, this time for all the mipmap levels at once, to transition the image into `VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL`. 
+
+The pseudocode looks like this.
+
+```cpp
+//image already comes with layout VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL on all mipmap levels from image creation
+
+int miplevels = calculate_mip_levels(imageSize);
+for (int mip = 0; mip < mipLevels; mip++) {
+
+    barrier( image.mips[mip] , VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL)
+
+    //not the last level
+    if (mip < mipLevels - 1)
+    {
+        copy_image(image.mips[mip], image.mips[mip+1];)
+    }
+}
+
+barrier( image , VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+```
+
+Lets now look at the actual code
+
+<!-- codegen from tag mipgen on file E:\ProgrammingProjects\vulkan-guide-2\shared/vk_images.cpp --> 
+```cpp
+void vkutil::generate_mipmaps(VkCommandBuffer cmd, VkImage image, VkExtent2D imageSize)
+{
+    int mipLevels = int(std::floor(std::log2(std::max(imageSize.width, imageSize.height)))) + 1;
+    for (int mip = 0; mip < mipLevels; mip++) {
+
+        VkExtent2D halfSize = imageSize;
+        halfSize.width /= 2;
+        halfSize.height /= 2;
+
+        VkImageMemoryBarrier2 imageBarrier { .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2, .pNext = nullptr };
+
+        imageBarrier.srcStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+        imageBarrier.srcAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT;
+        imageBarrier.dstStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+        imageBarrier.dstAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT | VK_ACCESS_2_MEMORY_READ_BIT;
+
+        imageBarrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+        imageBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+
+        VkImageAspectFlags aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        imageBarrier.subresourceRange = vkinit::image_subresource_range(aspectMask);
+        imageBarrier.subresourceRange.levelCount = 1;
+        imageBarrier.subresourceRange.baseMipLevel = mip;
+        imageBarrier.image = image;
+
+        VkDependencyInfo depInfo { .sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO, .pNext = nullptr };
+        depInfo.imageMemoryBarrierCount = 1;
+        depInfo.pImageMemoryBarriers = &imageBarrier;
+
+        vkCmdPipelineBarrier2(cmd, &depInfo);
+
+        if (mip < mipLevels - 1) {
+            VkImageBlit2 blitRegion { .sType = VK_STRUCTURE_TYPE_IMAGE_BLIT_2, .pNext = nullptr };
+
+            blitRegion.srcOffsets[1].x = imageSize.width;
+            blitRegion.srcOffsets[1].y = imageSize.height;
+            blitRegion.srcOffsets[1].z = 1;
+
+            blitRegion.dstOffsets[1].x = halfSize.width;
+            blitRegion.dstOffsets[1].y = halfSize.height;
+            blitRegion.dstOffsets[1].z = 1;
+
+            blitRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            blitRegion.srcSubresource.baseArrayLayer = 0;
+            blitRegion.srcSubresource.layerCount = 1;
+            blitRegion.srcSubresource.mipLevel = mip;
+
+            blitRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            blitRegion.dstSubresource.baseArrayLayer = 0;
+            blitRegion.dstSubresource.layerCount = 1;
+            blitRegion.dstSubresource.mipLevel = mip + 1;
+
+            VkBlitImageInfo2 blitInfo {.sType = VK_STRUCTURE_TYPE_BLIT_IMAGE_INFO_2, .pNext = nullptr};
+            blitInfo.dstImage = image;
+            blitInfo.dstImageLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+            blitInfo.srcImage = image;
+            blitInfo.srcImageLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+            blitInfo.filter = VK_FILTER_LINEAR;
+            blitInfo.regionCount = 1;
+            blitInfo.pRegions = &blitRegion;
+
+            vkCmdBlitImage2(cmd, &blitInfo);
+
+            imageSize = halfSize;
+        }
+    }
+
+    // transition all mip levels into the final read_only layout
+    transition_image(cmd, image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+}
+```
+
+The barrier is very similar to the one we have on `transition_image`, and the blit is similar to what we have in `copy_image_to_image` but with mip levels. In a way, this function combines the two.
+
+At each loop, we divide the image size by two, transition the mip level we copy from, and perform a VkCmdBlit from one mip level to the next.
+
+With this, now we automatically generate the mipmaps needed. We were already creating the samplers with the correct options, so it should work directly. 
 
 {% include comments.html term="Vkguide 2 Beta Comments" %}
