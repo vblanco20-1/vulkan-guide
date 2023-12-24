@@ -19,6 +19,8 @@ AllocatedImage create_image(void* data, VkExtent3D size, VkFormat format, VkImag
 }
 ```
 
+Now we start writing the functions on vk_engine.cpp
+
 ^code create_image chapter-4/vk_engine.cpp
 
 This is the same we already did when creating a draw image, just copied into its own function. We begin by storing the size and format as part of the AllocatedImage, then we make a VkImageCreateInfo with the size, format, and usages, then we allocate the image with VMA, and finally create the image-view. Something we werent doing before is setting up the aspect flag. We will default it to`VK_IMAGE_ASPECT_COLOR_BIT` unless the image is on a D32 float depth format. 
@@ -39,7 +41,7 @@ For mip level, we will copy the data into mip level 0 which is the top level. Th
 
 With those 2 functions, we can set up some default textures. We will create a default-white, default-black, default-grey, and a checkerboard texture. This way we have some textures we can use when something fails to load.
 
-Lets add those 3 images into the VulkanEngine class, and a couple samplers too that we can use with those images and others.
+Lets add those test images into the VulkanEngine class, and a couple samplers too that we can use with those images and others.
 
 ```cpp
 	AllocatedImage _whiteImage;
@@ -118,7 +120,7 @@ void VulkanEngine::init_mesh_pipeline()
 
 Now, on our draw function, we can dynamically create the descriptor set needed when binding this pipeline, and use it to display textures we want to draw.
 
-This goes into the `draw_geometry()` function, replacing the draw that does the rectangle
+This goes into the `draw_geometry()` function, changing the draw for the monkey mesh
 
 ^code draw_tex chapter-4/vk_engine.cpp
 
@@ -126,7 +128,9 @@ We allocate a new descriptor set from the frame descriptor set allocator, using 
 
 Then we use a descriptor writer to write a single image descriptor on binding 0, which will be the _errorCheckerboardImage. We give it the nearest-sampler, so that it doesnt blend between pixels. Then we update the descriptor set with the writer, and bind the set. Then we proceed with the draw.
 
-The result should be a rectangle with a magenta and black checkerboard pattern on the screen.
+The result should be that the monkey head now has a magenta pattern on it.
+
+![chapter2]({{site.baseurl}}/diagrams/texmonkey.png)
 
 ^nextlink
 

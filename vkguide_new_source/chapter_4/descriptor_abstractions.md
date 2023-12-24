@@ -232,7 +232,7 @@ Then we add it into the destruction queue of the current frame. This will destro
 
 To allocate the descriptor set we allocate it from the _frameDescriptors. That pool gets destroyed every frame, so same as with the deletion queue, it will be deleted automatically when the gpu is done with it 2 frames later. 
 
-Then we write the new buffer into the descriptor set. Now we have the globalDescriptor ready to be used for drawing. 
+Then we write the new buffer into the descriptor set. Now we have the globalDescriptor ready to be used for drawing. We arent using the scene-data buffer right now, but it will be necessary later.
 
 Before we continue with drawing, lets set up textures.
 

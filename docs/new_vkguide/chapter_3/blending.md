@@ -68,9 +68,7 @@ Lets try to use it to see what it does. We dont have alpha set in our shaders, s
 pipelineBuilder.enable_blending_additive();
 ```
 
-You should now see the rectangle we had as semi-transparent, letting the color below it show.
-
-If you want, try also using it on the monkey head mesh, and see how it looks. Play around with the blending modes to see what effects they result on.
+You should now see the monkey mesh as semi-transparent, letting the color below it show.Play around with the blending modes to see what effects they result on. 
 
 Before we move to chapter 4, lets implement window resizing.
 

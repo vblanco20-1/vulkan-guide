@@ -19,6 +19,8 @@ AllocatedImage create_image(void* data, VkExtent3D size, VkFormat format, VkImag
 }
 ```
 
+Now we start writing the functions on vk_engine.cpp
+
 <!-- codegen from tag create_image on file E:\ProgrammingProjects\vulkan-guide-2\chapter-4/vk_engine.cpp --> 
 ```cpp
 AllocatedImage VulkanEngine::create_image(VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool mipmapped)
@@ -112,7 +114,7 @@ For mip level, we will copy the data into mip level 0 which is the top level. Th
 
 With those 2 functions, we can set up some default textures. We will create a default-white, default-black, default-grey, and a checkerboard texture. This way we have some textures we can use when something fails to load.
 
-Lets add those 3 images into the VulkanEngine class, and a couple samplers too that we can use with those images and others.
+Lets add those test images into the VulkanEngine class, and a couple samplers too that we can use with those images and others.
 
 ```cpp
 	AllocatedImage _whiteImage;
@@ -223,23 +225,23 @@ void VulkanEngine::init_mesh_pipeline()
 {
 	VkShaderModule triangleFragShader;
 	if (!vkutil::load_shader_module("../../shaders/tex_image.frag.spv", _device, &triangleFragShader)) {
-		std::cout << "Error when building the mesh fragment shader module" << std::endl;
+		fmt::print("Error when building the fragment shader \n");
 	}
 	else {
-		std::cout << "Triangle fragment shader succesfully loaded" << std::endl;
+		fmt::print("Triangle fragment shader succesfully loaded \n");
 	}
 
 	VkShaderModule triangleVertexShader;
 	if (!vkutil::load_shader_module("../../shaders/colored_triangle_mesh.vert.spv", _device, &triangleVertexShader)) {
-		std::cout << "Error when building the mesh vertex shader module" << std::endl;
+		fmt::print("Error when building the vertex shader \n");
 	}
 	else {
-		std::cout << "Triangle vertex shader succesfully loaded" << std::endl;
+		fmt::print("Triangle vertex shader succesfully loaded \n");
 	}
 
 	VkPushConstantRange bufferRange{};
 	bufferRange.offset = 0;
-	bufferRange.size = sizeof(VkDeviceAddress);
+	bufferRange.size = sizeof(GPUDrawPushConstants);
 	bufferRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 
 	VkPipelineLayoutCreateInfo pipeline_layout_info = vkinit::pipeline_layout_create_info();
@@ -254,7 +256,7 @@ void VulkanEngine::init_mesh_pipeline()
 
 Now, on our draw function, we can dynamically create the descriptor set needed when binding this pipeline, and use it to display textures we want to draw.
 
-This goes into the `draw_geometry()` function, replacing the draw that does the rectangle
+This goes into the `draw_geometry()` function, changing the draw for the monkey mesh
 
 <!-- codegen from tag draw_tex on file E:\ProgrammingProjects\vulkan-guide-2\chapter-4/vk_engine.cpp --> 
 ```cpp
@@ -264,24 +266,38 @@ This goes into the `draw_geometry()` function, replacing the draw that does the 
 	VkDescriptorSet imageSet = get_current_frame()._frameDescriptors.allocate(_device, _singleImageDescriptorLayout);
 	{
 		DescriptorWriter writer;
-		writer.write_image(0, _errorCheckerboardImage.imageView, _defaultSamplerNearest, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+		writer.write_image(0, _errorCheckerboardImage.imageView, _defaultSamplerNearest, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
 
-		writer.update_set(_device,imageSet);
+		writer.update_set(_device, imageSet);
 	}
 
-	vkCmdBindDescriptorSets(cmd,VK_PIPELINE_BIND_POINT_GRAPHICS,_meshPipelineLayout,0,1,&imageSet,0,nullptr);
+	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _meshPipelineLayout, 0, 1, &imageSet, 0, nullptr);
 
-	vkCmdPushConstants(cmd,_meshPipelineLayout,VK_SHADER_STAGE_VERTEX_BIT,0, sizeof(VkDeviceAddress), &rectangle.vertexBufferAddress);
-	vkCmdBindIndexBuffer(cmd, rectangle.indexBuffer.buffer,0,VK_INDEX_TYPE_UINT32);
+	glm::mat4 view = glm::translate(glm::vec3{ 0,0,-5 });
+	// camera projection
+	glm::mat4 projection = glm::perspective(glm::radians(70.f), (float)_drawExtent.width / (float)_drawExtent.height, 10000.f, 0.1f);
 
-	vkCmdDrawIndexed(cmd,rectangle.indexBuffer.info.size / 4,1,0,0,0);
+	// invert the Y direction on projection matrix so that we are more similar
+	// to opengl and gltf axis
+	projection[1][1] *= -1;
+
+	GPUDrawPushConstants push_constants;
+	push_constants.worldMatrix = projection * view;
+	push_constants.vertexBuffer = testMeshes[2]->meshBuffers.vertexBufferAddress;
+
+	vkCmdPushConstants(cmd, _meshPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(GPUDrawPushConstants), &push_constants);
+	vkCmdBindIndexBuffer(cmd, testMeshes[2]->meshBuffers.indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
+
+	vkCmdDrawIndexed(cmd, testMeshes[2]->surfaces[0].count, 1, testMeshes[2]->surfaces[0].startIndex, 0, 0);
 ```
 
 We allocate a new descriptor set from the frame descriptor set allocator, using the _singleImageDescriptorLayout that the shader uses.
 
 Then we use a descriptor writer to write a single image descriptor on binding 0, which will be the _errorCheckerboardImage. We give it the nearest-sampler, so that it doesnt blend between pixels. Then we update the descriptor set with the writer, and bind the set. Then we proceed with the draw.
 
-The result should be a rectangle with a magenta and black checkerboard pattern on the screen.
+The result should be that the monkey head now has a magenta pattern on it.
+
+![chapter2]({{site.baseurl}}/diagrams/texmonkey.png)
 
 Next: [ Engine Architecture]({{ site.baseurl }}{% link docs/new_vkguide/chapter_4/engine_arch.md %})  
 
