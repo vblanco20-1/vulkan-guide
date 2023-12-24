@@ -35,12 +35,11 @@ On the draw() function, replace the call to `vkAcquireNextImageKHR` to check the
 	}
 ```
 
-Also replace the call to `vkQueuePresentKHR` at the end in the same way
+Also replace the call to `vkQueuePresentKHR` at the end in the same way. But we dont add the `return` as we are already at the end of the function.
 ```cpp
 VkResult presentResult = vkQueuePresentKHR(_graphicsQueue, &presentInfo);
-if (e == VK_ERROR_OUT_OF_DATE_KHR) {
+if (presentResult == VK_ERROR_OUT_OF_DATE_KHR) {
     resize_requested = true;
-    return;
 }
 ```
 

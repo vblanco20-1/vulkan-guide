@@ -222,13 +222,13 @@ In the file provided, index 0 is a cube, index 1 is a sphere, and index 2 is a b
 	vkCmdDrawIndexed(cmd, testMeshes[2]->surfaces[0].count, 1, testMeshes[2]->surfaces[0].startIndex, 0, 0);
 ```
 
-You will see that the monkey head is completely white due to the vertex color.  By changing the `OverrideColors` on the loader function, we will store the vertex normals as vertex colors, which will give some colors to the mesh.
+You will see that the monkey head has colors. That because we have `OverrideColors` in the loader set to true, which will store normal direction as colors. We dont have proper lighting in the shaders, so if you toggle that off you will see that the monkey head is pure solid white.
 
 Now we have the monkey head and its visible, but its also upside down. Lets fix up that matrix.
 
 In GLTF, the axis are meant to be for opengl, which has the Y up. Vulkan has Y down, so its flipped. We have 2 possibilities here. One would be to use negative viewport height, which is supported and will flip the entire rendering, this would make it closer to directx. On the other side, we can apply a flip that changes the objects as part of our projection matrix. We will be doing that.
 
-From the render code, lets give it a better matrix for rendering. 
+From the render code, lets give it a better matrix for rendering. Add this code right before the push constants call that draws the mesh on `draw_geometry()` 
 
 <!-- codegen from tag matview on file E:\ProgrammingProjects\vulkan-guide-2\chapter-3/vk_engine.cpp --> 
 ```cpp
@@ -249,7 +249,7 @@ First we calculate the view matrix, which is from the camera. a translation matr
 
 For the projection matrix, we are doing a trick here. Note that we are sending 10000 to the "near" and 0.1 to the "far". We will be reversing the depth, so that depth 1 is the near plane, and depth 0 the far plane. This is a technique that greatly increases the quality of depth testing.
 
-Talking about depth testing, if you run the engine at this point, you will find that the monkey head is drawing a bit glitched. We havent setup depth testing, so triangles of the back side of the head can render on top of the front, creating a wrong image. Lets go and implement depth testing.
+If you run the engine at this point, you will find that the monkey head is drawing a bit glitched. We havent setup depth testing, so triangles of the back side of the head can render on top of the front, creating a wrong image. Lets go and implement depth testing.
 
 Begin by adding a new image into the VulkanEngine class, by the side of the draw-image as they will be paired together while rendering.
 
@@ -292,7 +292,7 @@ _mainDeletionQueue.push_function([=]() {
 });
 ```
 
-From the draw loop, we will transition the depth image from undefined into depth attachment mode, In the same way we do with the draw image
+From the draw loop, we will transition the depth image from undefined into depth attachment mode, In the same way we do with the draw image. This goes right before the `draw_geometry()` call
 
 ```
 vkutil::transition_image(cmd, _drawImage.image, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
@@ -352,7 +352,7 @@ void PipelineBuilder::enable_depthtest(bool depthWriteEnable,VkCompareOp op)
 
 We will leave the stencil parts all off, but we will enable depth testing, and pass the depth OP into the structure.
 
-Now time to use it from the place where we build the mesh pipeline. `init_mesh_pipeline`
+Now time to use it from the place where we build the pipelines. Change this part on `init_mesh_pipeline`
 
 ```cpp
 	//pipelineBuilder.disable_depthtest();
@@ -365,11 +365,11 @@ Now time to use it from the place where we build the mesh pipeline. `init_mesh_p
 
 We call the enable_depthtest function on the builder, and we give it depth write, and as operator GREATER_OR_EQUAL. As mentioned, because 0 is far and 1 is near, we will want to only render the pixels if the current depth value is greater than the depth value on the depth image.
 
-Modify that `set_depth_format` call on the `init_triangle_pipeline` function too. Even if depth testing is disabled for a draw, we still need to set the format correctly for the render pass to work.
+Modify that `set_depth_format` call on the `init_triangle_pipeline` function too. Even if depth testing is disabled for a draw, we still need to set the format correctly for the render pass to work without validation layer issues.
 
 You can run the engine now, and the monkey head will be setup properly. The other draws with the triangle and rectangle render behind it because we have no depth testing set for them so they neither write or read from the depth attachment.
 
-Last thing in this chapter, setting up blending for transparent objects.
+Next, we will setup transparent objects and blending.
 
 Next: [ Blending]({{ site.baseurl }}{% link docs/new_vkguide/chapter_3/blending.md %})  
 
