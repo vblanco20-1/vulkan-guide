@@ -62,33 +62,6 @@ On the samplers, we will leave all parameters as default except the min/mag filt
 ## Binding images to shaders
 When we did the compute based rendering, we bound the image using a `VK_DESCRIPTOR_TYPE_STORAGE_IMAGE`, which was the type we use for a read/write texture with no sampling logic. This is roughly equivalent to binding a buffer, just a multi-dimensional one with different memory layout. But when we do drawing, we want to use the fixed hardware in the GPU for accessing texture data, which needs the sampler. We have the option to either use `VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER`, which packages an image and a sampler to use with that image, or to use 2 descriptors, and separate the two into `VK_DESCRIPTOR_TYPE_SAMPLER` and `VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE`. According to gpu vendors, the separated approach can be faster as there is less duplicated data. But its a bit harder to deal with so we wont be doing it for now. Instead, we will use the combined descriptor to make our shaders simpler. 
 
-We have been creating our descriptors at startup time, but lets change it up for this case. We will convert the rectangle draw from before into a image display, and it can be useful to have the descriptors done dynamically so we can swap what texture it displays according to some UI, or implement it as a fully dynamic "blit image to screen" function. 
-
-To allocate descriptor sets at runtime, we will hold one descriptor allocator in our FrameData structure. This way it will work like with the deletion queue, where we flush the resources and delete things as we begin the rendering of that frame. Resetting the whole descriptor pool at once is a lot faster than trying to keep track of individual descriptor set resource lifetimes.
-
-We add it into FrameData struct
-
-```cpp
-struct FrameData {
-	VkSemaphore _swapchainSemaphore, _renderSemaphore;
-	VkFence _renderFence;
-
-	VkCommandPool _commandPool;
-	VkCommandBuffer _mainCommandBuffer;
-
-	DeletionQueue _deletionQueue;
-	DescriptorAllocatorGrowable _frameDescriptors;
-};
-```
-
-Now, lets initialize it when we initialize the swapchain and create these structs. Add this at the end of init_descriptors()
-
-^code frame_desc chapter-4/vk_engine.cpp
-
-And now, we can clear these every frame when we flush the frame deletion queue. This goes at the start of draw()
-
-^code frame_clear chapter-4/vk_engine.cpp
-
 We will be modifying the rectangle draw we had before into a draw that displays a image in that rectangle. We need to create a new fragment shader that will show the image. Lets create a new fragment shader for that. We will call it `tex_image.frag`
 
 ```c

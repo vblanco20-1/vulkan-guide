@@ -352,7 +352,60 @@ writer.update_set(_device,_drawImageDescriptors);
 
 This abstraction will prove much more useful when we have more complex descriptor sets, specially in combination with the allocator and the layout builder. 
 
+# Dynamic Descriptor Allocation
 Lets start using the abstraction by using it to create a global scene data descriptor every frame. This is the descriptor set that all of our draws will use. It will contain the camera matrices so that we can do 3d rendering.
+
+To allocate descriptor sets at runtime, we will hold one descriptor allocator in our FrameData structure. This way it will work like with the deletion queue, where we flush the resources and delete things as we begin the rendering of that frame. Resetting the whole descriptor pool at once is a lot faster than trying to keep track of individual descriptor set resource lifetimes.
+
+We add it into FrameData struct
+
+```cpp
+struct FrameData {
+	VkSemaphore _swapchainSemaphore, _renderSemaphore;
+	VkFence _renderFence;
+
+	VkCommandPool _commandPool;
+	VkCommandBuffer _mainCommandBuffer;
+
+	DeletionQueue _deletionQueue;
+	DescriptorAllocatorGrowable _frameDescriptors;
+};
+```
+
+Now, lets initialize it when we initialize the swapchain and create these structs. Add this at the end of init_descriptors()
+
+<!-- codegen from tag frame_desc on file E:\ProgrammingProjects\vulkan-guide-2\chapter-4/vk_engine.cpp --> 
+```cpp
+	for (int i = 0; i < FRAME_OVERLAP; i++) {
+		// create a descriptor pool
+		std::vector<DescriptorAllocatorGrowable::PoolSizeRatio> frame_sizes = { 
+			{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 3 },
+			{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 3 },
+			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 3 },
+			{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 4 },
+		};
+
+		_frames[i]._frameDescriptors = DescriptorAllocatorGrowable{};
+		_frames[i]._frameDescriptors.init(_device, 1000, frame_sizes);
+	
+		_mainDeletionQueue.push_function([&, i]() {
+			_frames[i]._frameDescriptors.destroy_pools(_device);
+		});
+	}
+```
+
+And now, we can clear these every frame when we flush the frame deletion queue. This goes at the start of draw()
+
+<!-- codegen from tag frame_clear on file E:\ProgrammingProjects\vulkan-guide-2\chapter-4/vk_engine.cpp --> 
+```cpp
+	//wait until the gpu has finished rendering the last frame. Timeout of 1 second
+	VK_CHECK(vkWaitForFences(_device, 1, &get_current_frame()._renderFence, true, 1000000000));
+
+	get_current_frame()._deletionQueue.flush();
+	get_current_frame()._frameDescriptors.clear_pools(_device);
+```
+
+Now that we can allocate descriptor sets dynamically, we will be allocating the buffer that holds scene data and create its descriptor set.
 
 Add a new structure that we will use for the uniform buffer of scene data. We will hold view and projection matrix separated, and then premultiplied view-projection matrix. We also add some vec4s for a very basic lighting model that we will be building next.
 
@@ -384,7 +437,7 @@ Create the descriptor set layout as part of init_descriptors. It will be a descr
 }
 ```
 
-Now, we will create this descriptor set in a fully realtime fashion, inside the `draw_geometry()` function. We will also dynamically allocate the uniform buffer itself as a way to showcase how you could do temporal per-frame data that is dynamically created. It would be better to hold the buffers cached in our FrameData structure, but we will be doing it this way to show how. There are cases with dynamic draws and passes where you might want to do it this way.
+Now, we will create this descriptor set every frame, inside the `draw_geometry()` function. We will also dynamically allocate the uniform buffer itself as a way to showcase how you could do temporal per-frame data that is dynamically created. It would be better to hold the buffers cached in our FrameData structure, but we will be doing it this way to show how. There are cases with dynamic draws and passes where you might want to do it this way.
 
 ```cpp	
 	//allocate a new uniform buffer for the scene data

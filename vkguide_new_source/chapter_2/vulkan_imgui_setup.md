@@ -129,7 +129,6 @@ if (stop_rendering) {
 // imgui new frame
 ImGui_ImplVulkan_NewFrame();
 ImGui_ImplSDL2_NewFrame(_window);
-
 ImGui::NewFrame();
 
 //some imgui UI to test

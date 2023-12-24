@@ -143,7 +143,35 @@ writer.update_set(_device,_drawImageDescriptors);
 
 This abstraction will prove much more useful when we have more complex descriptor sets, specially in combination with the allocator and the layout builder. 
 
+# Dynamic Descriptor Allocation
 Lets start using the abstraction by using it to create a global scene data descriptor every frame. This is the descriptor set that all of our draws will use. It will contain the camera matrices so that we can do 3d rendering.
+
+To allocate descriptor sets at runtime, we will hold one descriptor allocator in our FrameData structure. This way it will work like with the deletion queue, where we flush the resources and delete things as we begin the rendering of that frame. Resetting the whole descriptor pool at once is a lot faster than trying to keep track of individual descriptor set resource lifetimes.
+
+We add it into FrameData struct
+
+```cpp
+struct FrameData {
+	VkSemaphore _swapchainSemaphore, _renderSemaphore;
+	VkFence _renderFence;
+
+	VkCommandPool _commandPool;
+	VkCommandBuffer _mainCommandBuffer;
+
+	DeletionQueue _deletionQueue;
+	DescriptorAllocatorGrowable _frameDescriptors;
+};
+```
+
+Now, lets initialize it when we initialize the swapchain and create these structs. Add this at the end of init_descriptors()
+
+^code frame_desc chapter-4/vk_engine.cpp
+
+And now, we can clear these every frame when we flush the frame deletion queue. This goes at the start of draw()
+
+^code frame_clear chapter-4/vk_engine.cpp
+
+Now that we can allocate descriptor sets dynamically, we will be allocating the buffer that holds scene data and create its descriptor set.
 
 Add a new structure that we will use for the uniform buffer of scene data. We will hold view and projection matrix separated, and then premultiplied view-projection matrix. We also add some vec4s for a very basic lighting model that we will be building next.
 
@@ -175,7 +203,7 @@ Create the descriptor set layout as part of init_descriptors. It will be a descr
 }
 ```
 
-Now, we will create this descriptor set in a fully realtime fashion, inside the `draw_geometry()` function. We will also dynamically allocate the uniform buffer itself as a way to showcase how you could do temporal per-frame data that is dynamically created. It would be better to hold the buffers cached in our FrameData structure, but we will be doing it this way to show how. There are cases with dynamic draws and passes where you might want to do it this way.
+Now, we will create this descriptor set every frame, inside the `draw_geometry()` function. We will also dynamically allocate the uniform buffer itself as a way to showcase how you could do temporal per-frame data that is dynamically created. It would be better to hold the buffers cached in our FrameData structure, but we will be doing it this way to show how. There are cases with dynamic draws and passes where you might want to do it this way.
 
 ```cpp	
 	//allocate a new uniform buffer for the scene data
