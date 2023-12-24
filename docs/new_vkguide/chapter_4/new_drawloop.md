@@ -7,11 +7,12 @@ nav_order: 14
 
 We will begin by setting up the new draw loop using the RenderObjects explained last chapter. We were harcoding the rendering on the mesh list loaded from GLTF, but now we will convert that list into RenderObjects and then draw that. We cant load textures from GLTF yet so we will be using the default material. 
 
-We will begin creating the architecture by defining the scene-node classes as explained in the article before.
+We will begin creating the architecture by adding the scene node base structures to vk_types.h
 
-All this on vk_types.h
+<!-- codegen from tag node_types on file E:\ProgrammingProjects\vulkan-guide-2\shared/vk_types.h --> 
 ```cpp
-struct DrawContext; //forward declaration
+struct DrawContext;
+
 // base class for a renderable dynamic object
 class IRenderable {
 
@@ -56,34 +57,38 @@ The draw function will do nothing, only call Draw() on children.
 
 This base node class does nothing, so we need to add a MeshNode class to vk_engine.h that displays a mesh.
 
+<!-- codegen from tag meshnode on file E:\ProgrammingProjects\vulkan-guide-2\chapter-4/vk_engine.h --> 
 ```cpp
 struct MeshNode : public Node {
 
-    std::shared_ptr<MeshAsset> mesh;
+	std::shared_ptr<MeshAsset> mesh;
 
-    virtual void Draw(const glm::mat4& topMatrix, DrawContext& ctx);
+	virtual void Draw(const glm::mat4& topMatrix, DrawContext& ctx) override;
 };
 ```
 
 The MeshNode holds a pointer to a mesh asset, and overrides the draw function to add commands into the draw context.
 
 Lets write the DrawContext too. All on vk_engine.h 
+
+<!-- codegen from tag renderobject on file E:\ProgrammingProjects\vulkan-guide-2\chapter-4/vk_engine.h --> 
 ```cpp
 struct RenderObject {
-    uint32_t indexCount;
-    uint32_t firstIndex;
-    VkBuffer indexBuffer;
-    
-    MaterialInstance* material;
+	uint32_t indexCount;
+	uint32_t firstIndex;
+	VkBuffer indexBuffer;
 
-    glm::mat4 transform;
-    VkDeviceAddress vertexBufferAddress;
+	MaterialInstance* material;
+
+	glm::mat4 transform;
+	VkDeviceAddress vertexBufferAddress;
 };
 
 struct DrawContext {
-    std::vector<RenderObject> OpaqueSurfaces;
+	std::vector<RenderObject> OpaqueSurfaces;
 };
 ```
+
 The draw context is just a list of RenderObject structures, for now.
 The RenderObject is the core of our rendering. The engine itself will not call any vulkan functions on the node classes, and the renderer is going to take the array of RenderObjects from the context, built every frame (or cached), and execute a single vulkan draw function for each.
 
@@ -131,7 +136,7 @@ class VulkanEngine{
 }
 ```
 
-We will add the code to the renderer on draw_geometry, right after creating the GPUSceneData descriptor set, so that we can bind it.
+We will add the code to the renderer on draw_geometry, right after creating the GPUSceneData descriptor set, so that we can bind it. Replace the code in the function that draws the hardcoded monkey head with this. Leave the descriptor set allocation for scene-data as this uses it.
 
 ```cpp
 	for (const RenderObject& draw : mainDrawContext.OpaqueSurfaces) {

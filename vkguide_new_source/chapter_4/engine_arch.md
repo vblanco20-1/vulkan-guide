@@ -31,11 +31,14 @@ This structure will be written dynamically every frame, and the renderer logic w
 
 The MaterialInstance struct looks like this.
 ```cpp
-struct MaterialInstance {
-    VkPipeline pipeline;
-    VkPipelineLayout layout;
-    VkDescriptorSet materialSet;
+struct MaterialPipeline {
+	VkPipeline pipeline;
+	VkPipelineLayout layout;
+};
 
+struct MaterialInstance {
+    MaterialPipeline* pipeline;
+    VkDescriptorSet materialSet;
     MaterialPass passType;
 };
 ```

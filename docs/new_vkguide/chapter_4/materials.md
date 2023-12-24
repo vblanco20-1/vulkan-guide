@@ -2,13 +2,15 @@
 layout: default
 title: Setting up Materials
 parent: "New 4. Textures and Engine Architecture"
-nav_order: 10
+nav_order: 12
 ---
 
 
 Lets begin with setting up the structures we need to build MaterialInstance and the GLTF shaders we use.
 
 Add these structures to vk_types.h
+
+<!-- codegen from tag mat_types on file E:\ProgrammingProjects\vulkan-guide-2\shared/vk_types.h --> 
 ```cpp
 enum class MaterialPass :uint8_t {
     MainColor,
@@ -19,6 +21,7 @@ struct MaterialPipeline {
 	VkPipeline pipeline;
 	VkPipelineLayout layout;
 };
+
 struct MaterialInstance {
     MaterialPipeline* pipeline;
     VkDescriptorSet materialSet;
@@ -31,35 +34,37 @@ This is the structs we need for the material data. MaterialInstance will hold a 
 For creating those objects, we are going to wrap the logic into a struct, as VulkanEngine is getting too big, and we will want to have multiple materials later.
 
 Add this into vk_engine.h
+
+<!-- codegen from tag gltfmat on file E:\ProgrammingProjects\vulkan-guide-2\chapter-4/vk_engine.h --> 
 ```cpp
 struct GLTFMetallic_Roughness {
-    MaterialPipeline opaquePipeline;
-    MaterialPipeline transparentPipeline;
+	MaterialPipeline opaquePipeline;
+	MaterialPipeline transparentPipeline;
 
-    VkDescriptorSetLayout materialLayout;
+	VkDescriptorSetLayout materialLayout;
 
-    struct MaterialConstants {
+	struct MaterialConstants {
 		glm::vec4 colorFactors;
 		glm::vec4 metal_rough_factors;
-        //padding, we need it for uniform buffers
+		//padding, we need it anyway for uniform buffers
 		glm::vec4 extra[14];
-    };
+	};
 
-    struct MaterialResources {
-        AllocatedImage colorImage; 
-        VkSampler colorSampler;
-        AllocatedImage metalRoughImage;
-        VkSampler metalRoughSampler;
-        VkBuffer dataBuffer; 
-        uint32_t dataBufferOffset;
-    };
+	struct MaterialResources {
+		AllocatedImage colorImage;
+		VkSampler colorSampler;
+		AllocatedImage metalRoughImage;
+		VkSampler metalRoughSampler;
+		VkBuffer dataBuffer;
+		uint32_t dataBufferOffset;
+	};
 
-    DescriptorWriter writer;
+	DescriptorWriter writer;
 
-    void build_pipelines(VulkanEngine* engine);
-    void clear_resources(VkDevice device);
+	void build_pipelines(VulkanEngine* engine);
+	void clear_resources(VkDevice device);
 
-    MaterialInstance write_material(VkDevice device,MaterialPass pass,const MaterialResources& resources , DescriptorAllocatorGrowable& descriptorAllocator);
+	MaterialInstance write_material(VkDevice device, MaterialPass pass, const MaterialResources& resources, DescriptorAllocatorGrowable& descriptorAllocator);
 };
 ```
 

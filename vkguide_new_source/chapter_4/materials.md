@@ -2,66 +2,23 @@
 layout: default
 title: Setting up Materials
 parent: "New 4. Textures and Engine Architecture"
-nav_order: 10
+nav_order: 12
 ---
 
 
 Lets begin with setting up the structures we need to build MaterialInstance and the GLTF shaders we use.
 
 Add these structures to vk_types.h
-```cpp
-enum class MaterialPass :uint8_t {
-    MainColor,
-    Transparent,
-    Other
-};
-struct MaterialPipeline {
-	VkPipeline pipeline;
-	VkPipelineLayout layout;
-};
-struct MaterialInstance {
-    MaterialPipeline* pipeline;
-    VkDescriptorSet materialSet;
-    MaterialPass passType;
-};
-```
+
+^code mat_types shared/vk_types.h
 
 This is the structs we need for the material data. MaterialInstance will hold a raw pointer (non owning) into its MaterialPipeline which contains the real pipeline. It holds a descriptor set too.
 
 For creating those objects, we are going to wrap the logic into a struct, as VulkanEngine is getting too big, and we will want to have multiple materials later.
 
 Add this into vk_engine.h
-```cpp
-struct GLTFMetallic_Roughness {
-    MaterialPipeline opaquePipeline;
-    MaterialPipeline transparentPipeline;
 
-    VkDescriptorSetLayout materialLayout;
-
-    struct MaterialConstants {
-		glm::vec4 colorFactors;
-		glm::vec4 metal_rough_factors;
-        //padding, we need it for uniform buffers
-		glm::vec4 extra[14];
-    };
-
-    struct MaterialResources {
-        AllocatedImage colorImage; 
-        VkSampler colorSampler;
-        AllocatedImage metalRoughImage;
-        VkSampler metalRoughSampler;
-        VkBuffer dataBuffer; 
-        uint32_t dataBufferOffset;
-    };
-
-    DescriptorWriter writer;
-
-    void build_pipelines(VulkanEngine* engine);
-    void clear_resources(VkDevice device);
-
-    MaterialInstance write_material(VkDevice device,MaterialPass pass,const MaterialResources& resources , DescriptorAllocatorGrowable& descriptorAllocator);
-};
-```
+^code gltfmat chapter-4/vk_engine.h
 
 We will hold the 2 pipelines we will be using for now, one for transparent draws, and other for opaque (and alpha-masked). And the descriptor set layout for the material.
 

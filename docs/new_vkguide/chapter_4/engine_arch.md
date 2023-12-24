@@ -31,11 +31,14 @@ This structure will be written dynamically every frame, and the renderer logic w
 
 The MaterialInstance struct looks like this.
 ```cpp
-struct MaterialInstance {
-    VkPipeline pipeline;
-    VkPipelineLayout layout;
-    VkDescriptorSet materialSet;
+struct MaterialPipeline {
+	VkPipeline pipeline;
+	VkPipelineLayout layout;
+};
 
+struct MaterialInstance {
+    MaterialPipeline* pipeline;
+    VkDescriptorSet materialSet;
     MaterialPass passType;
 };
 ```
@@ -69,6 +72,6 @@ A trick we will be doing too is that once we add GLTF, we will also have a Loade
 
 Loading the GLTF itself will be done next chapter, but we will ready the mechanics of the RenderObjects and gltf material now.
 
-Next: [ Meshes and Camera]({{ site.baseurl }}{% link docs/new_vkguide/chapter_4/new_drawloop.md %})  
+Next: [ Setting up Materials]({{ site.baseurl }}{% link docs/new_vkguide/chapter_4/materials.md %})  
 
 {% include comments.html term="Vkguide 2 Beta Comments" %}

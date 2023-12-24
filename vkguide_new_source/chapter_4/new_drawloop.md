@@ -7,46 +7,9 @@ nav_order: 14
 
 We will begin by setting up the new draw loop using the RenderObjects explained last chapter. We were harcoding the rendering on the mesh list loaded from GLTF, but now we will convert that list into RenderObjects and then draw that. We cant load textures from GLTF yet so we will be using the default material. 
 
-We will begin creating the architecture by defining the scene-node classes as explained in the article before.
+We will begin creating the architecture by adding the scene node base structures to vk_types.h
 
-All this on vk_types.h
-```cpp
-struct DrawContext; //forward declaration
-// base class for a renderable dynamic object
-class IRenderable {
-
-    virtual void Draw(const glm::mat4& topMatrix, DrawContext& ctx) = 0;
-};
-
-// implementation of a drawable scene node.
-// the scene node can hold children and will also keep a transform to propagate
-// to them
-struct Node : public IRenderable {
-
-    // parent pointer must be a weak pointer to avoid circular dependencies
-    std::weak_ptr<Node> parent;
-    std::vector<std::shared_ptr<Node>> children;
-
-    glm::mat4 localTransform;
-    glm::mat4 worldTransform;
-
-    void refreshTransform(const glm::mat4& parentMatrix)
-    {
-        worldTransform = parentMatrix * localTransform;
-        for (auto c : children) {
-            c->refreshTransform(worldTransform);
-        }
-    }
-
-    virtual void Draw(const glm::mat4& topMatrix, DrawContext& ctx)
-    {
-        // draw children
-        for (auto& c : children) {
-            c->Draw(topMatrix, ctx);
-        }
-    }
-};
-```
+^code node_types shared/vk_types.h
 
 The node will be the first IRenderable we have. We will be building the node tree using smart pointers. For the parent pointer, we store it as weak_ptr to avoid circular dependencies. The children will be stored as shared pointer. 
 
@@ -56,34 +19,14 @@ The draw function will do nothing, only call Draw() on children.
 
 This base node class does nothing, so we need to add a MeshNode class to vk_engine.h that displays a mesh.
 
-```cpp
-struct MeshNode : public Node {
-
-    std::shared_ptr<MeshAsset> mesh;
-
-    virtual void Draw(const glm::mat4& topMatrix, DrawContext& ctx);
-};
-```
+^code meshnode chapter-4/vk_engine.h
 
 The MeshNode holds a pointer to a mesh asset, and overrides the draw function to add commands into the draw context.
 
 Lets write the DrawContext too. All on vk_engine.h 
-```cpp
-struct RenderObject {
-    uint32_t indexCount;
-    uint32_t firstIndex;
-    VkBuffer indexBuffer;
-    
-    MaterialInstance* material;
 
-    glm::mat4 transform;
-    VkDeviceAddress vertexBufferAddress;
-};
+^code renderobject chapter-4/vk_engine.h
 
-struct DrawContext {
-    std::vector<RenderObject> OpaqueSurfaces;
-};
-```
 The draw context is just a list of RenderObject structures, for now.
 The RenderObject is the core of our rendering. The engine itself will not call any vulkan functions on the node classes, and the renderer is going to take the array of RenderObjects from the context, built every frame (or cached), and execute a single vulkan draw function for each.
 
@@ -109,7 +52,7 @@ class VulkanEngine{
 }
 ```
 
-We will add the code to the renderer on draw_geometry, right after creating the GPUSceneData descriptor set, so that we can bind it.
+We will add the code to the renderer on draw_geometry, right after creating the GPUSceneData descriptor set, so that we can bind it. Replace the code in the function that draws the hardcoded monkey head with this. Leave the descriptor set allocation for scene-data as this uses it.
 
 ```cpp
 	for (const RenderObject& draw : mainDrawContext.OpaqueSurfaces) {
