@@ -346,43 +346,61 @@ For our triangle, we are going to use hardcoded vertex positions in the vertex s
 
 These are the shaders: 
 
-triangle.vert
-<!-- codegen from tag all on file E:\ProgrammingProjects\vulkan-guide-2\shaders/triangle.vert --> 
+colored_triangle.vert
+<!-- codegen from tag all on file E:\ProgrammingProjects\vulkan-guide-2\shaders/colored_triangle.vert --> 
 ```cpp
 #version 450
 
-void main() {
+layout (location = 0) out vec3 outColor;
+
+void main() 
+{
 	//const array of positions for the triangle
 	const vec3 positions[3] = vec3[3](
 		vec3(1.f,1.f, 0.0f),
 		vec3(-1.f,1.f, 0.0f),
 		vec3(0.f,-1.f, 0.0f)
 	);
+
+	//const array of colors for the triangle
+	const vec3 colors[3] = vec3[3](
+		vec3(1.0f, 0.0f, 0.0f), //red
+		vec3(0.0f, 1.0f, 0.0f), //green
+		vec3(00.f, 0.0f, 1.0f)  //blue
+	);
+
 	//output the position of each vertex
 	gl_Position = vec4(positions[gl_VertexIndex], 1.0f);
+	outColor = colors[gl_VertexIndex];
 }
 ```
 
-triangle.frag
-<!-- codegen from tag all on file E:\ProgrammingProjects\vulkan-guide-2\shaders/triangle.frag --> 
+colored_triangle.frag
+<!-- codegen from tag all on file E:\ProgrammingProjects\vulkan-guide-2\shaders/colored_triangle.frag --> 
 ```cpp
-//glsl version 4.5
 #version 450
+
+//shader input
+layout (location = 0) in vec3 inColor;
 
 //output write
 layout (location = 0) out vec4 outFragColor;
 
-void main() {
+void main() 
+{
 	//return red
-	outFragColor = vec4(1.f,0.f,0.f,1.0f);
+	outFragColor = vec4(inColor,1.0f);
 }
 ```
+
+
 
 In our vertex shader, we have a hardcoded array of positions, and we index into it from `gl_VertexIndex`. This works in a similar way to LocalThreadID on compute shaders worked. For every invocation of the vertex shader, this will be a different index, and we can use it to process out vertex, which will write into the fixed function gl_Position variable. As the array is only of lenght 3, if we tried to render more than 3 vertices (1 triangle) this will error.
 
 In our fragment shader, we will declare an output at layout = 0 (this connects to the render attachments of the render pass), and we have a simple hardcoded red output.
 
 Lets now create the pipeline and layout we need to draw this triangle.
+We are adding new shader files, so make sure you rebuild the CMake project and build the Shaders target.
 
 On VulkanEngine class, we will add a `init_triangle_pipeline()` function, and a couple of members to hold the pipeline and its layout
 
@@ -400,7 +418,7 @@ Lets write that function We will start by loading the 2 shaders into VkShaderMod
 <!-- codegen from tag triangle_shaders on file E:\ProgrammingProjects\vulkan-guide-2\chapter-3/vk_engine.cpp --> 
 ```cpp
 	VkShaderModule triangleFragShader;
-	if (!vkutil::load_shader_module("../../shaders/triangle.frag.spv", _device, &triangleFragShader)) {
+	if (!vkutil::load_shader_module("../../shaders/colored_triangle.frag.spv", _device, &triangleFragShader)) {
 		fmt::print("Error when building the triangle fragment shader module");
 	}
 	else {
@@ -408,7 +426,7 @@ Lets write that function We will start by loading the 2 shaders into VkShaderMod
 	}
 
 	VkShaderModule triangleVertexShader;
-	if (!vkutil::load_shader_module("../../shaders/triangle.vert.spv", _device, &triangleVertexShader)) {
+	if (!vkutil::load_shader_module("../../shaders/colored_triangle.vert.spv", _device, &triangleVertexShader)) {
 		fmt::print("Error when building the triangle vertex shader module");
 	}
 	else {
@@ -531,6 +549,8 @@ To draw our triangle we need to begin a renderpass with cmdBeginRendering. This 
 We do a CmdBindPipeline, but instead of using the BIND_POINT_COMPUTE, we now use `VK_PIPELINE_BIND_POINT_GRAPHICS`. Then, we have to set our viewport and scissor. This is required before we left them undefined when creating the pipeline as we were using dynamic pipeline state. With that set, we can do a vkCmdDraw() to draw the triangle. With that done, we can finish the render pass to end our drawing.
 
 If you run the program at this point, you should see a triangle being rendered on top of the compute based background
+
+![triangle]({{site.baseurl}}/diagrams/ColorTri2.png)
 
 Next: [ Mesh buffers]({{ site.baseurl }}{% link docs/new_vkguide/chapter_3/mesh_buffers.md %})  
 

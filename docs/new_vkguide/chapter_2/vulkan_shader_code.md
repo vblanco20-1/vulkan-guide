@@ -371,7 +371,7 @@ bool vkutil::load_shader_module(const char* filePath,
 
 With this function, we first load the file into a `std::vector<uint32_t>`. This will store the compiled shader data, which we can then use on the call to `vkCreateShaderModule`. The create-info for a shader module needs nothing except the shader data as an int array. Shader modules are only needed when building a pipeline, and once the pipeline is built they can be safely destroyed, so we wont be storing them in the VulkanEngine class.
 
-Back to VulkanEngine, lets add the new members we will need, and the init_pipelines() function.
+Back to VulkanEngine, lets add the new members we will need, and the init_pipelines() function alongside a init_background_pipelines() function. init_pipelines() will call the other pipeline initialization functions that we will add as the tutorial progresses.
 
 ```cpp
 class VulkanEngine{
@@ -381,10 +381,11 @@ public:
 
 private:
 	void init_pipelines();
+	void init_background_pipelines();
 }
 ```
 
-Add it  to the init function, and add the vk_pipelines.h include to the top of the file.
+Add it  to the init function, and add the vk_pipelines.h include to the top of the file. The `init_pipelines()` function will call `init_background_pipelines()`
 
 ```cpp
 #include <vk_pipelines.h>
@@ -404,11 +405,16 @@ void VulkanEngine::init()
 	//everything went fine
 	_isInitialized = true;
 }
+
+void VulkanEngine::init_pipelines()
+{
+	init_background_pipelines();
+}
 ```
 
 Lets now begin creating the pipeline. The first thing we will do is create the pipeline layout.
 ```cpp
-void VulkanEngine::init_pipelines()
+void VulkanEngine::init_background_pipelines()
 {
 	VkPipelineLayoutCreateInfo computeLayout{};
 	computeLayout.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
@@ -424,7 +430,7 @@ To create a pipeline, we need an array of descriptor set layouts to use, and oth
 
 Now, we are going to create the pipeline object itself by loading the shader module and adding it plus other options into a VkComputePipelineCreateInfo.
 ```cpp
-void VulkanEngine::init_pipelines()
+void VulkanEngine::init_background_pipelines()
 {
 	//layout code
 	VkShaderModule computeDrawShader;

@@ -142,8 +142,9 @@ We will create a struct for the push-constants we want to draw the mesh, it will
 
 Now we need a function to create those buffers and fill them on the gpu.
 
-<!-- codegen from tag mesh_create_1 on file E:\ProgrammingProjects\vulkan-guide-2\chapter-3/vk_engine.cpp --> 
 ```cpp
+GPUMeshBuffers VulkanEngine::uploadMesh(std::span<uint32_t> indices, std::span<Vertex> vertices)
+{
 	const size_t vertexBufferSize = vertices.size() * sizeof(Vertex);
 	const size_t indexBufferSize = indices.size() * sizeof(uint32_t);
 
@@ -161,6 +162,7 @@ Now we need a function to create those buffers and fill them on the gpu.
 	newSurface.indexBuffer = create_buffer(indexBufferSize, VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 		VMA_MEMORY_USAGE_GPU_ONLY);
 
+}
 ```
 Add it to VulkanEngine class declaration too.
 
@@ -302,7 +304,7 @@ Its going to be mostly a copypaste of `init_triangle_pipeline()`
 	}
 
 	VkShaderModule triangleVertexShader;
-	if (!vkutil::load_shader_module("../../shaders/colored_triangle.vert.spv", _device, &triangleVertexShader)) {
+	if (!vkutil::load_shader_module("../../shaders/colored_triangle_mesh.vert.spv", _device, &triangleVertexShader)) {
 		fmt::print("Error when building the triangle vertex shader module");
 	}
 	else {
@@ -345,8 +347,7 @@ For the rest of the function, we do the same as in the triangle pipeline functio
 	//no blending
 	pipelineBuilder.disable_blending();
 
-	//pipelineBuilder.disable_depthtest();
-	pipelineBuilder.enable_depthtest(true, VK_COMPARE_OP_GREATER_OR_EQUAL);
+	pipelineBuilder.disable_depthtest();
 
 	//connect the image format we will draw into, from draw image
 	pipelineBuilder.set_color_attachment_format(_drawImage.imageFormat);
@@ -373,7 +374,6 @@ void VulkanEngine::init_pipelines()
 	//COMPUTE PIPELINES	
 	init_background_pipelines();
 
-
 	// GRAPHICS PIPELINES
 	init_triangle_pipeline();
 	init_mesh_pipeline();
@@ -382,8 +382,8 @@ void VulkanEngine::init_pipelines()
 
 Next we need to create and upload the mesh. We create a new initialization function, `init_default_data()` for our default data in the engine. Add it into the main init() function, at the end.
 
-<!-- codegen from tag init_data on file E:\ProgrammingProjects\vulkan-guide-2\chapter-3/vk_engine.cpp --> 
 ```cpp
+void VulkanEngine::init_default_data() {
 	std::array<Vertex,4> rect_vertices;
 
 	rect_vertices[0].position = {0.5,-0.5, 0};
@@ -408,8 +408,8 @@ Next we need to create and upload the mesh. We create a new initialization funct
 
 	rectangle = uploadMesh(rect_indices,rect_vertices);
 
+}
 ```
-
 We create 2 arrays for vertices and indices, and call the uploadMesh function to convert it all into buffers.
 
 We can now execute the draw. We will add the new draw command on `draw_geometry()` function, after the triangle we had.

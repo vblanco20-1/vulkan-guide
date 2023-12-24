@@ -153,17 +153,20 @@ For our triangle, we are going to use hardcoded vertex positions in the vertex s
 
 These are the shaders: 
 
-triangle.vert
-^code all shaders/triangle.vert
+colored_triangle.vert
+^code all shaders/colored_triangle.vert
 
-triangle.frag
-^code all shaders/triangle.frag
+colored_triangle.frag
+^code all shaders/colored_triangle.frag
+
+
 
 In our vertex shader, we have a hardcoded array of positions, and we index into it from `gl_VertexIndex`. This works in a similar way to LocalThreadID on compute shaders worked. For every invocation of the vertex shader, this will be a different index, and we can use it to process out vertex, which will write into the fixed function gl_Position variable. As the array is only of lenght 3, if we tried to render more than 3 vertices (1 triangle) this will error.
 
 In our fragment shader, we will declare an output at layout = 0 (this connects to the render attachments of the render pass), and we have a simple hardcoded red output.
 
 Lets now create the pipeline and layout we need to draw this triangle.
+We are adding new shader files, so make sure you rebuild the CMake project and build the Shaders target.
 
 On VulkanEngine class, we will add a `init_triangle_pipeline()` function, and a couple of members to hold the pipeline and its layout
 
@@ -201,6 +204,8 @@ To draw our triangle we need to begin a renderpass with cmdBeginRendering. This 
 We do a CmdBindPipeline, but instead of using the BIND_POINT_COMPUTE, we now use `VK_PIPELINE_BIND_POINT_GRAPHICS`. Then, we have to set our viewport and scissor. This is required before we left them undefined when creating the pipeline as we were using dynamic pipeline state. With that set, we can do a vkCmdDraw() to draw the triangle. With that done, we can finish the render pass to end our drawing.
 
 If you run the program at this point, you should see a triangle being rendered on top of the compute based background
+
+![triangle]({{site.baseurl}}/diagrams/ColorTri2.png)
 
 ^nextlink
 

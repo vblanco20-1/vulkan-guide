@@ -96,7 +96,12 @@ We will create a struct for the push-constants we want to draw the mesh, it will
 
 Now we need a function to create those buffers and fill them on the gpu.
 
+```cpp
+GPUMeshBuffers VulkanEngine::uploadMesh(std::span<uint32_t> indices, std::span<Vertex> vertices)
+{
 ^code mesh_create_1 chapter-3/vk_engine.cpp
+}
+```
 Add it to VulkanEngine class declaration too.
 
 The function will take a std::span of integers for its indices, and of Vertex for vertices. A span is a pointer + size pair. You can convert from C style arrays or std::vector into it, so its great to use here to avoid data copies.
@@ -173,7 +178,6 @@ void VulkanEngine::init_pipelines()
 	//COMPUTE PIPELINES	
 	init_background_pipelines();
 
-
 	// GRAPHICS PIPELINES
 	init_triangle_pipeline();
 	init_mesh_pipeline();
@@ -182,8 +186,11 @@ void VulkanEngine::init_pipelines()
 
 Next we need to create and upload the mesh. We create a new initialization function, `init_default_data()` for our default data in the engine. Add it into the main init() function, at the end.
 
+```cpp
+void VulkanEngine::init_default_data() {
 ^code init_data chapter-3/vk_engine.cpp
-
+}
+```
 We create 2 arrays for vertices and indices, and call the uploadMesh function to convert it all into buffers.
 
 We can now execute the draw. We will add the new draw command on `draw_geometry()` function, after the triangle we had.
