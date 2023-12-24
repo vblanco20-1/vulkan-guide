@@ -31,6 +31,9 @@ struct MeshAsset {
     std::vector<GeoSurface> surfaces;
     GPUMeshBuffers meshBuffers;
 };
+
+//forward declaration
+class VulkanEngine;
 ```
 
 A given mesh asset will have a name, loaded from the file, and then the mesh buffers. But it will also have an array of GeoSurface that has the sub-meshes of this specific mesh. When rendering each submesh will be its own draw.  We will use StartIndex and count for that drawcall as we will be appending all the vertex data of each surface into the same buffer.
@@ -198,14 +201,13 @@ The Position array is going to be there always, so we use that to initialize the
 Lets draw them.
 
 ```
-	GPUMeshBuffers rectangle;
-	std::vector<MeshAsset> testMeshes;
+	std::vector<std::shared_ptr<MeshAsset>> testMeshes;
 ```
 
-we begin by adding them to the VulkanEngine class. Lets load them from init_default_data()
+we begin by adding them to the VulkanEngine class. Lets load them from init_default_data(). Add `#include <vk_loader.h>` to vk_engine.h include list.
 
 ```
-testMeshes = loadGltfMeshes(this,"..\\..\\assets\\structure.glb").value();
+testMeshes = loadGltfMeshes(this,"..\\..\\assets\\basicmesh.glb").value();
 ```
 
 In the file provided, index 0 is a cube, index 1 is a sphere, and index 2 is a blender monkeyhead. we will be drawing that last one, draw it right after drawing the rectangle from before
