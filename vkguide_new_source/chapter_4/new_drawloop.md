@@ -90,7 +90,7 @@ struct GeoSurface {
 };
 ```
 
-Next, on vk_engine.cpp `init_default_data`, right after we load the meshes from the GLTF.
+Next, on vk_engine.cpp `init_default_data`, at the end after we created the default material.
 
 ^code default_meshes chapter-4/vk_engine.cpp
 
@@ -105,9 +105,7 @@ void VulkanEngine::update_scene()
 {
 	mainDrawContext.OpaqueSurfaces.clear();
 
-	for (auto& m : loadedNodes) {
-		m.second->Draw(glm::mat4{1.f}, mainDrawContext);
-	}
+	loadedNodes["Suzanne"]->Draw(glm::mat4{1.f}, mainDrawContext);	
 
 	sceneData.view = glm::translate(glm::vec3{ 0,0,-5 });
 	// camera projection
@@ -117,10 +115,15 @@ void VulkanEngine::update_scene()
 	// to opengl and gltf axis
 	sceneData.proj[1][1] *= -1;
 	sceneData.viewproj = sceneData.proj * sceneData.view;
+
+	//some default lighting parameters
+	sceneData.ambientColor = glm::vec4(.1f);
+	sceneData.sunlightColor = glm::vec4(1.f);
+	sceneData.sunlightDirection = glm::vec4(0,1,0.5,1.f);
 }
 ```
 
-We begin by clearing the render objects from the draw context, then looping other the loadedNodes and calling Draw on each. This adds their commands into the draw context. Then we set up the camera math.
+We begin by clearing the render objects from the draw context, then looping other the loadedNodes and calling Draw on `Suzanne` which is the mesh name for the monkey.
 
 This function gets called at the very start of the draw() function, before waiting on the frame fences.
 
@@ -134,7 +137,7 @@ void VulkanEngine::draw()
 }
 ```
 
-If you draw the engine now, you will see that the objects from the mesh asset are being drawn. 
+If you draw the engine now, you will see that the monkey head is being drawn with some dramatic top down lighting. If the monkey head is not white but multicolor, check that you have `OverrideColors` on vk_loader.cpp set to false.
 
 Now, to demonstrate it, we are going to manipulate the nodes and drawing a bit.
 
