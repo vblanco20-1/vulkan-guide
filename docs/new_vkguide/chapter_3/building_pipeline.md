@@ -400,21 +400,20 @@ Lets write that function We will start by loading the 2 shaders into VkShaderMod
 <!-- codegen from tag triangle_shaders on file E:\ProgrammingProjects\vulkan-guide-2\chapter-3/vk_engine.cpp --> 
 ```cpp
 	VkShaderModule triangleFragShader;
-	if (!vkutil::load_shader_module("../../shaders/colored_triangle.frag.spv", _device, &triangleFragShader)) {
-		std::cout << "Error when building the triangle fragment shader module" << std::endl;
+	if (!vkutil::load_shader_module("../../shaders/triangle.frag.spv", _device, &triangleFragShader)) {
+		fmt::print("Error when building the triangle fragment shader module");
 	}
 	else {
-		std::cout << "Triangle fragment shader succesfully loaded" << std::endl;
+		fmt::print("Triangle fragment shader succesfully loaded");
 	}
 
 	VkShaderModule triangleVertexShader;
-	if (!vkutil::load_shader_module("../../shaders/colored_triangle.vert.spv", _device, &triangleVertexShader)) {
-		std::cout << "Error when building the triangle vertex shader module" << std::endl;
+	if (!vkutil::load_shader_module("../../shaders/triangle.vert.spv", _device, &triangleVertexShader)) {
+		fmt::print("Error when building the triangle vertex shader module");
 	}
 	else {
-		std::cout << "Triangle vertex shader succesfully loaded" << std::endl;
+		fmt::print("Triangle vertex shader succesfully loaded");
 	}
-
 	
 	//build the pipeline layout that controls the inputs/outputs of the shader
 	//we are not using descriptor sets or other systems yet, so no need to use anything other than empty default

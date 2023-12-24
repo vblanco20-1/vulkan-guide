@@ -195,10 +195,10 @@ Vulkan has 2 main ways of copying one image to another. you can use VkCmdCopyIma
 CopyImage is faster, but its much more restricted, for example the resolution on both images must match.
 Meanwhile, blit image lets you copy images of different formats and different sizes into one another. You have a source rectangle and a target rectangle, and the system copies it into its position. Those two functions are useful when setting up the engine, but later its best to ignore them and write your own version that can do extra logic on a fullscreen fragment shader.
 
-With it, we can now update the render loop. As draw() is getting too big, we are going to leave the syncronization, command buffer management, and transitions in the draw() function, but we are going to add the draw commands themselves into a draw_main() function.
+With it, we can now update the render loop. As draw() is getting too big, we are going to leave the syncronization, command buffer management, and transitions in the draw() function, but we are going to add the draw commands themselves into a draw_background() function.
 
 ```cpp
-void VulkanEngine::draw_main(VkCommandBuffer cmd)
+void VulkanEngine::draw_background(VkCommandBuffer cmd)
 {
 ^code draw_clear chapter-2/vk_engine.cpp
 }

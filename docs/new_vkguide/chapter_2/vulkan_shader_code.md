@@ -474,7 +474,7 @@ We are now ready to draw with it.
 
 # Drawing with compute
 
-Go back to the draw_main() function, we will replace the vkCmdClear with a compute shader invocation.
+Go back to the draw_background() function, we will replace the vkCmdClear with a compute shader invocation.
 
 <!-- codegen from tag draw_comp on file E:\ProgrammingProjects\vulkan-guide-2\chapter-2/vk_engine.cpp --> 
 ```cpp

@@ -295,18 +295,18 @@ Its going to be mostly a copypaste of `init_triangle_pipeline()`
 ```cpp
 	VkShaderModule triangleFragShader;
 	if (!vkutil::load_shader_module("../../shaders/colored_triangle.frag.spv", _device, &triangleFragShader)) {
-		std::cout << "Error when building the triangle fragment shader module" << std::endl;
+		fmt::print("Error when building the triangle fragment shader module");
 	}
 	else {
-		std::cout << "Triangle fragment shader succesfully loaded" << std::endl;
+		fmt::print("Triangle fragment shader succesfully loaded");
 	}
 
 	VkShaderModule triangleVertexShader;
-	if (!vkutil::load_shader_module("../../shaders/colored_triangle_mesh.vert.spv", _device, &triangleVertexShader)) {
-		std::cout << "Error when building the mesh vertex shader module" << std::endl;
+	if (!vkutil::load_shader_module("../../shaders/colored_triangle.vert.spv", _device, &triangleVertexShader)) {
+		fmt::print("Error when building the triangle vertex shader module");
 	}
 	else {
-		std::cout << "Triangle vertex shader succesfully loaded" << std::endl;
+		fmt::print("Triangle vertex shader succesfully loaded");
 	}
 
 	VkPushConstantRange bufferRange{};
