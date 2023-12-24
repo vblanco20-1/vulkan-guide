@@ -25,7 +25,7 @@
 constexpr bool bUseValidationLayers = true;
 
 //chapter stage for refactors/changes
-#define CHAPTER_STAGE 2
+#define CHAPTER_STAGE 3
 
 //we want to immediately abort when there is an error. In normal engines this would give an error message to the user, or perform a dump of state.
 using namespace std;
@@ -97,7 +97,7 @@ void VulkanEngine::cleanup()
 		SDL_DestroyWindow(_window);
 	}
 }
-void VulkanEngine::draw_main(VkCommandBuffer cmd)
+void VulkanEngine::draw_background(VkCommandBuffer cmd)
 {
 #if CHAPTER_STAGE == 0
 //> draw_clear
@@ -120,7 +120,7 @@ void VulkanEngine::draw_main(VkCommandBuffer cmd)
 	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, _gradientPipelineLayout, 0, 1, &_drawImageDescriptors, 0, nullptr);
 
 	// execute the compute pipeline dispatch. We are using 16x16 workgroup size so we need to divide by it
-	vkCmdDispatch(cmd, std::ceil(_swapchainExtent.width / 16.0), std::ceil(_swapchainExtent.height / 16.0), 1);
+	vkCmdDispatch(cmd, std::ceil(_drawExtent.width / 16.0), std::ceil(_drawExtent.height / 16.0), 1);
 //< draw_comp
 #elif CHAPTER_STAGE == 2
 
@@ -208,7 +208,7 @@ void VulkanEngine::draw()
 	// we will overwrite it all so we dont care about what was the older layout
 	vkutil::transition_image(cmd, _drawImage.image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
 
-	draw_main(cmd);
+	draw_background(cmd);
 
 	//transition the draw image and the swapchain image into their correct transfer layouts
 	vkutil::transition_image(cmd, _drawImage.image, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
@@ -271,27 +271,34 @@ void VulkanEngine::run()
 {
 	SDL_Event e;
 	bool bQuit = false;
-	static bool skipDrawing = false;
 	//main loop
 	while (!bQuit)
 	{
 		//Handle events on queue
-		while (SDL_PollEvent(&e) != 0)
-		{
+		while (SDL_PollEvent(&e) != 0) {
 			//close the window when user alt-f4s or clicks the X button			
 			if (e.type == SDL_QUIT) bQuit = true;
-			if (e.type == SDL_WINDOWEVENT_MINIMIZED) {
-				skipDrawing = true;
+
+			if (e.type == SDL_WINDOWEVENT) {
+
+				if (e.window.event == SDL_WINDOWEVENT_MINIMIZED) {
+					stop_rendering = true;
+				}
+				if (e.window.event == SDL_WINDOWEVENT_RESTORED) {
+					stop_rendering = false;
+				}
 			}
-			if (e.type == SDL_WINDOWEVENT_RESTORED) {
-				skipDrawing = false;
-			}
-			if (e.type == SDL_WINDOWEVENT_RESIZED) {
-				
-				rebuild_swapchain();
-			}
+
+			//send SDL event to imgui for handling
 			ImGui_ImplSDL2_ProcessEvent(&e);
 		}
+
+		//do not draw if we are minimized
+		if (stop_rendering) {
+			//throttle the speed to avoid the endless spinning
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+			continue;
+		}		
 
 		// imgui new frame
 		ImGui_ImplVulkan_NewFrame();
@@ -318,12 +325,8 @@ void VulkanEngine::run()
 		ImGui::Render();
 
 //< imgui_bk
-		if (!skipDrawing) {
-			draw();
-		}
-		else {
-			std::this_thread::sleep_for(std::chrono::milliseconds{100});
-		}
+		
+		draw();
 	}
 }
 
@@ -503,20 +506,22 @@ void VulkanEngine::init_swapchain()
 	create_swapchain(_windowExtent.width, _windowExtent.height);
 
 //> init_swap
-	//depth image size will match the window
+	//draw image size will match the window
 	VkExtent3D drawImageExtent = {
 		_windowExtent.width,
 		_windowExtent.height,
 		1
 	};
 
-	//hardcoding the depth format to 32 bit float
+	//hardcoding the draw format to 32 bit float
 	_drawImage.imageFormat = VK_FORMAT_R16G16B16A16_SFLOAT;
+	_drawImage.imageExtent = drawImageExtent;
 
 	VkImageUsageFlags drawImageUsages{};
 	drawImageUsages |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
 	drawImageUsages |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 	drawImageUsages |= VK_IMAGE_USAGE_STORAGE_BIT;
+	drawImageUsages |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
 	VkImageCreateInfo rimg_info = vkinit::image_create_info(_drawImage.imageFormat, drawImageUsages, drawImageExtent);
 
@@ -560,7 +565,7 @@ void VulkanEngine::init_commands()
 //> imm_cmd
 	VK_CHECK(vkCreateCommandPool(_device, &commandPoolInfo, nullptr, &_immCommandPool));
 
-	// allocate the default command buffer that we will use for rendering
+	// allocate the command buffer for immediate submits
 	VkCommandBufferAllocateInfo cmdAllocInfo = vkinit::command_buffer_allocate_info(_immCommandPool, 1);
 
 	VK_CHECK(vkAllocateCommandBuffers(_device, &cmdAllocInfo, &_immCommandBuffer));
@@ -726,7 +731,7 @@ VK_CHECK(vkCreatePipelineLayout(_device, &computeLayout, nullptr, &_gradientPipe
 	VkShaderModule computeDrawShader;
 	if (!vkutil::load_shader_module("../../shaders/gradient.comp.spv", _device, &computeDrawShader))
 	{
-		std::cout << "Error when building the compute shader" << std::endl;
+		fmt::print("Error when building the compute shader \n");
 	}
 
 	VkPipelineShaderStageCreateInfo stageinfo{};
@@ -757,7 +762,7 @@ VK_CHECK(vkCreatePipelineLayout(_device, &computeLayout, nullptr, &_gradientPipe
 #elif CHAPTER_STAGE == 2
 VkShaderModule computeDrawShader;
 if (!vkutil::load_shader_module("../../shaders/gradient_color.comp.spv", _device, &computeDrawShader)) {
-	std::cout << "Error when building the compute shader" << std::endl;
+	fmt::print("Error when building the compute shader \n");
 }
 
 VkPipelineShaderStageCreateInfo stageinfo{};
@@ -785,12 +790,12 @@ _mainDeletionQueue.push_function([&]() {
 //> comp_pipeline_multi
 VkShaderModule gradientShader;
 if (!vkutil::load_shader_module("../../shaders/gradient_color.comp.spv", _device, &gradientShader)) {
-	std::cout << "Error when building the compute shader" << std::endl;
+	fmt::print("Error when building the compute shader \n");
 }
 
 VkShaderModule skyShader;
 if (!vkutil::load_shader_module("../../shaders/sky.comp.spv", _device, &skyShader)) {
-	std::cout << "Error when building the compute shader" << std::endl;
+	fmt::print("Error when building the compute shader \n");
 }
 
 VkPipelineShaderStageCreateInfo stageinfo{};

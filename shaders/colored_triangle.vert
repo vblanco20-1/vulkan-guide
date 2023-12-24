@@ -1,4 +1,4 @@
-//we will be using glsl version 4.5 syntax
+//> all
 #version 450
 
 layout (location = 0) out vec3 outColor;
@@ -23,3 +23,4 @@ void main()
 	gl_Position = vec4(positions[gl_VertexIndex], 1.0f);
 	outColor = colors[gl_VertexIndex];
 }
+//< all

@@ -61,7 +61,7 @@ public:
 
 	bool _isInitialized{ false };
 	int _frameNumber {0};
-
+	bool stop_rendering{false};
 	VkExtent2D _windowExtent{ 1700 , 900 };
 
 	struct SDL_Window* _window{ nullptr };
@@ -120,7 +120,7 @@ public:
 	//draw loop
 	void draw();
 
-	void draw_main(VkCommandBuffer cmd);
+	void draw_background(VkCommandBuffer cmd);
 	void draw_imgui(VkCommandBuffer cmd,  VkImageView targetImageView);
 
 	//run main loop

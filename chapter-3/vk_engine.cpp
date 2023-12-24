@@ -68,7 +68,7 @@ void VulkanEngine::init()
 
 
 void VulkanEngine::init_default_data() {
-//> init_data
+	//> init_data
 	std::array<Vertex,4> rect_vertices;
 
 	rect_vertices[0].position = {0.5,-0.5, 0};
@@ -874,20 +874,19 @@ void VulkanEngine::init_triangle_pipeline()
 //> triangle_shaders
 	VkShaderModule triangleFragShader;
 	if (!vkutil::load_shader_module("../../shaders/colored_triangle.frag.spv", _device, &triangleFragShader)) {
-		std::cout << "Error when building the triangle fragment shader module" << std::endl;
+		fmt::print("Error when building the triangle fragment shader module");
 	}
 	else {
-		std::cout << "Triangle fragment shader succesfully loaded" << std::endl;
+		fmt::print("Triangle fragment shader succesfully loaded");
 	}
 
 	VkShaderModule triangleVertexShader;
 	if (!vkutil::load_shader_module("../../shaders/colored_triangle.vert.spv", _device, &triangleVertexShader)) {
-		std::cout << "Error when building the triangle vertex shader module" << std::endl;
+		fmt::print("Error when building the triangle vertex shader module");
 	}
 	else {
-		std::cout << "Triangle vertex shader succesfully loaded" << std::endl;
+		fmt::print("Triangle vertex shader succesfully loaded");
 	}
-
 	
 	//build the pipeline layout that controls the inputs/outputs of the shader
 	//we are not using descriptor sets or other systems yet, so no need to use anything other than empty default
@@ -979,18 +978,18 @@ void VulkanEngine::init_mesh_pipeline()
 //> rectangle_shaders
 	VkShaderModule triangleFragShader;
 	if (!vkutil::load_shader_module("../../shaders/colored_triangle.frag.spv", _device, &triangleFragShader)) {
-		std::cout << "Error when building the triangle fragment shader module" << std::endl;
+		fmt::print("Error when building the triangle fragment shader module");
 	}
 	else {
-		std::cout << "Triangle fragment shader succesfully loaded" << std::endl;
+		fmt::print("Triangle fragment shader succesfully loaded");
 	}
 
 	VkShaderModule triangleVertexShader;
 	if (!vkutil::load_shader_module("../../shaders/colored_triangle_mesh.vert.spv", _device, &triangleVertexShader)) {
-		std::cout << "Error when building the mesh vertex shader module" << std::endl;
+		fmt::print("Error when building the triangle vertex shader module");
 	}
 	else {
-		std::cout << "Triangle vertex shader succesfully loaded" << std::endl;
+		fmt::print("Triangle vertex shader succesfully loaded");
 	}
 
 	VkPushConstantRange bufferRange{};
@@ -1025,8 +1024,7 @@ void VulkanEngine::init_mesh_pipeline()
 	//no blending
 	pipelineBuilder.disable_blending();
 
-	//pipelineBuilder.disable_depthtest();
-	pipelineBuilder.enable_depthtest(true, VK_COMPARE_OP_GREATER_OR_EQUAL);
+	pipelineBuilder.disable_depthtest();
 
 	//connect the image format we will draw into, from draw image
 	pipelineBuilder.set_color_attachment_format(_drawImage.imageFormat);

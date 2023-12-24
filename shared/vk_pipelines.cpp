@@ -1,7 +1,6 @@
 ﻿#include <vk_pipelines.h>
 
 #include <fstream>
-#include <iostream>
 #include "vk_initializers.h"
 
 //> pipe_clear
