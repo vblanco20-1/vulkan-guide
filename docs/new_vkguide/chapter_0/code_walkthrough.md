@@ -161,6 +161,8 @@ vk_engine.cpp, line 10
 
 <!-- codegen from tag init on file E:\ProgrammingProjects\vulkan-guide-2\chapter-0/vk_engine.cpp --> 
 ```cpp
+constexpr bool bUseValidationLayers = false;
+
 VulkanEngine* loadedEngine = nullptr;
 
 VulkanEngine& VulkanEngine::Get() { return *loadedEngine; }

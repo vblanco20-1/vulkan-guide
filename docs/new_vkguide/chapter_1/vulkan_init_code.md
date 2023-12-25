@@ -52,6 +52,8 @@ We will now call those init functions in order from our engine init function
 
 vk_engine.cpp
 ```cpp
+constexpr bool bUseValidationLayers = false;
+
 void VulkanEngine::init()
 {
 	// We initialize SDL and create a window with it. 
@@ -109,8 +111,6 @@ Now that our new init_Vulkan function is added, we can start filling it with the
 void VulkanEngine::init_vulkan()
 {
 	vkb::InstanceBuilder builder;
-
-	bool bUseValidationLayers = true;
 
 	//make the vulkan instance, with basic debug features
 	auto inst_ret = builder.set_app_name("Example Vulkan Application")

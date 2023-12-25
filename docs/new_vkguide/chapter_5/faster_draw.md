@@ -5,10 +5,7 @@ parent: "New 5. GLTF loading"
 nav_order: 10
 ---
 
-
-
-When we made the draw loop on chapter 4, we did not try to skip vulkan calls if they are the same between RenderObjects. Lets improve that.
-
+At the moment the engine works, but there are some parts that are significantly less efficient than they should be. Lets look into improving that.
 
 ## Timing UI
 Before we begin to optimize performance, we need some way of keeping track of how fast stuff goes. For that, we will be using std::chrono and imgui to setup a really basic benchmark timing. If you want, you can try using Tracy instead, but this can give a simple ui-based timing display. 
@@ -25,6 +22,8 @@ struct EngineStats {
     float mesh_draw_time;
 };
 ```
+
+Put it into the VulkanEngine class as `EngineStats stats;`
 
 frametime will be our global timing, and will likely just be locked to your monitor refresh rate as we are doing vsync. The others will be useful to measure.
 
@@ -105,7 +104,7 @@ In the `run()` function, between the call to `ImGui::NewFrame()` and `ImGui::Ren
         ImGui::End();
 ```
 
-If you run the engine, you will see the timings. Right now we have validation layers enabled, and likely also debug mode on. Turn on release mode in your compiler settings, and disable validation layers by setting `constexpr bool bUseValidationLayers = true;` to false
+If you run the engine, you will see the timings. Right now we have validation layers enabled, and likely also debug mode on. Turn on release mode in your compiler settings, and disable validation layers by setting `constexpr bool bUseValidationLayers = true;` to false. In a PC with a ryzen 5950x CPU, the draw_time goes from ~6.5 miliseconds to 0.3 when going from validation layers enabled to disabled. The drawcall count should show 1700 if its rendering the scene correctly.
 
 
 
@@ -179,7 +178,7 @@ We begin by checking if the pipeline has changed, and if it did, we bind the pip
 Then, we bind the descriptor set it for material parameters and textures if the material instance changed. 
 And last, the index buffer gets bound again if it changed.
 
-We now should get a performance win, specially as we only have 2 pipelines, so a lot of those calls to VkCmdBindPipeline now dissapear. But lets improve it further.
+We now should get a performance win, specially as we only have 2 pipelines, so a lot of those calls to VkCmdBindPipeline now dissapear. But lets improve it further. On the PC with a ryzen 5950x, this cuts the draw_geometry time by half. 
 
 We are going to sort the render objects by those parameters to minimize the number of calls. We will only do it this way for the opaque objects, as the transparent objects need a different type of sorting (depth sort) that we arent doing as we dont have the information about whats the center of the object.
 
@@ -188,41 +187,46 @@ To implement the sorting, we wont be sorting the draw array itself, as the objec
 At the beggining of the draw_geometry() function, add this
 
 ```cpp
-    std::vector<uint32_t> opaque_draws;
-    opaque_draws.reserve(drawCommands.OpaqueSurfaces.size());
+std::vector<uint32_t> opaque_draws;
+opaque_draws.reserve(mainDrawContext.OpaqueSurfaces.size());
 
-    for (uint32_t i = 0; i < drawCommands.OpaqueSurfaces.size(); i++) {
-        opaque_draws.push_back(i);
-    }
+for (uint32_t i = 0; i < mainDrawContext.OpaqueSurfaces.size(); i++) {
+    opaque_draws.push_back(i);
+}
 
-    // sort the opaque surfaces by material and mesh
-    std::sort(opaque_draws.begin(), opaque_draws.end(), [&](const auto& iA, const auto& iB) {
-    const RenderObject& A = drawCommands.OpaqueSurfaces[iA];
-    const RenderObject& B = drawCommands.OpaqueSurfaces[iB];
+// sort the opaque surfaces by material and mesh
+std::sort(opaque_draws.begin(), opaque_draws.end(), [&](const auto& iA, const auto& iB) {
+    const RenderObject& A = mainDrawContext.OpaqueSurfaces[iA];
+    const RenderObject& B = mainDrawContext.OpaqueSurfaces[iB];
     if (A.material == B.material) {
         return A.indexBuffer < B.indexBuffer;
-    } else {
+    }
+    else {
         return A.material < B.material;
     }
-    });
+});
 ```
 
 std::algorithms has a very handy sort function we can use to sort the opaque_draws vector. We give it a lambda that defines a `<` operator, and it sorts it efficiently for us. 
 
 We will first index the draw array, and check if the material is the same, and if it is, sort by indexBuffer. But if its not, then we directly compare the material pointer. Another way of doing this is that we would calculate a sort key , and then our opaque_draws would be something like 20 bits draw index, and 44 bits for sort key/hash. That way would be faster than this as it can be sorted through faster methods.
 
-Now, for the draws, we draw from the sorted array. Replace the draw loop with this one.
+Now, for the draws, we draw from the sorted array. Replace the opaque draw loop with this one.
 
 ```cpp
 for (auto& r : opaque_draws) {
-    draw(drawCommands.OpaqueSurfaces[r]);
+    draw(mainDrawContext.OpaqueSurfaces[r]);
 }
 ```
 
 
 With this the renderer will minimize the number of descriptor set bindings, as it will go material by material. We still have the index buffer binding to deal with but thats faster to switch.
 
-By doing this, the engine should now have significantly more performance. If you run it in release mode, you should be able to draw scenes with tens of thousands of meshes no problem. But out GPU cost is high as we are processing meshes outside the view. That gets improved by doing Frustum Culling.
+By doing this, the engine should now have a bit more performance. Rendering only 1 scene the cost of sorting makes it a wash if its faster or not. We are doing a inneficient single-threaded sort, so its cost can easily cover the performance we win on less vulkan calls. Make sure to profile your scenes and decide if you want to enable it or not.
+
+But we are processing many more object than we need to on both CPU and GPU, as we are still rendering objects behind the camera. We can improve that with frustum culling.
+
+
 
 ## Frustum Culling
 Right now we render every object in the map, but we dont have to draw things that are ouside of the view. As we have the draw list, we will filter it to check what objects are in view, and skip the ones that dont. As long as the cost of the filtering is cheaper than the cost of rendering objects, we have a win.
@@ -360,10 +364,10 @@ This is just one of the multiple possible functions we could be using for frustu
 To use it, we change the loop we added to fill the opaque_draws array.
 
 ```cpp
-for (int i = 0; i < drawCommands.OpaqueSurfaces.size(); i++) {
-    if (is_visible(drawCommands.OpaqueSurfaces[i], sceneData.viewproj)) {
-        opaque_draws.push_back(i);
-    }
+for (int i = 0; i < mainDrawContext.OpaqueSurfaces.size(); i++) {
+	if (is_visible(mainDrawContext.OpaqueSurfaces[i], sceneData.viewproj)) {
+		opaque_draws.push_back(i);
+	}
 }
 ```
 
@@ -374,6 +378,8 @@ The renderer now will skip objects outside of the view. It should look the same 
 The code for doing the same cull and sort but on the transparent objects has been skipped, but its the same as with the opaque objects, so you can try doing it yourself.
 
 With the transparent objects, you want to also change the sorting code so that it checks distance from bounds to the camera, so that objects draw more correct. But sorting by depth is incompatible with sorting by pipeline, so you will need to decide what works better for your case.
+
+You should see the drawcall count and triangle count in the stats window change as you rotate the camera. Performance should be improved significantly specially in cases where you are looking away from obects.
 
 ## Creating Mipmaps
 
@@ -411,7 +417,7 @@ AllocatedImage VulkanEngine::create_image(void* data, VkExtent3D size, VkFormat 
             &copyRegion);
 
         if (mipmapped) {
-            vkutil::generate_mipmaps(cmd, new_image.image, size);
+            vkutil::generate_mipmaps(cmd, new_image.image,VkExtent2D{new_image.imageExtent.width,new_image.imageExtent.height});
         } else {
             vkutil::transition_image(cmd, new_image.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                 VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
@@ -426,7 +432,7 @@ AllocatedImage VulkanEngine::create_image(void* data, VkExtent3D size, VkFormat 
 
 ```cpp
 namespace vkutil {
-void generate_mipmaps(VkCommandBuffer cmd, VkImage image, VkExtent3D imageSize);
+void generate_mipmaps(VkCommandBuffer cmd, VkImage image, VkExtent2D imageSize);
 }
 ```
 
@@ -532,8 +538,10 @@ void vkutil::generate_mipmaps(VkCommandBuffer cmd, VkImage image, VkExtent2D ima
 
 The barrier is very similar to the one we have on `transition_image`, and the blit is similar to what we have in `copy_image_to_image` but with mip levels. In a way, this function combines the two.
 
-At each loop, we divide the image size by two, transition the mip level we copy from, and perform a VkCmdBlit from one mip level to the next.
+At each loop, we divide the image size by two, transition the mip level we copy from, and perform a VkCmdBlit from one mip level to the next. 
 
+Make sure to update the image loader code on `load_image` in vk_loader.cpp to make sure it sets the last parameter to `true` on the create_image calls, so that mipmaps get generated.
+ 
 With this, now we automatically generate the mipmaps needed. We were already creating the samplers with the correct options, so it should work directly. 
 
 {% include comments.html term="Vkguide 2 Beta Comments" %}
