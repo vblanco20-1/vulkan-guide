@@ -5,10 +5,112 @@ parent: "New 5. GLTF loading"
 nav_order: 10
 ---
 
-# Improving Performance
+
 
 When we made the draw loop on chapter 4, we did not try to skip vulkan calls if they are the same between RenderObjects. Lets improve that.
 
+
+## Timing UI
+Before we begin to optimize performance, we need some way of keeping track of how fast stuff goes. For that, we will be using std::chrono and imgui to setup a really basic benchmark timing. If you want, you can try using Tracy instead, but this can give a simple ui-based timing display. 
+We will not be profiling the GPU side, as doing that requires pipeline queries and others and its a much more complex system. For our needs, it will work better to run the program in NSight or other equivalent GPU profiling programs.
+
+Lets add a struct to vk_engine.h to hold timing info.
+
+```cpp
+struct EngineStats {
+    float frametime;
+    int triangle_count;
+    int drawcall_count;
+    float scene_update_time;
+    float mesh_draw_time;
+};
+```
+
+frametime will be our global timing, and will likely just be locked to your monitor refresh rate as we are doing vsync. The others will be useful to measure.
+
+Lets begin by calculating frametime.
+
+On the engine main loop at `run()`, we will add some code at the start of the loop, and the end
+```cpp
+// main loop
+while (!bQuit) {
+    //begin clock
+    auto start = std::chrono::system_clock::now();
+
+    //everything else
+
+    //get clock again, compare with start clock
+    auto end = std::chrono::system_clock::now();
+     
+     //convert to microseconds (integer), and then come back to miliseconds
+    auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+    stats.frametime = elapsed.count() / 1000.f;
+}
+```
+
+using `auto start = std::chrono::system_clock::now();` gives us high precision clock for "now". By calling it again later, we can find how much time a given section of code took.
+To convert it into a frametime in miliseconds, we need to first cast it to microseconds (1/1000th of a milisecond) and then multiply it by 1000.f This way we get 3 decimal places.
+
+On draw_geometry, we will add some code for this timing, and to calculate the number of triangles and draws.
+
+```cpp
+void VulkanEngine::draw_geometry(VkCommandBuffer cmd)
+{
+    //reset counters
+    stats.drawcall_count = 0;
+    stats.triangle_count = 0;
+    //begin clock
+    auto start = std::chrono::system_clock::now();
+
+    /* code */
+
+    auto draw = [&](const RenderObject& r) {
+
+        /* drawing code */
+
+        vkCmdDrawIndexed(cmd, draw.indexCount, 1, draw.firstIndex, 0, 0);
+
+        //add counters for triangles and draws
+        stats.drawcall_count++;
+        stats.triangle_count += draw.indexCount / 3;   
+    }
+
+    /* code */
+
+
+    auto end = std::chrono::system_clock::now();
+
+    //convert to microseconds (integer), and then come back to miliseconds
+    auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+    stats.mesh_draw_time = elapsed.count() / 1000.f;
+}
+```
+
+We get the start time, and reset counters to 0. Then from the draw lambda, we add drawcall count and triangle count after the draw logic. At the very end of the function, we get final time and store it on the stats struct.
+
+Do the same code on `update_scene()` with the start/end clocks, storing it on `scene_update_time`
+
+Now we need to display them using imgui.
+
+In the `run()` function, between the call to `ImGui::NewFrame()` and `ImGui::Render();`, add this code to draw a new imgui window.
+
+```cpp
+        ImGui::Begin("Stats");
+
+        ImGui::Text("frametime %f ms", stats.frametime);
+        ImGui::Text("draw time %f ms", stats.mesh_draw_time);
+        ImGui::Text("update time %f ms", stats.scene_update_time);
+        ImGui::Text("triangles %i", stats.triangle_count);
+        ImGui::Text("draws %i", stats.drawcall_count);
+        ImGui::End();
+```
+
+If you run the engine, you will see the timings. Right now we have validation layers enabled, and likely also debug mode on. Turn on release mode in your compiler settings, and disable validation layers by setting `constexpr bool bUseValidationLayers = true;` to false
+
+
+
+## Draw sorting
+Right now, we are calling the vulkan calls a lot more than we should because we keep rebinding pipeline every draw and others. 
 We need to keep track of what state we are binding, and only call it again if we have to as it changes with the draw. 
 
 We are going to modify the draw() lambda seen in the last article, and give it state tracking. It will only call the vulkan functions if the parameters change.
@@ -65,6 +167,9 @@ We are going to modify the draw() lambda seen in the last article, and give it s
      vkCmdPushConstants(cmd, r.material->pipeline->layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(GPUDrawPushConstants), &push_constants);
 
      vkCmdDrawIndexed(cmd, r.indexCount, 1, r.firstIndex, 0, 0);
+    //stats
+    stats.drawcall_count++;
+    stats.triangle_count += r.indexCount / 3;
  };
 ```
 
