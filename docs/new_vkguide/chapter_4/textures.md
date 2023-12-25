@@ -7,15 +7,16 @@ nav_order: 6
 
 We already showed how to use images when we did compute based rendering, but there are things about images we still need to deal with, specially how to use them in graphics shaders for rendering and display. We will begin here by creating a set of default textures for our engine, and then load a texture from a file.
 
-First, we need to add functions to the VulkanEngine class to deal with creating images.
+First, we need to add functions to the VulkanEngine class to deal with creating and destroying images.
 
-Add this 2 functions to the class in the header.
+Add these functions to the class in the header.
 
 ```cpp
 class VulkanEngine {
 
 AllocatedImage create_image(VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool mipmapped = false);
 AllocatedImage create_image(void* data, VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool mipmapped = false);
+void destroy_image(const AllocatedImage& img);
 }
 ```
 
@@ -112,7 +113,17 @@ Similar to how we do it with the swapchain images, we first transition the image
 
 For mip level, we will copy the data into mip level 0 which is the top level. The image doesnt have any more mip levels. For now we are just passing the mipmapped boolean into the other create_image, but we arent doing anything else. We will handle that later.
 
-With those 2 functions, we can set up some default textures. We will create a default-white, default-black, default-grey, and a checkerboard texture. This way we have some textures we can use when something fails to load.
+For image destruction, lets fill that destroy_image() function
+```cpp
+void VulkanEngine::destroy_image(const AllocatedImage& img)
+{
+    vkDestroyImageView(_device, img.imageView, nullptr);
+    vmaDestroyImage(_allocator, img.image, img.allocation);
+}
+```
+We first destroy the image-view, and then destroy the image itself using VMA. This will free the image and its memory correctly.
+
+With those functions, we can set up some default textures. We will create a default-white, default-black, default-grey, and a checkerboard texture. This way we have some textures we can use when something fails to load.
 
 Lets add those test images into the VulkanEngine class, and a couple samplers too that we can use with those images and others.
 

@@ -9,9 +9,12 @@ The render architecture is ready to load full scenes, but thats not of much use 
 
 The camera is more of a gameplay layer object. We will add it into the VulkanEngine, but in a real architecture, you probably dont want to be doing input events and game logic within the engine itself, instead you would only store a camera struct that contains the render parameters, and when you update game logic, you refresh those matrices so they can be used with rendering.
 
-The Camera struct is going to look like tihs. we will add it into a new camera.h/camera.cpp file.
+The Camera struct is going to look like tihs. we will add it into camera.h
 
 ```cpp
+#include <vk_types.h>
+#include <SDL_events.h>
+
 class Camera {
 public:
     glm::vec3 velocity;
@@ -38,9 +41,13 @@ We wont be using a full rotation matrix, but instead just run  pitch + yaw. This
 
 On the functions, we have a Update() call that will modify position by velocity, and a processSDLEvent that acts as the input logic.
 
-Lets write those.
+Lets write those on camera.cpp
 
 ```cpp
+#include <camera.h>
+#include <glm/gtx/transform.hpp>
+#include <glm/gtx/quaternion.hpp>
+
 void Camera::update()
 {
     glm::mat4 cameraRotation = getRotationMatrix();
@@ -157,11 +164,11 @@ void VulkanEngine::update_scene()
 ```
 
 
-From the end of the init() function, we will set the camera initial variables.
+From the end of the init() function, we will set the camera initial variables. The camera will be looking towards the origin so the mesh at 0,0,0 coordinates should be visible.
 
 ```cpp
 mainCamera.velocity = glm::vec3(0.f);
-mainCamera.position = glm::vec3( 0,0,-5 );
+	mainCamera.position = glm::vec3(0, 0, 5);
 
 mainCamera.pitch = 0;
 mainCamera.yaw = 0;

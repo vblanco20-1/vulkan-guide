@@ -23,23 +23,31 @@ The second one is when fastgltf loads the texture into a std::vector type struct
 
 The third one is is loading from a BufferView, when the image file is embedded into the binary GLB file. We do the same as on the second one, and use stbi_load_from_memory.
 
+If you try to compile the engine at this point, you will see that the STB_image functions are missing their definitions. STB is a single-header library that requires a macro to be included into one translation unit for it to compile the function definitions. Add this into vk_images.cpp . Can also be another cpp file. This will make stb_image add the definitions of the functions into this cpp file for linking.
+
+```
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+```
+
 Lets go back into the gltf loading function and load the images from there.
 
 ```cpp
     // load all textures
-    for (fastgltf::Image& image : asset->images) {
-        std::optional<AllocatedImage> img = load_image(engine, *asset, image);
+	for (fastgltf::Image& image : gltf.images) {
+		std::optional<AllocatedImage> img = load_image(engine, gltf, image);
 
-        if (img.has_value()) {
-            images.push_back(*img);
-            file.images[image.name.c_str()] = *img;
-        } else {
-            // we failed to load, so lets give the slot a default white texture to not
-            // completely break loading
-            images.push_back(engine->_errorCheckerboardImage);
-            std::cout << "gltf failed to load texture " << image.name << std::endl;
-        }
-    }
+		if (img.has_value()) {
+			images.push_back(*img);
+			file.images[image.name.c_str()] = *img;
+		}
+		else {
+			// we failed to load, so lets give the slot a default white texture to not
+			// completely break loading
+			images.push_back(engine->_errorCheckerboardImage);
+			std::cout << "gltf failed to load texture " << image.name << std::endl;
+		}
+	}
 ```
 
 We try to load the image, and if the load succeeded, we store the image into the list. if it fails, we use the error image.
@@ -49,7 +57,6 @@ If you try to run the project again now, you will see we have textures on the ob
 Lets fill the clearAll function on the LoadedGLTF so that the resources can be freed properly
 
 ```cpp
-
 void LoadedGLTF::clearAll()
 {
     VkDevice dv = creator->_device;
@@ -87,19 +94,8 @@ Important detail with this. You cant delete a LoadedGLTF within the same frame i
 
 # Transparent objects
 
-We omitted those before, but gltf files not only have opaque draws, they also have transparent objects. When we created the GLTF main material and compiled its pipeline, we enabled blending for it. Lets make that load.
+We omitted those before, but gltf files not only have opaque draws, they also have transparent objects. When we created the GLTF main material and compiled its pipeline, we enabled blending for it. We already have the code in the loader that sets the pass mode to transparent, but we arent handling the rendering correctly for transparent objects. 
 
-We have to modify the loop that iterates the file materials to check if the material is opaque or transparent, and set the MaterialPass correctly to have the correct pipeline selected.
-
-This goes in the middle of the materials loop in loadGLTF
-```cpp
-    MaterialPass passType = MaterialPass::MainColor;
-    if (mat.alphaMode == fastgltf::AlphaMode::Blend) {
-        passType = MaterialPass::Transparent;
-    }
-```
-
-When the write_material call is done later, it will select the correct pipeline. Now we need to modify the rendering to take the transparent objects into account.
 Transparent objects do not write to the depth buffer, so if a transparent object is drawn, it can then have a opaque object drawn on top of it, causing visual glitches. We need to move the transparent objects so that they draw at the end of the frame. 
 
 For that, we could do sorting on the RenderObjects, but transparent objects also sort in a different way to opaque objects, so a better option is to make the DrawContext structure hold 2 different arrays of RenderObjects, one for opaque, and other for transparent. Separating the objects like this is very useful for various reasons like doing a depth pass only on the opaque surfaces, or other shader logic. Its also common to see things like rendering the transparent objects into a different image and then compositing them on top.
@@ -114,28 +110,28 @@ struct DrawContext {
 Now we change the `draw_geometry` function. As we need to call the vulkan call from 2 loops, we are going to move the inner draw loop into a draw() lambda, and then call it from the loops.
 
 ```cpp
- auto draw = [&](const RenderObject& r) { 
- 		vkCmdBindPipeline(cmd,VK_PIPELINE_BIND_POINT_GRAPHICS, draw.material->pipeline->pipeline);
-		vkCmdBindDescriptorSets(cmd,VK_PIPELINE_BIND_POINT_GRAPHICS,draw.material->pipeline->layout, 0,1, &globalDescriptor,0,nullptr );
-		vkCmdBindDescriptorSets(cmd,VK_PIPELINE_BIND_POINT_GRAPHICS,draw.material->pipeline->layout, 1,1, &draw.material->materialSet,0,nullptr );
+auto draw = [&](const RenderObject& draw) {
+    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, draw.material->pipeline->pipeline);
+    vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, draw.material->pipeline->layout, 0, 1, &globalDescriptor, 0, nullptr);
+    vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, draw.material->pipeline->layout, 1, 1, &draw.material->materialSet, 0, nullptr);
 
-		vkCmdBindIndexBuffer(cmd, draw.indexBuffer,0,VK_INDEX_TYPE_UINT32);
+    vkCmdBindIndexBuffer(cmd, draw.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
-		GPUDrawPushConstants pushConstants;
-		pushConstants.vertexBuffer = draw.vertexBufferAddress;
-		pushConstants.worldMatrix = draw.transform;
-		vkCmdPushConstants(cmd,draw.material->pipeline->layout ,VK_SHADER_STAGE_VERTEX_BIT,0, sizeof(GPUDrawPushConstants), &pushConstants);
+    GPUDrawPushConstants pushConstants;
+    pushConstants.vertexBuffer = draw.vertexBufferAddress;
+    pushConstants.worldMatrix = draw.transform;
+    vkCmdPushConstants(cmd, draw.material->pipeline->layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(GPUDrawPushConstants), &pushConstants);
 
-		vkCmdDrawIndexed(cmd,draw.indexCount,1,draw.firstIndex,0,0);
- };
+    vkCmdDrawIndexed(cmd, draw.indexCount, 1, draw.firstIndex, 0, 0);
+};
 
- for (auto& r : drawCommands.OpaqueSurfaces) {
-     draw(r);
- }
+for (auto& r : mainDrawContext.OpaqueSurfaces) {
+    draw(r);
+}
 
- for (auto& r : drawCommands.TransparentSurfaces) {
-     draw(r);
- }
+for (auto& r : mainDrawContext.TransparentSurfaces) {
+    draw(r);
+}
 ```
 
 By doing this, we now have proper transparent objects. If you load the structure gltf, you will see that the light halos should not glitch anymore. 
@@ -144,11 +140,11 @@ Make sure to reset the array of transparent draws too at the end of the function
 
 ```
 // we delete the draw commands now that we processed them
-drawCommands.OpaqueSurfaces.clear();
-drawCommands.TransparentSurfaces.clear();
+mainDrawContext.OpaqueSurfaces.clear();
+mainDrawContext.TransparentSurfaces.clear();
 ```
 
-The engine is now done. You can use this as a base to implement games. But we are going to do some tweaks that are optional as part of this chapter, improving its performance.
+The basic features of the engine are now done. You can use this as a base to implement games. But we are going to do some tweaks that are optional as part of this chapter, improving its performance and quality.
 
 ^nextlink
 

@@ -93,7 +93,7 @@ Now we have to load everything in order. MeshNodes depend on meshes, meshes depe
 
 ```cpp
 // load all textures
-for (fastgltf::Image& image : asset->images) {
+for (fastgltf::Image& image : gltf.images) {
    
     images.push_back(engine->_errorCheckerboardImage);
 }
@@ -267,7 +267,7 @@ We load that asset, and then store it on the hashmap for later use.
 The later use is to call Draw() on it as part of the update_scene() function
 
 ```cpp
-	loadedScenes["structure"]->Draw(glm::mat4{ 1.f }, drawCommands);
+	loadedScenes["structure"]->Draw(glm::mat4{ 1.f }, mainDrawContext);
 ```
 Its a big scene, so we can use it for benchmarking by loading it multiple times at different positions.
 
