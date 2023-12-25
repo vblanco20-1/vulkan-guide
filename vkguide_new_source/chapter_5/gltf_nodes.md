@@ -16,7 +16,7 @@ It looks like this, Add it to vk_loader.h
 ```cpp
 struct LoadedGLTF : public IRenderable {
 
-    // storage for all the data on a given gltf file
+    // storage for all the data on a given glTF file
     std::unordered_map<std::string, std::shared_ptr<MeshAsset>> meshes;
     std::unordered_map<std::string, std::shared_ptr<Node>> nodes;
     std::unordered_map<std::string, AllocatedImage> images;
@@ -51,7 +51,7 @@ We store also a vector of the non-parented nodes. This way we can draw() them re
 
 Array of VkSamplers too, which matches GLTF format. Its likely this one will barely be a couple. We could be hashing and storing them globally in the engine, but if we keep to the concept that a loaded gltf controls all of the vulkan resources, it simplifies the engine.
 
-We then have a descriptor pool made explicitly for this gltf file. That way way dont need to deal with descriptor sets individually in any point, and can free that to delete all descriptors for the materials in the file.
+We then have a descriptor pool made explicitly for this glTF file. That way way dont need to deal with descriptor sets individually in any point, and can free that to delete all descriptors for the materials in the file.
  
 The materialDataBuffer will contain the material data as seen in the GLTFMetallicRoughness material. We will use a single big buffer for the material data of every material in the file.
 
@@ -79,7 +79,7 @@ Lets load the samplers. GLTF samplers are using the numbers and properties from 
 Those 2 functions are global functions on vk_loader.cpp. We wont be needed them outside. 
 In vulkan, sampler filter is separated from mipmap mode. So we begin by extracting the filter from the GLTF filter option. `extract_filter()` only looks at the filtering, so it returns either `VK_FILTER_NEAREST` or  `VK_FILTER_LINEAR`. On `extract_mipmap_mode()` we look at the mipmap part, which we return as `VK_SAMPLER_MIPMAP_MODE_NEAREST` or `VK_SAMPLER_MIPMAP_MODE_LINEAR`. Linear will blend mipmaps, while nearest will use a single one with no blending.
 
-Now we can load the samplers from the gltf file.
+Now we can load the samplers from the glTF file.
 
 ^code load_samplers chapter-5/vk_loader.cpp
 
