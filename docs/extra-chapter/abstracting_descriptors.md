@@ -10,7 +10,7 @@ This article is outdated for the current version of vkguide and its valid for Le
 
 
 ## Managing Descriptors
-Creating and managing descriptor sets is one of the most painful things about vulkan. Creating an abstraction that simplifies is is really important, and will improve the workflow a lot.
+Creating and managing descriptor sets is one of the most painful things about vulkan. Creating an abstraction that simplifies it is really important, and will improve the workflow a lot.
 
 I'm going to show you a simple way to create a thin abstraction over descriptor sets, that makes it easier to handle them.
 
