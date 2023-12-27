@@ -2,6 +2,7 @@
 layout: default
 title: Vulkan Images
 parent: "(OLD) 5. Textures"
+grand_parent: (old) Vkguide
 nav_order: 12
 ---
 

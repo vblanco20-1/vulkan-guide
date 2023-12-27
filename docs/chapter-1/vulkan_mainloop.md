@@ -2,6 +2,7 @@
 layout: default
 title: Rendering Loop
 parent:  "(OLD) 1. Initialization and Render Loop"
+grand_parent: (old) Vkguide
 nav_order: 40
 ---
 

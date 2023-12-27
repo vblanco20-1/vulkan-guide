@@ -2,6 +2,7 @@
 layout: default
 title: Dynamic Descriptor sets
 parent:  "(OLD) 4. Buffers, Shader input/output"
+grand_parent: (old) Vkguide
 nav_order: 15
 ---
 

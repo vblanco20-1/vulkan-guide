@@ -2,6 +2,7 @@
 layout: default
 title: Toggling shaders
 parent:  "(OLD) 2. The graphics pipeline, Hello Triangle"
+grand_parent: (old) Vkguide
 nav_order: 15
 ---
 

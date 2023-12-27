@@ -2,6 +2,7 @@
 layout: default
 title: Building Project
 parent: "(OLD) 0. Initial Setup"
+grand_parent: (old) Vkguide
 nav_order: 2
 ---
 

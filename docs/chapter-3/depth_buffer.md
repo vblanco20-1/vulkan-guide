@@ -2,6 +2,7 @@
 layout: default
 title: Setting up depth buffer
 parent:  "(OLD) 3. Drawing meshes"
+grand_parent: (old) Vkguide
 nav_order: 15
 ---
 

@@ -2,6 +2,7 @@
 layout: default
 title: Implementing vertex buffers
 parent:  "(OLD) 3. Drawing meshes"
+grand_parent: (old) Vkguide
 nav_order: 11
 ---
 

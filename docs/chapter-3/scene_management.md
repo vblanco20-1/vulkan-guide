@@ -2,6 +2,7 @@
 layout: default
 title: Scene Management
 parent:  "(OLD) 3. Drawing meshes"
+grand_parent: (old) Vkguide
 nav_order: 20
 ---
 

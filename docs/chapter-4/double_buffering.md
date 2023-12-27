@@ -2,6 +2,7 @@
 layout: default
 title: Double buffering
 parent:  "(OLD) 4. Buffers, Shader input/output"
+grand_parent: (old) Vkguide
 nav_order: 10
 ---
 
