@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Extra Chapter
-nav_order: 10
+nav_order: 30
 has_children: true
 permalink: /docs/extra_chapter
 ---

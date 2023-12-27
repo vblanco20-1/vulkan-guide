@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Great resources
-nav_order: 100
+nav_order: 70
 has_children: false
 permalink: /docs/great_resources
 ---

@@ -1,7 +1,7 @@
 ---
 layout: default
 title: "New 2. Drawing with Compute"
-nav_order: 4
+nav_order: 14
 has_children: true
 permalink: /docs/new_vkguide/chapter_2
 ---

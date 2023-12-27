@@ -1,7 +1,7 @@
 ---
 layout: default
 title: "New 5. GLTF loading"
-nav_order: 8
+nav_order: 18
 has_children: true
 permalink: /docs/new_vkguide/chapter_5
 ---
