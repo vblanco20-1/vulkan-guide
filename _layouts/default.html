@@ -83,6 +83,10 @@ layout: table_wrappers
             </ul>
           {% endif %}
 
+          {% if page.comments %}
+            {% include comments.html term={{page.comments}} %}
+          {% endif %}
+
           {% if site.footer_content != nil %}
             <hr>
             <footer role="contentinfo">

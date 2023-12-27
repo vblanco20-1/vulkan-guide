@@ -4,6 +4,7 @@ title: Building Project
 parent: "0. Initial Setup"
 grand_parent: Legacy VkGuide, Vulkan 1.1
 nav_order: 2
+comments: "0. Comments"
 ---
 
 # Building the project
@@ -52,4 +53,3 @@ If you get the message of SDL2 dll missing, go to your sdl folder, lib directory
 Next: [Chapter 0 code walkthrough]({{ site.baseurl }}{% link docs/chapter-0/code_walkthrough.md %})
 
 
-{% include comments.html term="0. Comments" %}
