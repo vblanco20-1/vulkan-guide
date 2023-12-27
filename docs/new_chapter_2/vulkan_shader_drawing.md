@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Vulkan Shaders
-parent:  "New 2. Drawing with Compute"
+parent:  "2. Drawing with Compute"
 nav_order: 3
 ---
 

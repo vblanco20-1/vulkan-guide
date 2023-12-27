@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Improving the render loop
-parent:  "New 2. Drawing with Compute"
+parent:  "2. Drawing with Compute"
 nav_order: 1
 ---
 

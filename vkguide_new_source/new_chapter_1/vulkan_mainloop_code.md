@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Mainloop Code
-parent:  "New 1. Initializing Vulkan"
+parent:  "1. Initializing Vulkan"
 nav_order: 41
 ---
 

@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Executing Vulkan Commands
-parent:  "New 1. Initializing Vulkan"
+parent:  "1. Initializing Vulkan"
 nav_order: 20
 ---
 

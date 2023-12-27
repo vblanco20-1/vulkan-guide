@@ -1,7 +1,7 @@
 ---
 layout: default
 title: GLTF Scene Nodes
-parent: "New 5. GLTF loading"
+parent: "5. GLTF loading"
 nav_order: 5
 ---
 

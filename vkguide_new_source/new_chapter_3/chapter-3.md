@@ -1,6 +1,6 @@
 ---
 layout: default
-title: "New 3. Graphics Pipelines"
+title: "3. Graphics Pipelines"
 nav_order: 16
 has_children: true
 permalink: /docs/new_vkguide/chapter_3

@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Mesh buffers
-parent: "New 3. Graphics Pipelines"
+parent: "3. Graphics Pipelines"
 nav_order: 10
 ---
 

@@ -7,6 +7,9 @@ permalink: /
 ---
 
 
+![scene]({{site.baseurl}}/diagrams/fullscene.png)
+End stage after the tutorial
+
 ## Welcome to VulkanGuide
 
 Welcome to a new work-in-progress Vulkan guide. The focus of this guide is to understand Vulkan correctly, and act as a stepping stone for then working in your own projects. Unlike most samples and other Vulkan guides, which like to hardcode rendering loops, in here we will have a focus around dynamic rendering, so that it can act as a better base code for a game engine.
