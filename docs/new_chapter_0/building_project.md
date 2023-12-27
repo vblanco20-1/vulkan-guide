@@ -49,4 +49,4 @@ This is the list of libraries we are using.
 - fastgltf: High performance GLTF loading library. 
 
 
-^nextlink
+Next: [ Code Walkthrough]({{ site.baseurl }}{% link docs/new_chapter_0/code_walkthrough.md %})  
