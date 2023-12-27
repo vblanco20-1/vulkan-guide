@@ -470,6 +470,6 @@ Then we write the new buffer into the descriptor set. Now we have the globalDesc
 
 Before we continue with drawing, lets set up textures.
 
-Next: [ Textures]({{ site.baseurl }}{% link docs/new_vkguide/new_chapter_4/textures.md %})  
+Next: [ Textures]({{ site.baseurl }}{% link docs/new_chapter_4/textures.md %})  
 
 {% include comments.html term="Vkguide 2 Beta Comments" %}

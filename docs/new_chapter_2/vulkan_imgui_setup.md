@@ -334,7 +334,7 @@ If you run the application at this point, you will have the imgui demo window yo
 
 Lets continue and hook our new debug UI to the shaders.
 
-Next: [ Push Constants and new shaders]({{ site.baseurl }}{% link docs/new_vkguide/new_chapter_2/vulkan_pushconstants.md %})  
+Next: [ Push Constants and new shaders]({{ site.baseurl }}{% link docs/new_chapter_2/vulkan_pushconstants.md %})  
 
 {% include comments.html term="Vkguide 2 Beta Comments" %}
  

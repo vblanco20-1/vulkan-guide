@@ -376,6 +376,6 @@ This will now provide us a way to render images outside of the swapchain itself.
 
 With that done, we can now move into the actual compute shader execution steps.
 
-Next: [ Vulkan Shaders]({{ site.baseurl }}{% link docs/new_vkguide/new_chapter_2/vulkan_shader_drawing.md %})  
+Next: [ Vulkan Shaders]({{ site.baseurl }}{% link docs/new_chapter_2/vulkan_shader_drawing.md %})  
 
 {% include comments.html term="Vkguide 2 Beta Comments" %}

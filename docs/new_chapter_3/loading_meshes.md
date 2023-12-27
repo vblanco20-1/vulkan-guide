@@ -374,6 +374,6 @@ Delete `init_triangle_pipeline` function, its objects, and the creation of the r
 
 Next, we will setup transparent objects and blending.
 
-Next: [ Blending]({{ site.baseurl }}{% link docs/new_vkguide/new_chapter_3/blending.md %})  
+Next: [ Blending]({{ site.baseurl }}{% link docs/new_chapter_3/blending.md %})  
 
 {% include comments.html term="Vkguide 2 Beta Comments" %}

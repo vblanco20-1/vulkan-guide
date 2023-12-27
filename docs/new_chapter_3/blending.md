@@ -72,6 +72,6 @@ You should now see the monkey mesh as semi-transparent, letting the color below 
 
 Before we move to chapter 4, lets implement window resizing.
 
-Next: [ Window Resizing]({{ site.baseurl }}{% link docs/new_vkguide/new_chapter_3/resizing_window.md %})  
+Next: [ Window Resizing]({{ site.baseurl }}{% link docs/new_chapter_3/resizing_window.md %})  
 
 {% include comments.html term="Vkguide 2 Beta Comments" %}

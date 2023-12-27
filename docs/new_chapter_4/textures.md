@@ -310,6 +310,6 @@ The result should be that the monkey head now has a magenta pattern on it.
 
 ![chapter2]({{site.baseurl}}/diagrams/texmonkey.png)
 
-Next: [ Engine Architecture]({{ site.baseurl }}{% link docs/new_vkguide/new_chapter_4/engine_arch.md %})  
+Next: [ Engine Architecture]({{ site.baseurl }}{% link docs/new_chapter_4/engine_arch.md %})  
 
 {% include comments.html term="Vkguide 2 Beta Comments" %}

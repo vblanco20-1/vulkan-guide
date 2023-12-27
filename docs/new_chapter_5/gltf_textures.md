@@ -227,6 +227,6 @@ mainDrawContext.TransparentSurfaces.clear();
 
 The basic features of the engine are now done. You can use this as a base to implement games. But we are going to do some tweaks that are optional as part of this chapter, improving its performance and quality.
 
-Next: [ Faster Draw]({{ site.baseurl }}{% link docs/new_vkguide/new_chapter_5/faster_draw.md %})  
+Next: [ Faster Draw]({{ site.baseurl }}{% link docs/new_chapter_5/faster_draw.md %})  
 
 {% include comments.html term="Vkguide 2 Beta Comments" %}

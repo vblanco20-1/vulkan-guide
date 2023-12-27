@@ -503,7 +503,7 @@ in the init() function. This will be a good default location.
 
 Lets complete it by loading textures in the next article.
 
-Next: [ GLTF Textures]({{ site.baseurl }}{% link docs/new_vkguide/new_chapter_5/gltf_textures.md %})  
+Next: [ GLTF Textures]({{ site.baseurl }}{% link docs/new_chapter_5/gltf_textures.md %})  
 
 {% include comments.html term="Vkguide 2 Beta Comments" %}
 

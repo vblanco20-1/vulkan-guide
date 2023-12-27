@@ -552,6 +552,6 @@ If you run the program at this point, you should see a triangle being rendered o
 
 ![triangle]({{site.baseurl}}/diagrams/ColorTri2.png)
 
-Next: [ Mesh buffers]({{ site.baseurl }}{% link docs/new_vkguide/new_chapter_3/mesh_buffers.md %})  
+Next: [ Mesh buffers]({{ site.baseurl }}{% link docs/new_chapter_3/mesh_buffers.md %})  
 
 {% include comments.html term="Vkguide 2 Beta Comments" %}

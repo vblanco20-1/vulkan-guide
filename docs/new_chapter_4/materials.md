@@ -350,6 +350,6 @@ Now, at the end of init_default_data(), we create the default MaterialInstance s
 
 We are going to fill the parameters of the material on MaterialResources with the default white image. Then we create a buffer to hold the material color, and add it for deletion. Then we call write_material to create the descriptor set and initialize that defaultData material properly.
  
-Next: [ Meshes and Camera]({{ site.baseurl }}{% link docs/new_vkguide/new_chapter_4/new_drawloop.md %})  
+Next: [ Meshes and Camera]({{ site.baseurl }}{% link docs/new_chapter_4/new_drawloop.md %})  
  
 {% include comments.html term="Vkguide 2 Beta Comments" %}

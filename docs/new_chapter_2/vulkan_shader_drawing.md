@@ -43,6 +43,6 @@ On the shader code, we can access what the lane index is through `gl_LocalInvoca
 
 Lets now set all of this up in the code and get our first shaders working.
 
-Next: [ Vulkan Shaders - Code]({{ site.baseurl }}{% link docs/new_vkguide/new_chapter_2/vulkan_shader_code.md %})  
+Next: [ Vulkan Shaders - Code]({{ site.baseurl }}{% link docs/new_chapter_2/vulkan_shader_code.md %})  
 
 {% include comments.html term="Vkguide 2 Beta Comments" %}

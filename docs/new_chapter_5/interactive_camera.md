@@ -176,6 +176,6 @@ mainCamera.yaw = 0;
 
 Thats it, we now have a basic interactive camera. Try to use it and look around, you will be able to see the meshes we had before in the world, using WASD to move the camera, and mouse to look around.
 
-Next: [ GLTF Scene Nodes]({{ site.baseurl }}{% link docs/new_vkguide/new_chapter_5/gltf_nodes.md %})  
+Next: [ GLTF Scene Nodes]({{ site.baseurl }}{% link docs/new_chapter_5/gltf_nodes.md %})  
 
 {% include comments.html term="Vkguide 2 Beta Comments" %}

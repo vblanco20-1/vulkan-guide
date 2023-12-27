@@ -33,6 +33,6 @@ With the final colored pixels, we put them on the output framebuffer with the Re
 
 Next article we will draw a triangle using all this.
 
-Next: [ Setting up render pipeline]({{ site.baseurl }}{% link docs/new_vkguide/new_chapter_3/building_pipeline.md %})  
+Next: [ Setting up render pipeline]({{ site.baseurl }}{% link docs/new_chapter_3/building_pipeline.md %})  
 
 {% include comments.html term="Vkguide 2 Beta Comments" %}
