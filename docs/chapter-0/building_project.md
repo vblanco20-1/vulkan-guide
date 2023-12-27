@@ -4,7 +4,7 @@ title: Building Project
 parent: "0. Initial Setup"
 grand_parent: Legacy VkGuide, Vulkan 1.1
 nav_order: 2
-comments: "0. Comments"
+comments: 0. Comments
 ---
 
 # Building the project
