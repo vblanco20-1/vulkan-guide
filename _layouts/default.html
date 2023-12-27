@@ -84,7 +84,14 @@ layout: table_wrappers
           {% endif %}
 
           {% if page.auto_comments %}
-            {% include comments.html term='{{ page.auto_comments }}' %}
+          <script src="https://utteranc.es/client.js"
+            repo="vblanco20-1/vkguide-comments"
+            issue-term="{{ page.auto_comments }}"
+            label="Comment"
+            theme="github-dark"
+            crossorigin="anonymous"
+            async>
+          </script>
           {% endif %}
 
           {% if site.footer_content != nil %}
