@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Implementing vertex buffers
-parent:  "3. Drawing meshes"
+parent:  "(OLD) 3. Drawing meshes"
 nav_order: 11
 ---
 

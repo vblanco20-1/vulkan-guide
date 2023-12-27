@@ -1,7 +1,7 @@
 ---
 layout: default
 title: The render pipeline
-parent:  "2. The graphics pipeline, Hello Triangle"
+parent:  "(OLD) 2. The graphics pipeline, Hello Triangle"
 nav_order: 10
 ---
 

@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Drawing Images
-parent: "5. Textures"
+parent: "(OLD) 5. Textures"
 nav_order: 15
 ---
 

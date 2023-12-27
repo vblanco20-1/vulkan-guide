@@ -1,7 +1,7 @@
 ---
 layout: default
-title: "1. Initialization and Render Loop"
-nav_order: 3
+title: "(OLD) 1. Initialization and Render Loop"
+nav_order: 103
 has_children: true
 permalink: /docs/chapter_1
 ---

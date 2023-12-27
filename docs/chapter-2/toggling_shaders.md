@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Toggling shaders
-parent:  "2. The graphics pipeline, Hello Triangle"
+parent:  "(OLD) 2. The graphics pipeline, Hello Triangle"
 nav_order: 15
 ---
 

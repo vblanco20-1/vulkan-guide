@@ -1,7 +1,7 @@
 ---
 layout: default
-title: "4. Buffers, Shader input/output"
-nav_order: 6
+title: "(OLD) 4. Buffers, Shader input/output"
+nav_order: 106
 has_children: true
 permalink: /docs/chapter_4
 ---
