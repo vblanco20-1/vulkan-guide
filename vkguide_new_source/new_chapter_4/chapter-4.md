@@ -1,7 +1,6 @@
 ---
 layout: default
 title: "New 4. Textures and Engine Architecture"
-parent: "Vkguide 2 (WIP)"
 has_children: true
 permalink: /docs/new_vkguide/chapter_4
 ---
