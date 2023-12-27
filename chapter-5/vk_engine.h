@@ -7,6 +7,7 @@
 #include <vector>
 #include <functional>
 #include <deque>
+#include <string>
 #include <vk_mesh.h>
 #include <unordered_map>
 
