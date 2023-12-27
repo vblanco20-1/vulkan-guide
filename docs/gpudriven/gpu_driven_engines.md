@@ -8,7 +8,8 @@ nav_order: 1
 ![city]({{site.baseurl}}/diagrams/cityrender.png)
 Tutorial codebase, 125.000 objects processed and culled on main view and shadow view, 290 FPS. This view renders more than 40 million triangles due to the 2 mesh passes. Rendered on a RTX 2080.
 
-
+## Deprecation warning
+This chapter is outdated for the current version of vkguide and its valid for Legacy Vkguide. Its techniques can be still applied on new vkguide, but the text and code is meant for legacy vkguide. A new version of this chapter is being written as chapter 7 of the new Vkguide.
 
 ## GPU Driven Rendering
 

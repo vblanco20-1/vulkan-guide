@@ -4,7 +4,11 @@ title: Implementing DearImgui to a Vulkan engine
 parent: Extra Chapter
 nav_order: 30
 ---
+## Deprecation warning
+This article is outdated for the current version of vkguide and its valid for Legacy Vkguide. The contents of this extra chapter are included in the main tutorial now.
 
+
+## Dear IMGui
 https://github.com/ocornut/imgui
 
 Dear Imgui is one of the best debug user interface libraries around. Using it makes it very easy to create debug windows with widgets of various kinds.

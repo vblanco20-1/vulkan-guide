@@ -13,8 +13,8 @@ parent: introduction
 - `VkBuffer` : A chunk of GPU visible memory.
 - `VkImage` : A texture you can write to and read from. 
 - `VkPipeline` : Holds the state of the gpu needed to draw. For example: shaders, rasterization options, depth settings.
-- `VkRenderPass` : Holds information about the images you are rendering into. All drawing commands have to be done inside a renderpass.
-- `VkFrameBuffer` : Holds the target images for a renderpass.
+- `VkRenderPass` : Holds information about the images you are rendering into. All drawing commands have to be done inside a renderpass. Only used in legacy vkguide
+- `VkFrameBuffer` : Holds the target images for a renderpass. Only used in legacy vkguide
 - `VkCommandBuffer` : Encodes GPU commands. All execution that is performed on the GPU itself (not in the driver) has to be encoded in a `VkCommandBuffer`.
 - `VkQueue` : Execution "port" for commands. GPUs will have a set of queues with different properties. Some allow only graphics commands, others only allow memory commands, etc. Command buffers are executed by submitting them into a queue, which will copy the rendering commands onto the GPU for execution.
 - `VkDescriptorSet` : Holds the binding information that connects shader inputs to data such as `VkBuffer` resources and `VkImage` textures. Think of it as a set of gpu-side pointers that you bind once.
@@ -33,7 +33,7 @@ Once the core structures are initialized, you initialize the resources you need 
 
 ## Render Loop
 Now that everything is ready for rendering, you first ask the `VkSwapchainKHR` for an image to render to. Then you allocate a `VkCommandBuffer` from a `VkCommandBufferPool` or reuse an already allocated command buffer that has finished execution, and "start" the command buffer, which allows you to write commands into it.
-Next, you begin rendering by starting a `VkRenderPass`, which specifies that you are rendering to the image requested from swapchain, then create a loop where you bind a `VkPipeline`, bind some `VkDescriptorSet` resources (for the shader parameters), bind the vertex buffers, and then execute a draw call.
+Next, you begin rendering by starting a `VkRenderPass`, this can be done with a normal `VkRenderPass`, or using dynamic rendering. The render pass specifies that you are rendering to the image requested from swapchain. Then create a loop where you bind a `VkPipeline`, bind some `VkDescriptorSet` resources (for the shader parameters), bind the vertex buffers, and then execute a draw call.
 Once you are finished with the drawing for a pass, you end the `VkRenderPass`. If there is nothing more to render, you end the `VkCommandBuffer`.
 Finally, you submit the command buffer into the queue for rendering. This will begin execution of the commands in the command buffer on the gpu.
 If you want to display the result of the rendering, you "present" the image you have rendered to to the screen. Because the execution may not have finished yet, you use a semaphore to make the presentation of the image to the screen wait until rendering is finished.

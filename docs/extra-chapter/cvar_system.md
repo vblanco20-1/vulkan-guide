@@ -5,6 +5,8 @@ parent: Extra Chapter
 nav_order: 33
 ---
 
+
+## CVars
 As the engine grows, we find that we have more and more configuration options in the engine. Having them tweable in the UI requires us to add some edit code every time we add a variable. This gets annoying very quickly, and those configuration variables also aren't globally accessible.
 
 If you look at how engines like Unreal Engine or IDTech engines do it, they have a Console Variable system. Users can declare any console variable (CVAR) they want, and then access it through the code. Having the configuration and debug options all inside the same centralized location gives some very nice properties, such as having 1 centralized way to edit them, and being able to easily save them to disk.

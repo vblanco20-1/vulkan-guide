@@ -4,6 +4,12 @@ title: Implementing an asset system.
 parent: Extra Chapter
 nav_order: 31
 ---
+## Deprecation warning
+This article is outdated for the current version of vkguide and its valid for Legacy Vkguide. This article is no longer needed due to the movement to loading from GLTF on the new tutorial, removing the need for this.
+
+
+## Loading Assets
+
 In the tutorial, we have been loading .obj and .png files directly. The issue with doing that is that we depend on 3rd party libraries (stb_image and tinyobj), and loading the formats like that is quite inefficient. You have probably seen that the engine takes a couple seconds to load when you are in debug mode.
 
 On real engines, you don't load those formats at runtime. Instead, you convert those formats into a engine-specific fast-loadable format, and then load that.
