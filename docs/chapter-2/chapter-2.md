@@ -3,6 +3,7 @@ layout: default
 title: "(OLD) 2. The graphics pipeline, Hello Triangle"
 nav_order: 104
 has_children: true
+parent: (old) Vkguide
 permalink: /docs/chapter_2
 ---
 ![chapter2]({{site.baseurl}}/diagrams/chapter2.png)

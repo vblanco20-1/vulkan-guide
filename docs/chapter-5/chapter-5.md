@@ -3,6 +3,7 @@ layout: default
 title: "(OLD) 5. Textures"
 nav_order: 107
 has_children: true
+parent: (old) Vkguide
 permalink: /docs/chapter_5
 ---
 ![chapter5]({{site.baseurl}}/diagrams/chapter5.png)

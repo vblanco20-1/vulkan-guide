@@ -3,6 +3,7 @@ layout: default
 title: "(OLD) 3. Drawing meshes"
 nav_order: 105
 has_children: true
+parent: (old) Vkguide
 permalink: /docs/chapter_3
 ---
 ![chapter3]({{site.baseurl}}/diagrams/chapter3.png)

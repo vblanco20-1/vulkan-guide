@@ -3,6 +3,7 @@ layout: default
 title: "(OLD) 1. Initialization and Render Loop"
 nav_order: 103
 has_children: true
+parent: (old) Vkguide
 permalink: /docs/chapter_1
 ---
 ![chapter1]({{site.baseurl}}/diagrams/chapter1.png)

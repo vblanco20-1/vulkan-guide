@@ -3,6 +3,7 @@ layout: default
 title: "(OLD) 0. Initial Setup"
 nav_order: 102
 has_children: true
+parent: (old) Vkguide
 permalink: /docs/chapter_0
 ---
 ![chapter0]({{site.baseurl}}/diagrams/chapter0.png)
