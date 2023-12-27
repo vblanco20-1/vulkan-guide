@@ -131,7 +131,7 @@ VkCommandPoolCreateInfo vkinit::command_pool_create_info(uint32_t queueFamilyInd
     VkCommandPoolCreateInfo info = {};
     info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     info.pNext = nullptr;
-
+    info.queueFamilyIndex = queueFamilyIndex;
     info.flags = flags;
     return info;
 }
