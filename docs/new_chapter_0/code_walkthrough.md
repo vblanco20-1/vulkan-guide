@@ -276,6 +276,6 @@ As an exercise, read the documentation of SDL2 and try to get keypress events, u
 
 Now we can move forward to the first chapter, and get a render loop going.
 
-Next: [Initializing Vulkan]({{ site.baseurl }}{% link docs/new_vkguide/chapter_1/vulkan_init_flow.md %})
+Next: [Initializing Vulkan]({{ site.baseurl }}{% link docs/new_chapter_1/vulkan_init_flow.md %})
 
 {% include comments.html term="Vkguide 2 Beta Comments" %}

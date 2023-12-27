@@ -95,6 +95,6 @@ We are setting up the draw image a bit small, but if you want, try to increase t
 
 With this we have chapter 3 done, and can move forward to the next chapter.
 
-Next: [Chapter 4: New Descriptor Abstractions]({{ site.baseurl }}{% link docs/new_vkguide/chapter_4/descriptor_abstractions.md %})
+Next: [Chapter 4: New Descriptor Abstractions]({{ site.baseurl }}{% link docs/new_chapter_4/descriptor_abstractions.md %})
 
 {% include comments.html term="Vkguide 2 Beta Comments" %}
