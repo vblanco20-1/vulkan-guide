@@ -2,6 +2,7 @@
 layout: default
 title: "New 4. Textures and Engine Architecture"
 has_children: true
+nav_order: 7
 permalink: /docs/new_vkguide/chapter_4
 ---
 # Chapter 4 : Textures and engine architecture
