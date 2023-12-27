@@ -83,8 +83,8 @@ layout: table_wrappers
             </ul>
           {% endif %}
 
-          {% if page.comments %}
-            {% include comments.html term="{{ page.comments }}" %}
+          {% if page.auto_comments %}
+            {% include comments.html term="{{ page.auto_comments }}" %}
           {% endif %}
 
           {% if site.footer_content != nil %}
