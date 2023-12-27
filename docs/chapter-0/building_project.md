@@ -1,8 +1,8 @@
 ---
 layout: default
 title: Building Project
-parent: "(OLD) 0. Initial Setup"
-grand_parent: (old) Vkguide
+parent: "0. Initial Setup"
+grand_parent: Legacy VkGuide, Vulkan 1.1
 nav_order: 2
 ---
 

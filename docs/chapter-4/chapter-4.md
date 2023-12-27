@@ -1,9 +1,9 @@
 ---
 layout: default
-title: "(OLD) 4. Buffers, Shader input/output"
+title: "4. Buffers, Shader input/output"
 nav_order: 106
 has_children: true
-parent: (old) Vkguide
+parent: Legacy VkGuide, Vulkan 1.1
 permalink: /docs/chapter_4
 ---
 ![chapter4]({{site.baseurl}}/diagrams/chapter4.png)

@@ -1,8 +1,8 @@
 ---
 layout: default
 title: Setting up render pipeline
-parent:  "(OLD) 2. The graphics pipeline, Hello Triangle"
-grand_parent: (old) Vkguide
+parent:  "2. The graphics pipeline, Hello Triangle"
+grand_parent: Legacy VkGuide, Vulkan 1.1
 nav_order: 12
 ---
 

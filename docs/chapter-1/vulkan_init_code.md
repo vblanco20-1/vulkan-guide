@@ -1,8 +1,8 @@
 ---
 layout: default
 title: Vulkan Initialization Code
-parent:  "(OLD) 1. Initialization and Render Loop"
-grand_parent: (old) Vkguide
+parent:  "1. Initialization and Render Loop"
+grand_parent: Legacy VkGuide, Vulkan 1.1
 nav_order: 2
 ---
 

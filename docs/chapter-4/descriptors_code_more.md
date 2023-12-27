@@ -1,8 +1,8 @@
 ---
 layout: default
 title: Dynamic Descriptor sets
-parent:  "(OLD) 4. Buffers, Shader input/output"
-grand_parent: (old) Vkguide
+parent:  "4. Buffers, Shader input/output"
+grand_parent: Legacy VkGuide, Vulkan 1.1
 nav_order: 15
 ---
 

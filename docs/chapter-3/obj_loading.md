@@ -1,8 +1,8 @@
 ---
 layout: default
 title: OBJ Loading
-parent:  "(OLD) 3. Drawing meshes"
-grand_parent: (old) Vkguide
+parent:  "3. Drawing meshes"
+grand_parent: Legacy VkGuide, Vulkan 1.1
 nav_order: 13
 ---
 
