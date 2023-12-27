@@ -3,6 +3,7 @@ layout: default
 title: Code Walkthrough
 parent: "0. Project Setup"
 nav_order: 3
+auto_comments: Vkguide 2 Beta Comments
 ---
 
 # Walkthrough

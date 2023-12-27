@@ -3,6 +3,7 @@ layout: default
 title: Building Project
 parent: "0. Project Setup"
 nav_order: 2
+auto_comments: Vkguide 2 Beta Comments
 ---
 
 # Building the project
@@ -49,5 +50,3 @@ This is the list of libraries we are using.
 
 
 ^nextlink
-
-{% include comments.html term="Vkguide 2 Beta Comments" %}

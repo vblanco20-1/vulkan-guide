@@ -3,6 +3,7 @@ layout: default
 title: Building Project
 parent: "0. Project Setup"
 nav_order: 2
+auto_comments: Vkguide 2 Beta Comments
 ---
 
 # Building the project
@@ -48,6 +49,4 @@ This is the list of libraries we are using.
 - fastgltf: High performance GLTF loading library. 
 
 
-Next: [ Code Walkthrough]({{ site.baseurl }}{% link docs/new_chapter_0/code_walkthrough.md %})  
-
-{% include comments.html term="Vkguide 2 Beta Comments" %}
+^nextlink

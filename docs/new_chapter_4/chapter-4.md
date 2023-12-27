@@ -4,6 +4,7 @@ title: "4. Textures and Engine Architecture"
 has_children: true
 nav_order: 17
 permalink: /docs/new_vkguide/chapter_4
+auto_comments: Vkguide 2 Beta Comments
 ---
 # Chapter 4 : Textures and engine architecture
 
@@ -11,5 +12,3 @@ We are able to draw meshes now, but there are still some things that need doing.
 
 {: .fs-6 .fw-300 }
 
-
-{% include comments.html term="Vkguide 2 Beta Comments" %}
