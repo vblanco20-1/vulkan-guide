@@ -20,7 +20,8 @@ std::optional<std::vector<std::shared_ptr<MeshAsset>>> loadGltfMeshes(VulkanEngi
     data.loadFromFile(filePath);
 
     constexpr auto gltfOptions = fastgltf::Options::LoadGLBBuffers
-        | fastgltf::Options::LoadExternalBuffers;
+            | fastgltf::Options::LoadExternalBuffers
+            | fastgltf::Options::GenerateMeshIndices;
 
     fastgltf::Asset gltf;
     fastgltf::Parser parser {};
@@ -29,7 +30,7 @@ std::optional<std::vector<std::shared_ptr<MeshAsset>>> loadGltfMeshes(VulkanEngi
     if (load) {
         gltf = std::move(load.get());
     } else {
-        fmt::print("Failed to load glTF: {} \n", fastgltf::to_underlying(load.error()));
+        fmt::print("Failed to load glTF: {} \n", fastgltf::getErrorMessage(load.error()));
         return {};
     }
 //< openmesh
@@ -40,7 +41,7 @@ std::optional<std::vector<std::shared_ptr<MeshAsset>>> loadGltfMeshes(VulkanEngi
     // often
     std::vector<uint32_t> indices;
     std::vector<Vertex> vertices;
-    for (fastgltf::Mesh& mesh : gltf.meshes) {
+    for (const fastgltf::Mesh& mesh : gltf.meshes) {
         MeshAsset newmesh;
 
         newmesh.name = mesh.name;
