@@ -60,6 +60,7 @@ struct ComputeEffect {
 	ComputePushConstants data;
 };
 
+//> gltfmat
 struct GLTFMetallic_Roughness {
 	MaterialPipeline opaquePipeline;
 	MaterialPipeline transparentPipeline;
@@ -89,7 +90,9 @@ struct GLTFMetallic_Roughness {
 
 	MaterialInstance write_material(VkDevice device, MaterialPass pass, const MaterialResources& resources, DescriptorAllocatorGrowable& descriptorAllocator);
 };
+//< gltfmat
 
+//> renderobject
 struct RenderObject {
 	uint32_t indexCount;
 	uint32_t firstIndex;
@@ -104,13 +107,15 @@ struct RenderObject {
 struct DrawContext {
 	std::vector<RenderObject> OpaqueSurfaces;
 };
-
+//< renderobject
+//> meshnode
 struct MeshNode : public Node {
 
 	std::shared_ptr<MeshAsset> mesh;
 
 	virtual void Draw(const glm::mat4& topMatrix, DrawContext& ctx) override;
 };
+//< meshnode
 
 class VulkanEngine {
 public:

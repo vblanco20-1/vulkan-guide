@@ -598,10 +598,10 @@ void VulkanEngine::run()
 
         ImGui::Begin("Stats");
 
-        ImGui::Text("frametime %f ms", stats.frametime);
-        ImGui::Text("drawtime %f ms", stats.mesh_draw_time);
-        ImGui::Text("triangles %i", stats.triangle_count);
-        ImGui::Text("draws %i", stats.drawcall_count);
+		ImGui::Text("frametime %f ms", stats.frametime);
+		ImGui::Text("drawtime %f ms", stats.mesh_draw_time);
+		ImGui::Text("triangles %i", stats.triangle_count);
+		ImGui::Text("draws %i", stats.drawcall_count);
         ImGui::End();
 
 		if (ImGui::Begin("background")) {
@@ -747,7 +747,7 @@ AllocatedImage VulkanEngine::create_image(void* data, VkExtent3D size, VkFormat 
             &copyRegion);
 
         if (mipmapped) {
-            vkutil::generate_mipmaps(cmd, new_image.image, size);
+            vkutil::generate_mipmaps(cmd, new_image.image,VkExtent2D{new_image.imageExtent.width,new_image.imageExtent.height});
         } else {
             vkutil::transition_image(cmd, new_image.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                 VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);

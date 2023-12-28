@@ -28,7 +28,7 @@
 constexpr bool bUseValidationLayers = true;
 
 //chapter stage for refactors/changes
-#define CHAPTER_STAGE 1
+#define CHAPTER_STAGE 0
 
 //we want to immediately abort when there is an error. In normal engines this would give an error message to the user, or perform a dump of state.
 using namespace std;
@@ -166,9 +166,10 @@ void VulkanEngine::init_default_data() {
 	defaultData = metalRoughMaterial.write_material(_device,MaterialPass::MainColor,materialResources, globalDescriptorAllocator);
 //< default_mat
 
-//> default_meshes
+
 	testMeshes = loadGltfMeshes(this,"..\\..\\assets\\basicmesh.glb").value();
 
+//> default_meshes
 	for (auto& m : testMeshes) {
 		std::shared_ptr<MeshNode> newNode = std::make_shared<MeshNode>();
 		newNode->mesh = m;
@@ -282,17 +283,29 @@ void VulkanEngine::draw_geometry(VkCommandBuffer cmd)
 	VkDescriptorSet imageSet = get_current_frame()._frameDescriptors.allocate(_device, _singleImageDescriptorLayout);
 	{
 		DescriptorWriter writer;
-		writer.write_image(0, _errorCheckerboardImage.imageView, _defaultSamplerNearest, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+		writer.write_image(0, _errorCheckerboardImage.imageView, _defaultSamplerNearest, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
 
-		writer.update_set(_device,imageSet);
+		writer.update_set(_device, imageSet);
 	}
 
-	vkCmdBindDescriptorSets(cmd,VK_PIPELINE_BIND_POINT_GRAPHICS,_meshPipelineLayout,0,1,&imageSet,0,nullptr);
+	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _meshPipelineLayout, 0, 1, &imageSet, 0, nullptr);
 
-	vkCmdPushConstants(cmd,_meshPipelineLayout,VK_SHADER_STAGE_VERTEX_BIT,0, sizeof(VkDeviceAddress), &rectangle.vertexBufferAddress);
-	vkCmdBindIndexBuffer(cmd, rectangle.indexBuffer.buffer,0,VK_INDEX_TYPE_UINT32);
+	glm::mat4 view = glm::translate(glm::vec3{ 0,0,-5 });
+	// camera projection
+	glm::mat4 projection = glm::perspective(glm::radians(70.f), (float)_drawExtent.width / (float)_drawExtent.height, 10000.f, 0.1f);
 
-	vkCmdDrawIndexed(cmd,rectangle.indexBuffer.info.size / 4,1,0,0,0);
+	// invert the Y direction on projection matrix so that we are more similar
+	// to opengl and gltf axis
+	projection[1][1] *= -1;
+
+	GPUDrawPushConstants push_constants;
+	push_constants.worldMatrix = projection * view;
+	push_constants.vertexBuffer = testMeshes[2]->meshBuffers.vertexBufferAddress;
+
+	vkCmdPushConstants(cmd, _meshPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(GPUDrawPushConstants), &push_constants);
+	vkCmdBindIndexBuffer(cmd, testMeshes[2]->meshBuffers.indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
+
+	vkCmdDrawIndexed(cmd, testMeshes[2]->surfaces[0].count, 1, testMeshes[2]->surfaces[0].startIndex, 0, 0);
 //< draw_tex
 #else
 
@@ -825,12 +838,12 @@ void VulkanEngine::init_background_pipelines()
 		
 	VkShaderModule gradientShader;
 	if (!vkutil::load_shader_module("../../shaders/gradient_color.comp.spv", _device, &gradientShader)) {
-		std::cout << "Error when building the compute shader" << std::endl;
+		fmt::print("Error when building the compute shader \n");
 	}
 
 	VkShaderModule skyShader;
 	if (!vkutil::load_shader_module("../../shaders/sky.comp.spv", _device, &skyShader)) {
-		std::cout << "Error when building the compute shader" << std::endl;
+		fmt::print("Error when building the compute shader \n");
 	}
 
 	VkPipelineShaderStageCreateInfo stageinfo{};
@@ -1008,23 +1021,23 @@ void VulkanEngine::init_mesh_pipeline()
 //> mesh_shader
 	VkShaderModule triangleFragShader;
 	if (!vkutil::load_shader_module("../../shaders/tex_image.frag.spv", _device, &triangleFragShader)) {
-		std::cout << "Error when building the mesh fragment shader module" << std::endl;
+		fmt::print("Error when building the fragment shader \n");
 	}
 	else {
-		std::cout << "Triangle fragment shader succesfully loaded" << std::endl;
+		fmt::print("Triangle fragment shader succesfully loaded \n");
 	}
 
 	VkShaderModule triangleVertexShader;
 	if (!vkutil::load_shader_module("../../shaders/colored_triangle_mesh.vert.spv", _device, &triangleVertexShader)) {
-		std::cout << "Error when building the mesh vertex shader module" << std::endl;
+		fmt::print("Error when building the vertex shader \n");
 	}
 	else {
-		std::cout << "Triangle vertex shader succesfully loaded" << std::endl;
+		fmt::print("Triangle vertex shader succesfully loaded \n");
 	}
 
 	VkPushConstantRange bufferRange{};
 	bufferRange.offset = 0;
-	bufferRange.size = sizeof(VkDeviceAddress);
+	bufferRange.size = sizeof(GPUDrawPushConstants);
 	bufferRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 
 	VkPipelineLayoutCreateInfo pipeline_layout_info = vkinit::pipeline_layout_create_info();

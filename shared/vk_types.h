@@ -56,6 +56,7 @@ struct GPUSceneData {
     glm::vec4 sunlightColor;
 };
 
+//> mat_types
 enum class MaterialPass :uint8_t {
     MainColor,
     Transparent,
@@ -71,7 +72,7 @@ struct MaterialInstance {
     VkDescriptorSet materialSet;
     MaterialPass passType;
 };
-
+//< mat_types
 //> vbuf_types
 struct Vertex {
 
@@ -97,6 +98,7 @@ struct GPUDrawPushConstants {
 };
 //< vbuf_types
 
+//> node_types
 struct DrawContext;
 
 // base class for a renderable dynamic object
@@ -133,6 +135,7 @@ struct Node : public IRenderable {
         }
     }
 };
+//< node_types
 //> intro
 #define VK_CHECK(x)                                                     \
     do {                                                                \

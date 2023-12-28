@@ -12,6 +12,8 @@
 //< includes
 
 //> init
+constexpr bool bUseValidationLayers = false;
+
 VulkanEngine* loadedEngine = nullptr;
 
 VulkanEngine& VulkanEngine::Get() { return *loadedEngine; }

@@ -217,9 +217,6 @@ void VulkanEngine::draw_geometry(VkCommandBuffer cmd)
 
 	vkCmdSetScissor(cmd, 0, 1, &scissor);
 
-
-	//launch a draw command to draw 3 vertices
-	vkCmdDraw(cmd, 3, 1, 0, 0);
 //> drawrect
 	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _meshPipeline);
 

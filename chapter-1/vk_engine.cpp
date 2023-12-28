@@ -14,6 +14,8 @@
 #include <chrono>
 
 //> init_fn
+constexpr bool bUseValidationLayers = false;
+
 void VulkanEngine::init()
 {
 	// We initialize SDL and create a window with it. 
@@ -219,8 +221,6 @@ void VulkanEngine::init_vulkan()
 {
 //> init_instance
 	vkb::InstanceBuilder builder;
-
-	bool bUseValidationLayers = true;
 
 	//make the vulkan instance, with basic debug features
 	auto inst_ret = builder.set_app_name("Example Vulkan Application")

@@ -35,7 +35,7 @@ std::optional<AllocatedImage> load_image(VulkanEngine* engine, fastgltf::Asset& 
                     imagesize.height = height;
                     imagesize.depth = 1;
 
-                    newImage = engine->create_image(data, imagesize, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT,true);
+                    newImage = engine->create_image(data, imagesize, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT,false);
 
                     stbi_image_free(data);
                 }
@@ -49,7 +49,7 @@ std::optional<AllocatedImage> load_image(VulkanEngine* engine, fastgltf::Asset& 
                     imagesize.height = height;
                     imagesize.depth = 1;
 
-                    newImage = engine->create_image(data, imagesize, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT,true);
+                    newImage = engine->create_image(data, imagesize, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT,false);
 
                     stbi_image_free(data);
                 }
@@ -73,7 +73,7 @@ std::optional<AllocatedImage> load_image(VulkanEngine* engine, fastgltf::Asset& 
                                        imagesize.depth = 1;
 
                                        newImage = engine->create_image(data, imagesize, VK_FORMAT_R8G8B8A8_UNORM,
-                                           VK_IMAGE_USAGE_SAMPLED_BIT,true);
+                                           VK_IMAGE_USAGE_SAMPLED_BIT,false);
 
                                        stbi_image_free(data);
                                    }
