@@ -13,7 +13,9 @@ target_include_directories(meshbaker PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 
 target_link_libraries(meshbaker vkguide_shared vkbootstrap imgui fastgltf::fastgltf)
 
-add_custom_command(TARGET meshbaker POST_BUILD
-  COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_RUNTIME_DLLS:meshbaker> $<TARGET_FILE_DIR:meshbaker>
-  COMMAND_EXPAND_LISTS
-  )
+if (WIN32)
+  add_custom_command(TARGET meshbaker POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_RUNTIME_DLLS:meshbaker> $<TARGET_FILE_DIR:meshbaker>
+    COMMAND_EXPAND_LISTS
+    )
+endif()

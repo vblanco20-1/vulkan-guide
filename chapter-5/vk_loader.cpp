@@ -6,6 +6,7 @@
 #include "vk_initializers.h"
 #include "vk_types.h"
 #include <glm/gtx/quaternion.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 #include <fastgltf/glm_element_traits.hpp>
 #include <fastgltf/parser.hpp>
@@ -25,9 +26,7 @@ std::optional<AllocatedImage> load_image(VulkanEngine* engine, fastgltf::Asset& 
                 assert(filePath.fileByteOffset == 0); // We don't support offsets with stbi.
                 assert(filePath.uri.isLocalPath()); // We're only capable of loading
                                                     // local files.
-
-                const std::string path(filePath.uri.path().begin(),
-                    filePath.uri.path().end()); // Thanks C++.
+                const std::string path(filePath.uri.path());
                 unsigned char* data = stbi_load(path.c_str(), &width, &height, &nrChannels, 4);
                 if (data) {
                     VkExtent3D imagesize;
@@ -137,7 +136,11 @@ std::optional<std::shared_ptr<LoadedGLTF>> loadGltf(VulkanEngine* engine, std::s
 
     fastgltf::Parser parser {};
 
-    constexpr auto gltfOptions = fastgltf::Options::DontRequireValidAssetMember | fastgltf::Options::AllowDouble | fastgltf::Options::LoadGLBBuffers | fastgltf::Options::LoadExternalBuffers;
+    constexpr auto gltfOptions = fastgltf::Options::DontRequireValidAssetMember
+            | fastgltf::Options::AllowDouble
+            | fastgltf::Options::LoadGLBBuffers
+            | fastgltf::Options::LoadExternalBuffers
+            | fastgltf::Options::GenerateMeshIndices;
     // fastgltf::Options::LoadExternalImages;
 
     fastgltf::GltfDataBuffer data;
@@ -153,7 +156,7 @@ std::optional<std::shared_ptr<LoadedGLTF>> loadGltf(VulkanEngine* engine, std::s
         if (load) {
             gltf = std::move(load.get());
         } else {
-            std::cerr << "Failed to load glTF: " << fastgltf::to_underlying(load.error()) << std::endl;
+            fmt::print("Failed to load glTF: {}", fastgltf::getErrorMessage(load.error()));
             return {};
         }
     } else if (type == fastgltf::GltfType::GLB) {
@@ -161,7 +164,7 @@ std::optional<std::shared_ptr<LoadedGLTF>> loadGltf(VulkanEngine* engine, std::s
         if (load) {
             gltf = std::move(load.get());
         } else {
-            std::cerr << "Failed to load glTF: " << fastgltf::to_underlying(load.error()) << std::endl;
+            fmt::print("Failed to load glTF: {}", fastgltf::getErrorMessage(load.error()));
             return {};
         }
     } else {
@@ -180,7 +183,7 @@ std::optional<std::shared_ptr<LoadedGLTF>> loadGltf(VulkanEngine* engine, std::s
 //> load_samplers
 
     // load samplers
-    for (fastgltf::Sampler& sampler : gltf.samplers) {
+    for (const fastgltf::Sampler& sampler : gltf.samplers) {
 
         VkSamplerCreateInfo sampl = { .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO, .pNext = nullptr};
         sampl.maxLod = VK_LOD_CLAMP_NONE;
@@ -229,16 +232,13 @@ std::optional<std::shared_ptr<LoadedGLTF>> loadGltf(VulkanEngine* engine, std::s
 //< load_buffer
     //
 //> load_material
-    for (fastgltf::Material& mat : gltf.materials) {
+    for (const fastgltf::Material& mat : gltf.materials) {
         std::shared_ptr<GLTFMaterial> newMat = std::make_shared<GLTFMaterial>();
         materials.push_back(newMat);
         file.materials[mat.name.c_str()] = newMat;
 
         GLTFMetallic_Roughness::MaterialConstants constants;
-        constants.colorFactors.x = mat.pbrData.baseColorFactor[0];
-        constants.colorFactors.y = mat.pbrData.baseColorFactor[1];
-        constants.colorFactors.z = mat.pbrData.baseColorFactor[2];
-        constants.colorFactors.w = mat.pbrData.baseColorFactor[3];
+        constants.colorFactors = glm::make_vec4(mat.pbrData.baseColorFactor.data());
 
         constants.metal_rough_factors.x = mat.pbrData.metallicFactor;
         constants.metal_rough_factors.y = mat.pbrData.roughnessFactor;
@@ -280,7 +280,7 @@ std::optional<std::shared_ptr<LoadedGLTF>> loadGltf(VulkanEngine* engine, std::s
     std::vector<uint32_t> indices;
     std::vector<Vertex> vertices;
 
-    for (fastgltf::Mesh& mesh : gltf.meshes) {
+    for (const fastgltf::Mesh& mesh : gltf.meshes) {
         std::shared_ptr<MeshAsset> newmesh = std::make_shared<MeshAsset>();
         meshes.push_back(newmesh);
         file.meshes[mesh.name.c_str()] = newmesh;
@@ -290,7 +290,7 @@ std::optional<std::shared_ptr<LoadedGLTF>> loadGltf(VulkanEngine* engine, std::s
         indices.clear();
         vertices.clear();
 
-        for (auto&& p : mesh.primitives) {
+        for (const fastgltf::Primitive& p : mesh.primitives) {
             GeoSurface newSurface;
             newSurface.startIndex = (uint32_t)indices.size();
             newSurface.count = (uint32_t)gltf.accessors[p.indicesAccessor.value()].count;
@@ -364,7 +364,7 @@ std::optional<std::shared_ptr<LoadedGLTF>> loadGltf(VulkanEngine* engine, std::s
 
             glm::vec3 minpos = vertices[initial_vtx].position;
             glm::vec3 maxpos = vertices[initial_vtx].position;
-            for (int i = initial_vtx; i < vertices.size(); i++) {
+            for (size_t i = initial_vtx; i < vertices.size(); i++) {
                 minpos = glm::min(minpos, vertices[i].position);
                 maxpos = glm::max(maxpos, vertices[i].position);
             }
@@ -393,23 +393,23 @@ std::optional<std::shared_ptr<LoadedGLTF>> loadGltf(VulkanEngine* engine, std::s
         nodes.push_back(newNode);
         file.nodes[node.name.c_str()];
 
-        std::visit(fastgltf::visitor { [&](fastgltf::Node::TransformMatrix matrix) {
-                                          memcpy(&newNode->localTransform, matrix.data(), sizeof(matrix));
-                                      },
-                       [&](fastgltf::Node::TRS transform) {
-                           glm::vec3 tl(transform.translation[0], transform.translation[1],
-                               transform.translation[2]);
-                           glm::quat rot(transform.rotation[3], transform.rotation[0], transform.rotation[1],
-                               transform.rotation[2]);
-                           glm::vec3 sc(transform.scale[0], transform.scale[1], transform.scale[2]);
+        std::visit(fastgltf::visitor {
+            [&](fastgltf::Node::TransformMatrix matrix) {
+                std::memcpy(&newNode->localTransform, matrix.data(), sizeof(matrix));
+            },
+            [&](fastgltf::Node::TRS transform) {
+                glm::vec3 tl = glm::make_vec3(transform.translation.data());
+                glm::quat rot(transform.rotation[3], transform.rotation[0], transform.rotation[1],
+                              transform.rotation[2]);
+                glm::vec3 sc = glm::make_vec3(transform.scale.data());
 
-                           glm::mat4 tm = glm::translate(glm::mat4(1.f), tl);
-                           glm::mat4 rm = glm::toMat4(rot);
-                           glm::mat4 sm = glm::scale(glm::mat4(1.f), sc);
+                glm::mat4 tm = glm::translate(glm::mat4(1.f), tl);
+                glm::mat4 rm = glm::toMat4(rot);
+                glm::mat4 sm = glm::scale(glm::mat4(1.f), sc);
 
-                           newNode->localTransform = tm * rm * sm;
-                       } },
-            node.transform);
+                newNode->localTransform = tm * rm * sm;
+            }
+        }, node.transform);
     }
 //< load_nodes
 //> load_graph

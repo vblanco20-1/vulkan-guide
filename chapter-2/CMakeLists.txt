@@ -14,7 +14,9 @@ target_include_directories(chapter_2 PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 
 target_link_libraries(chapter_2 vkguide_shared vkbootstrap imgui)
 
-add_custom_command(TARGET chapter_2 POST_BUILD
-  COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_RUNTIME_DLLS:chapter_2> $<TARGET_FILE_DIR:chapter_2>
-  COMMAND_EXPAND_LISTS
-  )
+if (WIN32)
+  add_custom_command(TARGET chapter_2 POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_RUNTIME_DLLS:chapter_2> $<TARGET_FILE_DIR:chapter_2>
+    COMMAND_EXPAND_LISTS
+    )
+endif()

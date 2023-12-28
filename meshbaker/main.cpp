@@ -67,7 +67,7 @@ void output_meshes(std::filesystem::path target_file, std::filesystem::path sour
 			gltf = std::move(load.get());
 		}
 		else {
-			std::cerr << "Failed to load glTF: " << fastgltf::to_underlying(load.error()) << std::endl;
+			std::cerr << "Failed to load glTF: " << fastgltf::getErrorMessage(load.error()) << std::endl;
 		}
 	}
 	else if (type == fastgltf::GltfType::GLB) {
@@ -76,7 +76,7 @@ void output_meshes(std::filesystem::path target_file, std::filesystem::path sour
 			gltf = std::move(load.get());
 		}
 		else {
-			std::cerr << "Failed to load glTF: " << fastgltf::to_underlying(load.error()) << std::endl;
+			std::cerr << "Failed to load glTF: " << fastgltf::getErrorMessage(load.error()) << std::endl;
 		}
 	}
 	else {

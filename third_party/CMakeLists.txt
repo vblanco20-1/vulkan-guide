@@ -35,6 +35,7 @@ add_library(imgui STATIC)
 
 target_include_directories(imgui PUBLIC imgui)
 
+target_compile_features(imgui PRIVATE cxx_std_17)
 target_sources(imgui PRIVATE 
   imgui/imgui.h
   imgui/imgui.cpp
