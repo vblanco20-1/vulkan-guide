@@ -64,6 +64,7 @@ void VulkanEngine::init_commands()
 	commandPoolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 	commandPoolInfo.pNext = nullptr;
 	commandPoolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+	commandPoolInfo.queueFamilyIndex = _graphicsQueueFamily;
 
 	for (int i = 0; i < FRAME_OVERLAP; i++) {
 
