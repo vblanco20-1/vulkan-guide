@@ -36,7 +36,7 @@ The Libraries we are using:
 
 - [VMA (vulkan memory allocator)](https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator) Implements memory allocators for Vulkan, header only. In Vulkan, the user has to deal with the memory allocation of buffers, images, and other resources on their own. This can be very difficult to get right in a performant and safe way. Vulkan Memory Allocator does it for us and allows us to simplify the creation of images and other resources. Widely used in personal Vulkan engines or smaller scale projects like emulators. Very high end projects like Unreal Engine or AAA engines write their own memory allocators.
 
-Next: [Building Project]({{ site.baseurl }}{% link docs/chapter-0/building_project.md %})
+Next: [Building Project]({{ site.baseurl }}{% link docs/new_chapter_0/building_project.md %})
 
 
 {% include comments.html term="Introduction Comments" %}
