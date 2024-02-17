@@ -12,7 +12,7 @@ struct DescriptorLayoutBuilder {
 
     void add_binding(uint32_t binding, VkDescriptorType type);
     void clear();
-    VkDescriptorSetLayout build(VkDevice device, VkShaderStageFlags shaderStages);
+    VkDescriptorSetLayout build(VkDevice device, VkShaderStageFlags shaderStages, void* pNext = nullptr, VkDescriptorSetLayoutCreateFlags flags = 0);
 };
 //< descriptor_layout
 // 
@@ -60,8 +60,7 @@ public:
 	void clear_pools(VkDevice device);
 	void destroy_pools(VkDevice device);
 
-	VkDescriptorSet allocate(VkDevice device, VkDescriptorSetLayout layout);
-
+    VkDescriptorSet allocate(VkDevice device, VkDescriptorSetLayout layout, void* pNext = nullptr);
 private:
 	VkDescriptorPool get_pool(VkDevice device);
 	VkDescriptorPool create_pool(VkDevice device, uint32_t setCount, std::span<PoolSizeRatio> poolRatios);

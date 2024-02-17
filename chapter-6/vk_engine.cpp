@@ -21,7 +21,7 @@
 #define VMA_IMPLEMENTATION
 #include "vk_mem_alloc.h"
 
-constexpr bool bUseValidationLayers = true;
+constexpr bool bUseValidationLayers = false;
 
 // we want to immediately abort when there is an error. In normal engines this
 // would give an error message to the user, or perform a dump of state.
@@ -268,14 +268,14 @@ void VulkanEngine::draw_main(VkCommandBuffer cmd)
 
 	vkCmdPushConstants(cmd, _gradientPipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(ComputePushConstants), &effect.data);
 	// execute the compute pipeline dispatch. We are using 16x16 workgroup size so we need to divide by it
-	vkCmdDispatch(cmd, std::ceil(_windowExtent.width / 16.0), std::ceil(_windowExtent.height / 16.0), 1);
+	vkCmdDispatch(cmd, std::ceil(_drawExtent.width / 16.0), std::ceil(_drawExtent.height / 16.0), 1);
 
 	//draw the triangle
 
 	VkRenderingAttachmentInfo colorAttachment = vkinit::attachment_info(_drawImage.imageView, nullptr, VK_IMAGE_LAYOUT_GENERAL);
 	VkRenderingAttachmentInfo depthAttachment = vkinit::depth_attachment_info(_depthImage.imageView, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
 
-	VkRenderingInfo renderInfo = vkinit::rendering_info(_windowExtent, &colorAttachment, &depthAttachment);
+	VkRenderingInfo renderInfo = vkinit::rendering_info(_drawExtent, &colorAttachment, &depthAttachment);
 
 	vkCmdBeginRendering(cmd, &renderInfo);
 	auto start = std::chrono::system_clock::now();
@@ -316,9 +316,8 @@ void VulkanEngine::draw()
         resize_requested = true;
 		return ;
 	}
-
-	_drawExtent.height = std::min(_swapchainExtent.height, _drawImage.imageExtent.height) * renderScale;
-	_drawExtent.width = std::min(_swapchainExtent.width, _drawImage.imageExtent.width) * renderScale;
+	_drawExtent.height = std::min(_swapchainExtent.height, _drawImage.imageExtent.height) * 1.f;
+	_drawExtent.width = std::min(_swapchainExtent.width, _drawImage.imageExtent.width) *  1.f;
 
 	VK_CHECK(vkResetFences(_device, 1, &get_current_frame()._renderFence));
 
@@ -331,7 +330,6 @@ void VulkanEngine::draw()
 	//begin the command buffer recording. We will use this command buffer exactly once, so we want to let vulkan know that
 	VkCommandBufferBeginInfo cmdBeginInfo = vkinit::command_buffer_begin_info(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 
-	//> draw_first
 	VK_CHECK(vkBeginCommandBuffer(cmd, &cmdBeginInfo));
 
 	// transition our main draw image into general layout so we can write into it
@@ -348,10 +346,10 @@ void VulkanEngine::draw()
 	VkExtent2D extent;
 	extent.height = _windowExtent.height;
 	extent.width = _windowExtent.width;
-	//< draw_first
-	//> imgui_draw
+	//extent.depth = 1;
+
 	// execute a copy from the draw image into the swapchain
-    vkutil::copy_image_to_image(cmd, _drawImage.image, _swapchainImages[swapchainImageIndex], _drawExtent,_swapchainExtent);
+	vkutil::copy_image_to_image(cmd, _drawImage.image, _swapchainImages[swapchainImageIndex], _drawExtent,_swapchainExtent);
 
 	// set swapchain image layout to Attachment Optimal so we can draw it
 	vkutil::transition_image(cmd, _swapchainImages[swapchainImageIndex], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
@@ -380,8 +378,6 @@ void VulkanEngine::draw()
 	// _renderFence will now block until the graphic commands finish execution
 	VK_CHECK(vkQueueSubmit2(_graphicsQueue, 1, &submit, get_current_frame()._renderFence));
 
-	
-
 	//prepare present
 	// this will put the image we just rendered to into the visible window.
 	// we want to wait on the _renderSemaphore for that, 
@@ -405,7 +401,6 @@ void VulkanEngine::draw()
 	_frameNumber++;
 }
 
-//> visfn
 bool is_visible(const RenderObject& obj, const glm::mat4& viewproj) {
     std::array<glm::vec3, 8> corners {
         glm::vec3 { 1, 1, 1 },
@@ -443,7 +438,6 @@ bool is_visible(const RenderObject& obj, const glm::mat4& viewproj) {
         return true;
     }
 }
-//< visfn
 
 void VulkanEngine::draw_geometry(VkCommandBuffer cmd)
 {
@@ -455,17 +449,6 @@ void VulkanEngine::draw_geometry(VkCommandBuffer cmd)
             opaque_draws.push_back(i);
        }
     }
-
-    // sort the opaque surfaces by material and mesh
-    std::sort(opaque_draws.begin(), opaque_draws.end(), [&](const auto& iA, const auto& iB) {
-		const RenderObject& A = drawCommands.OpaqueSurfaces[iA];
-		const RenderObject& B = drawCommands.OpaqueSurfaces[iB];
-        if (A.material == B.material) {
-            return A.indexBuffer < B.indexBuffer;
-        } else {
-            return A.material < B.material;
-        }
-    });
 
     //allocate a new uniform buffer for the scene data
     AllocatedBuffer gpuSceneDataBuffer =  create_buffer(sizeof(GPUSceneData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
@@ -479,11 +462,30 @@ void VulkanEngine::draw_geometry(VkCommandBuffer cmd)
     GPUSceneData* sceneUniformData = (GPUSceneData*)gpuSceneDataBuffer.allocation->GetMappedData();
     *sceneUniformData = sceneData;
 
+    VkDescriptorSetVariableDescriptorCountAllocateInfo allocArrayInfo{.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_VARIABLE_DESCRIPTOR_COUNT_ALLOCATE_INFO, .pNext = nullptr};
+   
+    uint32_t descriptorCounts =texCache.Cache.size();
+    allocArrayInfo.pDescriptorCounts = &descriptorCounts;
+    allocArrayInfo.descriptorSetCount = 1;
+
+
     //create a descriptor set that binds that buffer and update it
-    VkDescriptorSet globalDescriptor = get_current_frame()._frameDescriptors.allocate(_device, _gpuSceneDataDescriptorLayout);
+    VkDescriptorSet globalDescriptor = get_current_frame()._frameDescriptors.allocate(_device, _gpuSceneDataDescriptorLayout, &allocArrayInfo);
 
 	DescriptorWriter writer;
 	writer.write_buffer(0, gpuSceneDataBuffer.buffer, sizeof(GPUSceneData), 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+
+
+    if (texCache.Cache.size() > 0) {
+		VkWriteDescriptorSet arraySet{ .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
+		arraySet.descriptorCount = texCache.Cache.size();
+		arraySet.dstArrayElement = 0;
+		arraySet.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		arraySet.dstBinding = 1;
+		arraySet.pImageInfo = texCache.Cache.data();
+		writer.writes.push_back(arraySet);
+    }
+
 	writer.update_set(_device, globalDescriptor);
 
     MaterialPipeline* lastPipeline = nullptr;
@@ -503,8 +505,8 @@ void VulkanEngine::draw_geometry(VkCommandBuffer cmd)
 				VkViewport viewport = {};
 				viewport.x = 0;
 				viewport.y = 0;
-				viewport.width = (float)_windowExtent.width;
-				viewport.height = (float)_windowExtent.height;
+				viewport.width = (float)_drawExtent.width;
+				viewport.height = (float)_drawExtent.height;
 				viewport.minDepth = 0.f;
 				viewport.maxDepth = 1.f;
 
@@ -513,8 +515,8 @@ void VulkanEngine::draw_geometry(VkCommandBuffer cmd)
 				VkRect2D scissor = {};
 				scissor.offset.x = 0;
 				scissor.offset.y = 0;
-				scissor.extent.width = _windowExtent.width;
-				scissor.extent.height = _windowExtent.height;
+				scissor.extent.width = _drawExtent.width;
+				scissor.extent.height = _drawExtent.height;
 
 				vkCmdSetScissor(cmd, 0, 1, &scissor);
             }
@@ -646,7 +648,7 @@ void VulkanEngine::update_scene()
 	glm::mat4 view = mainCamera.getViewMatrix();
 
 	// camera projection
-	glm::mat4 projection = glm::perspective(glm::radians(70.f), (float)_drawExtent.width / (float)_drawExtent.height, 10000.f, 0.1f);
+	glm::mat4 projection = glm::perspective(glm::radians(70.f), (float)_windowExtent.width / (float)_windowExtent.height, 10000.f, 0.1f);
 
 	// invert the Y direction on projection matrix so that we are more similar
 	// to opengl and gltf axis
@@ -720,7 +722,6 @@ AllocatedImage VulkanEngine::create_image(VkExtent3D size, VkFormat format, VkIm
     return newImage;
 }
 
-//> create_mip_2
 AllocatedImage VulkanEngine::create_image(void* data, VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool mipmapped)
 {
     size_t data_size = size.depth * size.width * size.height * 4;
@@ -758,7 +759,6 @@ AllocatedImage VulkanEngine::create_image(void* data, VkExtent3D size, VkFormat 
     destroy_buffer(uploadbuffer);
     return new_image;
 }
-//< create_mip_2
 
 GPUMeshBuffers VulkanEngine::uploadMesh(std::span<uint32_t> indices, std::span<Vertex> vertices)
 {
@@ -880,6 +880,10 @@ void VulkanEngine::init_vulkan()
    VkPhysicalDeviceVulkan12Features features12 {};
    features12.bufferDeviceAddress = true;
    features12.descriptorIndexing = true; 
+   features12.descriptorBindingPartiallyBound = true;
+   features12.descriptorBindingVariableDescriptorCount = true;
+   features12.runtimeDescriptorArray = true;
+
 
     // use vkbootstrap to select a gpu.
     // We want a gpu that can write to the SDL surface and supports vulkan 1.2
@@ -950,7 +954,6 @@ void VulkanEngine::init_swapchain()
 	//hardcoding the draw format to 32 bit float
 	_depthImage.imageFormat = VK_FORMAT_D32_SFLOAT;
     _depthImage.imageExtent = drawImageExtent;
-
 	VkImageUsageFlags depthImageUsages{};
 	depthImageUsages |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
 
@@ -1185,7 +1188,19 @@ void VulkanEngine::init_descriptors()
     {
         DescriptorLayoutBuilder builder;
         builder.add_binding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
-        _gpuSceneDataDescriptorLayout = builder.build(_device, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
+        builder.add_binding(1,VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+
+       
+        VkDescriptorSetLayoutBindingFlagsCreateInfo bindFlags = {.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO, .pNext = nullptr};
+
+        std::array<VkDescriptorBindingFlags,2> flagArray { 0,VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT |VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT  };
+       
+       builder.bindings[1].descriptorCount = 4048;
+
+       bindFlags.bindingCount = 2;
+       bindFlags.pBindingFlags = flagArray.data();
+
+        _gpuSceneDataDescriptorLayout = builder.build(_device, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, &bindFlags);
     }
 
     _mainDeletionQueue.push_function([&]() {
@@ -1219,7 +1234,7 @@ void VulkanEngine::init_descriptors()
 void GLTFMetallic_Roughness::build_pipelines(VulkanEngine* engine)
 {
 	VkShaderModule meshFragShader;
-	if (!vkutil::load_shader_module("../../shaders/mesh.frag.spv", engine->_device, &meshFragShader)) {
+	if (!vkutil::load_shader_module("../../shaders/mesh_pbr.frag.spv", engine->_device, &meshFragShader)) {
 		fmt::println("Error when building the triangle fragment shader module");
 	}
 
@@ -1345,4 +1360,35 @@ void MeshNode::Draw(const glm::mat4& topMatrix, DrawContext& ctx)
 
     // recurse down
     Node::Draw(topMatrix, ctx);
+}
+
+TextureID TextureCache::AddTexture(const VkImageView& image, VkSampler sampler,const std::string& name)
+{
+	auto it = NameMap.find(name);
+	if (it != NameMap.end()) {
+		//override the texture at this slot if the name matches
+        Cache[it->second.Index] = VkDescriptorImageInfo{ .sampler = sampler,.imageView = image, .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL};
+        return it->second;
+	}
+	else {
+		uint32_t idx = Cache.size();
+
+		Cache.push_back(VkDescriptorImageInfo{ .sampler = sampler,.imageView = image, .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
+        NameMap.insert({name, TextureID{ idx }});
+
+		return TextureID{ idx };
+	}
+
+    
+}
+
+TextureID TextureCache::FindTexture(const std::string& name)
+{
+    auto it = NameMap.find(name);
+    if (it != NameMap.end()) {
+        return it->second;
+    }
+    else {
+        return TextureID(-1);
+    }
 }
