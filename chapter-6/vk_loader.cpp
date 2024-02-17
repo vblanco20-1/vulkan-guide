@@ -11,7 +11,8 @@
 #include <fastgltf/parser.hpp>
 #include <fastgltf/tools.hpp>
 #include <fastgltf/util.hpp>
-//> loadimg
+
+
 std::optional<AllocatedImage> load_image(VulkanEngine* engine, fastgltf::Asset& asset, fastgltf::Image& image)
 {
     AllocatedImage newImage {};
@@ -91,8 +92,7 @@ std::optional<AllocatedImage> load_image(VulkanEngine* engine, fastgltf::Asset& 
         return newImage;
     }
 }
-//< loadimg
-//> filters
+
 VkFilter extract_filter(fastgltf::Filter filter)
 {
     switch (filter) {
@@ -124,11 +124,9 @@ VkSamplerMipmapMode extract_mipmap_mode(fastgltf::Filter filter)
         return VK_SAMPLER_MIPMAP_MODE_LINEAR;
     }
 }
-//< filters
 
 std::optional<std::shared_ptr<LoadedGLTF>> loadGltf(VulkanEngine* engine, std::string_view filePath)
 {
-//> load_1
     fmt::print("Loading GLTF: {}", filePath);
 
     std::shared_ptr<LoadedGLTF> scene = std::make_shared<LoadedGLTF>();
@@ -168,16 +166,12 @@ std::optional<std::shared_ptr<LoadedGLTF>> loadGltf(VulkanEngine* engine, std::s
         std::cerr << "Failed to determine glTF container" << std::endl;
         return {};
     }
-//< load_1
-//> load_2
     // we can stimate the descriptors we will need accurately
     std::vector<DescriptorAllocatorGrowable::PoolSizeRatio> sizes = { { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 3 },
         { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 3 },
         { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1 } };
 
     file.descriptorPool.init(engine->_device, gltf.materials.size(), sizes);
-//< load_2
-//> load_samplers
 
     // load samplers
     for (fastgltf::Sampler& sampler : gltf.samplers) {
@@ -196,15 +190,13 @@ std::optional<std::shared_ptr<LoadedGLTF>> loadGltf(VulkanEngine* engine, std::s
 
         file.samplers.push_back(newSampler);
     }
-//< load_samplers
-//> load_arrays
+
     // temporal arrays for all the objects to use while creating the GLTF data
     std::vector<std::shared_ptr<MeshAsset>> meshes;
     std::vector<std::shared_ptr<Node>> nodes;
     std::vector<AllocatedImage> images;
     std::vector<TextureID> imageIDs;
     std::vector<std::shared_ptr<GLTFMaterial>> materials;
-//< load_arrays
 
     // load all textures
     for (fastgltf::Image& image : gltf.images) {
@@ -269,12 +261,13 @@ std::optional<std::shared_ptr<LoadedGLTF>> loadGltf(VulkanEngine* engine, std::s
 
             materialResources.colorImage = images[img];
             materialResources.colorSampler = file.samplers[sampler];
+
+
         }
 
-        //add textures to texCache
-		constants.colorTexID = engine->texCache.AddTexture(materialResources.colorImage.imageView, materialResources.colorSampler, ).Index;
+		constants.colorTexID = engine->texCache.AddTexture(materialResources.colorImage.imageView, materialResources.colorSampler).Index;
 		constants.metalRoughTexID = engine->texCache.AddTexture(materialResources.metalRoughImage.imageView, materialResources.metalRoughSampler).Index;
-
+      
 		// write material parameters to buffer
 		sceneMaterialConstants[data_index] = constants;
         // build material
@@ -282,7 +275,6 @@ std::optional<std::shared_ptr<LoadedGLTF>> loadGltf(VulkanEngine* engine, std::s
 
         data_index++;
     }
-//< load_material
 
     // use the same vectors for all meshes so that the memory doesnt reallocate as
     // often

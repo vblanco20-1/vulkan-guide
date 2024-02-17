@@ -142,8 +142,7 @@ struct TextureCache {
 
     std::vector<VkDescriptorImageInfo> Cache;
     std::unordered_map<std::string, TextureID> NameMap;
-    TextureID AddTexture(const VkImageView& image, VkSampler sampler, const std::string& name);
-    TextureID FindTexture(const std::string& name);
+    TextureID AddTexture(const VkImageView& image, VkSampler sampler);
 };
 
 class VulkanEngine {

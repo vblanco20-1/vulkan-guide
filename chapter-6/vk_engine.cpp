@@ -1250,8 +1250,6 @@ void GLTFMetallic_Roughness::build_pipelines(VulkanEngine* engine)
 
     DescriptorLayoutBuilder layoutBuilder;
     layoutBuilder.add_binding(0,VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
-    layoutBuilder.add_binding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
-	layoutBuilder.add_binding(2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
 
     materialLayout = layoutBuilder.build(engine->_device, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
 
@@ -1330,8 +1328,6 @@ MaterialInstance GLTFMetallic_Roughness::write_material(VkDevice device, Materia
    
     writer.clear();
     writer.write_buffer(0,resources.dataBuffer,sizeof(MaterialConstants),resources.dataBufferOffset,VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
-    writer.write_image(1, resources.colorImage.imageView, resources.colorSampler,VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
-    writer.write_image(2, resources.metalRoughImage.imageView, resources.metalRoughSampler,VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
 
     writer.update_set(device,matData.materialSet);
 
@@ -1362,33 +1358,19 @@ void MeshNode::Draw(const glm::mat4& topMatrix, DrawContext& ctx)
     Node::Draw(topMatrix, ctx);
 }
 
-TextureID TextureCache::AddTexture(const VkImageView& image, VkSampler sampler,const std::string& name)
+
+TextureID TextureCache::AddTexture(const VkImageView& image, VkSampler sampler)
 {
-	auto it = NameMap.find(name);
-	if (it != NameMap.end()) {
-		//override the texture at this slot if the name matches
-        Cache[it->second.Index] = VkDescriptorImageInfo{ .sampler = sampler,.imageView = image, .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL};
-        return it->second;
-	}
-	else {
-		uint32_t idx = Cache.size();
-
-		Cache.push_back(VkDescriptorImageInfo{ .sampler = sampler,.imageView = image, .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
-        NameMap.insert({name, TextureID{ idx }});
-
-		return TextureID{ idx };
-	}
-
-    
-}
-
-TextureID TextureCache::FindTexture(const std::string& name)
-{
-    auto it = NameMap.find(name);
-    if (it != NameMap.end()) {
-        return it->second;
+    for (unsigned int i = 0; i < Cache.size(); i++) {
+        if (Cache[i].imageView == image && Cache[i].sampler == sampler) {
+            //found, return it
+            return TextureID{i};
+        }
     }
-    else {
-        return TextureID(-1);
-    }
+
+	uint32_t idx = Cache.size();
+
+	Cache.push_back(VkDescriptorImageInfo{ .sampler = sampler,.imageView = image, .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
+
+	return TextureID{ idx };
 }
