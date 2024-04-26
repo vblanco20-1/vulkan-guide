@@ -142,20 +142,20 @@ lets go and create those as part of the `init_default_data()` function, after th
 <!-- codegen from tag default_img on file E:\ProgrammingProjects\vulkan-guide-2\chapter-4/vk_engine.cpp --> 
 ```cpp
 	//3 default textures, white, grey, black. 1 pixel each
-	uint32_t white = 0xFFFFFFFF;
+	uint32_t white = glm::packUnorm4x8(glm::vec4(1, 1, 1, 1));
 	_whiteImage = create_image((void*)&white, VkExtent3D{ 1, 1, 1 }, VK_FORMAT_R8G8B8A8_UNORM,
 		VK_IMAGE_USAGE_SAMPLED_BIT);
 
-	uint32_t grey = 0xAAAAAAFF;
+	uint32_t grey = glm::packUnorm4x8(glm::vec4(0.66f, 0.66f, 0.66f, 1));
 	_greyImage = create_image((void*)&grey, VkExtent3D{ 1, 1, 1 }, VK_FORMAT_R8G8B8A8_UNORM,
 		VK_IMAGE_USAGE_SAMPLED_BIT);
 
-	uint32_t black = 0x000000FF;
+	uint32_t black = glm::packUnorm4x8(glm::vec4(0, 0, 0, 0));
 	_blackImage = create_image((void*)&black, VkExtent3D{ 1, 1, 1 }, VK_FORMAT_R8G8B8A8_UNORM,
 		VK_IMAGE_USAGE_SAMPLED_BIT);
 
 	//checkerboard image
-	uint32_t magenta = 0xFF00FFFF;
+	uint32_t magenta = glm::packUnorm4x8(glm::vec4(1, 0, 1, 1));
 	std::array<uint32_t, 16 *16 > pixels; //for 16x16 checkerboard texture
 	for (int x = 0; x < 16; x++) {
 		for (int y = 0; y < 16; y++) {

@@ -27,8 +27,7 @@ public:
 	void clear_pools(VkDevice device);
 	void destroy_pools(VkDevice device);
 
-	VkDescriptorSet allocate(VkDevice device, VkDescriptorSetLayout layout);
-
+    VkDescriptorSet allocate(VkDevice device, VkDescriptorSetLayout layout, void* pNext = nullptr);
 private:
 	VkDescriptorPool get_pool(VkDevice device);
 	VkDescriptorPool create_pool(VkDevice device, uint32_t setCount, std::span<PoolSizeRatio> poolRatios);
@@ -152,13 +151,13 @@ Last is the new allocation function.
 
 <!-- codegen from tag growpool_3 on file E:\ProgrammingProjects\vulkan-guide-2\shared/vk_descriptors.cpp --> 
 ```cpp
-VkDescriptorSet DescriptorAllocatorGrowable::allocate(VkDevice device, VkDescriptorSetLayout layout)
+VkDescriptorSet DescriptorAllocatorGrowable::allocate(VkDevice device, VkDescriptorSetLayout layout, void* pNext)
 {
     //get or create a pool to allocate from
     VkDescriptorPool poolToUse = get_pool(device);
 
 	VkDescriptorSetAllocateInfo allocInfo = {};
-	allocInfo.pNext = nullptr;
+	allocInfo.pNext = pNext;
 	allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
 	allocInfo.descriptorPool = poolToUse;
 	allocInfo.descriptorSetCount = 1;

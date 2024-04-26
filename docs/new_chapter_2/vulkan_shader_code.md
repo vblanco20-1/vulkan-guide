@@ -63,7 +63,7 @@ struct DescriptorLayoutBuilder {
 
     void add_binding(uint32_t binding, VkDescriptorType type);
     void clear();
-    VkDescriptorSetLayout build(VkDevice device, VkShaderStageFlags shaderStages);
+    VkDescriptorSetLayout build(VkDevice device, VkShaderStageFlags shaderStages, void* pNext = nullptr, VkDescriptorSetLayoutCreateFlags flags = 0);
 };
 ```
 
@@ -96,18 +96,18 @@ Next is creating the layout itself
 
 <!-- codegen from tag descriptor_layout on file E:\ProgrammingProjects\vulkan-guide-2\shared/vk_descriptors.cpp --> 
 ```cpp
-VkDescriptorSetLayout DescriptorLayoutBuilder::build(VkDevice device, VkShaderStageFlags shaderStages)
+VkDescriptorSetLayout DescriptorLayoutBuilder::build(VkDevice device, VkShaderStageFlags shaderStages, void* pNext, VkDescriptorSetLayoutCreateFlags flags)
 {
     for (auto& b : bindings) {
         b.stageFlags |= shaderStages;
     }
 
     VkDescriptorSetLayoutCreateInfo info = {.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO};
-    info.pNext = nullptr;
+    info.pNext = pNext;
 
     info.pBindings = bindings.data();
     info.bindingCount = (uint32_t)bindings.size();
-    info.flags = 0;
+    info.flags = flags;
 
     VkDescriptorSetLayout set;
     VK_CHECK(vkCreateDescriptorSetLayout(device, &info, nullptr, &set));

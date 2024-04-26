@@ -333,7 +333,7 @@ void VulkanEngine::draw_background(VkCommandBuffer cmd)
 {
 	//make a clear-color from frame number. This will flash with a 120 frame period.
 	VkClearColorValue clearValue;
-	float flash = abs(sin(_frameNumber / 120.f));
+	float flash = std::abs(std::sin(_frameNumber / 120.f));
 	clearValue = { { 0.0f, 0.0f, flash, 1.0f } };
 
 	VkImageSubresourceRange clearRange = vkinit::image_subresource_range(VK_IMAGE_ASPECT_COLOR_BIT);
