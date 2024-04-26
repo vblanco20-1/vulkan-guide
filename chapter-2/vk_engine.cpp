@@ -76,14 +76,14 @@ void VulkanEngine::cleanup()
 		_mainDeletionQueue.flush();
 		for (int i = 0; i < FRAME_OVERLAP; i++) {
 
+			_frames[i]._deletionQueue.flush();
+
 			vkDestroyCommandPool(_device, _frames[i]._commandPool, nullptr);
 
 			//destroy sync objects
 			vkDestroyFence(_device, _frames[i]._renderFence, nullptr);
 			vkDestroySemaphore(_device, _frames[i]._renderSemaphore, nullptr);
 			vkDestroySemaphore(_device, _frames[i]._swapchainSemaphore, nullptr);
-
-			_frames[i]._deletionQueue.flush();
 		}
 
 		destroy_swapchain();
@@ -160,7 +160,7 @@ void VulkanEngine::draw_background(VkCommandBuffer cmd)
 //> imgui_draw_fn
 void VulkanEngine::draw_imgui(VkCommandBuffer cmd, VkImageView targetImageView)
 {
-	VkRenderingAttachmentInfo colorAttachment = vkinit::attachment_info(targetImageView, nullptr, VK_IMAGE_LAYOUT_GENERAL);
+	VkRenderingAttachmentInfo colorAttachment = vkinit::attachment_info(targetImageView, nullptr, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 	VkRenderingInfo renderInfo = vkinit::rendering_info(_swapchainExtent, &colorAttachment, nullptr);
 
 	vkCmdBeginRendering(cmd, &renderInfo);
@@ -302,7 +302,7 @@ void VulkanEngine::run()
 
 		// imgui new frame
 		ImGui_ImplVulkan_NewFrame();
-		ImGui_ImplSDL2_NewFrame(_window);
+		ImGui_ImplSDL2_NewFrame();
 
 //> imgui_bk
 		ImGui::NewFrame();
@@ -397,7 +397,7 @@ void VulkanEngine::rebuild_swapchain()
 	vkUpdateDescriptorSets(_device, 1, &cameraWrite, 0, nullptr);
 
 	//add to deletion queues
-	_mainDeletionQueue.push_function([=]() {
+	_mainDeletionQueue.push_function([&]() {
 		vkDestroyImageView(_device, _drawImage.imageView, nullptr);
 		vmaDestroyImage(_allocator, _drawImage.image, _drawImage.allocation);
 	});
@@ -426,12 +426,17 @@ void VulkanEngine::init_vulkan()
 	features.dynamicRendering = true;
 	features.synchronization2 = true;
 
+	VkPhysicalDeviceVulkan12Features features12{};
+	features12.bufferDeviceAddress = true;
+	features12.descriptorIndexing = true;
+
 	//use vkbootstrap to select a gpu. 
 	//We want a gpu that can write to the SDL surface and supports vulkan 1.2
 	vkb::PhysicalDeviceSelector selector{ vkb_inst };
 	vkb::PhysicalDevice physicalDevice = selector
 		.set_minimum_version(1, 3)
 		.set_required_features_13(features)
+		.set_required_features_12(features12)
 		.set_surface(_surface)
 		.select()
 		.value();
@@ -673,22 +678,23 @@ void VulkanEngine::init_imgui()
 	init_info.MinImageCount = 3;
 	init_info.ImageCount = 3;
 	init_info.UseDynamicRendering = true;
-	init_info.ColorAttachmentFormat = _swapchainImageFormat;
+
+	//dynamic rendering parameters for imgui to use
+	init_info.PipelineRenderingCreateInfo = {.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO};
+	init_info.PipelineRenderingCreateInfo.colorAttachmentCount = 1;
+	init_info.PipelineRenderingCreateInfo.pColorAttachmentFormats = &_swapchainImageFormat;
+	
 
 	init_info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
 
-	ImGui_ImplVulkan_Init(&init_info, VK_NULL_HANDLE);
+	ImGui_ImplVulkan_Init(&init_info);
 
-	// execute a gpu command to upload imgui font textures
-	immediate_submit([&](VkCommandBuffer cmd) { ImGui_ImplVulkan_CreateFontsTexture(cmd); });
-
-	// clear font textures from cpu data
-	ImGui_ImplVulkan_DestroyFontUploadObjects();
+	ImGui_ImplVulkan_CreateFontsTexture();
 
 	// add the destroy the imgui created structures
 	_mainDeletionQueue.push_function([=]() {
-		vkDestroyDescriptorPool(_device, imguiPool, nullptr);
 		ImGui_ImplVulkan_Shutdown();
+		vkDestroyDescriptorPool(_device, imguiPool, nullptr);
 	});
 }
 //< imgui_init
@@ -841,7 +847,7 @@ backgroundEffects.push_back(sky);
 //destroy structures properly
 vkDestroyShaderModule(_device, gradientShader, nullptr);
 vkDestroyShaderModule(_device, skyShader, nullptr);
-_mainDeletionQueue.push_function([&]() {
+_mainDeletionQueue.push_function([=]() {
 	vkDestroyPipelineLayout(_device, _gradientPipelineLayout, nullptr);
 	vkDestroyPipeline(_device, sky.pipeline, nullptr);
 	vkDestroyPipeline(_device, gradient.pipeline, nullptr);
