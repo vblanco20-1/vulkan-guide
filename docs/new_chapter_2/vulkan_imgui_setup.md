@@ -11,6 +11,8 @@ To do that, we are going to add the library "dear Imgui" to the project. This is
 
 
 ## Immediate GPU commands
+EDIT UNTIL FIXED: This section of the article will be moved away, new version of imgui does not need immediate commands to upload. We still need the immediate commands for later in the tutorial.
+
 Imgui will require us to run some commands outside of the normal draw loop. This is going to be something we will need many times on the engine for different uses. We are going to implement an `immediate_submit` function, which uses a fence and a different command buffer from the one we use on draws to send some commands to the GPU without syncronizing with swapchain or with rendering logic.
 
 Lets add those structures into the VulkanEngine class
@@ -165,22 +167,23 @@ void VulkanEngine::init_imgui()
 	init_info.MinImageCount = 3;
 	init_info.ImageCount = 3;
 	init_info.UseDynamicRendering = true;
-	init_info.ColorAttachmentFormat = _swapchainImageFormat;
+
+	//dynamic rendering parameters for imgui to use
+	init_info.PipelineRenderingCreateInfo = {.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO};
+	init_info.PipelineRenderingCreateInfo.colorAttachmentCount = 1;
+	init_info.PipelineRenderingCreateInfo.pColorAttachmentFormats = &_swapchainImageFormat;
+	
 
 	init_info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
 
-	ImGui_ImplVulkan_Init(&init_info, VK_NULL_HANDLE);
+	ImGui_ImplVulkan_Init(&init_info);
 
-	// execute a gpu command to upload imgui font textures
-	immediate_submit([&](VkCommandBuffer cmd) { ImGui_ImplVulkan_CreateFontsTexture(cmd); });
-
-	// clear font textures from cpu data
-	ImGui_ImplVulkan_DestroyFontUploadObjects();
+	ImGui_ImplVulkan_CreateFontsTexture();
 
 	// add the destroy the imgui created structures
 	_mainDeletionQueue.push_function([=]() {
-		vkDestroyDescriptorPool(_device, imguiPool, nullptr);
 		ImGui_ImplVulkan_Shutdown();
+		vkDestroyDescriptorPool(_device, imguiPool, nullptr);
 	});
 }
 ```
@@ -230,7 +233,7 @@ if (stop_rendering) {
 
 // imgui new frame
 ImGui_ImplVulkan_NewFrame();
-ImGui_ImplSDL2_NewFrame(_window);
+ImGui_ImplSDL2_NewFrame();
 ImGui::NewFrame();
 
 //some imgui UI to test
@@ -287,7 +290,7 @@ With the attachment info done, we can make the VkRenderingInfo. Add a new functi
 ```cpp
 void VulkanEngine::draw_imgui(VkCommandBuffer cmd, VkImageView targetImageView)
 {
-	VkRenderingAttachmentInfo colorAttachment = vkinit::attachment_info(targetImageView, nullptr, VK_IMAGE_LAYOUT_GENERAL);
+	VkRenderingAttachmentInfo colorAttachment = vkinit::attachment_info(targetImageView, nullptr, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 	VkRenderingInfo renderInfo = vkinit::rendering_info(_swapchainExtent, &colorAttachment, nullptr);
 
 	vkCmdBeginRendering(cmd, &renderInfo);

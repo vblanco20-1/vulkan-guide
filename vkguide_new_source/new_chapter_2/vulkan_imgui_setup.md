@@ -11,6 +11,8 @@ To do that, we are going to add the library "dear Imgui" to the project. This is
 
 
 ## Immediate GPU commands
+EDIT UNTIL FIXED: This section of the article will be moved away, new version of imgui does not need immediate commands to upload. We still need the immediate commands for later in the tutorial.
+
 Imgui will require us to run some commands outside of the normal draw loop. This is going to be something we will need many times on the engine for different uses. We are going to implement an `immediate_submit` function, which uses a fence and a different command buffer from the one we use on draws to send some commands to the GPU without syncronizing with swapchain or with rendering logic.
 
 Lets add those structures into the VulkanEngine class
@@ -128,7 +130,7 @@ if (stop_rendering) {
 
 // imgui new frame
 ImGui_ImplVulkan_NewFrame();
-ImGui_ImplSDL2_NewFrame(_window);
+ImGui_ImplSDL2_NewFrame();
 ImGui::NewFrame();
 
 //some imgui UI to test
