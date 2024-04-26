@@ -12,7 +12,7 @@ Start by syncing the Git project at <https://github.com/vblanco20-1/vulkan-guide
 The all-chapters branch contains the example code for the entire project, and the starting-point branch contains the initial empty project setup. I recommend you sync both branches to different folders, and if at one point you get stuck, check how the code works in the all-chapters code.
 If you want a direct download to the code without using Git just download from these direct links. 
 
-[All Chapters](https://github.com/vblanco20-1/vulkan-guide/archive/all-chapters-1.3-wip.zip)
+[All Chapters](https://github.com/vblanco20-1/vulkan-guide/archive/all-chapters-2.zip)
 
 [Starting Point](https://github.com/vblanco20-1/vulkan-guide/archive/starting-point-2.zip)
 
