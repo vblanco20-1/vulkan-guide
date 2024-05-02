@@ -76,6 +76,10 @@ void VulkanEngine::cleanup()
 		//make sure the gpu has stopped doing its things
 		vkDeviceWaitIdle(_device);
         _mainDeletionQueue.flush();
+        for (int i = 0; i < FRAME_OVERLAP; i++) {
+            _frames[i]._deletionQueue.flush();
+            // Delete other frame objects
+        }
 
         //other code
     }
