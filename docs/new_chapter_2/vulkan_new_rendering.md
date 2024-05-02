@@ -87,7 +87,7 @@ With the deletion queue set, now whenever we create new vulkan objects we can ju
 
 ## Memory Allocation
 
-To improve the render loop, we will need to allocate a image, and this gets us into how to allocate objects in vulkan. We are going to skip that entire chapter, because we will be using Vulkan Memory Allocator library. Dealing with the different memory heaps and object restrictions such as image alignement is very error prone and really hard to get right, specially if you want to get it right at a decent performance. By using VMA, we skip all that, and we get a battle tested way that is guaranteed to work well. There are cases like the PCSX3 emulator project, where they replaced their attempt at allocation to VMA, and won 20% extra framerate. 
+To improve the render loop, we will need to allocate a image, and this gets us into how to allocate objects in vulkan. We are going to skip that entire chapter, because we will be using Vulkan Memory Allocator library. Dealing with the different memory heaps and object restrictions such as image alignment is very error prone and really hard to get right, specially if you want to get it right at a decent performance. By using VMA, we skip all that, and we get a battle tested way that is guaranteed to work well. There are cases like the PCSX3 emulator project, where they replaced their attempt at allocation to VMA, and won 20% extra framerate. 
 
 vk_types.h already holds the include needed for the VMA library, but we need to do something else too.
 
@@ -149,7 +149,7 @@ We have already dealt superficially with images when setting up the swapchain, b
 
 Lets begin by adding the new members we will need to the VulkanEngine class.
 
-On vk_types.h, add this structure which holds the data needed for a image. We will hold a `VkImage` alongside its default `VkImageView`, then the allocation for the image memory, and last, the image size and its format, which will be useful when dealing with the image. We also add a `_drawExtent` that we can use to decide what size to render.
+On vk_types.h, add this structure which holds the data needed for an image. We will hold a `VkImage` alongside its default `VkImageView`, then the allocation for the image memory, and last, the image size and its format, which will be useful when dealing with the image. We also add a `_drawExtent` that we can use to decide what size to render.
 
 ```cpp
 struct AllocatedImage {
@@ -218,7 +218,7 @@ VkImageViewCreateInfo vkinit::imageview_create_info(VkFormat format, VkImage ima
 }
 ```
 
-We will hardcode the image tiling to OPTIMAL, which means that we allow the gpu to shuffle the data however it sees fit. If we want to read the image data from cpu, we would need to use tiling LINEAR, which makes the gpu data into a simple 2d array. This tiling is highly limited in what can be gpu do with it, so the only real use case for it is CPU readback.
+We will hardcode the image tiling to OPTIMAL, which means that we allow the gpu to shuffle the data however it sees fit. If we want to read the image data from cpu, we would need to use tiling LINEAR, which makes the gpu data into a simple 2d array. This tiling highly limits what the gpu can do, so the only real use case for LINEAR is CPU readback.
 
 On the imageview creation, we need to setup the subresource. Thats similar to the one we used in the pipeline barrier.
 
@@ -321,6 +321,16 @@ void vkutil::copy_image_to_image(VkCommandBuffer cmd, VkImage source, VkImage de
 	vkCmdBlitImage2(cmd, &blitInfo);
 }
 ```
+Also add the corresponding declaration to `vk_images.h`
+```
+	namespace vkutil {
+
+	    // Existing:
+	    void transition_image(VkCommandBuffer cmd, VkImage image, VkImageLayout currentLayout, VkImageLayout newLayout);
+
+            void copy_image_to_image(VkCommandBuffer cmd, VkImage source, VkImage destination, VkExtent2D srcSize, VkExtent2D dstSize);	
+	}
+```
  
 Vulkan has 2 main ways of copying one image to another. you can use VkCmdCopyImage or VkCmdBlitImage.
 CopyImage is faster, but its much more restricted, for example the resolution on both images must match.
@@ -342,6 +352,16 @@ void VulkanEngine::draw_background(VkCommandBuffer cmd)
 	vkCmdClearColorImage(cmd, _drawImage.image, VK_IMAGE_LAYOUT_GENERAL, &clearValue, 1, &clearRange);
 }
 ```
+
+Add this to the vk_engine.h header
+```
+class VulkanEngine {
+//...
+  private:
+       void draw_background(VkCommandBuffer cmd);
+}
+```
+
 We will be changing the code that records the command buffer. You can now delete the older one. 
 The new code is this.
 ```cpp
