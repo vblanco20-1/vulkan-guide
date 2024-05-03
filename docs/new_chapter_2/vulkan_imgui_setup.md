@@ -169,16 +169,14 @@ void VulkanEngine::init_imgui()
 	init_info.UseDynamicRendering = true;
 
 	//dynamic rendering parameters for imgui to use
-	init_info.PipelineRenderingCreateInfo = {.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO};
-	init_info.PipelineRenderingCreateInfo.colorAttachmentCount = 1;
-	init_info.PipelineRenderingCreateInfo.pColorAttachmentFormats = &_swapchainImageFormat;
-	
+        init_info.ColorAttachmentFormat = _swapchainImageFormat;	
 
 	init_info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
 
 	ImGui_ImplVulkan_Init(&init_info);
 
 	ImGui_ImplVulkan_CreateFontsTexture();
+	ImGui_ImplVulkan_DestroyFontUploadObjects();
 
 	// add the destroy the imgui created structures
 	_mainDeletionQueue.push_function([=]() {
@@ -188,6 +186,8 @@ void VulkanEngine::init_imgui()
 }
 ```
 
+Warning: The version of imgui at `starting-point-2` is out of date. Please copy across `third_party\imgui` from the `all-chapters-2` branch. If you encounter a linker error, clean and rebuild. Make sure you compile the shaders again.
+
 Call this function at the end of `VulkanEngine::init()`, after `init_pipelines();`       
 This code is adapted from the imgui demos. We first need to create some structures that imgui wants, like its own descriptor pool. The descriptor pool here is storing data for 1000 of a lot of different types of descriptors, so its a bit overkill. It wont be a problem, just slightly less efficient space-wise.
 
@@ -196,8 +196,7 @@ On the vulkan one, we need to hook a few things, like our device, instance, queu
 
 One important one is that we need to set UseDynamicRendering to true, and set ColorAttachmentFormat to our swapchain format, this is because we wont be using vulkan render-passes but Dynamic Rendering instead. And unlike with the compute shader, we are going to draw dear imgui directly into the swapchain. 
 
-After calling `ImGui_ImplVulkan_Init`, we need to do an immediate submit to upload the font texture. Once that is executed, we call DestroyFontUploadObjects so that imgui deletes those temporal structures. 
-Last, we add cleanup code into the destruction queue.
+After calling `ImGui_ImplVulkan_Init`, we need to do an immediate submit to upload the font texture. Last, we add cleanup code into the destruction queue.
 
 # Imgui render loop
 Imgui is initialized now, but we need to hook it into the rendering loop.
@@ -255,7 +254,7 @@ When we call `ImGui::Render()`, that calculates the vertices/draws/etc that imgu
 Imgui will draw using actual gpu draws with meshes and shaders, it will not do a compute draw like we are doing at the moment.
 To draw geometry, it needs to be done withing a renderpass. But we are not using renderpasses as we will use dynamic rendering, a vulkan 1.3 feature. Instead of calling VkCmdBeginRenderpass, and giving it a VkRenderPass object, we call VkBeginRendering, with a VkRenderingInfo that contains the settings needed for the images to draw into.
 
-The VkRenderingInfo points into multiple VkRenderingAttachmentInfo for our target images to draw into, so lets begin writing that one into the initializers.
+The VkRenderingInfo points into multiple VkRenderingAttachmentInfo for our target images to draw into. Once again, you'll find `attachment_info` is already provided in `vk_initializers.cpp`:
 
 <!-- codegen from tag color_info on file E:\ProgrammingProjects\vulkan-guide-2\shared/vk_initializers.cpp --> 
 ```cpp
