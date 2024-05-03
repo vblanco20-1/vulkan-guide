@@ -169,8 +169,10 @@ void VulkanEngine::init_imgui()
 	init_info.UseDynamicRendering = true;
 
 	//dynamic rendering parameters for imgui to use
-        init_info.ColorAttachmentFormat = _swapchainImageFormat;	
-
+	init_info.PipelineRenderingCreateInfo = {.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO};
+	init_info.PipelineRenderingCreateInfo.colorAttachmentCount = 1;
+	init_info.PipelineRenderingCreateInfo.pColorAttachmentFormats = &_swapchainImageFormat;
+	
 	init_info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
 
 	ImGui_ImplVulkan_Init(&init_info);
