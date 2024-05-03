@@ -176,11 +176,11 @@ That copy_image command is the same as before, we are replacing the later comman
 
 Before, we were transitioning the swapchain image from transfer layout into present layout, but now we are going to change it into `VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL` instead. This is the layout you should be using whenever you are calling rendering commands like in here.
 
-After that, we build the VkRenderingInfo and send a single color attachment to it. That color attachment will point to the swapchain image we target.
+Now, look inside `draw_imgui` which we just defined. Here you see we build the VkRenderingInfo and send a single color attachment to it. That color attachment will point to the swapchain image we target.
 
 Now that we have a VkRenderInfo, we can call `vkCmdBeginRendering`, this begins a render pass, and we can now execute draw commands. We call into the imgui vulkan backend with our command buffer, which will make imgui record its draw commands into the buffer. Once that is done, we can call `vkCmdEndRendering` to end the render pass. 
 
-After that, we transition the swapchain image from attachment-optimal into present mode, and can finally end the command buffer.
+After `draw_imgui` returns, we transition the swapchain image from attachment-optimal into present mode, and can finally end the command buffer.
 
 If you run the application at this point, you will have the imgui demo window you can play around with.
 
