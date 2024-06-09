@@ -510,7 +510,7 @@ Now fill the draw_geometry function
 void VulkanEngine::draw_geometry(VkCommandBuffer cmd)
 {
 	//begin a render pass  connected to our draw image
-	VkRenderingAttachmentInfo colorAttachment = vkinit::attachment_info(_drawImage.imageView, nullptr, VK_IMAGE_LAYOUT_GENERAL);
+	VkRenderingAttachmentInfo colorAttachment = vkinit::attachment_info(_drawImage.imageView, nullptr, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
 	VkRenderingInfo renderInfo = vkinit::rendering_info(_drawExtent, &colorAttachment, nullptr);
 	vkCmdBeginRendering(cmd, &renderInfo);

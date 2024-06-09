@@ -298,6 +298,13 @@ void VulkanEngine::init_descriptors()
 	drawImageWrite.pImageInfo = &imgInfo;
 
 	vkUpdateDescriptorSets(_device, 1, &drawImageWrite, 0, nullptr);
+
+	//make sure both the descriptor allocator and the new layout get cleaned up properly
+	_mainDeletionQueue.push_function([&]() {
+		globalDescriptorAllocator.destroy_pool(_device);
+
+		vkDestroyDescriptorSetLayout(_device, _drawImageDescriptorLayout, nullptr);
+	});
 }
 ```
 

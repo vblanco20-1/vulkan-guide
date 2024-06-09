@@ -175,6 +175,16 @@ lets go and create those as part of the `init_default_data()` function, after th
 	sampl.magFilter = VK_FILTER_LINEAR;
 	sampl.minFilter = VK_FILTER_LINEAR;
 	vkCreateSampler(_device, &sampl, nullptr, &_defaultSamplerLinear);
+
+	_mainDeletionQueue.push_function([&](){
+		vkDestroySampler(_device,_defaultSamplerNearest,nullptr);
+		vkDestroySampler(_device,_defaultSamplerLinear,nullptr);
+
+		destroy_image(_whiteImage);
+		destroy_image(_greyImage);
+		destroy_image(_blackImage);
+		destroy_image(_errorCheckerboardImage);
+	});
 ```
 
 for the 3 default color images, we create the image with that color as the single pixel. For the checkerboard, we write a 16x16 array of pixel color data with some simple math for a black/magenta check pattern.

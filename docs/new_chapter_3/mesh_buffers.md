@@ -408,6 +408,12 @@ void VulkanEngine::init_default_data() {
 
 	rectangle = uploadMesh(rect_indices,rect_vertices);
 
+	//delete the rectangle data on engine shutdown
+	_mainDeletionQueue.push_function([&](){
+		destroy_buffer(rectangle.indexBuffer);
+		destroy_buffer(rectangle.vertexBuffer);
+	});
+
 }
 ```
 We create 2 arrays for vertices and indices, and call the uploadMesh function to convert it all into buffers.
