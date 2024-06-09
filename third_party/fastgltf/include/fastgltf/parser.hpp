@@ -186,6 +186,12 @@ namespace fastgltf {
         // See https://github.com/KhronosGroup/glTF/tree/main/extensions/2.0/Archived/KHR_materials_pbrSpecularGlossiness/README.md
         KHR_materials_pbrSpecularGlossiness = 1 << 20,
 #endif
+
+		// See https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Vendor/MSFT_packing_normalRoughnessMetallic/README.md
+		MSFT_packing_normalRoughnessMetallic = 1 << 21,
+
+		// See https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Vendor/MSFT_packing_occlusionRoughnessMetallic/README.md
+		MSFT_packing_occlusionRoughnessMetallic = 1 << 22,
     };
     // clang-format on
 
@@ -250,6 +256,13 @@ namespace fastgltf {
          * to LoadExternalBuffers.
          */
         LoadExternalImages              = 1 << 7,
+
+		/**
+		 * Lets fastgltf generate indices for all mesh primitives without indices. This currently
+		 * does not de-duplicate the vertices. This is entirely for compatibility and simplifying the
+		 * loading process.
+		 */
+		GenerateMeshIndices             = 1 << 8,
     };
     // clang-format on
 
@@ -278,6 +291,8 @@ namespace fastgltf {
         constexpr std::string_view KHR_mesh_quantization = "KHR_mesh_quantization";
         constexpr std::string_view KHR_texture_basisu = "KHR_texture_basisu";
         constexpr std::string_view KHR_texture_transform = "KHR_texture_transform";
+	    constexpr std::string_view MSFT_packing_normalRoughnessMetallic = "MSFT_packing_normalRoughnessMetallic";
+	    constexpr std::string_view MSFT_packing_occlusionRoughnessMetallic = "MSFT_packing_occlusionRoughnessMetallic";
         constexpr std::string_view MSFT_texture_dds = "MSFT_texture_dds";
 
 #if FASTGLTF_ENABLE_DEPRECATED_EXT
@@ -290,29 +305,31 @@ namespace fastgltf {
 	// value used for enabling/disabling the loading of it. This also represents all extensions that
 	// fastgltf supports and understands.
 #if FASTGLTF_ENABLE_DEPRECATED_EXT
-	static constexpr size_t SUPPORTED_EXTENSION_COUNT = 19;
+	static constexpr size_t SUPPORTED_EXTENSION_COUNT = 21;
 #else
-	static constexpr size_t SUPPORTED_EXTENSION_COUNT = 18;
+	static constexpr size_t SUPPORTED_EXTENSION_COUNT = 20;
 #endif
 	static constexpr std::array<std::pair<std::string_view, Extensions>, SUPPORTED_EXTENSION_COUNT> extensionStrings = {{
-		{ extensions::EXT_mesh_gpu_instancing,            Extensions::EXT_mesh_gpu_instancing },
-		{ extensions::EXT_meshopt_compression,            Extensions::EXT_meshopt_compression },
-		{ extensions::EXT_texture_webp,                   Extensions::EXT_texture_webp },
-		{ extensions::KHR_lights_punctual,                Extensions::KHR_lights_punctual },
-		{ extensions::KHR_materials_anisotropy,           Extensions::KHR_materials_anisotropy },
-		{ extensions::KHR_materials_clearcoat,            Extensions::KHR_materials_clearcoat },
-		{ extensions::KHR_materials_emissive_strength,    Extensions::KHR_materials_emissive_strength },
-		{ extensions::KHR_materials_ior,                  Extensions::KHR_materials_ior },
-		{ extensions::KHR_materials_iridescence,          Extensions::KHR_materials_iridescence },
-		{ extensions::KHR_materials_sheen,                Extensions::KHR_materials_sheen },
-		{ extensions::KHR_materials_specular,             Extensions::KHR_materials_specular },
-		{ extensions::KHR_materials_transmission,         Extensions::KHR_materials_transmission },
-		{ extensions::KHR_materials_unlit,                Extensions::KHR_materials_unlit },
-		{ extensions::KHR_materials_volume,               Extensions::KHR_materials_volume },
-		{ extensions::KHR_mesh_quantization,              Extensions::KHR_mesh_quantization },
-		{ extensions::KHR_texture_basisu,                 Extensions::KHR_texture_basisu },
-		{ extensions::KHR_texture_transform,              Extensions::KHR_texture_transform },
-		{ extensions::MSFT_texture_dds,                   Extensions::MSFT_texture_dds },
+		{ extensions::EXT_mesh_gpu_instancing,                  Extensions::EXT_mesh_gpu_instancing },
+		{ extensions::EXT_meshopt_compression,                  Extensions::EXT_meshopt_compression },
+		{ extensions::EXT_texture_webp,                         Extensions::EXT_texture_webp },
+		{ extensions::KHR_lights_punctual,                      Extensions::KHR_lights_punctual },
+		{ extensions::KHR_materials_anisotropy,                 Extensions::KHR_materials_anisotropy },
+		{ extensions::KHR_materials_clearcoat,                  Extensions::KHR_materials_clearcoat },
+		{ extensions::KHR_materials_emissive_strength,          Extensions::KHR_materials_emissive_strength },
+		{ extensions::KHR_materials_ior,                        Extensions::KHR_materials_ior },
+		{ extensions::KHR_materials_iridescence,                Extensions::KHR_materials_iridescence },
+		{ extensions::KHR_materials_sheen,                      Extensions::KHR_materials_sheen },
+		{ extensions::KHR_materials_specular,                   Extensions::KHR_materials_specular },
+		{ extensions::KHR_materials_transmission,               Extensions::KHR_materials_transmission },
+		{ extensions::KHR_materials_unlit,                      Extensions::KHR_materials_unlit },
+		{ extensions::KHR_materials_volume,                     Extensions::KHR_materials_volume },
+		{ extensions::KHR_mesh_quantization,                    Extensions::KHR_mesh_quantization },
+		{ extensions::KHR_texture_basisu,                       Extensions::KHR_texture_basisu },
+		{ extensions::KHR_texture_transform,                    Extensions::KHR_texture_transform },
+		{ extensions::MSFT_packing_normalRoughnessMetallic,     Extensions::MSFT_packing_normalRoughnessMetallic },
+		{ extensions::MSFT_packing_occlusionRoughnessMetallic,  Extensions::MSFT_packing_occlusionRoughnessMetallic },
+		{ extensions::MSFT_texture_dds,                         Extensions::MSFT_texture_dds },
 
 #if FASTGLTF_ENABLE_DEPRECATED_EXT
 		{ extensions::KHR_materials_pbrSpecularGlossiness,Extensions::KHR_materials_pbrSpecularGlossiness },
@@ -348,6 +365,7 @@ namespace fastgltf {
 		return "";
 	}
 
+#if !FASTGLTF_DISABLE_CUSTOM_MEMORY_POOL
 	class ChunkMemoryResource : public std::pmr::memory_resource {
 		/**
 		 * The default size of the individual blocks we allocate.
@@ -408,6 +426,7 @@ namespace fastgltf {
 			return this == std::addressof(other);
 		}
 	};
+#endif
 
 	/**
 	 * A type that stores an error together with an expected value.
@@ -588,7 +607,9 @@ namespace fastgltf {
          * Returns the size, in bytes,
          * @return
          */
-        [[nodiscard]] inline std::size_t getBufferSize() const noexcept;
+        [[nodiscard]] inline std::size_t getBufferSize() const noexcept {
+			return dataSize;
+		}
 
         [[nodiscard]] explicit operator span<std::byte>() {
             return span<std::byte>(bufferPointer, dataSize);
@@ -642,7 +663,9 @@ namespace fastgltf {
 
 		ParserInternalConfig config = {};
 		DataSource glbBuffer;
+#if !FASTGLTF_DISABLE_CUSTOM_MEMORY_POOL
 		std::shared_ptr<ChunkMemoryResource> resourceAllocator;
+#endif
 		std::filesystem::path directory;
 		Options options;
 
@@ -651,6 +674,8 @@ namespace fastgltf {
 
 		[[nodiscard]] auto decodeDataUri(URIView& uri) const noexcept -> Expected<DataSource>;
 		[[nodiscard]] auto loadFileFromUri(URIView& uri) const noexcept -> Expected<DataSource>;
+
+		Error generateMeshIndices(Asset& asset) const;
 
 		Error parseAccessors(simdjson::dom::array& array, Asset& asset);
 		Error parseAnimations(simdjson::dom::array& array, Asset& asset);

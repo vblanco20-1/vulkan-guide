@@ -1,4 +1,5 @@
 #include <fstream>
+#include <random>
 
 #include <catch2/benchmark/catch_benchmark.hpp>
 #include <catch2/catch_test_macros.hpp>
@@ -6,6 +7,7 @@
 #include "simdjson.h"
 
 #include <fastgltf/parser.hpp>
+#include <fastgltf/base64.hpp>
 #include "gltf_path.hpp"
 
 constexpr auto benchmarkOptions = fastgltf::Options::DontRequireValidAssetMember;
@@ -68,6 +70,12 @@ void setTinyGLTFCallbacks(tinygltf::TinyGLTF& gltf) {
 #include "gltf-rs-bridge/lib.h"
 #endif
 
+#ifdef HAS_ASSIMP
+#include <assimp/cimport.h>
+#include <assimp/scene.h>
+#include <assimp/Base64.hpp>
+#endif
+
 std::vector<uint8_t> readFileAsBytes(std::filesystem::path path) {
     std::ifstream file(path, std::ios::ate | std::ios::binary);
     if (!file.is_open())
@@ -127,6 +135,12 @@ TEST_CASE("Benchmark loading of NewSponza", "[gltf-benchmark]") {
 		return rust::gltf::run(slice);
 	};
 #endif
+
+#ifdef HAS_ASSIMP
+	BENCHMARK("Parse NewSponza with assimp") {
+		return aiImportFileFromMemory(reinterpret_cast<const char*>(bytes.data()), jsonData->getBufferSize(), 0, nullptr);
+	};
+#endif
 }
 
 TEST_CASE("Benchmark base64 decoding from glTF file", "[gltf-benchmark]") {
@@ -173,6 +187,14 @@ TEST_CASE("Benchmark base64 decoding from glTF file", "[gltf-benchmark]") {
 		return rust::gltf::run(slice);
 	};
 #endif
+
+#ifdef HAS_ASSIMP
+	BENCHMARK("2CylinderEngine with assimp") {
+		const auto* scene = aiImportFileFromMemory(reinterpret_cast<const char*>(bytes.data()), jsonData->getBufferSize(), 0, nullptr);
+		REQUIRE(scene != nullptr);
+		return scene;
+	};
+#endif
 }
 
 TEST_CASE("Benchmark raw JSON parsing", "[gltf-benchmark]") {
@@ -216,6 +238,12 @@ TEST_CASE("Benchmark raw JSON parsing", "[gltf-benchmark]") {
 	BENCHMARK("Parse Buggy.gltf with gltf-rs") {
 		auto slice = rust::Slice<const std::uint8_t>(reinterpret_cast<std::uint8_t*>(bytes.data()), bytes.size() - padding);
 		return rust::gltf::run(slice);
+	};
+#endif
+
+#ifdef HAS_ASSIMP
+	BENCHMARK("Parse Buggy.gltf with assimp") {
+		return aiImportFileFromMemory(reinterpret_cast<const char*>(bytes.data()), jsonData->getBufferSize(), 0, nullptr);
 	};
 #endif
 }
@@ -267,6 +295,12 @@ TEST_CASE("Benchmark massive gltf file", "[gltf-benchmark]") {
 		return rust::gltf::run(slice);
 	};
 #endif
+
+#ifdef HAS_ASSIMP
+	BENCHMARK("Parse Bistro with assimp") {
+		return aiImportFileFromMemory(reinterpret_cast<const char*>(bytes.data()), jsonData->getBufferSize(), 0, nullptr);
+	};
+#endif
 }
 
 TEST_CASE("Compare parsing performance with minified documents", "[gltf-benchmark]") {
@@ -315,3 +349,75 @@ TEST_CASE("Small CRC32-C benchmark", "[gltf-benchmark]") {
     };
 }
 #endif
+
+TEST_CASE("Compare base64 decoding performance", "[gltf-benchmark]") {
+	std::string base64Characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+	constexpr std::size_t bufferSize = 2 * 1024 * 1024;
+
+	// We'll generate a random base64 buffer
+	std::random_device device;
+	std::mt19937 gen(device());
+	std::uniform_int_distribution<> distribution(0, base64Characters.size() - 1);
+	std::string generatedData;
+	generatedData.reserve(bufferSize);
+	for (std::size_t i = 0; i < bufferSize; ++i) {
+		generatedData.push_back(base64Characters[distribution(gen)]);
+	}
+
+#ifdef HAS_TINYGLTF
+	BENCHMARK("Run tinygltf's base64 decoder") {
+		return tinygltf::base64_decode(generatedData);
+	};
+#endif
+
+#ifdef HAS_CGLTF
+	cgltf_options options {};
+	BENCHMARK("Run cgltf's base64 decoder") {
+		auto padding = fastgltf::base64::getPadding(generatedData);
+		auto outputSize = fastgltf::base64::getOutputSize(generatedData.size(), padding);
+		std::string output;
+		output.resize(outputSize);
+		auto* outputData = output.data();
+		return cgltf_load_buffer_base64(&options, generatedData.size(), generatedData.data(), reinterpret_cast<void**>(&outputData));
+	};
+#endif
+
+#ifdef HAS_GLTFRS
+	BENCHMARK("Run base64 Rust library decoder") {
+		auto slice = rust::Slice<const std::uint8_t>(reinterpret_cast<std::uint8_t*>(generatedData.data()), generatedData.size());
+		return rust::gltf::run_base64(slice);
+	};
+#endif
+
+#ifdef HAS_ASSIMP
+	BENCHMARK("Run Assimp's base64 decoder") {
+		return Assimp::Base64::Decode(generatedData);
+	};
+#endif
+
+	BENCHMARK("Run fastgltf's fallback base64 decoder") {
+		return fastgltf::base64::fallback_decode(generatedData);
+	};
+
+#if defined(FASTGLTF_IS_X86)
+	const auto& impls = simdjson::get_available_implementations();
+	if (const auto* sse4 = impls["westmere"]; sse4 != nullptr && sse4->supported_by_runtime_system()) {
+		BENCHMARK("Run fastgltf's SSE4 base64 decoder") {
+			return fastgltf::base64::sse4_decode(generatedData);
+		};
+	}
+
+	if (const auto* avx2 = impls["haswell"]; avx2 != nullptr && avx2->supported_by_runtime_system()) {
+		BENCHMARK("Run fastgltf's AVX2 base64 decoder") {
+			return fastgltf::base64::avx2_decode(generatedData);
+		};
+	}
+#elif defined(FASTGLTF_IS_A64)
+	const auto& impls = simdjson::get_available_implementations();
+	if (const auto* neon = impls["arm64"]; avx2 != nullptr && neon->supported_by_runtime_system()) {
+		BENCHMARK("Run fastgltf's Neon base64 decoder") {
+			return fastgltf::base64::neon_decode(generatedData);
+		};
+	}
+#endif
+}

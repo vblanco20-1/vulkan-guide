@@ -520,8 +520,8 @@ TEST_CASE("Test accessors min/max", "[gltf-loader]") {
 
     {
         auto& firstAccessor = accessors[0];
-        const auto* max = std::get_if<std::pmr::vector<std::int64_t>>(&firstAccessor.max);
-        const auto* min = std::get_if<std::pmr::vector<std::int64_t>>(&firstAccessor.min);
+        const auto* max = std::get_if<FASTGLTF_STD_PMR_NS::vector<std::int64_t>>(&firstAccessor.max);
+        const auto* min = std::get_if<FASTGLTF_STD_PMR_NS::vector<std::int64_t>>(&firstAccessor.min);
         REQUIRE(max != nullptr);
         REQUIRE(min != nullptr);
         REQUIRE(max->size() == fastgltf::getNumComponents(firstAccessor.type));
@@ -533,8 +533,8 @@ TEST_CASE("Test accessors min/max", "[gltf-loader]") {
 
     {
         auto& secondAccessor = accessors[1];
-        const auto* max = std::get_if<std::pmr::vector<double>>(&secondAccessor.max);
-        const auto* min = std::get_if<std::pmr::vector<double>>(&secondAccessor.min);
+        const auto* max = std::get_if<FASTGLTF_STD_PMR_NS::vector<double>>(&secondAccessor.max);
+        const auto* min = std::get_if<FASTGLTF_STD_PMR_NS::vector<double>>(&secondAccessor.min);
         REQUIRE(max != nullptr);
         REQUIRE(min != nullptr);
         REQUIRE(max->size() == fastgltf::getNumComponents(secondAccessor.type));
@@ -552,8 +552,8 @@ TEST_CASE("Test accessors min/max", "[gltf-loader]") {
 
     {
         auto& fifthAccessor = accessors[4];
-        const auto* max = std::get_if<std::pmr::vector<double>>(&fifthAccessor.max);
-        const auto* min = std::get_if<std::pmr::vector<double>>(&fifthAccessor.min);
+        const auto* max = std::get_if<FASTGLTF_STD_PMR_NS::vector<double>>(&fifthAccessor.max);
+        const auto* min = std::get_if<FASTGLTF_STD_PMR_NS::vector<double>>(&fifthAccessor.min);
         REQUIRE(max != nullptr);
         REQUIRE(min != nullptr);
         REQUIRE(max->size() == fastgltf::getNumComponents(fifthAccessor.type));

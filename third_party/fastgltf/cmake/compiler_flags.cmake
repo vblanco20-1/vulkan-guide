@@ -1,4 +1,4 @@
-macro(compiler_flags TARGET)
+macro(fastgltf_compiler_flags TARGET)
     if (NOT ${TARGET} STREQUAL "" AND TARGET ${TARGET})
         # Note that simdjson automatically figures out which SIMD intrinsics to use at runtime based on
         # cpuid, meaning no architecture flags or other compile flags need to be passed.
@@ -20,7 +20,7 @@ macro(compiler_flags TARGET)
     endif()
 endmacro()
 
-macro(enable_debug_inlining TARGET)
+macro(fastgltf_enable_debug_inlining TARGET)
     if (NOT ${TARGET} STREQUAL "" AND TARGET ${TARGET})
         if (MSVC)
             target_compile_options(${TARGET} PRIVATE $<$<CONFIG:DEBUG>:/Ob2>)

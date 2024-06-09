@@ -67,7 +67,7 @@
 
 #if FASTGLTF_CPP_23
 #define FASTGLTF_UNREACHABLE std::unreachable();
-#elif defined(__GNUC__)
+#elif defined(__GNUC__) || defined(__clang__)
 #define FASTGLTF_UNREACHABLE __builtin_unreachable();
 #elif defined(_MSC_VER)
 #define FASTGLTF_UNREACHABLE __assume(false);

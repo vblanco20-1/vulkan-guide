@@ -1,5 +1,11 @@
 # fastgltf
 
+![vcpkg](https://img.shields.io/vcpkg/v/fastgltf?style=flat-square)
+![conan center](https://img.shields.io/conan/v/fastgltf?style=flat-square)
+![CI_x64 workflow status](https://img.shields.io/github/actions/workflow/status/spnda/fastgltf/ci_x64.yml?label=CI%20x64&style=flat-square)
+![CI_arm workflow status](https://img.shields.io/github/actions/workflow/status/spnda/fastgltf/ci_arm.yml?label=CI%20ARM&style=flat-square)
+
+
 **fastgltf** is a speed and usability focused glTF 2.0 parser written in modern C++17 with minimal dependencies.
 It uses SIMD in various areas to decrease the time the application spends parsing and loading glTF data.
 By taking advantage of modern C++17 (and optionally C++20) it also provides easy and safe access to the properties and data.
