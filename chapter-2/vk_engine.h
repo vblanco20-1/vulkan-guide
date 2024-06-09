@@ -10,7 +10,7 @@
 #include <functional>
 #include "vk_descriptors.h"
 
-struct DeletionQueue
+struct DeletionQueue 
 {
 	std::deque<std::function<void()>> deletors;
 

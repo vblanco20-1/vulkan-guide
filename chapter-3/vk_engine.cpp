@@ -436,25 +436,25 @@ void VulkanEngine::init_imgui()
 	init_info.MinImageCount = 3;
 	init_info.ImageCount = 3;
 	init_info.UseDynamicRendering = true;
-	init_info.ColorAttachmentFormat = _swapchainImageFormat;
+
+	//dynamic rendering parameters for imgui to use
+	init_info.PipelineRenderingCreateInfo = { .sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO };
+	init_info.PipelineRenderingCreateInfo.colorAttachmentCount = 1;
+	init_info.PipelineRenderingCreateInfo.pColorAttachmentFormats = &_swapchainImageFormat;
+
 
 	init_info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
 
-	ImGui_ImplVulkan_Init(&init_info, VK_NULL_HANDLE);
+	ImGui_ImplVulkan_Init(&init_info);
 
-	// execute a gpu command to upload imgui font textures
-	immediate_submit([&](VkCommandBuffer cmd) { ImGui_ImplVulkan_CreateFontsTexture(cmd); });
-
-	// clear font textures from cpu data
-	ImGui_ImplVulkan_DestroyFontUploadObjects();
+	ImGui_ImplVulkan_CreateFontsTexture();
 
 	// add the destroy the imgui created structures
 	_mainDeletionQueue.push_function([=]() {
-		vkDestroyDescriptorPool(_device, imguiPool, nullptr);
 		ImGui_ImplVulkan_Shutdown();
+		vkDestroyDescriptorPool(_device, imguiPool, nullptr);
 		});
 }
-
 void VulkanEngine::run()
 {
 	SDL_Event e;
@@ -492,7 +492,7 @@ void VulkanEngine::run()
 
 		// imgui new frame
 		ImGui_ImplVulkan_NewFrame();
-		ImGui_ImplSDL2_NewFrame(_window);
+		ImGui_ImplSDL2_NewFrame();
 
 		ImGui::NewFrame();
 

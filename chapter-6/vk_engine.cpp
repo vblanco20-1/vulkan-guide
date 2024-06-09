@@ -597,7 +597,7 @@ void VulkanEngine::run()
 
         // imgui new frame
         ImGui_ImplVulkan_NewFrame();
-        ImGui_ImplSDL2_NewFrame(_window);
+        ImGui_ImplSDL2_NewFrame();
 
         ImGui::NewFrame();
 
@@ -1125,39 +1125,40 @@ void VulkanEngine::init_imgui()
 
     // 2: initialize imgui library
 
-    // this initializes the core structures of imgui
-    ImGui::CreateContext();
+	// this initializes the core structures of imgui
+	ImGui::CreateContext();
 
-    // this initializes imgui for SDL
-    ImGui_ImplSDL2_InitForVulkan(_window);
+	// this initializes imgui for SDL
+	ImGui_ImplSDL2_InitForVulkan(_window);
 
-    // this initializes imgui for Vulkan
-    ImGui_ImplVulkan_InitInfo init_info = {};
-    init_info.Instance = _instance;
-    init_info.PhysicalDevice = _chosenGPU;
-    init_info.Device = _device;
-    init_info.Queue = _graphicsQueue;
-    init_info.DescriptorPool = imguiPool;
-    init_info.MinImageCount = 3;
-    init_info.ImageCount = 3;
-    init_info.UseDynamicRendering = true;
-    init_info.ColorAttachmentFormat = _swapchainImageFormat;
+	// this initializes imgui for Vulkan
+	ImGui_ImplVulkan_InitInfo init_info = {};
+	init_info.Instance = _instance;
+	init_info.PhysicalDevice = _chosenGPU;
+	init_info.Device = _device;
+	init_info.Queue = _graphicsQueue;
+	init_info.DescriptorPool = imguiPool;
+	init_info.MinImageCount = 3;
+	init_info.ImageCount = 3;
+	init_info.UseDynamicRendering = true;
 
-    init_info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
+	//dynamic rendering parameters for imgui to use
+	init_info.PipelineRenderingCreateInfo = { .sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO };
+	init_info.PipelineRenderingCreateInfo.colorAttachmentCount = 1;
+	init_info.PipelineRenderingCreateInfo.pColorAttachmentFormats = &_swapchainImageFormat;
 
-    ImGui_ImplVulkan_Init(&init_info, VK_NULL_HANDLE);
 
-    // execute a gpu command to upload imgui font textures
-    immediate_submit([&](VkCommandBuffer cmd) { ImGui_ImplVulkan_CreateFontsTexture(cmd); });
+	init_info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
 
-    // clear font textures from cpu data
-    ImGui_ImplVulkan_DestroyFontUploadObjects();
+	ImGui_ImplVulkan_Init(&init_info);
 
-    // add the destroy the imgui created structures
-    _mainDeletionQueue.push_function([=]() {
-        vkDestroyDescriptorPool(_device, imguiPool, nullptr);
-        ImGui_ImplVulkan_Shutdown();
-    });
+	ImGui_ImplVulkan_CreateFontsTexture();
+
+	// add the destroy the imgui created structures
+	_mainDeletionQueue.push_function([=]() {
+		ImGui_ImplVulkan_Shutdown();
+		vkDestroyDescriptorPool(_device, imguiPool, nullptr);
+		});
 }
 
 void VulkanEngine::init_pipelines()
