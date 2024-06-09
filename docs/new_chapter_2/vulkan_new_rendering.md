@@ -56,7 +56,7 @@ class VulkanEngine{
 
 ```
 
-We then call it from 2 places, right after we wait on the Fence per frame, and from the cleanup() function after the WaitIdle call. By flushing it right after the fence, we make sure that the GPU has finished executing that frame so we can safely delete objects create for that specific frame only.
+We then call it from 2 places, right after we wait on the Fence per frame, and from the cleanup() function after the WaitIdle call. By flushing it right after the fence, we make sure that the GPU has finished executing that frame so we can safely delete objects create for that specific frame only. We also want to make sure we free those per-frame resources when destroying the rest of frame data.
 
 ```cpp
 void VulkanEngine::draw()
@@ -73,13 +73,27 @@ void VulkanEngine::cleanup()
 {	
 	if (_isInitialized) {
 		
-		//make sure the gpu has stopped doing its things
+		//make sure the gpu has stopped doing its things				
 		vkDeviceWaitIdle(_device);
-        _mainDeletionQueue.flush();
+		
+		//free per-frame structures and deletion queue
+		for (int i = 0; i < FRAME_OVERLAP; i++) {
 
-        //other code
-    }
+			vkDestroyCommandPool(_device, _frames[i]._commandPool, nullptr);
 
+			//destroy sync objects
+			vkDestroyFence(_device, _frames[i]._renderFence, nullptr);
+			vkDestroySemaphore(_device, _frames[i]._renderSemaphore, nullptr);
+			vkDestroySemaphore(_device, _frames[i]._swapchainSemaphore, nullptr);
+
+			_frames[i]._deletionQueue.flush();
+		}
+
+		//flush the global deletion queue
+		_mainDeletionQueue.flush();
+
+		//rest of cleanup function
+	}
 }
 ```
 
