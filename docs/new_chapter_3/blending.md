@@ -18,48 +18,47 @@ void PipelineBuilder::enable_blending_additive()
 {
     _colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
     _colorBlendAttachment.blendEnable = VK_TRUE;
-	_colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
-	_colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_DST_ALPHA;
-	_colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
-	_colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
-	_colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
-	_colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
+    _colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+    _colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE;
+    _colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
+    _colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+    _colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+    _colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
 }
 
 void PipelineBuilder::enable_blending_alphablend()
 {
-	_colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-	_colorBlendAttachment.blendEnable = VK_TRUE;
-	_colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_DST_ALPHA;
-	_colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_DST_ALPHA;
-	_colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
-	_colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
-	_colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
-	_colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
+    _colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+    _colorBlendAttachment.blendEnable = VK_TRUE;
+    _colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+    _colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+    _colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
+    _colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+    _colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+    _colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
 }
 ```
-
 
 When setting blending options in vulkan, we need to fill the formula on both color and alpha. The parameters work the same on both color and alpha. The formula works like this
 
 ```
 outColor = srcColor * srcColorBlendFactor <op> dstColor * dstColorBlendFactor;
 ```
-there are a few possible operators, but for the most part we will be doing `VK_BLEND_OP_ADD`, as its the most basic and guaranteed to work. There are many other much more advanced operators, but those come with extensions and we wont use them.
+There are a few possible operators, but for the most part we will be doing `VK_BLEND_OP_ADD`, as its the most basic and guaranteed to work. There are many other much more advanced operators, but those come with extensions and we wont use them. Source (from srcColor and blend factor) refers to the color we are processing on our pipeline, and Destination (dstColor and blend factor) is the current value of the image we are rendering into.
 
 With the formula above, lets explain what the addition blending does.
 
-`VK_BLEND_FACTOR_ONE` sets the blend factor to just 1.0, so no multiplying. `VK_BLEND_FACTOR_DST_ALPHA` on the other hand multiplies it by the alpha of the destination. Our blending ends up as this formula
+`VK_BLEND_FACTOR_ONE` sets the blend factor to just 1.0, so no multiplying. `VK_BLEND_FACTOR_SRC_ALPHA` on the other hand multiplies it by the alpha of the source. Our blending ends up as this formula
 ```c
-outColor = srcColor.rgb * 1.0 + dstColor.rgb * dstColor.a
+outColor = srcColor.rgb * srcColor.a + dstColor.rgb * 1.0
 ```
 
 The alpha-blend one will look like this instead.
 
 ```c
-outColor = srcColor.rgb * (1.0 - dst.color.a) + dstColor.rgb * dstColor.a
+outColor = srcColor.rgb * srcColor.a + dstColor.rgb * (1.0 - srcColor.a)
 ```
-Essentially making it into a lerp controlled by dstColor alpha.
+Essentially making it into a lerp controlled by srcColor alpha, which will be from our shader.
 
 Lets try to use it to see what it does. We dont have alpha set in our shaders, so lets just try the additive one. Change the blending on the `init_mesh_pipeline()` function.
 

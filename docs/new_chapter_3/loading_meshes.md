@@ -336,17 +336,17 @@ We made the depth option when the pipelinebuilder was made, buit left it disable
 
 <!-- codegen from tag depth_enable on file E:\ProgrammingProjects\vulkan-guide-2\shared/vk_pipelines.cpp --> 
 ```cpp
-void PipelineBuilder::enable_depthtest(bool depthWriteEnable,VkCompareOp op)
+void PipelineBuilder::enable_depthtest(bool depthWriteEnable, VkCompareOp op)
 {
-	_depthStencil.depthTestEnable = VK_TRUE;
-	_depthStencil.depthWriteEnable = depthWriteEnable;
-	_depthStencil.depthCompareOp = op;
-	_depthStencil.depthBoundsTestEnable = VK_FALSE;
-	_depthStencil.stencilTestEnable = VK_FALSE;
-	_depthStencil.front = {};
-	_depthStencil.back = {};
-	_depthStencil.minDepthBounds = 0.f;
-	_depthStencil.maxDepthBounds = 1.f;
+    _depthStencil.depthTestEnable = VK_TRUE;
+    _depthStencil.depthWriteEnable = depthWriteEnable;
+    _depthStencil.depthCompareOp = op;
+    _depthStencil.depthBoundsTestEnable = VK_FALSE;
+    _depthStencil.stencilTestEnable = VK_FALSE;
+    _depthStencil.front = {};
+    _depthStencil.back = {};
+    _depthStencil.minDepthBounds = 0.f;
+    _depthStencil.maxDepthBounds = 1.f;
 }
 ```
 

@@ -321,17 +321,18 @@ void vkutil::copy_image_to_image(VkCommandBuffer cmd, VkImage source, VkImage de
 	vkCmdBlitImage2(cmd, &blitInfo);
 }
 ```
+ 
 Also add the corresponding declaration to `vk_images.h`
-```
+```cpp
 	namespace vkutil {
 
 	    // Existing:
 	    void transition_image(VkCommandBuffer cmd, VkImage image, VkImageLayout currentLayout, VkImageLayout newLayout);
 
-            void copy_image_to_image(VkCommandBuffer cmd, VkImage source, VkImage destination, VkExtent2D srcSize, VkExtent2D dstSize);	
+		void copy_image_to_image(VkCommandBuffer cmd, VkImage source, VkImage destination, VkExtent2D srcSize, VkExtent2D dstSize);	
 	}
 ```
- 
+
 Vulkan has 2 main ways of copying one image to another. you can use VkCmdCopyImage or VkCmdBlitImage.
 CopyImage is faster, but its much more restricted, for example the resolution on both images must match.
 Meanwhile, blit image lets you copy images of different formats and different sizes into one another. You have a source rectangle and a target rectangle, and the system copies it into its position. Those two functions are useful when setting up the engine, but later its best to ignore them and write your own version that can do extra logic on a fullscreen fragment shader.
@@ -353,14 +354,7 @@ void VulkanEngine::draw_background(VkCommandBuffer cmd)
 }
 ```
 
-Add this to the vk_engine.h header
-```
-class VulkanEngine {
-//...
-  private:
-       void draw_background(VkCommandBuffer cmd);
-}
-```
+Add the function to the header too.
 
 We will be changing the code that records the command buffer. You can now delete the older one. 
 The new code is this.

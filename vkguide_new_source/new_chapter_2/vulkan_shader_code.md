@@ -83,7 +83,7 @@ Descriptor allocation happens through `VkDescriptorPool`. Those are objects that
 
 One very important thing to do with pools is that when you reset a pool, it destroys all of the descriptor sets allocated from it. This is very useful for things like per-frame descriptors. That way we can have descriptors that are used just for one frame, allocated dynamically, and then before we start the frame we completely delete all of them in one go. This is confirmed to be a fast path by GPU vendors, and recommended to use when you need to handle per-frame descriptor sets. 
 
-The DescriptorAllocator we have just has functions to initialize a pool, clear the pool, and allocate a descriptor set from it.
+The DescriptorAllocator we have just declared has functions to initialize a pool, clear the pool, and allocate a descriptor set from it.
 
 Lets write the code now
 
