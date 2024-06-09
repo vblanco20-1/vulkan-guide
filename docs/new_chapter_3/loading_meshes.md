@@ -369,6 +369,18 @@ Modify that `set_depth_format` call on the `init_triangle_pipeline` function too
 
 You can run the engine now, and the monkey head will be setup properly. The other draws with the triangle and rectangle render behind it because we have no depth testing set for them so they neither write or read from the depth attachment.
 
+
+We need to add cleanup code for the new meshes we are creating, so we will destroy the buffers of the mesh array in the cleanup function, before the main deletion queue flush.
+
+```cpp
+for (auto& mesh : testMeshes) {
+	destroy_buffer(mesh->meshBuffers.indexBuffer);
+	destroy_buffer(mesh->meshBuffers.vertexBuffer);
+}
+
+_mainDeletionQueue.flush();
+```
+
 Before continuing, remove the code with the rectangle mesh and the triangle in the background. We will no longer need them.
 Delete `init_triangle_pipeline` function, its objects, and the creation of the rectangle mesh on `init_default_data` plus its usages. On draw_geometry, move the viewport and scissor code so that its after the call to `vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _meshPipeline);`, as the call to binding the triangle pipeline is now gone and those VkCmdSetViewport and VkCmdSetScissor calls need to be done with a pipeline bound.
 
