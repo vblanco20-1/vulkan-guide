@@ -237,9 +237,9 @@ Now we can add the imgui debug window for this. This goes on run() function. We 
 			ImGui::InputFloat4("data2",(float*)& selected.data.data2);
 			ImGui::InputFloat4("data3",(float*)& selected.data.data3);
 			ImGui::InputFloat4("data4",(float*)& selected.data.data4);
-		
-			ImGui::End();
 		}
+		ImGui::End();
+
 		ImGui::Render();
 
 ```
