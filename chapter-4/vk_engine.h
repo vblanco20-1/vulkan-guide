@@ -136,7 +136,6 @@ public:
 
 	FrameData& get_current_frame() { return _frames[_frameNumber % FRAME_OVERLAP]; };
 
-
 	VkQueue _graphicsQueue;
 	uint32_t _graphicsQueueFamily;	
 
@@ -235,6 +234,7 @@ public:
 	AllocatedImage create_image(void* data, VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool mipmapped = false);
 
 	void destroy_buffer(const AllocatedBuffer& buffer);
+	void destroy_image(const AllocatedImage& img);
 
 	bool resize_requested{ false };
 	bool freeze_rendering{ false };

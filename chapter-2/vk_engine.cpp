@@ -69,14 +69,9 @@ void VulkanEngine::cleanup()
 		
 		//make sure the gpu has stopped doing its things
 		vkDeviceWaitIdle(_device);
-		for (auto& frame : _frames) {
-			
-		}
 
 		_mainDeletionQueue.flush();
 		for (int i = 0; i < FRAME_OVERLAP; i++) {
-
-			_frames[i]._deletionQueue.flush();
 
 			vkDestroyCommandPool(_device, _frames[i]._commandPool, nullptr);
 
@@ -84,6 +79,8 @@ void VulkanEngine::cleanup()
 			vkDestroyFence(_device, _frames[i]._renderFence, nullptr);
 			vkDestroySemaphore(_device, _frames[i]._renderSemaphore, nullptr);
 			vkDestroySemaphore(_device, _frames[i]._swapchainSemaphore, nullptr);
+
+			_frames[i]._deletionQueue.flush();
 		}
 
 		destroy_swapchain();
@@ -422,11 +419,11 @@ void VulkanEngine::init_vulkan()
 
 	SDL_Vulkan_CreateSurface(_window, _instance, &_surface);
 
-	VkPhysicalDeviceVulkan13Features features{};
+	VkPhysicalDeviceVulkan13Features features{ .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES };
 	features.dynamicRendering = true;
 	features.synchronization2 = true;
 
-	VkPhysicalDeviceVulkan12Features features12{};
+	VkPhysicalDeviceVulkan12Features features12{ .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES };
 	features12.bufferDeviceAddress = true;
 	features12.descriptorIndexing = true;
 
@@ -895,5 +892,12 @@ void VulkanEngine::init_descriptors()
 	drawImageWrite.pImageInfo = &imgInfo;
 
 	vkUpdateDescriptorSets(_device, 1, &drawImageWrite, 0, nullptr);
+
+	//make sure both the descriptor allocator and the new layout get cleaned up properly
+	_mainDeletionQueue.push_function([&]() {
+		globalDescriptorAllocator.destroy_pool(_device);
+
+		vkDestroyDescriptorSetLayout(_device, _drawImageDescriptorLayout, nullptr);
+	});
 //< init_desc_2
 }
