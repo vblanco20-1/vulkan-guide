@@ -32,6 +32,7 @@ target_include_directories(glm INTERFACE glm)
 #target_link_libraries(sdl2 INTERFACE SDL2 SDL2main)
 
 add_library(imgui STATIC)
+set_property(TARGET imgui PROPERTY CXX_STANDARD 20)
 
 target_include_directories(imgui PUBLIC imgui)
 
