@@ -79,7 +79,7 @@ On this image we can see what a light does. A sphere is drawn that covers the bo
 Once all of the point lights are rendered, it applies a full-screen quad that draws the global light of the scene.
 ![map]({{site.baseurl}}/diagrams/metafor/deferred_global.png)
 
-We are going to see a LOT of these full-screen quads. The game doesnt use compute for drawing, so it does all of its postprocessing as fullscreen quads of layers and layers, completely murdering the poor steamdeck bandwidth.
+We are going to see a LOT of these full-screen quads. The game doesnt use compute for drawing, and instead opts to use full-screen quads that do that logic in the pixel shader. While doing this is OK if you really need to run that logic on all pixels, this engine likes to do postprocessing and effects as layers and layers of full-screen quads with low performance.
 
 After the global light, we see another 3 full-screen quads one after another. One of them draws a sky/background using a lower resolution image, the other applies the background on top of the full resolution one, and the 3rd applies global fog. These are all subtle, so they look very similar to the image above.
 
@@ -136,7 +136,7 @@ So aparently, we have all of it as primitive shader invocation, which is basical
 
 Something interesting comes to view, and it is that the 3 shadows are rendering the exact same objects. But each of the cascades is rendering a considerably different image. One of them is close to the characters and only renders characters + a bit of ground, while the far scale one draws most of the city. Turns out, that the game does not do any sort of culling for its shadow casting. Even the small shadow cascade gets thrown every single object in the map at it. This is crazy, and its what results on the timeline we are seeing on RGP. The shadow cascades are being sent so many geometry, most of it off-screen, that the entire execution is completely bottlenecked on pure triangle processing in the vertex shaders. 
 
-With correct culling in here, the only shadow cascade that would be expensive to draw would be the far distance one, while the other 2 would be very cheap to draw. An stimate is that it would probably make the time for shadows to go from 12.5 miliseconds down to 4 miliseconds. Still expensive, but then it could also render the shadows at a lower resolution, as 3 2k resolution shadows is a bit on the expensive side. Even then, the biggest bottleneck is the raw amount of triangles thrown at the GPU for these shadows.
+With correct culling in here, the only shadow cascade that would be expensive to draw would be the far distance one, while the other 2 would be very cheap to draw. An estimate is that it would probably make the time for shadows to go from 12.5 miliseconds down to 4 miliseconds. Still expensive, but then it could also render the shadows at a lower resolution, as 3 2k resolution shadows is a bit on the expensive side. Even then, the biggest bottleneck is the raw amount of triangles thrown at the GPU for these shadows.
 
 Comparing with the captures on the other 2 zones, it looks like the same happens. This is a engine-wide issue and happens on every map, it seems.
 
