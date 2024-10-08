@@ -1,6 +1,6 @@
 ---
 layout: default
-title: Performance and frame analysis - Metaphor: ReFantazio
+title: Performance and frame analysis - Metaphor ReFantazio
 parent: Extra Chapter
 nav_order: 45
 ---
