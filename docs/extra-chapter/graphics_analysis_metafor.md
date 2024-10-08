@@ -142,6 +142,37 @@ Comparing with the captures on the other 2 zones, it looks like the same happens
 
 The next zone we can identify is the gbuffer environment draw. This one also has low occupancy overall, but a less extreme vertex bottleneck. It takes around 4 miliseconds to draw the background, and another 2 miliseconds to draw the characters. 
 
-On the background, there are some draws that are slow in a strange way. All others are faster. 2 draws, on this city scene, take 1 milisecond by themselves. Looking at them in renderdoc, they are terrain draws, and have a different and more complex shader than the other meshes. We dont really know what the shader is doing, but radeon profiler tells us that it has low occupancy, with it being at 10/16 on the fragment shader, and 12/16 on the vertex shader. 
+On the background, there are some draws that are slow in a strange way. All others are faster. 2 draws, on this city scene, take 1 milisecond by themselves. Looking at them in renderdoc, they are terrain draws, and have a different and more complex shader than the other meshes. We dont really know what the shader is doing, but radeon profiler tells us that it has low occupancy, with it being at 10/16 on the fragment shader, and 12/16 on the vertex shader. Looking at the other capture, in the desert, is even more dramatic. On that desert, the terrain mesh is bigger and covers a lot more of the screen, so it ends up costing 3 miliseconds by itself.
 
 ![map]({{site.baseurl}}/diagrams/metafor/rgp_occupancy.png)
+
+If we looked at the original shader, its likely we could find a way to optimize it a little bit and make it faster, which would give a bit of extra perf. The other draws use simple shaders and are fast to run, there is just a lot of them and they are fairly heavy in polycount.
+
+Similarly, there is nothing really out of the ordinary on the character draws. They are forward lit, but their shaders are not really that complicated, and they are high in polycount due to fidelity. 
+There is one issue, and is the gbuffers. The normals are stored in a 4 channel 16 bit per channel float texture, but normals do not require this. Most games store normals as rgb 8 bit, with then using the 4th alpha channel for something else. Alternatively, one can use a 2-channel 16 bit texture, but use octahedral encoding for those normals, halving the size required. When doing a gbuffer, the biggest performance bottleneck is always memory bandwidth due to the data you end up storing per pixel, so trying to find the most optimal way of encoding that data saves a lot of performance. 
+
+Continuing down the render pipeline, we reach the section of the deferred lighting. Above, i mentioned that we would be looking at this. The deferred lighting takes 2.5 miliseconds. 2 miliseconds for the spherical point-lights, and half a milisecond for the ambient/sun light. 
+
+This is simply way too slow. This sort of light uses simple formulas, and the steam deck is powerful enough to draw thousands of fancy math PBR lights no sweat if used properly. So what is going on here?
+
+The issue is yet again, due to bandwidth and the overdraw caused by the lights. 
+
+![map]({{site.baseurl}}/diagrams/metafor/overdraw.png)
+In renderdoc, we can select the Overlay: Quad Overdraw (pass) option to check the overdraw of a given renderpass. This go through the colors of the rainbow towards white depending on how much the scene overdraws. If you have light blue, its already a warning. this goes much further beyond.
+
+The deferred rendering here is broken, with it not doing the stencil part properly, and each light drawing a transparent sphere with depth testing disabled that will run the math on every single pixel inside it. This is probably the single worst possible way to implement deferred lights, and a simple bruteforce algorithm would significantly outperform it.
+
+The overdraw here is considerable, and the bandwith used is massive, as for every pixel in those sphere draws it needs to load all of the data and write the light value back.
+To improve this, the developers could implement a simple full-screen quad with a bruteforce shader (the simplest possible, loop every light at every pixel), and it would drop that 2.5 ms perf usage down to 0.5 or so. Their amount of lights is fairly low, so it doesnt matter much.
+
+Alternatively, and this would likely be a single-line fix, they should enable depth-testing for the lights, so that they dont render behind buildings. And also implement culling for them, as renderdoc shows that its doing the light calculations for every light in the map, not checking if they are visible.
+
+Once characters and background are rendered, we enter the final section of the frame, with transparencies, postfx, and UI. This takes 5.5 miliseconds.
+Remember the mention of those full screen quads for different effects? Due to memory constraints, a full screen quad at native resolution on a steam deck will take 0.25 miliseconds by itself, and we have quite a few here.
+
+A lot of the postprocessing and several effects apply layers of effects on top of each other, each as a fullscreen quad. This means that at every one of them, it needs to load the memory for those pixels, do the postprocessing calculations, and store it back. If instead of this it did it in 1 quad (or compute shader) that does multiple things at once, its very likely to be a significant performance win. The transparency and vfx draws here dont take much time, basically negligible at the side of the fullscreen quads. Of those 5.5 miliseconds of transparency, postfx, and UI, around 3.5 to 4 of them are spent due to the overhead of doing fullscreen quads over and over. A lot of those do make sense and are needed as they are, like for the bloom lighting effect, but that entire pipeline could be significantly optimized by merging shaders.
+
+With this whole analysis, how fast could the game run? Assuming no changes on assets, just optimizing the rendering code itself.
+
+The biggest win of all would be the change to the shadows. We can save 8 miliseconds by fixing their culling, which should be a simple code fix. Improving the gbuffer layout compressing memory would save RAM, and will probably drop around half a milisecond from the gbuffer and character passes. Fixing the terrain mesh and its shader would save 0.5 ms to 1 ms, depending on scene. Going from overdraw-hell deferred lighting into a bruteforce algorithm or a fancier scheme would save 2 miliseconds, and improving the postfx pipeline by merging shaders would save 1 to 2 ms more. The total would be 12 to 14 miliseconds saved, which would make the game render almost 2x faster. At that level, the game would stay at 60 fps on most places in the game on the steam deck. We could save a bit more perf by doing things like rendering the shadows at a bit less resolution, offering it as a option in settings. In the same way, removing that 3rd shadow cascade as an option would save another 1-2 ms from the game and would be great for most of it, but it does change the image quality. 
+
