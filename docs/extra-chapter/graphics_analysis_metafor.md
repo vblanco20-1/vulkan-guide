@@ -2,7 +2,7 @@
 layout: default
 title: Performance and frame analysis - Metaphor: ReFantazio
 parent: Extra Chapter
-nav_order: 1
+nav_order: 45
 ---
 
 # Intro 
