@@ -1,0 +1,28 @@
+# CMake generation dependency list for this directory.
+C:/Program Files/CMake/share/cmake-3.30/Modules/CMakeCInformation.cmake
+C:/Program Files/CMake/share/cmake-3.30/Modules/CMakeCXXInformation.cmake
+C:/Program Files/CMake/share/cmake-3.30/Modules/CMakeCommonLanguageInclude.cmake
+C:/Program Files/CMake/share/cmake-3.30/Modules/CMakeGenericSystem.cmake
+C:/Program Files/CMake/share/cmake-3.30/Modules/CMakeInitializeConfigs.cmake
+C:/Program Files/CMake/share/cmake-3.30/Modules/CMakeLanguageInformation.cmake
+C:/Program Files/CMake/share/cmake-3.30/Modules/CMakeRCInformation.cmake
+C:/Program Files/CMake/share/cmake-3.30/Modules/CMakeSystemSpecificInformation.cmake
+C:/Program Files/CMake/share/cmake-3.30/Modules/CMakeSystemSpecificInitialize.cmake
+C:/Program Files/CMake/share/cmake-3.30/Modules/Compiler/CMakeCommonCompilerMacros.cmake
+C:/Program Files/CMake/share/cmake-3.30/Modules/Compiler/MSVC-C.cmake
+C:/Program Files/CMake/share/cmake-3.30/Modules/Compiler/MSVC-CXX.cmake
+C:/Program Files/CMake/share/cmake-3.30/Modules/Compiler/MSVC.cmake
+C:/Program Files/CMake/share/cmake-3.30/Modules/FindPackageHandleStandardArgs.cmake
+C:/Program Files/CMake/share/cmake-3.30/Modules/FindPackageMessage.cmake
+C:/Program Files/CMake/share/cmake-3.30/Modules/FindVulkan.cmake
+C:/Program Files/CMake/share/cmake-3.30/Modules/Platform/Windows-Initialize.cmake
+C:/Program Files/CMake/share/cmake-3.30/Modules/Platform/Windows-MSVC-C.cmake
+C:/Program Files/CMake/share/cmake-3.30/Modules/Platform/Windows-MSVC-CXX.cmake
+C:/Program Files/CMake/share/cmake-3.30/Modules/Platform/Windows-MSVC.cmake
+C:/Program Files/CMake/share/cmake-3.30/Modules/Platform/Windows.cmake
+C:/Program Files/CMake/share/cmake-3.30/Modules/Platform/WindowsPaths.cmake
+C:/Users/Daenyl/vulkan-guide/CMakeFiles/3.30.5/CMakeCCompiler.cmake
+C:/Users/Daenyl/vulkan-guide/CMakeFiles/3.30.5/CMakeCXXCompiler.cmake
+C:/Users/Daenyl/vulkan-guide/CMakeFiles/3.30.5/CMakeRCCompiler.cmake
+C:/Users/Daenyl/vulkan-guide/CMakeFiles/3.30.5/CMakeSystem.cmake
+C:/Users/Daenyl/vulkan-guide/CMakeLists.txt

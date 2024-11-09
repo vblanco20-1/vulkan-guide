@@ -1,0 +1,7 @@
+C:/Users/Daenyl/vulkan-guide/CMakeFiles/Shaders.dir
+C:/Users/Daenyl/vulkan-guide/CMakeFiles/ALL_BUILD.dir
+C:/Users/Daenyl/vulkan-guide/CMakeFiles/ZERO_CHECK.dir
+C:/Users/Daenyl/vulkan-guide/third_party/CMakeFiles/vkbootstrap.dir
+C:/Users/Daenyl/vulkan-guide/third_party/CMakeFiles/tinyobjloader.dir
+C:/Users/Daenyl/vulkan-guide/third_party/CMakeFiles/imgui.dir
+C:/Users/Daenyl/vulkan-guide/src/CMakeFiles/vulkan_guide.dir

@@ -1,0 +1,10 @@
+^C:\USERS\DAENYL\VULKAN-GUIDE\THIRD_PARTY\CMAKELISTS.TXT
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SC:/Users/Daenyl/vulkan-guide -BC:/Users/Daenyl/vulkan-guide --check-stamp-file C:/Users/Daenyl/vulkan-guide/third_party/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

@@ -1,0 +1,10 @@
+^C:\USERS\DAENYL\VULKAN-GUIDE\CMAKEFILES\61F295AA6A16A773B5F248A6213C2796\GENERATE.STAMP.RULE
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SC:/Users/Daenyl/vulkan-guide -BC:/Users/Daenyl/vulkan-guide --check-stamp-list CMakeFiles/generate.stamp.list --vs-solution-file C:/Users/Daenyl/vulkan-guide/vulkan_guide.sln
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
