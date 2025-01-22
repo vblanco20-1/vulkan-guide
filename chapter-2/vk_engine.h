@@ -23,7 +23,8 @@ struct DeletionQueue
 	{
 		while (!deletors.empty())
 		{
-			deletors.top(); 
+			auto topFunc = deletors.top();
+			topFunc(); // call function 
 			deletors.pop(); 
 		}
 	}
