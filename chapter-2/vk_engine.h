@@ -6,25 +6,26 @@
 #include <vk_types.h>
 #include <vector>
 #include "vk_mem_alloc.h"
-#include <deque>
+#include <stack>
 #include <functional>
 #include "vk_descriptors.h"
 
 struct DeletionQueue 
 {
-	std::deque<std::function<void()>> deletors;
+	std::stack<std::function<void()>> deletors; 
 
-	void push_function(std::function<void()>&& function) {
-		deletors.push_back(function);
+	void push_function(std::function<void()>&& function) 
+	{
+		deletors.push(function); 
 	}
 
-	void flush() {
-		// reverse iterate the deletion queue to execute all the functions
-		for (auto it = deletors.rbegin(); it != deletors.rend(); it++) {
-			(*it)(); //call functors
+	void flush() 
+	{
+		while (!deletors.empty())
+		{
+			deletors.top(); 
+			deletors.pop(); 
 		}
-
-		deletors.clear();
 	}
 };
 
