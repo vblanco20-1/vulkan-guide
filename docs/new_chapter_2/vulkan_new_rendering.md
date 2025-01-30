@@ -247,7 +247,7 @@ Now, at the end of init_swapchain, lets create it.
 		1
 	};
 
-	//hardcoding the draw format to 32 bit float
+	//hardcoding the draw format to 64 bit float
 	_drawImage.imageFormat = VK_FORMAT_R16G16B16A16_SFLOAT;
 	_drawImage.imageExtent = drawImageExtent;
 
