@@ -876,11 +876,11 @@ void VulkanEngine::init_vulkan()
 
     SDL_Vulkan_CreateSurface(_window, _instance, &_surface);
 
-    VkPhysicalDeviceVulkan13Features features13 {};
+	VkPhysicalDeviceVulkan13Features features13{ .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES };
 	features13.dynamicRendering = true;
 	features13.synchronization2 = true;
    
-   VkPhysicalDeviceVulkan12Features features12 {};
+   VkPhysicalDeviceVulkan12Features features12{ .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES };
    features12.bufferDeviceAddress = true;
    features12.descriptorIndexing = true; 
 
