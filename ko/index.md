@@ -40,5 +40,5 @@ OpenGL 혹은 DirectX에 대해 익숙해 3D 그래픽스에 대해 어느정도
 - **부록** : 튜토리얼에서 구현한 엔진의 성능을 올리는 다양한 내용이 있습니다.
 
 
-Next: [Introduction to vulkan]({{ site.baseurl }}{% link docs/introduction/vulkan_overview.md %})
+다음 글: [Vulkan 소개]({{ site.baseurl }}{% link docs/introduction/vulkan_overview.md %})
 {% include comments.html term="Index Comments" %}
