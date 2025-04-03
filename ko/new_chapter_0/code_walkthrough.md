@@ -167,7 +167,7 @@ VulkanEngine* loadedEngine = nullptr;
 VulkanEngine& VulkanEngine::Get() { return *loadedEngine; }
 void VulkanEngine::init()
 {
-    // only one engine initialization is allowed with the application.
+    // 애플리케이션 당 하나의 엔진 초기화만을 허용합니다.
     assert(loadedEngine == nullptr);
     loadedEngine = this;
 
