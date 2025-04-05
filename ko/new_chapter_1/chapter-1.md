@@ -1,9 +1,10 @@
 ---
 layout: default
-title: "1. Initializing Vulkan"
+lang: ko
+title: "1. Vulkan 초기화"
 nav_order: 13
 has_children: true
-permalink: /docs/new_vkguide/chapter_1
+permalink: /ko/new_vkguide/chapter_1
 auto_comments: Vkguide 2 Beta Comments
 ---
 ![chapter1]({{site.baseurl}}/diagrams/chapter1.png)

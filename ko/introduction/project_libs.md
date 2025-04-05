@@ -1,7 +1,8 @@
 ---
 layout: default
+lang: ko
 title: Project layout and libraries
-parent: introduction
+parent: 소개
 nav_order: 99
 ---
 

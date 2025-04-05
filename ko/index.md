@@ -1,9 +1,10 @@
 ---
 layout: default
-title: Home
+title: 서론
+lang: ko
 nav_order: 1
 description: "Guide to the Vulkan API"
-permalink: /
+permalink: /ko
 ---
 
 

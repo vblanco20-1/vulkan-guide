@@ -1,7 +1,8 @@
 ---
 layout: default
-title: Code Walkthrough
-parent: "0. Project Setup"
+lang: ko
+title: ko Code Walkthrough
+parent: "0. 프로젝트 설정"
 nav_order: 3
 auto_comments: Vkguide 2 Beta Comments
 ---

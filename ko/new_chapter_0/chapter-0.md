@@ -1,9 +1,10 @@
 ---
 layout: default
-title: "0. Project Setup"
+title: "0. 프로젝트 설정"
+lang: ko
 nav_order: 11
 has_children: true
-permalink: /docs/new_vkguide/chapter_0
+permalink: /ko/new_vkguide/chapter_0
 auto_comments: Vkguide 2 Beta Comments
 ---
 ![chapter0]({{site.baseurl}}/diagrams/chapter0.png)

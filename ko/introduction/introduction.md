@@ -1,9 +1,10 @@
 ---
 layout: default
-title: introduction
+lang: ko
+title: 소개
 nav_order: 1
 has_children: true
-permalink: /docs/introduction
+permalink: /ko/introduction
 
 auto_comments: Introduction Comments
 ---

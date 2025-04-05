@@ -1,8 +1,9 @@
 ---
 layout: default
+lang: ko
 title: Vulkan Usage
 nav_order: 2
-parent: introduction
+parent: 소개
 ---
 
 # Vulkan 핵심 객체와 활용 방법

@@ -1,7 +1,8 @@
 ---
 layout: default
+lang: ko
 title: Mainloop Code
-parent:  "1. Initializing Vulkan"
+parent:  "1. Vulkan 초기화"
 nav_order: 41
 ---
 
