@@ -47,7 +47,7 @@ The next layout statement is for the shader input through descriptor sets. We ar
 
 The shader code is a very simple dummy shader that will create a gradient from the coordinates of the global invocation ID. If local invocation ID is 0 on either X or Y, we will just default to black. This is going to create a grid that will directly display our shader workgroup invocations.
 
-Any time you touch the shaders, make sure you compile the shaders target from the build, and if you add new files, you must re-configure the cmake. This process has to succeed with no errors, or the project will be missing the spirv files necesary to run this shaders on the gpu.
+Any time you touch the shaders, make sure you compile the shaders target from the build, and if you add new files, you must re-configure the cmake. This process has to succeed with no errors, or the project will be missing the spirv files necessary to run this shaders on the gpu.
 
 ## Setting up the descriptor layout
 
