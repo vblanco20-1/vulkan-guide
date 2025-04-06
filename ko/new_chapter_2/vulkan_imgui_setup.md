@@ -5,22 +5,17 @@ title: Setting up IMGUI
 parent:  "2. 컴퓨트 셰이더 그리기"
 nav_order: 7
 ---
+ 
+엔진이 점점 커지면서 슬라이더, 버튼을 추가하거나 데이터를 표시할 수 있는 상호작용 가능한 인터페이스가 필요해졌습니다.
 
-As the engine grows, we need a way to have some interactuable interface we can play with to add sliders, buttons, and display data. 
-엔진이 커지면서 슬라이더, 버튼, 그리고 데이터를 표시할 수 있는 상호작용할 수 있는 인터페이스가 필요합니다.
-
-To do that, we are going to add the library "dear Imgui" to the project. This is a library that makes it very easy to add windows and interfaces with sliders, buttons, editable text.. Without having to setup UI files or deal with a complex system. 
-이를 위해 프로젝트에 "dear Imgui" 라이브러리를 추가할 것입니다. 이는 슬라이더나 버튼, 기타 편집가능한 텍스트와 같은 상호작용 요소와 창을 ui 설정이나 복잡한 시스템을 다루지 않고 매우 쉽게 추가할 수 있는 라이브러리입니다.
+이를 위해 프로젝트에 "dear Imgui" 라이브러리를 추가할 것입니다. 이 라이브러리는 ui 설정이나 복잡한 시스템을 다루지 않고도 슬라이더나 버튼, 기타 편집가능한 텍스트와 같은 상호작용 요소와 창을 매우 쉽게 추가할 수 있는 라이브러리입니다.
 
 
-## Immediate GPU commands / 즉시 GPU 명령
-EDIT UNTIL FIXED: This section of the article will be moved away, new version of imgui does not need immediate commands to upload. We still need the immediate commands for later in the tutorial.
-수정 될 때 까지 편집 : 이 글의 해당 섹션은 새로운 버전의 imgui가 immediate 명령을 업로드할 필요가 없을 때 옮겨질 것입니다. 아직은 튜토리얼에서 immediate 명령이 필요합니다.
+## Immediate GPU 명령
+보류 : 해당 섹션은 나중에 다른 위치로 이동할 예정입니다. 최신 버전의 ImGui에서는 업로드를 위해 immediate 명령이 필요하지 않지만, 아직은 추후 튜토리얼에서 immediate 명령이 필요합니다.
 
-Imgui will require us to run some commands outside of the normal draw loop. This is going to be something we will need many times on the engine for different uses. We are going to implement an `immediate_submit` function, which uses a fence and a different command buffer from the one we use on draws to send some commands to the GPU without syncronizing with swapchain or with rendering logic.
-Imgui는 일반적인 그리기 루프 외부에 몇 가지 명령을 실행하는 것을 요구합니다. 이는 엔진에서 다양하게 여러번 사용할 것입니다. `immediate_submit`함수를 구현할 것이며, 이는 GPU에게 스왑체인 혹은 렌더링 로직을 동기화하지 않고 명령을 보낼 때 사용하는 다양한 버퍼와 펜스를 사용합니다.
+Imgui는 일반적인 그리기 루프 외부에서 몇 가지 명령을 실행해야 합니다. 이러한 기능은 엔진에서 다양한 용도로 여러 번 사용할 것입니다. 이를 위해 `immediate_submit`함수를 구현할 것이며, 이 함수는 그리기에 사용하는 커맨드 버퍼와는 다른 버퍼와 펜스를 사용하여 스왑체인이나 렌더링 로직과 동기화하지 않고 GPU에 명령을 전송합니다.
 
-Lets add those structures into the VulkanEngine class
 VulkanEngine 클래스에 이러한 구조체를 추가합시다.
 
 ```cpp
@@ -38,12 +33,9 @@ private:
 	void init_imgui();
 }
 ```
-We have a fence and a command buffer with its pool. The immediate_submit function takes an std function as callback to use with lambdas. 
-Add the init_imgui() function too, and add it at the end of the init() chain of function calls. Leave it empty for now.
-펜스와 커맨드 버퍼가 있습니다. immediate_submit 함수는 std::function을 람다를 사용하는 콜백으로서 받습니다.
+우리는 펜스와 커맨드 버퍼를 가지고 있습니다. immediate_submit 함수는 람다와 함께 사용할 수 있도록 std::function을 콜백으로 받습니다. init_imgui() 함수도 추가하고, init() 함수 호출 마지막에 호출되도록 합니다. 지금은 비워둡니다.
 
-we need to create those syncronization structures for immediate submit, so lets go into init_commands() function and hook the command part.
-immediate submit을 위해 이러한 동기화 구조체를 생성할 필요가 있는데, 따라서 init_commands() 함수에 명령 부분을 연결합시다. 
+immediate submit을 위해 이러한 동기화 구조체를 생성해야 하므로, init_commands() 함수에 명령 부분을 연결합시다. 
 
 ```cpp
 void VulkanEngine::init_commands()
@@ -62,10 +54,8 @@ void VulkanEngine::init_commands()
 }
 ```
 
-This is the same we were doing with the per-frame commands, but this time we are directly putting it into the deletion queue for cleanup.
-이는 프레임별 커맨드를 작성할 때와 같지만, 이번에는  이를 정리를 위해 삭제큐에 직접 넣어주고 있습니다.
+이는 프레임별 명령을 작성할 때와 같지만, 이번에는 정리를 위해 삭제큐에 직접 추가하고 있습니다.
 
-Now we need to create the fence, which we are going to add to init_sync_structures(). Add it to the end
 이제 펜스를 생성해야 합니다. 이는 init_sync_structures()에 추가하겠습니다.
 
 ```cpp
@@ -76,10 +66,8 @@ void VulkanEngine::init_sync_structures()
 }
 ```
 
-We will use the same fenceCreateInfo we were using for the per-frame fences. Same as with the commands, we are directly adding its destroy function to the deletion queue too.
-같은 프레임별 펜스에 사용했던 fenceCreateInfo를 사용할 것입니다. 커맨드 버퍼와 같이 이를 삭제 큐에 직접 넣어주겠습니다.
+프레임별 펜스에 사용했던 것과 같은 fenceCreateInfo를 사용할 것입니다. 커맨드 버퍼와 마찬가지로 이를 삭제 큐에 직접 넣어주겠습니다.
 
-Now implement the immediate_submit function
 이제 immediate_submit 함수를 구현하겠습니다.
 
 <!-- codegen from tag imm_submit on file E:\ProgrammingProjects\vulkan-guide-2\chapter-2/vk_engine.cpp --> 
@@ -110,22 +98,17 @@ void VulkanEngine::immediate_submit(std::function<void(VkCommandBuffer cmd)>&& f
 }
 ```
 
-Note how this function is very similar and almost the same as the way we are executing commands on the gpu. 
-이 함수가 GPU에서 명령을 실행하는 방법과 매우 유사한 것을 유의해야 합니다.
+이 함수가 GPU에서 명령을 실행하는 방법과 거의 동일하다는 점에 주목하세요.
 
-Its close to the same thing, except we are not syncronizing the submit with the swapchain. 
-거의 유사하지만 교환사슬에 제출할 때 동기화는 수행하지 않고 있습니다.
+거의 동일하지만 제출할 때 스왑체인과 동기화는 수행하지 않고 있습니다.
 
-We will be using this function for data uploads and other "instant" operations outside of the render loop. One way to improve it would be to run it on a different queue than the graphics queue, and that way we could overlap the execution from this with the main render loop. 
-데이터 업로드와 렌더링 루프 외부에서 다른 "즉각적인" 명령을 위해 함수를 사용할 것입니다. 이를 개선하는 방법 중 하나는 그래픽스 큐와는 다른 큐에서 실행하여 메인 렌더링 루프 실행을 겹쳐 사용하는 것입니다.
+데이터 업로드와 렌더링 루프 외부에서 기타 "즉각적인" 작업에 함수를 사용할 것입니다. 이를 개선하는 방법 중 하나는 그래픽스 큐와는 다른 큐에서 실행하여 함수의 실행을 메인 렌더링 루프와 겹쳐 사용하는 것입니다.
 
 
-## IMGUI 설정
-Lets now go with the imgui initialization.
-이제 imgui를 초기화해보겠습니다.
+## ImGui 설정
+이제 ImGui를 초기화해보겠습니다.
 
-We need to add some includes first to vk_engine.cpp
-몇가지 헤더를 vk_engine.cpp에 포함하겠습니다.
+먼저 몇가지 헤더를 vk_engine.cpp에 포함하겠습니다.
 
 ```cpp
 #include "imgui.h"
@@ -133,10 +116,8 @@ We need to add some includes first to vk_engine.cpp
 #include "imgui_impl_vulkan.h"
 ```
 
-Its the main imgui header, and then the implementation headers for the SDL 2 and the vulkan backends.
-이는 핵심 imgui 헤더로, SDL 2와 Vulkan 백엔드 구현 헤더입니다.
+이는 주요 imgui 헤더와, SDL 2 및 Vulkan 백엔드 구현 헤더입니다.
 
-Now to the initialization function
 이제 초기화 함수를 작성해봅시다.
 
 <!-- codegen from tag imgui_init on file E:\ProgrammingProjects\vulkan-guide-2\chapter-2/vk_engine.cpp --> 
@@ -207,25 +188,20 @@ void VulkanEngine::init_imgui()
 }
 ```
 
-Call this function at the end of `VulkanEngine::init()`, after `init_pipelines();`       
-This code is adapted from the imgui demos. We first need to create some structures that imgui wants, like its own descriptor pool. The descriptor pool here is storing data for 1000 of a lot of different types of descriptors, so its a bit overkill. It wont be a problem, just slightly less efficient space-wise.
-이 함수를 `init_pipelines();` 이후에 `VulkanEngine::init()`의 끝에서 호출합니다. 이 코드는 imgui 데모로부터 채택됩니다. 먼저 imgui가 원하는 구조체, 예를 들어 imgui만의 디스크립터 풀과 같은 구조체를 추가해야 합니다.
-여기서의 디스크립터 풀은 1000개의 다양한 디스크립터를 담는데, 이는 약간 과합니다. 하지만 이는 문제가 되지 않는데, 공간적으로 약간 덜 효율적일 뿐입니다.
+이 함수를 `init_pipelines();` 이후에 `VulkanEngine::init()`의 마지막에 호출합니다. 이 코드는 ImGui 데모에서 가져온 예제를 기반으로 작성되었습니다. 먼저 ImGui에서 요구하는 구조체, 예를 들어 ImGui 전용 디스크립터 풀 등을 생성해야 합니다.
+여기서의 디스크립터 풀은 1000개의 다양한 타입의 디스크립터를 담는데, 이는 약간 과하지만, 공간 활용 면에서 약간 비효율적일 뿐 문제는 발생하지 않습니다.
 
-We then call `CreateContext()` , `ImGui_ImplSDL2_InitForVulkan`, and `ImGui_ImplVulkan_Init`. These functions will initialize the different parts of imgui we need. 
-On the vulkan one, we need to hook a few things, like our device, instance, queue.
-그리고 `CreateContext()`, `Imgui_ImplSDL2_InitForVulkan`과 `ImGUI_ImplVulkan_Init`을 호출합니다. 이 함수들은 우리가 필요한 imgui의 다양한 부분을 초기화할 것입니다. Vulkan에서는 디바이스, 인스턴스, 큐와 같은 것들을 연결할 것입니다.
+그리고 `CreateContext()`, `Imgui_ImplSDL2_InitForVulkan`과 `ImGUI_ImplVulkan_Init`을 호출합니다. 이 함수들은 우리가 필요한 ImGui의 여러 구성요소를 초기화할 것입니다. Vulkan에서는 디바이스, 인스턴스, 큐와 같은 것들을 연결해야 합니다.
 
-One important one is that we need to set UseDynamicRendering to true, and set ColorAttachmentFormat to our swapchain format, this is because we wont be using vulkan render-passes but Dynamic Rendering instead. And unlike with the compute shader, we are going to draw dear imgui directly into the swapchain. 
+한 가지 중요한 점은 UseDynamicRendering을 true로 설정하고, ColorAttachmentFormat을 스왑체인 포맷으로 설정해야 한다는 것입니다. 왜냐하면 Vulkan 렌더 패스를 사용하지 않고 동적렌더링을 사용할 것이기 때문입니다. 그리고 컴퓨트 셰이더와는 달리 dear imgui는 스왑체인에 직접 렌더링될 것입니다.
 
 
-After calling `ImGui_ImplVulkan_Init`, we need to do an immediate submit to upload the font texture. Once that is executed, we call DestroyFontUploadObjects so that imgui deletes those temporal structures. 
-Last, we add cleanup code into the destruction queue.
+`ImGui_ImplVulkan_Init`을 호출한 후, 폰트 텍스쳐를 업로드 하기 위해 immediate submit을 해야합니다. 이 작업이 실행 되면 DestroyFontUploadObjects를 호출하여 ImGui가 임시 구조체를 정리하도록 합니다. 마지막으로 정리하는 코드를 삭제 큐에 추가합니다.
 
-# Imgui render loop
-Imgui is initialized now, but we need to hook it into the rendering loop.
+# Imgui 렌더링 루프
+Imgui가 초기화되었지만 이를 렌더링 루프에 연결해주어야 합니다.
 
-First thing we have to do is to add its code into the run() function
+먼저 ImGui 코드를 run()함수에 추가합니다.
 
 ```cpp
 //Handle events on queue
@@ -269,16 +245,12 @@ ImGui::Render();
 draw();
 ```
 
-We have to pass the SDL events into imgui for handling from our pollEvent loop.
-After that, we need to call the 3 functions for a new frame on imgui. 
-Once that is done, we can now do our UI commands. We are going to leave it on the demo window for now. 
-When we call `ImGui::Render()`, that calculates the vertices/draws/etc that imgui requires to draw the frame, but it does not do any drawing on its own. To draw it we will continue it from within our draw() function.
+pollEvent 루프에서 발생한 SDL 이벤트를 ImGui로 전달하여 처리하게 해야 합니다. 그 다음, ImGui의 새로운 프레임을 시작하기 위해 세 가지 함수를 호출해야 합니다. 이 작업이 수행되면 UI 명령을 실행할 수 있습니다. 지금은 데모 창만을 표시해보겠습니다. `ImGui::Render()`를 호출할 때, ImGui가 프레임을 그리기에 필요한 정점/드로우콜 등을 계산하지만, 실제로 화면에 그리지는 않습니다. 실제 렌더링은 draw()함수 내부에서 계속하겠습니다.
 
-# Dynamic Rendering
-Imgui will draw using actual gpu draws with meshes and shaders, it will not do a compute draw like we are doing at the moment.
-To draw geometry, it needs to be done withing a renderpass. But we are not using renderpasses as we will use dynamic rendering, a vulkan 1.3 feature. Instead of calling VkCmdBeginRenderpass, and giving it a VkRenderPass object, we call VkBeginRendering, with a VkRenderingInfo that contains the settings needed for the images to draw into.
+# 동적 렌더링
+ImGui는 메시와 셰이더를 포함하는 실제 GPU 드로우콜을 사용해 그립니다. 현재 우리가 진행중인 컴퓨트 셰이더 방식의 드로우는 아닙니다. 도형을 렌더링하기 위해 렌더 패스를 설정해야 하지만, Vulkan 1.3기능인 동적 렌더링을 사용할 것이기 때문에 렌더 패스를 사용하지 않을 것입니다. VkRenderPass 객체를 전달해 VkCmdBeginRenderPass를 호출하는 것 대신 이미지를 그릴 때 필요한 정보를 담는 VkRenderingInfo와 함께 VkBeginRendering을 호출할 것입니다.
 
-The VkRenderingInfo points into multiple VkRenderingAttachmentInfo for our target images to draw into, so lets begin writing that one into the initializers.
+VkRenderingInfo는 우리의 그릴 이미지인 여러 VkRenderingAttachmentInfo를 참조합니다. 이를 intializers에 작성해봅시다.
 
 <!-- codegen from tag color_info on file E:\ProgrammingProjects\vulkan-guide-2\shared/vk_initializers.cpp --> 
 ```cpp
@@ -301,13 +273,13 @@ VkRenderingAttachmentInfo vkinit::attachment_info(
 }
 ```
 
-For our attachment info, we will have clear value as an optional pointer, that way we can either do a clear or skip it and load the image.
+attachment info를 위해 선택적인 포인터로 clear value를 설정해야 합니다. 이를 통해 초기화하거나, 혹은 생략하고 기존 이미지를 불러올 수 있습니다.
 
-We need to hook imageview and layout as usual with all these rendering commands. The important part is the loadOP and storeOP. This controls what happens to the render target in this attachment when its used within a renderpass (both dynamic one and class renderpass). For load options, we have LOAD, which will keep the data in that image. Clear which will set it to our clear value at the start, and dont-care where we plan to replace every pixel and thus the gpu can skip loading it from memory. 
+이미지 뷰와 레이아웃은 평소처럼 모든 렌더링 명령과 연결해주어야 합니다. 여기서 중요한 부분은 loadOP와 storeOP입니다. 이는 해당 어태치먼트가 렌더패스(동적 렌더링과 일반 렌더패스 모두)에서 사용될 때 렌더 타겟에 어떤 일이 일어나는지를 제어합니다. load 선택지에서는 LOAD를 설정했습니다. 이는 기존 이미지 데이터를 유지하는 것을 의미합니다. Clear는 시작 시 설정된 clear value로 초기화하며, 모든 픽셀을 교체할 때에는 dont-care로 설정해 GPU가 메모리에서 값을 읽지 않게 하여 성능을 최적화합니다.
 
-For our store op, we are going to use store hardcoded, as we will want our draw commands to be saved.
+우리의 store op는 그리기 명령을 저장하기 위해 store로 하드코딩할 것입니다. 
 
-With the attachment info done, we can make the VkRenderingInfo. Add a new function `draw_imgui()` to the VulkanEngine class, to draw a renderpass that renders imgui. 
+attachment info가 수행되었으므로 VkRenderingInfo를 작성할 수 있습니다. ImGui를 렌더링하는 렌더패스를 실행하기 위해 새로운 함수 `draw_imgui()`를 VulkanEngine 클래스에 추가합니다.
 
 <!-- codegen from tag imgui_draw_fn on file E:\ProgrammingProjects\vulkan-guide-2\chapter-2/vk_engine.cpp --> 
 ```cpp
@@ -324,9 +296,9 @@ void VulkanEngine::draw_imgui(VkCommandBuffer cmd, VkImageView targetImageView)
 }
 ```
 
-We are going to take a render extent to setup a rectangle of pixels to draw, and we will send a color attachment and a depth attachment. We dont need the depth attachment right now, thats for later.
+그릴 사각형의 영역을 설정하기 위해 render extent를 받아야 하며, 색상 어태치먼트와 깊이 어태치먼트를 전달해야 합니다. 깊이 어태치먼트는 당장은 필요 없지만 이후에 다룰 것입니다.
 
-Then we need to call it from our draw() function.
+이후에는 draw() 함수에서 호출하기만 하면 됩니다.
 
 <!-- codegen from tag imgui_draw on file E:\ProgrammingProjects\vulkan-guide-2\chapter-2/vk_engine.cpp --> 
 ```cpp
@@ -346,21 +318,21 @@ Then we need to call it from our draw() function.
 	VK_CHECK(vkEndCommandBuffer(cmd));
 ```
 
-That copy_image command is the same as before, we are replacing the later commands until the end of the VkEndCommandBuffer call.
+copy_image 명령은 이전과 같습니다. 이후의 명령들은 마지막의 VkEndCommandBuffer가 호출될 때 까지 대체하게 됩니다.
 
-Before, we were transitioning the swapchain image from transfer layout into present layout, but now we are going to change it into `VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL` instead. This is the layout you should be using whenever you are calling rendering commands like in here.
+이전에는 스왑체인의 이미지를 전송 레이아웃에서 표시 레이아웃으로 전환했지만, `VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL`로 대신 바꿀 것입니다. 이는 여기처럼 렌더링 명령을 호출할 때 사용하는 레이아웃입니다.
 
-After that, we build the VkRenderingInfo and send a single color attachment to it. That color attachment will point to the swapchain image we target.
+그 다음, VkRenderingInfo를 구성하고 단일 색상 어태치먼트를 전달합니다. 이 색상 어태치먼트는 우리가 타게팅한 스왑체인 이미지를 가리킵니다.
 
-Now that we have a VkRenderInfo, we can call `vkCmdBeginRendering`, this begins a render pass, and we can now execute draw commands. We call into the imgui vulkan backend with our command buffer, which will make imgui record its draw commands into the buffer. Once that is done, we can call `vkCmdEndRendering` to end the render pass. 
+이제 VkRenderInfo를 준비했으므로 `vkCmdBeginRendering`을 호출할 수 있습니다. 이는 렌더 패스를 시작하며 이제 그리기 명령을 실행할 수 있습니다. ImGui Vulkan 백엔드에서 우리의 커맨드 버퍼를 전달하면, ImGui가 자신의 그리기 명령을 해당 버퍼에 기록합니다. 이것이 완료되면 `vkCmdEndRendering`을 호출해 렌더 패스를 끝낼 수 있습니다.
 
-After that, we transition the swapchain image from attachment-optimal into present mode, and can finally end the command buffer.
+이후, 스왑체인 이미지를 어태치먼트 최적에서 표시 모드로 전환하고 커맨드 버퍼를끝냅니다.
 
-If you run the application at this point, you will have the imgui demo window you can play around with.
+이 시점에서 애플리케이션을 실행해본다면 ImGui 데모창을 확인할 수 있습니다.
 
-Lets continue and hook our new debug UI to the shaders.
+이제 디버깅 UI를 셰이더와 연결해보겠습니다.
 
-Next: [ Push Constants and new shaders]({{ site.baseurl }}{% link docs/new_chapter_2/vulkan_pushconstants.md %})  
+다음 글: [ 푸시 상수와 새로운 셰이더]({{ site.baseurl }}{% link docs/new_chapter_2/vulkan_pushconstants.md %})  
 
 {% include comments.html term="Vkguide 2 Beta Comments" %}
  
