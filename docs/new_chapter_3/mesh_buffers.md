@@ -46,7 +46,7 @@ struct AllocatedBuffer {
 };
 ```
 
-We will use this structure to hold the data for a given buffer. We have the `VkBuffer` which is the vulkan handle, and the VmaAllocation and VmaAllocationInfo wich contains metadata about the buffer and its allocation, needed to be able to free the buffer.
+We will use this structure to hold the data for a given buffer. We have the `VkBuffer` which is the vulkan handle, and the VmaAllocation and VmaAllocationInfo which contains metadata about the buffer and its allocation, needed to be able to free the buffer.
 
 Lets add a function into VulkanEngine to create it
 
