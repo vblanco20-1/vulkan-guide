@@ -179,7 +179,7 @@ First we do is to calculate how big the buffers need to be. Then, we create our 
 
  To take the buffer address, we need to call `vkGetBufferDeviceAddress`, giving it the VkBuffer we want to do that on. Once we have the VkDeviceAddress, we can do pointer math with it if we want, which is useful if we are sub-allocating from a bigger buffer.
 
- With the buffers allocated, we need to write the data into them. For that, we will be using a staging buffer. This is a very common pattern with vulkan. As GPU_ONLY memory cant be written on CPU, we first write the memory on a temporal staging buffer that is CPU writeable, and then execute a copy command to copy this buffer into the GPU buffers. Its not necesary for meshes to use GPU_ONLY vertex buffers, but its highly recommended unless its something like a CPU side particle system or other dynamic effects.
+ With the buffers allocated, we need to write the data into them. For that, we will be using a staging buffer. This is a very common pattern with vulkan. As GPU_ONLY memory cant be written on CPU, we first write the memory on a temporal staging buffer that is CPU writeable, and then execute a copy command to copy this buffer into the GPU buffers. Its not necessary for meshes to use GPU_ONLY vertex buffers, but its highly recommended unless its something like a CPU side particle system or other dynamic effects.
 
 <!-- codegen from tag mesh_create_2 on file E:\ProgrammingProjects\vulkan-guide-2\chapter-3/vk_engine.cpp --> 
 ```cpp
