@@ -193,7 +193,7 @@ GPUSceneData sceneData;
 VkDescriptorSetLayout _gpuSceneDataDescriptorLayout;
 ```
 
-Create the descriptor set layout as part of init_descriptors. It will be a descriptor set with a single uniform buffer binding. We use uniform buffer here instead of SSBO because this is a small buffer. We arent using it through buffer device adress because we have a single descriptor set for all objects so there isnt any overhead of managing it.
+Create the descriptor set layout as part of init_descriptors. It will be a descriptor set with a single uniform buffer binding. We use uniform buffer here instead of SSBO because this is a small buffer. We arent using it through buffer device address because we have a single descriptor set for all objects so there isnt any overhead of managing it.
 
 ```cpp
 {

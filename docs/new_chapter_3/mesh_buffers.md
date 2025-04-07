@@ -7,7 +7,7 @@ nav_order: 10
 
 To render objects properly, we need to send our vertex data to the vertex shader. Right now, we are using a hardcoded array, but that will not work for anything other than a single triangle or similar geometry. 
 
-As we arent using the fixed function vertex attribute fetch logic on the pipeline, we have total freedom on how exactly do we load our vertex data in the shaders. We will be loading the vertices from big gpu buffers passed through Buffer Device Adress, which gives high performance and great flexibility.
+As we arent using the fixed function vertex attribute fetch logic on the pipeline, we have total freedom on how exactly do we load our vertex data in the shaders. We will be loading the vertices from big gpu buffers passed through Buffer Device address, which gives high performance and great flexibility.
 
 ## Vulkan Buffers
 In vulkan, we can allocate general usage memory through buffers. They are different from images in that they dont need samplers and act more as a typical cpu side structure or array. We can access them in the shaders just as structures or array of structures.
@@ -28,8 +28,8 @@ In this benchmark, different ways of accessing buffers are compared https://gith
 
 When creating the descriptors, its also possible to have them as Dynamic buffer. If you use that, you can control the offset the buffer is bound to when writing the commands. This lets you use 1 descriptor set for multiple objects draws, by storing the uniform data for multiple objects into a big buffer, and then binding that descriptor at different offsets within that. It works well for uniform buffers, but for storage buffers its better to go with device-address.
 
-## Buffer Device Adress
-Normally, buffers will need to be bound through descriptor sets, where we would bind 1 buffer of a given type. This means we need to know the specific buffer dimensions from the CPU (for uniform buffers) and need to deal with the lifetime of descriptor sets. For this project, as we are targetting vulkan 1.3, we can take advantage of a different way of accessing buffers, Buffer Device Adress. 
+## Buffer Device address
+Normally, buffers will need to be bound through descriptor sets, where we would bind 1 buffer of a given type. This means we need to know the specific buffer dimensions from the CPU (for uniform buffers) and need to deal with the lifetime of descriptor sets. For this project, as we are targetting vulkan 1.3, we can take advantage of a different way of accessing buffers, Buffer Device address. 
 This essentially lets us send a int64 pointer to the gpu (through whatever way) and then access it in the shader, and its even allowed to do pointer math with it. Its essentially the same mechanics as a Cpp pointer would have, with things like linked lists and indirect accesses allowed.
 
 We will be using this for our vertices because accessing a SSBO through device address is faster than accessing it through descriptor sets, and we can send it through push constants for a really fast and really easy way of binding the vertex data to the shaders. 
@@ -136,9 +136,9 @@ struct GPUDrawPushConstants {
 
 We need a vertex format, so lets use this one. when creating a vertex format its very important to compact the data as much as possible, but for the current stage of the tutorial it wont matter. We will optimize this vertex format later. The reason the uv parameters are interleaved is due to alignement limitations on GPUs. We want this structure to match the shader version so interleaving it like this improves it.
 
-We store our mesh data into a GPUMeshBuffers struct, which will contain the allocated buffer for both indices and vertices, plus the buffer device adress for the vertices. 
+We store our mesh data into a GPUMeshBuffers struct, which will contain the allocated buffer for both indices and vertices, plus the buffer device address for the vertices. 
 
-We will create a struct for the push-constants we want to draw the mesh, it will contain the transform matrix for the object, and the device adress for the mesh buffer.
+We will create a struct for the push-constants we want to draw the mesh, it will contain the transform matrix for the object, and the device address for the mesh buffer.
 
 Now we need a function to create those buffers and fill them on the gpu.
 
@@ -154,9 +154,9 @@ GPUMeshBuffers VulkanEngine::uploadMesh(std::span<uint32_t> indices, std::span<V
 	newSurface.vertexBuffer = create_buffer(vertexBufferSize, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
 		VMA_MEMORY_USAGE_GPU_ONLY);
 
-	//find the adress of the vertex buffer
-	VkBufferDeviceAddressInfo deviceAdressInfo{ .sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO,.buffer = newSurface.vertexBuffer.buffer };
-	newSurface.vertexBufferAddress = vkGetBufferDeviceAddress(_device, &deviceAdressInfo);
+	//find the address of the vertex buffer
+	VkBufferDeviceAddressInfo deviceaddressInfo{ .sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO,.buffer = newSurface.vertexBuffer.buffer };
+	newSurface.vertexBufferAddress = vkGetBufferDeviceAddress(_device, &deviceaddressInfo);
 
 	//create index buffer
 	newSurface.indexBuffer = create_buffer(indexBufferSize, VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
@@ -171,7 +171,7 @@ The function will take a std::span of integers for its indices, and of Vertex fo
 First we do is to calculate how big the buffers need to be. Then, we create our buffers on GPU-only memory.
 
  On the vertex buffer we use these Usage flags: 
- `VK_BUFFER_USAGE_STORAGE_BUFFER_BIT` because its a SSBO, and `VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT` because will be taking its adress. 
+ `VK_BUFFER_USAGE_STORAGE_BUFFER_BIT` because its a SSBO, and `VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT` because will be taking its address. 
  
  On the index buffer we use `VK_BUFFER_USAGE_INDEX_BUFFER_BIT` to signal that we are going to be using that buffer for indexed draws.
 
@@ -215,7 +215,7 @@ First we do is to calculate how big the buffers need to be. Then, we create our 
 
 We first create the staging buffer, which will be 1 buffer for both of the copies to index and vertex buffers. Its memory type is CPU_ONLY, and its usage flag is `VK_BUFFER_USAGE_TRANSFER_SRC_BIT` as the only thing we will do with it is a copy command.
 
-Once we have the buffer, we can take its mapped adress with GetMappedData(), this gives us a void* pointer we can write to. So we do 2 memcpy commands to copy both spans into it.
+Once we have the buffer, we can take its mapped address with GetMappedData(), this gives us a void* pointer we can write to. So we do 2 memcpy commands to copy both spans into it.
 
 With the staging buffer written, we run an `immediate_submit` to run a GPU side command to perform this copy. The command will run 2 VkCmdCopyBuffer commands, which are roughly the same as a memcpy but done by the GPU. You can see how the VkBufferCopy structures mirror directly the memcpys we did to write the staging buffer.
 
@@ -258,7 +258,7 @@ layout( push_constant ) uniform constants
 
 void main() 
 {	
-	//load vertex data from device adress
+	//load vertex data from device address
 	Vertex v = PushConstants.vertexBuffer.vertices[gl_VertexIndex];
 
 	//output data
@@ -273,7 +273,7 @@ We need to enable the `GL_EXT_buffer_reference` extension so that the shader com
 
 Then we have the vertex struct, which is the exact same one as the one we have on CPU. 
 
-After that, we declare the VertexBuffer, which is a readonly buffer that has an array (unsized) of Vertex structures. by having the `buffer_reference` in the layout, that tells the shader that this object is used from buffer adress. `std430` is the alignement rules for the structure. 
+After that, we declare the VertexBuffer, which is a readonly buffer that has an array (unsized) of Vertex structures. by having the `buffer_reference` in the layout, that tells the shader that this object is used from buffer address. `std430` is the alignement rules for the structure. 
 
 We have our push_constant block which holds a single instance of our VertexBuffer, and a matrix. Because the vertex buffer is declared as buffer_reference, this is a uint64 handle, while the matrix is a normal matrix (no references).
 
@@ -440,9 +440,9 @@ We can now execute the draw. We will add the new draw command on `draw_geometry(
 
 We bind another pipeline, this time the rectangle mesh one.
 
-Then, we use push-constants to upload the vertexBufferAdress to the gpu. For the matrix, we will be defaulting it for now until we implement mesh transformations.
+Then, we use push-constants to upload the vertexBufferaddress to the gpu. For the matrix, we will be defaulting it for now until we implement mesh transformations.
 
-We then need to do a cmdBindIndexBuffer to bind the index buffer for graphics. Sadly there is no way of using device adress here, and you need to give it the VkBuffer and offsets.
+We then need to do a vkCmdBindIndexBuffer to bind the index buffer for graphics. Sadly there is no way of using device address here, and you need to give it the VkBuffer and offsets.
 
 Last, we use `vkCmdDrawIndexed` to draw 2 triangles (6 indices). This is the same as the vkCmdDraw, but it uses the currently bound index buffer to draw meshes.
 

@@ -111,7 +111,7 @@ CVarSystem* CVarSystem::Get()
 }
 ```
 
-The Impl class is empty for now, but we implement the `CVarSystem::Get()` function. In there, we declare a static CVarSystemImpl object, and return its adress.
+The Impl class is empty for now, but we implement the `CVarSystem::Get()` function. In there, we declare a static CVarSystemImpl object, and return its address.
 This is known as the statically initialized singleton, and it's the modern way of doing Singletons in Cpp11 and more. It has the very interesting property that Get() is fully threadsafe due to the rules of static variables inside functions.
 
 To store the cvars, we are going to implement a way to store the cvars into the System, for that we start by implementing a very simple cvar struct
