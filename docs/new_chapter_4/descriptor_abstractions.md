@@ -143,7 +143,7 @@ void DescriptorAllocatorGrowable::destroy_pools(VkDevice device)
 
 the init function just allocates the first descriptor pool, and adds it to the readyPools array.
 
-clearing the pools means going through all pools, and coping the fullPool array into the readyPools array. 
+clearing the pools means going through all pools, and coping the fullPools array into the readyPools array. 
 
 destroying loops over both lists and destroys everything to clear the entire allocator.
 
