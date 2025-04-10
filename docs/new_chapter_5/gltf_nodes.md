@@ -272,7 +272,7 @@ First, we begin writing the MaterialConstants, loading them from the material in
 
 Then, we need to fill the MaterialResources structure. We are going to default the textures and sampler to the default white one. We then hook the materialDataBuffer at the correct offset for the data. Then we check if the material has a color texture (textures on a GLTF material are optional. If they arent set, they generally default to white). If there is a color texture, we hook the texture by index, and sampler by index. We also check if the material is transparent and set the MaterialPass to Blend if thats the case.
 
-Once we have everything, we pass the parameters into the metaRoughMaterial class and write the material. 
+Once we have everything, we pass the parameters into the metalRoughMaterial class and write the material. 
 
 Next is loading meshes. We are going to do more or less the same we had in the older loader, with the difference that we are storing the meshes in a different way
 
