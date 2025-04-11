@@ -5,7 +5,7 @@ parent:  "2. Drawing with Compute"
 nav_order: 5
 ---
 
-Lets now write the code necesary for our compute shader. We will begin with a very simple shader that has an image as input, and writes a color to it, based on the thread ID, forming a gradient. This one is already on the code, in the shaders folder. From now on, all the shaders we add will go into that folder as the CMake script will build them.
+Lets now write the code necessary for our compute shader. We will begin with a very simple shader that has an image as input, and writes a color to it, based on the thread ID, forming a gradient. This one is already on the code, in the shaders folder. From now on, all the shaders we add will go into that folder as the CMake script will build them.
 
 gradient.comp
 ```c
@@ -47,7 +47,7 @@ The next layout statement is for the shader input through descriptor sets. We ar
 
 The shader code is a very simple dummy shader that will create a gradient from the coordinates of the global invocation ID. If local invocation ID is 0 on either X or Y, we will just default to black. This is going to create a grid that will directly display our shader workgroup invocations.
 
-Any time you touch the shaders, make sure you compile the shaders target from the build, and if you add new files, you must re-configure the cmake. This process has to succeed with no errors, or the project will be missing the spirv files necesary to run this shaders on the gpu.
+Any time you touch the shaders, make sure you compile the shaders target from the build, and if you add new files, you must re-configure the cmake. This process has to succeed with no errors, or the project will be missing the spirv files necessary to run this shaders on the gpu.
 
 ## Setting up the descriptor layout
 

@@ -36,7 +36,7 @@ Lets create the other functions we need, init(), clear_pools(), and destroy_pool
 
 the init function just allocates the first descriptor pool, and adds it to the readyPools array.
 
-clearing the pools means going through all pools, and coping the fullPool array into the readyPools array. 
+clearing the pools means going through all pools, and coping the fullPools array into the readyPools array. 
 
 destroying loops over both lists and destroys everything to clear the entire allocator.
 
@@ -193,7 +193,7 @@ GPUSceneData sceneData;
 VkDescriptorSetLayout _gpuSceneDataDescriptorLayout;
 ```
 
-Create the descriptor set layout as part of init_descriptors. It will be a descriptor set with a single uniform buffer binding. We use uniform buffer here instead of SSBO because this is a small buffer. We arent using it through buffer device adress because we have a single descriptor set for all objects so there isnt any overhead of managing it.
+Create the descriptor set layout as part of init_descriptors. It will be a descriptor set with a single uniform buffer binding. We use uniform buffer here instead of SSBO because this is a small buffer. We arent using it through buffer device address because we have a single descriptor set for all objects so there isnt any overhead of managing it.
 
 ```cpp
 {
