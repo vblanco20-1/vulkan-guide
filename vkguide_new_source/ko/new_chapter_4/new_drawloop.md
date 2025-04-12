@@ -156,7 +156,7 @@ void VulkanEngine::draw()
 
 이것으로 4장이 끝났습니다. 다음 장에서는 GLTF 로더를 업그레이드하여 텍스쳐와 여러 객체가포함된 씬을 불러오고, 상호작용 가능한 FPS 카메라를 설정해보겠습니다.
 
-^nextlink
+Next: [Chapter 5: Interactive Camera]({{ site.baseurl }}{% link ko/docs/new_chapter_5/interactive_camera.md %})
 
 
 {% include comments.html term="Vkguide 2 Beta Comments" %}

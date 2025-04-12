@@ -140,6 +140,6 @@ pipelines 함수를 수정했습니다. 기존의 파이프라인 레이아웃�
 
 애플리케이션을 실행하여 디버그 창을 통해 셰이더를 선택하고 파라미터를 수정해보세요.
 
-^nextlink
+Next: [Chapter 3: The graphics pipeline]({{ site.baseurl }}{% link ko/docs/new_chapter_3/render_pipeline.md %})
 
 {% include comments.html term="Vkguide 2 Beta Comments" %}
