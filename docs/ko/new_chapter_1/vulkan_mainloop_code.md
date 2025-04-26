@@ -398,7 +398,7 @@ VkSubmitInfo2 vkinit::submit_info(VkCommandBufferSubmitInfo* cmd, VkSemaphoreSub
 
 이것으로 1장이 끝났습니다. 다음은 컴퓨트 셰이더를 사용해 단순한 깜빡이는 화면보다 조금 더 복잡한 것을 그려보겠습니다.
 
-Next: [Chapter 2: Improving the render loop]({{ site.baseurl }}{% link ko/docs/new_chapter_2/vulkan_new_rendering.md %})
+Next: [Chapter 2: Improving the render loop]({{ site.baseurl }}{% link docs/ko/new_chapter_2/vulkan_new_rendering.md %})
 
 
 

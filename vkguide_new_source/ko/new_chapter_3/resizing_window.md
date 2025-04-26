@@ -95,6 +95,6 @@ ImGui::SliderFloat("Render Scale",&renderScale, 0.3f, 1.f);
 
 이것으로 3장이 끝났습니다. 이제 다음 장으로 넘어가겠습니다.
 
-Next: [Chapter 4: New Descriptor Abstractions]({{ site.baseurl }}{% link ko/docs/new_chapter_4/descriptor_abstractions.md %})
+Next: [Chapter 4: New Descriptor Abstractions]({{ site.baseurl }}{% link docs/ko/new_chapter_4/descriptor_abstractions.md %})
 
 {% include comments.html term="Vkguide 2 Beta Comments" %}
