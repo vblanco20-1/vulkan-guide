@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Rendering Loop
-parent:  "1. Initializing Vulkan"
+parent:  "1. Initializing Vulkan - KO"
 nav_order: 40
 ---
 

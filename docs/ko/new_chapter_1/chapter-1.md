@@ -1,6 +1,7 @@
 ---
 layout: default
-title: "1. Initializing Vulkan KO"
+title: "1. Initializing Vulkan - KO"
+parent: "Korean VKGuide"
 nav_order: 13
 has_children: true
 permalink: /docs/ko/new_vkguide/chapter_1

@@ -1,6 +1,6 @@
 ---
 layout: default
-title: "0. Project Setup"
+title: "0. Project Setup - KO"
 parent: "Korean VKGuide"
 nav_order: 11
 has_children: true
