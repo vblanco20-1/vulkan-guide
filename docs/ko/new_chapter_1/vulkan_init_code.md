@@ -362,4 +362,4 @@ Vulkan 초기화가 완료되었고 검증 레이어도 정상적으로 작동�
 
 Next: [ Executing Vulkan Commands]({{ site.baseurl }}{% link docs/ko/new_chapter_1/vulkan_command_flow.md %})  
 
-{% include comments.html term="Vkguide 2 Beta Comments" %}
+{% include comments.html term="Vkguide 2 Korean Comments" %}

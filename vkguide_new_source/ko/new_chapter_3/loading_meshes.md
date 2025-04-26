@@ -202,4 +202,4 @@ _mainDeletionQueue.flush();
 
 ^nextlink
 
-{% include comments.html term="Vkguide 2 Beta Comments" %}
+{% include comments.html term="Vkguide 2 Korean Comments" %}

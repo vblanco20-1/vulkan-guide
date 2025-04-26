@@ -290,5 +290,5 @@ init()함수에서 이 값을 설정해주세요.
 
 ^nextlink
 
-{% include comments.html term="Vkguide 2 Beta Comments" %}
+{% include comments.html term="Vkguide 2 Korean Comments" %}
 

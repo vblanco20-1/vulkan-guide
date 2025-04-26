@@ -387,5 +387,5 @@ _mainDeletionQueue.flush();
 
 Next: [ Blending]({{ site.baseurl }}{% link docs/ko/new_chapter_3/blending.md %})  
 
-{% include comments.html term="Vkguide 2 Beta Comments" %}
+{% include comments.html term="Vkguide 2 Korean Comments" %}
 

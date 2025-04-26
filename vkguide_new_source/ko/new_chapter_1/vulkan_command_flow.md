@@ -58,5 +58,5 @@ GPU의 모든 명령은 `VkCommandBuffer`에 기록됩니다. GPU의 작업을 �
 
 ^nextlink
 
-{% include comments.html term="Vkguide 2 Beta Comments" %}
+{% include comments.html term="Vkguide 2 Korean Comments" %}
 

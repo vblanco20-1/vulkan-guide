@@ -143,4 +143,4 @@ pipelines 함수를 수정했습니다. 기존의 파이프라인 레이아웃�
 
 Next: [Chapter 3: The graphics pipeline]({{ site.baseurl }}{% link docs/ko/new_chapter_3/render_pipeline.md %})
 
-{% include comments.html term="Vkguide 2 Beta Comments" %}
+{% include comments.html term="Vkguide 2 Korean Comments" %}

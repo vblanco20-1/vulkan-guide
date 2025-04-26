@@ -183,5 +183,5 @@ attachment info가 작성되었으므로 `VkRenderingInfo`를 작성할 수 있�
 
 ^nextlink
 
-{% include comments.html term="Vkguide 2 Beta Comments" %}
+{% include comments.html term="Vkguide 2 Korean Comments" %}
  

@@ -58,6 +58,6 @@ GPU의 모든 명령은 `VkCommandBuffer`에 기록됩니다. GPU의 작업을 �
 
 Next: [ Setting up Vulkan commands]({{ site.baseurl }}{% link docs/ko/new_chapter_1/vulkan_commands_code.md %})  
 
-{% include comments.html term="Vkguide 2 Beta Comments" %}
+{% include comments.html term="Vkguide 2 Korean Comments" %}
 
 

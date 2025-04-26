@@ -245,4 +245,4 @@ void VulkanEngine::draw_background(VkCommandBuffer cmd)
 
 ^nextlink
 
-{% include comments.html term="Vkguide 2 Beta Comments" %}
+{% include comments.html term="Vkguide 2 Korean Comments" %}

@@ -160,4 +160,4 @@ void VulkanEngine::draw()
 Next: [Chapter 5: Interactive Camera]({{ site.baseurl }}{% link docs/ko/new_chapter_5/interactive_camera.md %})
 
 
-{% include comments.html term="Vkguide 2 Beta Comments" %}
+{% include comments.html term="Vkguide 2 Korean Comments" %}

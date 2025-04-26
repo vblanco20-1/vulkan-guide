@@ -98,4 +98,4 @@ ImGui::SliderFloat("Render Scale",&renderScale, 0.3f, 1.f);
 
 Next: [Chapter 4: New Descriptor Abstractions]({{ site.baseurl }}{% link docs/ko/new_chapter_4/descriptor_abstractions.md %})
 
-{% include comments.html term="Vkguide 2 Beta Comments" %}
+{% include comments.html term="Vkguide 2 Korean Comments" %}

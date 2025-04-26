@@ -35,4 +35,4 @@ GPU를 하나의 어셈블리 라인이라고 생각해도 좋습니다. 각 단
 
 Next: [ Setting up render pipeline]({{ site.baseurl }}{% link docs/ko/new_chapter_3/building_pipeline.md %})  
 
-{% include comments.html term="Vkguide 2 Beta Comments" %}
+{% include comments.html term="Vkguide 2 Korean Comments" %}

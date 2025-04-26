@@ -49,3 +49,5 @@ third_party 폴더 하위에는 튜토리얼에서 사용할 여러 다양한 �
 
 
 Next: [ "Code Walkthrough - KO"]({{ site.baseurl }}{% link docs/ko/new_chapter_0/code_walkthrough.md %})  
+
+{% include comments.html term="Vkguide 2 Korean Comments" %}

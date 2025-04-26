@@ -323,4 +323,4 @@ void VulkanEngine::init_mesh_pipeline()
 
 Next: [ Engine Architecture]({{ site.baseurl }}{% link docs/ko/new_chapter_4/engine_arch.md %})  
 
-{% include comments.html term="Vkguide 2 Beta Comments" %}
+{% include comments.html term="Vkguide 2 Korean Comments" %}

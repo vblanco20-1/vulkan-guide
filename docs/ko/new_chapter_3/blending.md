@@ -74,4 +74,4 @@ pipelineBuilder.enable_blending_additive();
 
 Next: [ Window Resizing]({{ site.baseurl }}{% link docs/ko/new_chapter_3/resizing_window.md %})  
 
-{% include comments.html term="Vkguide 2 Beta Comments" %}
+{% include comments.html term="Vkguide 2 Korean Comments" %}

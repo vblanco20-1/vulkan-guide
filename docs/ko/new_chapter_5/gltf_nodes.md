@@ -505,6 +505,6 @@ init()함수에서 이 값을 설정해주세요.
 
 Next: [ GLTF Textures]({{ site.baseurl }}{% link docs/ko/new_chapter_5/gltf_textures.md %})  
 
-{% include comments.html term="Vkguide 2 Beta Comments" %}
+{% include comments.html term="Vkguide 2 Korean Comments" %}
 
 

@@ -397,4 +397,4 @@ void VulkanEngine::draw_background(VkCommandBuffer cmd)
 
 Next: [ Vulkan Shaders]({{ site.baseurl }}{% link docs/ko/new_chapter_2/vulkan_shader_drawing.md %})  
 
-{% include comments.html term="Vkguide 2 Beta Comments" %}
+{% include comments.html term="Vkguide 2 Korean Comments" %}

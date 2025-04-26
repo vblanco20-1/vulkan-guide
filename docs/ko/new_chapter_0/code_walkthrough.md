@@ -279,4 +279,4 @@ void VulkanEngine::run()
 
 Next: [Initializing Vulkan]({{ site.baseurl }}{% link docs/ko/new_chapter_1/vulkan_init_flow.md %})
 
-{% include comments.html term="Vkguide 2 Beta Comments" %}
+{% include comments.html term="Vkguide 2 Korean Comments" %}

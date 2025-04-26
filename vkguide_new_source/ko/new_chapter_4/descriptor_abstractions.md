@@ -239,4 +239,4 @@ init_descriptors함수에서 디스크립터 셋 레이아웃을 생성합니다
 
 ^nextlink
 
-{% include comments.html term="Vkguide 2 Beta Comments" %}
+{% include comments.html term="Vkguide 2 Korean Comments" %}

@@ -506,4 +506,4 @@ void VulkanEngine::init_background_pipelines()
 
 Next: [ Setting up IMGUI]({{ site.baseurl }}{% link docs/ko/new_chapter_2/vulkan_imgui_setup.md %})  
 
-{% include comments.html term="Vkguide 2 Beta Comments" %}
+{% include comments.html term="Vkguide 2 Korean Comments" %}

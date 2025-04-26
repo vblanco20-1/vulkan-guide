@@ -87,4 +87,4 @@ GPU는 메모리에 이미지를 상황에 따라 다른 포맷으로 저장합�
 
 ^nextlink
 
-{% include comments.html term="Vkguide 2 Beta Comments" %}
+{% include comments.html term="Vkguide 2 Korean Comments" %}

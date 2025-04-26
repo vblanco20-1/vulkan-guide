@@ -50,4 +50,4 @@ Vulkan 셰이더의 코드로 GLSL 대신 HLSL을 사용하는 것도 가능합�
 
 Next: [ Vulkan Shaders - Code]({{ site.baseurl }}{% link docs/ko/new_chapter_2/vulkan_shader_code.md %})  
 
-{% include comments.html term="Vkguide 2 Beta Comments" %}
+{% include comments.html term="Vkguide 2 Korean Comments" %}

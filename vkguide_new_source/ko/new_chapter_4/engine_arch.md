@@ -75,4 +75,4 @@ GLTF를 불러오는 것은 다음 장에서 할 예정이지만, 지금은 Rend
 
 ^nextlink
 
-{% include comments.html term="Vkguide 2 Beta Comments" %}
+{% include comments.html term="Vkguide 2 Korean Comments" %}

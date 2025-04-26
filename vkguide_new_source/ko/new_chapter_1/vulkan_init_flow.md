@@ -60,4 +60,4 @@ GPU가 올바르게 초기화했지만, 화면에 실제로 렌더링을 수행�
 
 ^nextlink
 
-{% include comments.html term="Vkguide 2 Beta Comments" %}
+{% include comments.html term="Vkguide 2 Korean Comments" %}

@@ -108,4 +108,4 @@ SDL이 C 라이브러리이기 때문에, 생성자와 파괴자를 지원하지
 
 Next: [Initializing Vulkan]({{ site.baseurl }}{% link docs/ko/new_chapter_1/vulkan_init_flow.md %})
 
-{% include comments.html term="Vkguide 2 Beta Comments" %}
+{% include comments.html term="Vkguide 2 Korean Comments" %}

@@ -334,5 +334,5 @@ void VulkanEngine::draw_imgui(VkCommandBuffer cmd, VkImageView targetImageView)
 
 Next: [ Push Constants and new shaders]({{ site.baseurl }}{% link docs/ko/new_chapter_2/vulkan_pushconstants.md %})  
 
-{% include comments.html term="Vkguide 2 Beta Comments" %}
+{% include comments.html term="Vkguide 2 Korean Comments" %}
  

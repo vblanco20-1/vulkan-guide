@@ -230,4 +230,4 @@ mainDrawContext.TransparentSurfaces.clear();
 
 Next: [ Faster Draw]({{ site.baseurl }}{% link docs/ko/new_chapter_5/faster_draw.md %})  
 
-{% include comments.html term="Vkguide 2 Beta Comments" %}
+{% include comments.html term="Vkguide 2 Korean Comments" %}

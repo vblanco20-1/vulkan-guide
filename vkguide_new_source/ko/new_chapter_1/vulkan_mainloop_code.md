@@ -184,4 +184,4 @@ Next: [Chapter 2: Improving the render loop]({{ site.baseurl }}{% link docs/ko/n
 
 
 
-{% include comments.html term="Vkguide 2 Beta Comments" %}
+{% include comments.html term="Vkguide 2 Korean Comments" %}

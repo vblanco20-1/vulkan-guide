@@ -540,4 +540,4 @@ vk_loader.cpp의 `load_image`에 있는 `create_image` 호출 시 마지막 인�
  
 이렇게 하면 필요한 밉맵이 자동으로 생성됩니다. 이미 샘플러는 올바른 설정으로 생성되어 있으므로, 별도의 수정 없이 잘 작동할 것입니다.
 
-{% include comments.html term="Vkguide 2 Beta Comments" %}
+{% include comments.html term="Vkguide 2 Korean Comments" %}

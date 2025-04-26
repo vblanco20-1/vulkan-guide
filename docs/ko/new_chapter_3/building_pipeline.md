@@ -553,4 +553,4 @@ void VulkanEngine::draw_geometry(VkCommandBuffer cmd)
 
 Next: [ Mesh buffers]({{ site.baseurl }}{% link docs/ko/new_chapter_3/mesh_buffers.md %})  
 
-{% include comments.html term="Vkguide 2 Beta Comments" %}
+{% include comments.html term="Vkguide 2 Korean Comments" %}

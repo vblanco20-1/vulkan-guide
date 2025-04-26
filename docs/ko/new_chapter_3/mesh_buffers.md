@@ -449,4 +449,4 @@ void VulkanEngine::init_default_data() {
 
 Next: [ Mesh Loading]({{ site.baseurl }}{% link docs/ko/new_chapter_3/loading_meshes.md %})  
 
-{% include comments.html term="Vkguide 2 Beta Comments" %}
+{% include comments.html term="Vkguide 2 Korean Comments" %}
