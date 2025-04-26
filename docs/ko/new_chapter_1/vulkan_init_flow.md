@@ -2,6 +2,7 @@
 layout: default
 title: Vulkan Initialization
 parent:  "1. Initializing Vulkan - KO"
+grand_parent: "Korean VKGuide"
 nav_order: 1
 ---
 
@@ -57,7 +58,7 @@ GPU가 올바르게 초기화했지만, 화면에 실제로 렌더링을 수행�
 
 이 가이드에서는 `FIFO_RELAXED` 모드를 사용하겠습니다. 렌더링 속도의 상한을 설정해주며, 많은 객체를 렌더링하지 않으므로 프레임 속도가 5000FPS까지 올라가 과열 등의 문제가 발생하는 것을 방지하는 데 적합합니다. 하지만 실제 애플리케이션에서 작업 부하가 있다면 `MAILBOX`가 더 적절할 수 있습니다.
 
-Next: [ Vulkan Initialization Code]({{ site.baseurl }}{% link docs/ko/new_chapter_1/vulkan_init_code.md %})  
+Next: [ "Building Project - KO"]({{ site.baseurl }}{% link docs/ko/new_chapter_0/building_project.md %})  
 
 {% include comments.html term="Vkguide 2 Beta Comments" %}
 

@@ -2,6 +2,7 @@
 layout: default
 title: "Building Project - KO"
 parent: "0. Project Setup - KO"
+grand_parent: "Korean VKGuide"
 nav_order: 2
 auto_comments: Vkguide 2 Beta Comments
 ---

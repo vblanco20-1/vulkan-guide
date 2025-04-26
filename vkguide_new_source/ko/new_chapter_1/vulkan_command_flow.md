@@ -2,6 +2,7 @@
 layout: default
 title: Executing Vulkan Commands
 parent: "1. Initializing Vulkan - KO"
+grand_parent: "Korean VKGuide"
 nav_order: 20
 ---
 

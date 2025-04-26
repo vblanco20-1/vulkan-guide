@@ -2,6 +2,7 @@
 layout: default
 title: "Code Walkthrough - KO"
 parent: "0. Project Setup - KO"
+grand_parent: "Korean VKGuide"
 nav_order: 3
 auto_comments: Vkguide 2 Beta Comments
 ---

@@ -2,6 +2,7 @@
 layout: default
 title: Vulkan Initialization Code
 parent:  "1. Initializing Vulkan - KO"
+grand_parent: "Korean VKGuide"
 nav_order: 2
 ---
 
@@ -359,6 +360,6 @@ Validation Error: [ VUID-vkDestroyInstance-instance-00629 ] Object 0: handle = 0
 
 Vulkan 초기화가 완료되었고 검증 레이어도 정상적으로 작동하므로, 이제 GPU가 무언가를 수행할 수 있도록 명령 구조체를 준비하겠습니다.
 
-Next: [ Executing Vulkan Commands]({{ site.baseurl }}{% link docs/ko/new_chapter_1/vulkan_command_flow.md %})  
+Next: [ "Code Walkthrough - KO"]({{ site.baseurl }}{% link docs/ko/new_chapter_0/code_walkthrough.md %})  
 
 {% include comments.html term="Vkguide 2 Beta Comments" %}
