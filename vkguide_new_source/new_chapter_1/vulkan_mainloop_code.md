@@ -146,7 +146,7 @@ The function call requires a `VkSubmitInfo2` which contains the information on t
 command_buffer_submit_info only needs the command buffer handle. We dont need anthing else, and we can leave the deviceMask at 0 as we are not it.
 
 semaphore_submit_info requires a StageMask, which is the same as we saw with the transition_image function. Other than that, it only needs the semaphore handle. 
-device index parameter is used for multi-gpu semaphore usage, but we wont do any of it. and value is used for timeline semaphores, which are a special type of semaphore where they work through a counter intead of a binary state. We will also not be using them, so we can default it to 1
+device index parameter is used for multi-gpu semaphore usage, but we wont do any of it. and value is used for timeline semaphores, which are a special type of semaphore where they work through a counter instead of a binary state. We will also not be using them, so we can default it to 1
 
 submit_info arranges everything together. it needs the command submit info, and then the semaphore wait and signal infos. We are going to only use 1 semaphore each for waiting and signaling, but its possible to signal or wait on multiple semaphores at once for more complicated systems.
 
