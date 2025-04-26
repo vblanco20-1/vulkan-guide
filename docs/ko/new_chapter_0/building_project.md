@@ -1,6 +1,6 @@
 ---
 layout: default
-title: Building Project - KO
+title: "Building Project - KO"
 parent: "0. Project Setup - KO"
 nav_order: 2
 auto_comments: Vkguide 2 Beta Comments
@@ -47,4 +47,4 @@ third_party 폴더 하위에는 튜토리얼에서 사용할 여러 다양한 �
 - fastgltf: 고성능 GLTF 로딩 라이브러리입니다. 
 
 
-Next: [ Code Walkthrough - KO]({{ site.baseurl }}{% link docs/ko/new_chapter_0/code_walkthrough.md %})  
+Next: [ "Code Walkthrough - KO"]({{ site.baseurl }}{% link docs/ko/new_chapter_0/code_walkthrough.md %})  
