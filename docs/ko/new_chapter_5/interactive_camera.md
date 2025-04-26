@@ -1,7 +1,8 @@
 ---
 layout: default
 title: Interactive Camera
-parent: "5. GLTF loading"
+parent: "5. GLTF loading - KO"
+grand_parent: "Korean VKGuide"
 nav_order: 2
 ---
 

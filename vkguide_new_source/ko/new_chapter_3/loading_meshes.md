@@ -1,7 +1,8 @@
 ---
 layout: default
 title: Mesh Loading
-parent: "3. Graphics Pipelines"
+parent: "3. Graphics Pipelines - KO"
+grand_parent: "Korean VKGuide"
 nav_order: 12
 ---
 

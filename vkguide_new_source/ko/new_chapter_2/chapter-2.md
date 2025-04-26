@@ -1,7 +1,8 @@
 ---
 layout: default
-title: "2. Drawing with Compute"
+title: "2. Drawing with Compute - KO"
 nav_order: 14
+parent: "Korean VKGuide"
 has_children: true
 permalink: /docs/ko/new_vkguide/chapter_2
 auto_comments: Vkguide 2 Beta Comments

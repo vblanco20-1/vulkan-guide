@@ -1,8 +1,9 @@
 ---
 layout: default
-title: "5. GLTF loading"
+title: "5. GLTF loading - KO"
 nav_order: 18
 has_children: true
+parent: "Korean VKGuide"
 permalink: /docs/ko/new_vkguide/chapter_5
 auto_comments: Vkguide 2 Beta Comments
 ---

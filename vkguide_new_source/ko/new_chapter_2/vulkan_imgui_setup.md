@@ -1,7 +1,8 @@
 ---
 layout: default
 title: Setting up IMGUI
-parent:  "2. Drawing with Compute"
+parent:  "2. Drawing with Compute - KO"
+grand_parent: "Korean VKGuide"
 nav_order: 7
 ---
 

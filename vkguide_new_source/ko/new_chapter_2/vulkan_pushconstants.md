@@ -1,7 +1,8 @@
 ---
 layout: default
 title: Push Constants and new shaders
-parent:  "2. Drawing with Compute"
+parent:  "2. Drawing with Compute - KO"
+grand_parent: "Korean VKGuide"
 nav_order: 9
 ---
 

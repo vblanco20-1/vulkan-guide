@@ -1,7 +1,8 @@
 ---
 layout: default
 title: Meshes and Camera
-parent: "4. Textures and Engine Architecture"
+parent: "4. Textures and Engine Architecture- KO"
+grand_parent: "Korean VKGuide"
 nav_order: 14
 ---
 

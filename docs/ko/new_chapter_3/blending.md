@@ -1,7 +1,8 @@
 ---
 layout: default
 title: Blending
-parent: "3. Graphics Pipelines"
+grand_parent: "Korean VKGuide"
+parent: "3. Graphics Pipelines - KO"
 nav_order: 20
 ---
 

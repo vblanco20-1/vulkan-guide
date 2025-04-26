@@ -1,8 +1,9 @@
 ---
 layout: default
-title: "4. Textures and Engine Architecture"
+title: "4. Textures and Engine Architecture- KO"
 has_children: true
 nav_order: 17
+parent: "Korean VKGuide"
 permalink: /docs/ko/new_vkguide/chapter_4
 auto_comments: Vkguide 2 Beta Comments
 ---

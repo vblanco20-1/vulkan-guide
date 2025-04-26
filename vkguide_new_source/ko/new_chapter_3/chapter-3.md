@@ -1,7 +1,8 @@
 ---
 layout: default
-title: "3. Graphics Pipelines"
+title: "3. Graphics Pipelines - KO"
 nav_order: 16
+parent: "Korean VKGuide"
 has_children: true
 auto_comments: Vkguide 2 Beta Comments
 permalink: /docs/ko/new_vkguide/chapter_3

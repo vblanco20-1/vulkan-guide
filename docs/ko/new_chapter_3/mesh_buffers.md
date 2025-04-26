@@ -1,7 +1,8 @@
 ---
 layout: default
 title: Mesh buffers
-parent: "3. Graphics Pipelines"
+parent: "3. Graphics Pipelines - KO"
+grand_parent: "Korean VKGuide"
 nav_order: 10
 ---
 

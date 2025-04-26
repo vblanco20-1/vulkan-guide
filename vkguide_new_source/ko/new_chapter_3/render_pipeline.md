@@ -1,7 +1,8 @@
 ---
 layout: default
 title: The graphics pipeline
-parent: "3. Graphics Pipelines"
+parent: "3. Graphics Pipelines - KO"
+grand_parent: "Korean VKGuide"
 nav_order: 2
 ---
 

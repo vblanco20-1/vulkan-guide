@@ -1,7 +1,8 @@
 ---
 layout: default
 title: Descriptor Abstractions
-parent: "4. Textures and Engine Architecture"
+parent: "4. Textures and Engine Architecture- KO"
+grand_parent: "Korean VKGuide"
 nav_order: 2
 ---
 

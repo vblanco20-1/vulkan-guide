@@ -1,7 +1,8 @@
 ---
 layout: default
 title: Improving the render loop
-parent:  "2. Drawing with Compute"
+parent:  "2. Drawing with Compute - KO"
+grand_parent: "Korean VKGuide"
 nav_order: 1
 ---
 
