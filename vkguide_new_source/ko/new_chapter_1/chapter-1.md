@@ -3,7 +3,7 @@ layout: default
 title: "1. Initializing Vulkan"
 nav_order: 13
 has_children: true
-permalink: /docs/new_vkguide/chapter_1
+permalink: /docs/ko/new_vkguide/chapter_1
 auto_comments: Vkguide 2 Beta Comments
 ---
 ![chapter1]({{site.baseurl}}/diagrams/chapter1.png)

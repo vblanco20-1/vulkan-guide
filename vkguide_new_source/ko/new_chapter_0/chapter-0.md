@@ -3,7 +3,7 @@ layout: default
 title: "0. Project Setup"
 nav_order: 11
 has_children: true
-permalink: /docs/new_vkguide/chapter_0
+permalink: /docs/ko/new_vkguide/chapter_0
 auto_comments: Vkguide 2 Beta Comments
 ---
 ![chapter0]({{site.baseurl}}/diagrams/chapter0.png)

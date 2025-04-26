@@ -3,7 +3,7 @@ layout: default
 title: "2. Drawing with Compute"
 nav_order: 14
 has_children: true
-permalink: /docs/new_vkguide/chapter_2
+permalink: /docs/ko/new_vkguide/chapter_2
 auto_comments: Vkguide 2 Beta Comments
 ---
 # 2장 : 컴퓨트 셰이더 그리기

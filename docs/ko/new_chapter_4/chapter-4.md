@@ -3,7 +3,7 @@ layout: default
 title: "4. Textures and Engine Architecture"
 has_children: true
 nav_order: 17
-permalink: /docs/new_vkguide/chapter_4
+permalink: /docs/ko/new_vkguide/chapter_4
 auto_comments: Vkguide 2 Beta Comments
 ---
 # 4장 : 텍스쳐와 엔진 아키텍처
