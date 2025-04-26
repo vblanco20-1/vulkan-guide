@@ -40,4 +40,5 @@ Vulkan 엔진에서는 다음과 같은 폴더 레이아웃을 사용할 것입�
 Next: [Building Project]({{ site.baseurl }}{% link docs/ko/new_chapter_0/building_project.md %})
 
 
-{% include comments.html term="Introduction Comments" %}
+{% include comments.html term="Vkguide 2 Korean Comments" %}
+

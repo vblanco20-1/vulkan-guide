@@ -65,4 +65,4 @@ Vulkan에는 프레임이라는 개념이 없습니다. 이는 렌더링 방식�
 Next: [Vulkan Render flow]({{ site.baseurl }}{% link docs/ko/introduction/vulkan_execution.md %})
 
 
-{% include comments.html term="Introduction Comments" %}
+{% include comments.html term="Vkguide 2 Korean Comments" %}

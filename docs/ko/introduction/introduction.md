@@ -12,3 +12,6 @@ auto_comments: Introduction Comments
 
 
 {: .fs-6 .fw-300 }
+
+{% include comments.html term="Vkguide 2 Korean Comments" %}
+
