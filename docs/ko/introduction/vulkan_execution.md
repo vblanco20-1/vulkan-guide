@@ -81,7 +81,7 @@ vkQueueSubmit(graphicsQueue, cmd, ...);
 vkQueuePresent(graphicsQueue, renderSemaphore);
 ```
 
-Next: [Project files and libraries]({{ site.baseurl }}{% link ko/docs/introduction/project_libs.md %})
+Next: [Project files and libraries]({{ site.baseurl }}{% link docs/ko/introduction/project_libs.md %})
 
 
 {% include comments.html term="Introduction Comments" %}

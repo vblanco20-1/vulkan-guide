@@ -37,7 +37,7 @@ Vulkan 엔진에서는 다음과 같은 폴더 레이아웃을 사용할 것입�
 
 - [VMA (vulkan memory allocator)](https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator) Vulkan을 위한 메모리 할당자가 구현되어있는 header only 라이브러리입니다. Vulkan에서는 버퍼, 이미지, 그리고 다른 자원들의 메모리 관리를 사용자가 직접 다뤄야 합니다. 이는 성능과 안정성을 동시에 고려하면서 처리하기 매우 어려울 수 있습니다. Vulkan Memory Allocator는 이를 대신 처리하여 이미지나 다른 자원의 생성을 쉽게 수행할 수 있습니다. 개인 Vulkan 엔진이나 에뮬레이터와 같은 소규모 프로젝트에서 널리 사용됩니다. 언리얼 엔진이나 기타 AAA 엔진과 같은 대규모 프로젝트에서는 각자의 메모리 할당자가 구현되어있습니다.
 
-Next: [Building Project]({{ site.baseurl }}{% link ko/docs/new_chapter_0/building_project.md %})
+Next: [Building Project]({{ site.baseurl }}{% link docs/ko/new_chapter_0/building_project.md %})
 
 
 {% include comments.html term="Introduction Comments" %}

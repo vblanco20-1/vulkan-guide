@@ -62,7 +62,7 @@ Vulkan에는 프레임이라는 개념이 없습니다. 이는 렌더링 방식�
 
 이는 Vulkan이 완전히 헤드리스(headless)모드로 사용할 수 있다는 것을 의미합니다. 즉, 화면에 아무것도 표시하지 않고 이미지를 렌더링한 후 이미지를 디스크에 저장할 수 있습니다(테스트 하기에 매우 유용하죠!). 혹은 Vulkan을 레이트레이싱과 같은 GPU 연산이나 다른 컴퓨팅 작업을 수행하는 도구로도 사용할 수 있습니다.
 
-Next: [Vulkan Render flow]({{ site.baseurl }}{% link ko/docs/introduction/vulkan_execution.md %})
+Next: [Vulkan Render flow]({{ site.baseurl }}{% link docs/ko/introduction/vulkan_execution.md %})
 
 
 {% include comments.html term="Introduction Comments" %}
