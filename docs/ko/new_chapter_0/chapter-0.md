@@ -1,6 +1,7 @@
 ---
 layout: default
 title: "0. Project Setup"
+parent: "Korean VKGuide"
 nav_order: 11
 has_children: true
 permalink: /docs/ko/new_vkguide/chapter_0
