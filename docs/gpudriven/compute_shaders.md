@@ -11,7 +11,7 @@ During this GPU driven chapter compute shaders have been mentioned many times, b
 The GPU is a computation machine, much in the same way as a CPU is. A GPU executes arbitrary code to do things like running the shaders or rendering triangles.
 While GPUs at first used to be just triangle-render machines, over time, they became more and more like CPUs due to the need of executing pixel/vertex shaders. Eventually, graphic APIs added compute shaders, which are a special type of shader that doesn't use the fixed graphics pipeline, and just allows to run arbitrary computations on the GPU.
 
-Modern GPUs are parallel compute machines first, with a few fixed hardware that accelerates graphics such as texture accessors and triangle rasterizers. A Gpu is composed of a set of "Compute units", which are roughly equivalent to a CPU core. But because a GPU is about parallelism first, their cores are different in some major ways.
+Modern GPUs are parallel compute machines first, with a few fixed hardware that accelerates graphics such as texture accessors and triangle rasterizers. A GPU is composed of a set of "Compute units", which are roughly equivalent to a CPU core. But because a GPU is about parallelism first, their cores are different in some major ways.
 
 First of all, the cores execute instructions in a very wide SIMD (Single Instruction, Multiple Data). While a CPU executes instructions on items one-at-a-time by default unless you use special instructions, a GPU executes everything in a wide manner, often 32 or 64 items at a time. Those are often called threads/lanes/cuda-cores. Also, each of the cores in the GPU overlaps the execution of multiple of those 32/64 wide instruction streams at a time, so that if one stream is waiting for a memory access, it can execute a different one. This works a lot like Hyperthreading does on CPUs, but it's a much more extreme version of the same concept.
 
@@ -25,7 +25,7 @@ A very important detail is that because executions run 32 or 64 at a time, they 
 To tame all of this power, GPUs run a different programming model than CPUs do. In a CPU you program scalar-first, workling on elements one at a time, while on the GPU want to do the same operations on thousands of elements at a time to let the wide GPU do its thing.
 It's for that reason the vertex shaders and pixel shaders run the way they do, one pixel or vertex at a time. On the driver, your pixel shader will be called in parallel with many threads at a time.
 
-For compute shaders, you access this a bit more directly. In compute shaders, there is a split beetween individual elements, and "work groups", which are groups of individual elements. Elements within the same workgroup can do some features such as access workgroup-local memory in a fast way, which is useful for many operations.
+For compute shaders, you access this a bit more directly. In compute shaders, there is a split between individual elements, and "work groups", which are groups of individual elements. Elements within the same workgroup can do some features such as access workgroup-local memory in a fast way, which is useful for many operations.
 
 To define a workgroup size, you have to set that up in the shader itself.
 
