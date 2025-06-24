@@ -6,6 +6,8 @@ nav_order: 1
 auto_comments: Project Ascendant
 ---
 
+Showcase video made almost from an early version.
+<iframe width="560" height="315" src="https://www.youtube.com/embed/ugsaEypPfn4?si=HkYnio8GM-auuGOV" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
 
 Project Ascendant is a side project created to prototype a large scale voxel RPG. The code was not meant to be used for a shipping game, but to have a framework to try rendering features and procedural generation techniques, as game engines are normally not a good fit for this sort of exploration. 
 
@@ -56,6 +58,9 @@ The codebase continues directly after the last chapter of VkGuide 2.0, and start
 The goal of the project was exploration of procedural techniques and data systems, as those can be very annoying to iterate with when using Unreal Engine which is what most of the tech will be ported to later when beginning full development. The reason the game will be "ported" into Unreal Engine is because it will have console support and multiplayer, and doing those on a custom engine will take years. Unity is not considered due to licensing issues, and Godot is not ready for something of this scale, might as well go full custom there and take the extra years of development.
 
 Over the coming weeks, I will be writing articles on sections of the engine that will be of interest to people, specially coming from VKGuide tutorial, but also outside of it if you are interested in game engine development in a "real" way, with an actual game project, not just a rendering engine. I will be covering architectural details, graphics techniques, game object architectures, and procedural generation.
+
+
+
 
 
 {: .fs-6 .fw-300 }
