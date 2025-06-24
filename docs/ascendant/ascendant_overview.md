@@ -3,6 +3,7 @@ layout: default
 title: Project Ascendant Overview
 parent: Project Ascendant
 nav_order: 1
+auto_comments: Project Ascendant
 ---
 
 
@@ -58,4 +59,3 @@ Over the coming weeks, I will be writing articles on sections of the engine that
 
 
 {: .fs-6 .fw-300 }
-{% include comments.html term="Project Ascendant" %}
