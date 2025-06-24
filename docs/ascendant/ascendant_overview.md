@@ -6,7 +6,7 @@ nav_order: 1
 auto_comments: Project Ascendant
 ---
 
-Showcase video made almost from an early version.
+Showcase video made from an early version, missing a lot of current features.
 <iframe width="560" height="315" src="https://www.youtube.com/embed/ugsaEypPfn4?si=HkYnio8GM-auuGOV" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
 
 Project Ascendant is a side project created to prototype a large scale voxel RPG. The code was not meant to be used for a shipping game, but to have a framework to try rendering features and procedural generation techniques, as game engines are normally not a good fit for this sort of exploration. 
