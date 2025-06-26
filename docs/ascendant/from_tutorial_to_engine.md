@@ -73,6 +73,42 @@ To hot-reload shaders, all you need to do is create the pipelines again with the
 
 Shaders are also no longer GLSL, but SLANG instead. This lets me use both HLSL and GLSL syntax in the same project, which is very useful when grabbing math snippets from internet. You also get real pointers as a feature for use with buffer device address, which is used extensively across the engine. Building the slang shader is the same as GLSL, you just point the script into a different executable, and the vulkan SDK installs the slang compiler already. I highly recommend you swap to slang from GLSL as its a significantly better experience.
 
+Snippets needed on the build script
+```python
+import os
+import subprocess
+
+slangPath = "./../third_party/slang/bin/slangc.exe"
+slangCommand = " {input} -o {output} -entry {entry} -force-glsl-scalar-layout -g2 -matrix-layout-column-major {defines} ";
+
+# compare last timestamp of the files
+def checkTiming(pathSource, pathTarget):
+    try:
+        info_source = os.stat(pathSource)
+    except FileNotFoundError as e:
+        return True        
+    
+    try:
+        info_target = os.stat(pathTarget)
+    except FileNotFoundError as e:
+        return True
+
+    return (info_source.st_mtime > info_target.st_mtime)
+
+# launches shader build on the target path
+def buildShader(path, outputPath,entry ,defines):
+
+    if(checkTiming(path,outputPath) or forceCompile):
+        command = slangPath +slangCommand.format(input=path, output=outputPath,entry=entry, defines=defines)       
+        print("executing: " + command)
+        subprocess.run(command, capture_output=True, text=True)
+
+
+# compile files
+buildShader("src/block_multi.slang","block_multi_transparent.frag.spv","pxMain", "-DFRAG -DTRANSPARENT")
+buildShader("src/block_multi.slang","block_multi_slang.frag.spv","pxMain", "-DFRAG")
+```
+
 # Renderer modularization
 As more logic was added to the renderer, the new features were added as classes that then would be hooked to VulkanEngine, where the main render loop happens.
 Some of the new modules are the BlockRenderer class, which deals with gpu-driven voxel rendering, but also individual post-fx implementations, or the object-renderer that deals with meshes from the ECS. The VulkanEngine class remains the "core" of the renderer, holding the important handles like Device, and managing the frame loop itself.
