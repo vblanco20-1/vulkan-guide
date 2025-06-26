@@ -1,6 +1,6 @@
 ---
 layout: default
-title: From tutorial to Engine (Draft)
+title: From tutorial to Engine
 parent: Project Ascendant
 nav_order: 2
 auto_comments: Project Ascendant
@@ -11,9 +11,9 @@ At the end of the chapter 5 of the tutorial, you have a VulkanEngine class that 
 # New dependencies and change to EASTL
 For this project, I went and moved to [EASTL](https://github.com/electronicarts/EASTL) instead of using the STL containers. Main reason for EASTL is easier allocator overrides, and being able to enable bound-checking in release modes at a insignificant performance cost. As a bonus i also get handy data structures like fixed_vector or better hashmaps. The biggest downside of EASTL is that the dependencies you use will be using the normal STL, which means you now need to instantiate both eastl::vector templates and std::vector templates with their helper structures/traits, decreasing compile time overall. On a head to head test, i found EASTL to take about the same time to compile as normal STL. 
 
-Using EASTL allowed simpler override of the allocator, which I used to change the allocator to [snmalloc](github.com/microsoft/snmalloc). This is a modern cpp allocator with considerable speed, specially when dealing with multiple threads allocating at once. I benchmarked this allocator being more than twice faster than the default MSVC allocator on most of my usage patterns. 
+Using EASTL allowed simpler override of the allocator, which I used to change the allocator to [snmalloc](https://github.com/microsoft/snmalloc). This is a modern cpp allocator with considerable speed, specially when dealing with multiple threads allocating at once. I benchmarked this allocator being more than twice faster than the default MSVC allocator on most of my usage patterns. 
 
-For profiling, I implemented [Tracy](github.com/wolfpld/tracy/). This is the best open source profiler of its kind, and it works by having the developed flag functions with `ZoneScoped;` macros and their variants. When you then connect the Tracy client to your running application, it will accurately measure the scopes you put the macros on. This lets you see exactly where your time is going every frame, and it does so across threads too. You can also hook your allocation overrides into Tracy and that lets it see the exact allocations too so that it can accurately track the memory usages of your application by exact callstack. All of this comes at a very low performance overhead, but you have to be watchful of RAM usage as all of this data can easily bloat RAM. 
+For profiling, I implemented [Tracy](https://github.com/wolfpld/tracy/). This is the best open source profiler of its kind, and it works by having the developed flag functions with `ZoneScoped;` macros and their variants. When you then connect the Tracy client to your running application, it will accurately measure the scopes you put the macros on. This lets you see exactly where your time is going every frame, and it does so across threads too. You can also hook your allocation overrides into Tracy and that lets it see the exact allocations too so that it can accurately track the memory usages of your application by exact callstack. All of this comes at a very low performance overhead, but you have to be watchful of RAM usage as all of this data can easily bloat RAM. 
 
 
 ![map]({{site.baseurl}}/diagrams/ascendant/tracy_overview.png)
@@ -23,7 +23,7 @@ For physics, i added [Jolt](https://github.com/jrouwe/JoltPhysics) into the engi
 
 On particle systems, i needed something that had an editor to bootstrap some fancy effects until i can have my own system. I found [Effekseer](https://effekseer.github.io/) which is a japanese middleware used in a few different indie games. It contains a particle editor and then a runtime that can display those effects in the engine. The vulkan backend was mostly drop-in, but i had to modify it to make it work with Dynamic Rendering instead of renderpasses. Overall effekseer is very basic, with a feature set below the particle systems you find on engines like unity or unreal, but its good enough as a placeholder for now.
 
-For sounds, i chose [SoLoud](github.com/jarikomppa/soloud), which is a fairly small audio library that handles some basic 3d audio and file playing. Its enough for the current stage of the project. 
+For sounds, i chose [SoLoud](https://github.com/jarikomppa/soloud), which is a fairly small audio library that handles some basic 3d audio and file playing. Its enough for the current stage of the project. 
 
 [Flecs](https://www.flecs.dev) was selected as the ECS library to deal with game object management at the game layer. The renderer does not use it other than to update some structures from it. 
 
