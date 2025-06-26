@@ -59,8 +59,7 @@ The goal of the project was exploration of procedural techniques and data system
 
 Over the coming weeks, I will be writing articles on sections of the engine that will be of interest to people, specially coming from VKGuide tutorial, but also outside of it if you are interested in game engine development in a "real" way, with an actual game project, not just a rendering engine. I will be covering architectural details, graphics techniques, game object architectures, and procedural generation.
 
-
-
+On the next article, i cover how the engine at the end of the tutorial was upgraded for the project [Next]({{site.baseurl}}/docs/ascendant/from_tutorial_to_engine/)
 
 
 {: .fs-6 .fw-300 }
