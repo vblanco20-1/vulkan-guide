@@ -117,6 +117,9 @@ To make this modularization work better, ive implemented a very simple framegrap
 
 The renderer has been moved from a forward renderer in the tutorial, to a deferred renderer. This was done because implementing techniques like SSAO requires a depth prepass, but doing depth prepass on a forward renderer means you draw 2 times, and a voxel renderer like this is completely bottlenecked by triangle counts, not materials. Thus moving to a deferred renderer makes sense because it does a single pass to write the gbuffer, and then it does the lighting logic in compute shaders.
 
+GBuffer as seen in renderdoc. Due to the simplicity of the materials, its only doing Albedo (color) + Normals + Depth. I dont support roughness
+![map]({{site.baseurl}}/diagrams/ascendant/gbuffer.png)
+
 Mesh rendering is changed from the tutorial, moving into a retained system instead of walking a graph like the tutorial does. The logic is on a ObjectRenderer class, and it works by storing renderable objects in arrays, one array per mesh and material pair. When you create a mesh, it gives you a integer handle that then you can use to manipulate the mesh and move it, or to destroy it. When rendering a frame, it goes over each of these arrays, and does a single DrawInstanced call to draw that group of objects. There is no sorting needed as things are pre-sorted, and its not sorting by depth either. The system can render hundreds of thousands of meshes no problem, with the possibility of moving it towards indirect drawing later.
 
 Animation is implemented using a custom buffer device address in the ObjectRenderer. There is no special renderer handling for skeletal meshes at all, they run through the same path as static meshes, but with a different shader. This means they are as fast to render as non-skeletal objects. Animation is handled in a component on the ECS entities, where i hold a SoA layout bone array and update it based on time. The animations are loaded from GLTF.
@@ -131,7 +134,13 @@ The block textures are loaded from the block information from config files and s
 
 Lighting is done as part of the ObjectRenderer, and applied during the `GbufferApply` compute pass, which does a lot of things at once and essentially calculates most of the rendering going from a gbuffer into a lit image. This pass calculates ambient light first, reading from the SSAO texture and LPV GI information, and then it loops over all the current lights in view and applies them to the current pixel. This is not very optimized, but as light counts in the prototype tend to be around 20 max, it performs completely fine and its very simple vs a clustered system. The lights get culled on the CPU to find which ones are near the camera and visible in the frustum, then put into a SSBO to read from the shader.
 
+This is how the render target looks after applying lighting on the gbuffer.
+![map]({{site.baseurl}}/diagrams/ascendant/gbuffer_lit.png)
+
 After lighting it applies volumetrics and fog on top on another shader, and renders the transparent objets. Next is bloom effect, tonemapping, and FXAA antialiasing. The last pass, which does tonemapping and fxaa, copies the image into the swapchain. Then it renders UI on top of that directly on the swapchain and presents.
+
+Here is a picture demonstrating the fog system and the dynamic pointlights
+![map]({{site.baseurl}}/diagrams/ascendant/bonfires.png)
 
 Details on the new renderer techniques and features will come on an article later.
 
