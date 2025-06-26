@@ -36,7 +36,7 @@ Luau is used as scripting runtime for data management of game objects. Its not u
 # Physical design for encapsulation and fast compile times
 With so many new libraries, we need a way to encapsulate them to avoid a serious compile time explosion. For example, VulkanEngine class leaks the vulkan headers as its using vulkan types on its private parameters. 
 
-Inspired by modern CryEngine, on the big classes i encapsulate them behind a pure interface that becomes the "public API" of the class. This technique is one of the many ways you can do pImpl patterns, and helps a lot to reduce compile time bloat and improve the incremental building times. 
+Inspired by modern CryEngine, on the big classes i encapsulate them behind a pure interface that becomes the "public API" of the class. This technique is one of the many ways you can do pImpl patterns, and helps a lot to reduce compile time bloat and improve the incremental building times. Some of these classes are created through `static Create()` function, others use a `static Get()` singleton pattern
 
 ```cpp
 // on a IFoo.h header, using forward declarations and having almost 0 transitive includes
@@ -75,17 +75,29 @@ Shaders are also no longer GLSL, but SLANG instead. This lets me use both HLSL a
 
 # Renderer modularization
 As more logic was added to the renderer, the new features were added as classes that then would be hooked to VulkanEngine, where the main render loop happens.
-Some of the new modules are the BlockRenderer class, which deals with gpu-driven voxel rendering, but also individual post-fx implementations, or the object-renderer that deals with meshes from the ECS.
+Some of the new modules are the BlockRenderer class, which deals with gpu-driven voxel rendering, but also individual post-fx implementations, or the object-renderer that deals with meshes from the ECS. The VulkanEngine class remains the "core" of the renderer, holding the important handles like Device, and managing the frame loop itself.
 
 To make this modularization work better, ive implemented a very simple framegraph to deal with sync across passes. It works as a sort of layer on top of the barrier system seen in the tutorial. It works by having you define passes every frame that runs, and then the system will run the passes in order, calculating which barriers are needed at each pass, and doing 1 pipeline barrier within the passes if thats necessary. If 2 passes dont need a barrier between them, then the system wont use barriers which will allow the GPU to overlap their work better. 
 
+The renderer has been moved from a forward renderer in the tutorial, to a deferred renderer. This was done because implementing techniques like SSAO requires a depth prepass, but doing depth prepass on a forward renderer means you draw 2 times, and a voxel renderer like this is completely bottlenecked by triangle counts, not materials. Thus moving to a deferred renderer makes sense because it does a single pass to write the gbuffer, and then it does the lighting logic in compute shaders.
+
+Mesh rendering is changed from the tutorial, moving into a retained system instead of walking a graph like the tutorial does. The logic is on a ObjectRenderer class, and it works by storing renderable objects in arrays, one array per mesh and material pair. When you create a mesh, it gives you a integer handle that then you can use to manipulate the mesh and move it, or to destroy it. When rendering a frame, it goes over each of these arrays, and does a single DrawInstanced call to draw that group of objects. There is no sorting needed as things are pre-sorted, and its not sorting by depth either. The system can render hundreds of thousands of meshes no problem, with the possibility of moving it towards indirect drawing later.
+
 Animation is implemented using a custom buffer device address in the ObjectRenderer. There is no special renderer handling for skeletal meshes at all, they run through the same path as static meshes, but with a different shader. This means they are as fast to render as non-skeletal objects. Animation is handled in a component on the ECS entities, where i hold a SoA layout bone array and update it based on time. The animations are loaded from GLTF.
+
+Voxels are drawn on the BlockRenderer class, and they are drawn using draw indirect for speed. They get drawn in chunks, with a chunk being 8x8x8 voxels. A chunk has multiple layers, for its transparency and opaque meshed draw, but also for its "far" render that is pure voxels. It generates a mesh for near voxels, while far voxels are drawn using a point-draw pipeline that is much faster and lighter in memory cost. It renders each individual voxel as a point, and in the pixel shader it raytraces the cube that makes that voxel.
+
+Both the ObjectRenderer and BlockRenderer support shadow passes, and they are done with the same techniques as the main draw, but with different pipelines.
 
 For data management, nothing is done. I just load the meshes exactly the same as the tutorial, preloading everything at startup. For games of this kind, the amount of assets they have is little, so you can preload everything at startup no problem and simplify the architecture by a lot. For voxel data and runtime meshes, i preallocate a 400 megabyte memory buffer and suballocate from it to handle the dynamic mesh loading needed for voxels.
 
 The block textures are loaded from the block information from config files and stuffed into a single hardcoded atlas. Even a 2k by 2k pixel atlas is fine when your textures are 16 by 16 pixels.
 
-Details on the specific changes to the renderer and the animation system will be on another article.
+Lighting is done as part of the ObjectRenderer, and applied during the `GbufferApply` compute pass, which does a lot of things at once and essentially calculates most of the rendering going from a gbuffer into a lit image. This pass calculates ambient light first, reading from the SSAO texture and LPV GI information, and then it loops over all the current lights in view and applies them to the current pixel. This is not very optimized, but as light counts in the prototype tend to be around 20 max, it performs completely fine and its very simple vs a clustered system. The lights get culled on the CPU to find which ones are near the camera and visible in the frustum, then put into a SSBO to read from the shader.
+
+After lighting it applies volumetrics and fog on top on another shader, and renders the transparent objets. Next is bloom effect, tonemapping, and FXAA antialiasing. The last pass, which does tonemapping and fxaa, copies the image into the swapchain. Then it renders UI on top of that directly on the swapchain and presents.
+
+Details on the new renderer techniques and features will come on an article later.
 
 # ECS Game Layer
 The renderer just draws things. We need something to hold the actual game state. For that, i use FLECS ECS library as the "low level" management layer. There is another game logic layer on top of that which manages entities, but that will be explained on a later article. 
@@ -93,7 +105,7 @@ The object renderer checks the ECS every frame and updates the mesh locations of
 
 The ECS is also directly hooked into the Jolt physics, where it will sync game objects with their physics proxies inside Jolt, then run a Jolt simulation step, and then sync the new positions to the ECS objects. 
 
-There is also a transform system for the ECS game objects, where there is a SceneNodeComponent, and by calling functions such as SetPosition on it, it wil automatically update all the children entities and flag them as moved to then be synced on physics and renderer. The transform system will be detailed on its own article later. The renderer does not care about hierarchy, it only deals with a simple list of entities with a MeshComponent. 
+There is a transform system for the ECS game objects, where there is a SceneNodeComponent, and by calling functions such as SetPosition on it, it wil automatically update all the children entities and flag them as moved to then be synced on physics and renderer. The transform system will be detailed on its own article later. The renderer does not care about hierarchy, it only deals with a simple list of entities with a MeshComponent. 
 
 
 
