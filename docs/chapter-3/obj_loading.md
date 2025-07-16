@@ -179,11 +179,11 @@ It's the same as the triangle, but we now use the monkey instead of the triangle
 ```
 
 You should be seeing a rotating monkey head. But with a glitch, some faces draw on top of each other.
-That's caused by the lack of a depth buffer that we have right now, so let's fix that on the next article.
+That's caused by the lack of a depth attachment that we have right now, so let's fix that on the next article.
 
 ![triangle]({{site.baseurl}}/diagrams/monkeyGlitch.png)
 
-Next: [Setting up Depth Buffer]({{ site.baseurl }}{% link docs/chapter-3/depth_buffer.md %})
+Next: [Setting up Depth Attachment]({{ site.baseurl }}{% link docs/chapter-3/depth_buffer.md %})
 
 {% include comments.html term="Chapter 3 Comments" %}
 
