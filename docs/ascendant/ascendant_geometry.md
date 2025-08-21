@@ -30,8 +30,6 @@ The main tradeoff of chunk size is that the bigger your chunks, the fewer draws 
 
 The 3 voxel-draws + the vegetation system work through the same system, as part of the `BlockRenderer` class. This design works by having a very big buffer that is allocated at engine startup (I use 400 megabytes) - I'll call this buffer "gigabuffer" - and then the buffers for their data get sub-allocated on there thanks to VMA Virtual Allocation feature. This could use buffer device address, but I suballocate like this so that it's unified into 1 buffer for transfer operations and so I can use 32-bit offsets into the buffer instead of 64-bit pointers. 
 
-![Gigabuffer Layout]({{site.baseurl}}/diagrams/ascendant/gigabuffer_layout.svg)
-
 In the renderer, there are 2 big arrays of chunk information that get uploaded to the GPU too. The first one contains the "near field" chunks, and the second the far field. 
 
 As its simpler, lets begin with the far field system.
@@ -62,8 +60,6 @@ struct DrawBlock {
 ```
 A Block that is a 32-bit packed version of a blockID + its position and a couple flags. Only visible blocks are put into the data, so blocks below the ground will not be contained there. Only surface blocks do. So for example, in a flat field, an 8x8x8 chunk will contain 8x8 = 64 block data entries as there is only 1 layer visible. As the chunks are all 8x8x8, with 4 bits per axis I can cover the possible positions for that block. With 4 bits I could also make it go into 16x16x16 chunks as it fits there too.
 
-![DrawBlock Format]({{site.baseurl}}/diagrams/ascendant/drawblock_format.svg)
-
 The voxel renderer does not take care of generating these lists. It only draws and manages the gpu side memory. 
 Its relevant api is just this
 
@@ -92,8 +88,6 @@ The engine does not implement pyramid-based depth culling as shown [here](https:
 First, the engine has to sync the memory of the ChunkDrawInfo array to the GPU. This is done by directly writing the chunk draw info array into a CPU-side buffer. This could be done with a scatter upload step like the blocks use, but it was fast enough so it was preferable to avoid the complexity of handling that.
 
 Every time the chunks need to be drawn, I run a compute shader that outputs into an indirect buffer + indirect count. Shadow passes and main view passes reuse the same indirect buffer. The cull shader looks like this:
-
-![Draw Indirect Flow]({{site.baseurl}}/diagrams/ascendant/draw_indirect_flow.svg)
 
 ```hlsl
 struct ChunkDrawIndirect { 
@@ -158,8 +152,6 @@ With that system for pure cubes explained, we can now move forward to the meshed
 The system does not generate index buffers. Instead, all of the mesh generation outputs quads. But these quads are quads with arbitrary 4 points, they aren't like the cubes where they are flat quads. By restricting the topology of the mesh to quads, we can simplify the data management as we don't need to care about index buffers for the draw indirect logic, and it now relies on reusing the same quad index buffer for everything.
 
 The vertex format is this.
-
-![Vertex Formats]({{site.baseurl}}/diagrams/ascendant/vertex_formats_simple.svg)
 
 ```cpp
 //compact packed vertex for environment/block generators
