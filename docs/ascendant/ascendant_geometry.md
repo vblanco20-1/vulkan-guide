@@ -14,6 +14,8 @@ The core of all voxel engines is determining what technique to use for drawing t
 * **Vegetation clutter**: Instanced drawing system with vertex animation, for all the grass.
 * **Arbitrary mesh rendering (allows animation)**: For enemies, props, and all sorts of things where they are loaded from a GLTF and aren't voxels
 
+![Rendering Systems Overview]({{site.baseurl}}/diagrams/ascendant/rendering_systems_overview.svg)
+
 As there are 5 different rendering systems with different properties, I decided to move the engine to a deferred rendering scheme. That way I only need to care about writing the gbuffer, and the lighting math is unified when the deferred light is applied later in the frame.
 
 In voxel engines and Minecraft-likes, there are 2 main bottlenecks to the rendering performance (in regards to GPU, at least). The first is memory usage for the generated meshes and/or voxels, and the second is geometry density. As voxels are 3-dimensional and scale as O(n³) when you increase the draw distance, you will fill your RAM very, very quickly. Even with culling, you still need to generate those voxel meshes so that they are ready to be drawn. 
@@ -29,6 +31,8 @@ A given chunk will be 1 "unit" of mesh generation, and 1 mesh to draw. Chunks ca
 The main tradeoff of chunk size is that the bigger your chunks, the fewer draws you have, but also your draws become bigger so they cull worse. There isn't really an optimal chunk size, as it's something that changes the design of the engine and heavily depends on the data. 
 
 The 3 voxel-draws + the vegetation system work through the same system, as part of the `BlockRenderer` class. This design works by having a very big buffer that is allocated at engine startup (I use 400 megabytes) - I'll call this buffer "gigabuffer" - and then the buffers for their data get sub-allocated on there thanks to VMA Virtual Allocation feature. This could use buffer device address, but I suballocate like this so that it's unified into 1 buffer for transfer operations and so I can use 32-bit offsets into the buffer instead of 64-bit pointers. 
+
+![Chunk Architecture]({{site.baseurl}}/diagrams/ascendant/chunk_architecture.svg)
 
 In the renderer, there are 2 big arrays of chunk information that get uploaded to the GPU too. The first one contains the "near field" chunks, and the second the far field. 
 
@@ -88,6 +92,8 @@ The engine does not implement pyramid-based depth culling as shown [here](https:
 First, the engine has to sync the memory of the ChunkDrawInfo array to the GPU. This is done by directly writing the chunk draw info array into a CPU-side buffer. This could be done with a scatter upload step like the blocks use, but it was fast enough so it was preferable to avoid the complexity of handling that.
 
 Every time the chunks need to be drawn, I run a compute shader that outputs into an indirect buffer + indirect count. Shadow passes and main view passes reuse the same indirect buffer. The cull shader looks like this:
+
+![Draw Indirect Pipeline]({{site.baseurl}}/diagrams/ascendant/draw_indirect_pipeline.svg)
 
 ```hlsl
 struct ChunkDrawIndirect { 
@@ -152,6 +158,8 @@ With that system for pure cubes explained, we can now move forward to the meshed
 The system does not generate index buffers. Instead, all of the mesh generation outputs quads. But these quads are quads with arbitrary 4 points, they aren't like the cubes where they are flat quads. By restricting the topology of the mesh to quads, we can simplify the data management as we don't need to care about index buffers for the draw indirect logic, and it now relies on reusing the same quad index buffer for everything.
 
 The vertex format is this.
+
+![Vertex Formats]({{site.baseurl}}/diagrams/ascendant/vertex_formats.svg)
 
 ```cpp
 //compact packed vertex for environment/block generators
