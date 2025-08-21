@@ -14,8 +14,6 @@ The core of all voxel engines is determining what technique to use for drawing t
 * **Vegetation clutter**: Instanced drawing system with vertex animation, for all the grass.
 * **Arbitrary mesh rendering (allows animation)**: For enemies, props, and all sorts of things where they are loaded from a GLTF and aren't voxels
 
-![Rendering Systems Overview]({{site.baseurl}}/diagrams/ascendant/rendering_systems_overview.svg)
-
 As there are 5 different rendering systems with different properties, I decided to move the engine to a deferred rendering scheme. That way I only need to care about writing the gbuffer, and the lighting math is unified when the deferred light is applied later in the frame.
 
 In voxel engines and Minecraft-likes, there are 2 main bottlenecks to the rendering performance (in regards to GPU, at least). The first is memory usage for the generated meshes and/or voxels, and the second is geometry density. As voxels are 3-dimensional and scale as O(n³) when you increase the draw distance, you will fill your RAM very, very quickly. Even with culling, you still need to generate those voxel meshes so that they are ready to be drawn. 
@@ -32,7 +30,7 @@ The main tradeoff of chunk size is that the bigger your chunks, the fewer draws 
 
 The 3 voxel-draws + the vegetation system work through the same system, as part of the `BlockRenderer` class. This design works by having a very big buffer that is allocated at engine startup (I use 400 megabytes) - I'll call this buffer "gigabuffer" - and then the buffers for their data get sub-allocated on there thanks to VMA Virtual Allocation feature. This could use buffer device address, but I suballocate like this so that it's unified into 1 buffer for transfer operations and so I can use 32-bit offsets into the buffer instead of 64-bit pointers. 
 
-![Chunk Architecture]({{site.baseurl}}/diagrams/ascendant/chunk_architecture.svg)
+![Gigabuffer Layout]({{site.baseurl}}/diagrams/ascendant/gigabuffer_layout.svg)
 
 In the renderer, there are 2 big arrays of chunk information that get uploaded to the GPU too. The first one contains the "near field" chunks, and the second the far field. 
 
@@ -64,6 +62,8 @@ struct DrawBlock {
 ```
 A Block that is a 32-bit packed version of a blockID + its position and a couple flags. Only visible blocks are put into the data, so blocks below the ground will not be contained there. Only surface blocks do. So for example, in a flat field, an 8x8x8 chunk will contain 8x8 = 64 block data entries as there is only 1 layer visible. As the chunks are all 8x8x8, with 4 bits per axis I can cover the possible positions for that block. With 4 bits I could also make it go into 16x16x16 chunks as it fits there too.
 
+![DrawBlock Format]({{site.baseurl}}/diagrams/ascendant/drawblock_format.svg)
+
 The voxel renderer does not take care of generating these lists. It only draws and manages the gpu side memory. 
 Its relevant api is just this
 
@@ -93,7 +93,7 @@ First, the engine has to sync the memory of the ChunkDrawInfo array to the GPU. 
 
 Every time the chunks need to be drawn, I run a compute shader that outputs into an indirect buffer + indirect count. Shadow passes and main view passes reuse the same indirect buffer. The cull shader looks like this:
 
-![Draw Indirect Pipeline]({{site.baseurl}}/diagrams/ascendant/draw_indirect_pipeline.svg)
+![Draw Indirect Flow]({{site.baseurl}}/diagrams/ascendant/draw_indirect_flow.svg)
 
 ```hlsl
 struct ChunkDrawIndirect { 
@@ -159,7 +159,7 @@ The system does not generate index buffers. Instead, all of the mesh generation 
 
 The vertex format is this.
 
-![Vertex Formats]({{site.baseurl}}/diagrams/ascendant/vertex_formats.svg)
+![Vertex Formats]({{site.baseurl}}/diagrams/ascendant/vertex_formats_simple.svg)
 
 ```cpp
 //compact packed vertex for environment/block generators
