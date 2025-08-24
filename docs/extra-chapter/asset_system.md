@@ -43,7 +43,7 @@ Engine and Converter will both link AssetLib. Converter will link all the differ
 
 
 # Libraries
-We will add 2 libraries to the project. The first one is LZ4 compression library, which we will be using to compress the binary blobs. The second one is nhlomans Json library, which is the easiest to use json library for modern Cpp and it's really nice to use.
+We will add 2 libraries to the project. The first one is LZ4 compression library, which we will be using to compress the binary blobs. The second one is nlohmann's Json library, which is the easiest to use json library for modern Cpp and it's really nice to use.
 
 * LZ4: https://github.com/lz4/lz4
 * Json: https://github.com/nlohmann/json
