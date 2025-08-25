@@ -15,7 +15,8 @@ The core of all voxel engines is determining what technique to use for drawing t
 * **Arbitrary mesh rendering (allows animation)**: For enemies, props, and all sorts of things where they are loaded from a GLTF and aren't voxels
 
 In this image you can see the difference between the blocky draws that are used for distance rendering and the smoothed detail meshes used close
-![map]({{site.baseurl}}/diagrams/ascendant/BlockVsMesh.jpg)
+
+![map]({{site.baseurl}}/diagrams/ascendant/BlockVsMesh.png)
 
 As there are 5 different rendering systems with different properties, I decided to move the engine to a deferred rendering scheme. That way I only need to care about writing the gbuffer, and the lighting math is unified when the deferred light is applied later in the frame.
 
@@ -85,7 +86,7 @@ The sprite renderer is based on this paper: [A Ray-Box Intersection Algorithm an
 The idea is that we do one quad (or point) per voxel, and in the pixel shader, we perform a ray/box intersection to calculate the exact collision. This lets us draw a box (or other shape!) with only a single quad or point draw. The downside of it is that we need to do tricks with outputting depth from the pixel shader, which must be used carefully. As it's raytracing geometry inside the pixel shader, it can't be used with MSAA. In the paper, they recommend drawing as points or using a geometry shader to augment a point into a quad. I decided to do a fairly common particle system trick to draw quads.
 
 In this screenshot I have removed the discard logic that removes pixel outside of the rendered sprites, which clearly shows how each cube is a quad sprite.
-![map]({{site.baseurl}}/diagrams/ascendant/cubesprites.jpg)
+![map]({{site.baseurl}}/diagrams/ascendant/cubesprites.png)
 
 The other renderer just finds the global voxel position, and moves 3 quads to face the camera to match the 3 visible sides of the cube. It got removed once I added the smooth mesh system and left the other for the far distance draws.
 
