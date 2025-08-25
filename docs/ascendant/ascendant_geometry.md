@@ -14,6 +14,9 @@ The core of all voxel engines is determining what technique to use for drawing t
 * **Vegetation clutter**: Instanced drawing system with vertex animation, for all the grass.
 * **Arbitrary mesh rendering (allows animation)**: For enemies, props, and all sorts of things where they are loaded from a GLTF and aren't voxels
 
+In this image you can see the difference between the blocky draws that are used for distance rendering and the smoothed detail meshes used close
+![map]({{site.baseurl}}/diagrams/ascendant/BlockVsMesh.jpg)
+
 As there are 5 different rendering systems with different properties, I decided to move the engine to a deferred rendering scheme. That way I only need to care about writing the gbuffer, and the lighting math is unified when the deferred light is applied later in the frame.
 
 In voxel engines and Minecraft-likes, there are 2 main bottlenecks to the rendering performance (in regards to GPU, at least). The first is memory usage for the generated meshes and/or voxels, and the second is geometry density. As voxels are 3-dimensional and scale as O(n³) when you increase the draw distance, you will fill your RAM very, very quickly. Even with culling, you still need to generate those voxel meshes so that they are ready to be drawn. 
@@ -80,6 +83,9 @@ There are 2 strategies for rendering these lists of blocks: one is the sprite re
 The sprite renderer is based on this paper: [A Ray-Box Intersection Algorithm and Efficient Dynamic Voxel Rendering](https://research.nvidia.com/publication/2018-09_ray-box-intersection-algorithm-and-efficient-dynamic-voxel-rendering).
 
 The idea is that we do one quad (or point) per voxel, and in the pixel shader, we perform a ray/box intersection to calculate the exact collision. This lets us draw a box (or other shape!) with only a single quad or point draw. The downside of it is that we need to do tricks with outputting depth from the pixel shader, which must be used carefully. As it's raytracing geometry inside the pixel shader, it can't be used with MSAA. In the paper, they recommend drawing as points or using a geometry shader to augment a point into a quad. I decided to do a fairly common particle system trick to draw quads.
+
+In this screenshot I have removed the discard logic that removes pixel outside of the rendered sprites, which clearly shows how each cube is a quad sprite.
+![map]({{site.baseurl}}/diagrams/ascendant/cubesprites.jpg)
 
 The other renderer just finds the global voxel position, and moves 3 quads to face the camera to match the 3 visible sides of the cube. It got removed once I added the smooth mesh system and left the other for the far distance draws.
 

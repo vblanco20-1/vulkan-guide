@@ -1,4 +1,4 @@
-<svg width="650" height="320" xmlns="http://www.w3.org/2000/svg">
+<svg width="650" height="260" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <style>
       .title { fill: #ffffff; font-family: 'Arial', sans-serif; font-size: 16px; font-weight: bold; }
@@ -71,12 +71,5 @@
   <text x="355" y="215" text-anchor="middle" class="label" font-size="9">index:150, count:72</text>
   
   <text x="235" y="245" text-anchor="middle" class="label">ChunkDrawInfo Array (CPU)</text>
-  
-  <!-- Clear arrows from ChunkDrawInfo to specific chunks -->
-  <path d="M 115 185 Q 115 150 100 140" class="arrow" fill="none" stroke="#00ff88" stroke-width="3" marker-end="url(#arrowhead)"/>
- 
-  <path d="M 235 185 Q 210 160 185 140" class="arrow" fill="none" stroke="#88ff00" stroke-width="3" marker-end="url(#arrowhead2)"/>
-  
-  <path d="M 355 185 Q 320 160 270 140" class="arrow" fill="none" stroke="#ffaa00" stroke-width="3" marker-end="url(#arrowhead3)"/>
-  
+   
 </svg>
