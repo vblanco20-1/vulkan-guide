@@ -28,7 +28,9 @@ A given chunk will be 1 "unit" of mesh generation, and 1 mesh to draw. Chunks ca
 
 The main tradeoff of chunk size is that the bigger your chunks, the fewer draws you have, but also your draws become bigger so they cull worse. There isn't really an optimal chunk size, as it's something that changes the design of the engine and heavily depends on the data. 
 
-The 3 voxel-draws + the vegetation system work through the same system, as part of the `BlockRenderer` class. This design works by having a very big buffer that is allocated at engine startup (I use 400 megabytes) - I'll call this buffer "gigabuffer" - and then the buffers for their data get sub-allocated on there thanks to VMA Virtual Allocation feature. This could use buffer device address, but I suballocate like this so that it's unified into 1 buffer for transfer operations and so I can use 32-bit offsets into the buffer instead of 64-bit pointers. 
+The 3 voxel-draws + the vegetation system work through the same system, as part of the `BlockRenderer` class. This design works by having a very big buffer that is allocated at engine startup (I use 400 megabytes) - I'll call this buffer "gigabuffer" - and then the buffers for their data get sub-allocated on there thanks to VMA Virtual Allocation feature. This could use buffer device address, but I suballocate like this so that it's unified into 1 buffer for transfer operations and so I can use 32-bit offsets into the buffer instead of 64-bit pointers.
+
+![Gigabuffer Memory Layout](gigabuffer_diagram.svg) 
 
 In the renderer, there are 2 big arrays of chunk information that get uploaded to the GPU too. The first one contains the "near field" chunks, and the second the far field. 
 

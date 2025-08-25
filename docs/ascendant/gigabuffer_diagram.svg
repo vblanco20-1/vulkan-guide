@@ -1,0 +1,82 @@
+<svg width="650" height="320" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      .title { fill: #ffffff; font-family: 'Arial', sans-serif; font-size: 16px; font-weight: bold; }
+      .label { fill: #cccccc; font-family: 'Arial', sans-serif; font-size: 12px; }
+      .buffer { fill: #2a2a2a; stroke: #666666; stroke-width: 2; }
+      .chunk { fill: #4a90e2; stroke: #357abd; stroke-width: 1; opacity: 0.8; }
+      .chunk-veg { fill: #5cb85c; stroke: #449d44; stroke-width: 1; opacity: 0.8; }
+      .chunk-far { fill: #f0ad4e; stroke: #ec971f; stroke-width: 1; opacity: 0.8; }
+      .free { fill: #333333; stroke: #555555; stroke-width: 1; stroke-dasharray: "3,3"; }
+      .arrow { stroke-width: 2; }
+      .data-label { fill: #ffffff; font-family: 'Arial', sans-serif; font-size: 10px; font-weight: bold; }
+    </style>
+    
+    <marker id="arrowhead" markerWidth="12" markerHeight="8" refX="10" refY="4" orient="auto" markerUnits="strokeWidth">
+      <polygon points="0 0, 12 4, 0 8" fill="#00ff88"/>
+    </marker>
+    <marker id="arrowhead2" markerWidth="12" markerHeight="8" refX="10" refY="4" orient="auto" markerUnits="strokeWidth">
+      <polygon points="0 0, 12 4, 0 8" fill="#88ff00"/>
+    </marker>
+    <marker id="arrowhead3" markerWidth="12" markerHeight="8" refX="10" refY="4" orient="auto" markerUnits="strokeWidth">
+      <polygon points="0 0, 12 4, 0 8" fill="#ffaa00"/>
+    </marker>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="650" height="320" fill="#1a1a1a"/>
+  
+  <!-- Title -->
+  <text x="325" y="25" text-anchor="middle" class="title">Gigabuffer Memory Layout (400MB GPU Buffer)</text>
+  
+  <!-- Main buffer outline -->
+  <rect x="50" y="50" width="380" height="80" class="buffer" rx="4"/>
+  <text x="55" y="45" class="label">Gigabuffer (Unified GPU Buffer containing all vertex/voxel data)</text>
+  
+  <!-- Allocated chunks with vertex/voxel data labels -->
+  <rect x="60" y="60" width="80" height="60" class="chunk" rx="2"/>
+  <text x="100" y="78" text-anchor="middle" class="label">Near Field</text>
+  <text x="100" y="92" text-anchor="middle" class="label">Mesh Vertices</text>
+  <text x="100" y="106" text-anchor="middle" class="data-label">BlockVertex[]</text>
+  
+  <rect x="150" y="60" width="70" height="60" class="chunk-veg" rx="2"/>
+  <text x="185" y="78" text-anchor="middle" class="label">Vegetation</text>
+  <text x="185" y="92" text-anchor="middle" class="label">Clutter Data</text>
+  <text x="185" y="106" text-anchor="middle" class="data-label">ClutterUnit[]</text>
+  
+  <rect x="230" y="60" width="80" height="60" class="chunk-far" rx="2"/>
+  <text x="270" y="78" text-anchor="middle" class="label">Far Field</text>
+  <text x="270" y="92" text-anchor="middle" class="label">Voxel Blocks</text>
+  <text x="270" y="106" text-anchor="middle" class="data-label">DrawBlock[]</text>
+  
+  <!-- Free space -->
+  <rect x="320" y="60" width="100" height="60" class="free" rx="2"/>
+  <text x="370" y="85" text-anchor="middle" class="label">Free Space</text>
+  <text x="370" y="100" text-anchor="middle" class="label">(Available)</text>
+  
+  <!-- ChunkDrawInfo references -->
+  <rect x="50" y="170" width="370" height="60" class="buffer" rx="4"/>
+  
+  <!-- Horizontal table cells -->
+  <rect x="60" y="185" width="110" height="35" fill="#555555" rx="1"/>
+  <text x="115" y="200" text-anchor="middle" class="label" font-size="10">pos:(8,0,12)</text>
+  <text x="115" y="215" text-anchor="middle" class="label" font-size="9">index:0, count:64</text>
+  
+  <rect x="180" y="185" width="110" height="35" fill="#555555" rx="1"/>
+  <text x="235" y="200" text-anchor="middle" class="label" font-size="10">pos:(16,0,12)</text>
+  <text x="235" y="215" text-anchor="middle" class="label" font-size="9">index:80, count:48</text>
+  
+  <rect x="300" y="185" width="110" height="35" fill="#555555" rx="1"/>
+  <text x="355" y="200" text-anchor="middle" class="label" font-size="10">pos:(24,0,12)</text>
+  <text x="355" y="215" text-anchor="middle" class="label" font-size="9">index:150, count:72</text>
+  
+  <text x="235" y="245" text-anchor="middle" class="label">ChunkDrawInfo Array (CPU)</text>
+  
+  <!-- Clear arrows from ChunkDrawInfo to specific chunks -->
+  <path d="M 115 185 Q 115 150 100 140" class="arrow" fill="none" stroke="#00ff88" stroke-width="3" marker-end="url(#arrowhead)"/>
+ 
+  <path d="M 235 185 Q 210 160 185 140" class="arrow" fill="none" stroke="#88ff00" stroke-width="3" marker-end="url(#arrowhead2)"/>
+  
+  <path d="M 355 185 Q 320 160 270 140" class="arrow" fill="none" stroke="#ffaa00" stroke-width="3" marker-end="url(#arrowhead3)"/>
+  
+</svg>
