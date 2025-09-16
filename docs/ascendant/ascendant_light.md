@@ -127,6 +127,7 @@ struct Pass {
  ```
 
  ## Executing the RenderGraph
+ 
  Once this list of passes is generated, it needs to execute them in order. When the rendergraph execution begins, the first thing it does is go through all images, and pre-barrier the first usage of each image. This way we are batching things a bit. After that, it executes each pass one at a time. On each pass, it checks what image layouts and barriers the pass wants, and adds the barriers to the BarrierMerger seen above. This uses the read + write information seen on the pass. It then does a barrier flush to perform the barrier, and calls the execution lambda so that the Vulkan commands are executed. After the pass is executed, the information from the imageWrites sets some flags on those resources, which the next pass that uses them will keep in mind when calculating the needed barriers for the pass. 
 
  This system is going to be doing 1 barrier for most passes. More advanced rendergraph systems will reorder passes or calculate the barriers more accurately to try to "merge" passes without barriers between them. For this engine, I made sure that the passes are defined in a way that they don't share image reads/writes, which allows the system to skip barriers between passes at various points. 
