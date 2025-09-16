@@ -156,11 +156,28 @@ Unlike the sky, the volumetrics are quite expensive. The 3d volume needed ends u
 
 With all those things calculated, its time to apply them to the image. The first pass is a GbufferApply pass, which calculates the full lighting. This pass loads the color and normal from the gbuffer, and calculates the whole lighting necessary for the image. 
 
-Using the SSAO for blending, it applies "ambient" lighting. By using the ssao to mask it, it keeps the corners darker. 
+Using the SSAO for blending, it applies "ambient" lighting. By using the ssao to mask it, it keeps the corners darker. The ambient light is calculated by using the atmosphere system to create a cubemap, and downsampling it to find a ambient light parameter that includes the blue sky (if at day) plus a green ground color (the color can change depending on what biome you are at. its an approximation)
 
 With the sun mask image, it gives the pixels where it needs to add the lighting from the sun. Using the sun mask image skips having to calculate shadow logic on this pass as we already did it before.
 
 Then, it applies the point lights. These are culled and uploaded to the GPU from the cpu every frame, and are applied in a completely bruteforce fashion. In this project you dont see that many point lights, so for something on the "dozens" scale, such a bruteforce way works completely fine. If the project had more lights, then it would need to use some acceleration structure to avoid calculating every light on every pixel, for example a tiled lighting system where it divides the screen into square tiles, and loops the lights on each tile only.
+
+```c
+[loop]
+for (int i = 0; i < pushConst.pointLightCount; i++) {
+
+    GPUlightParameters light = pushConst.PointLights[i];
+
+    //distance squared check as a fast-path
+    float distSQ = dot(pixelWorldPosition.xyz - light.lightPosition, pixelWorldPosition.xyz - light.lightPosition);
+    bool inRange = distSQ < (light.attenuationRadius * light.attenuationRadius);
+
+    //by using wave-operations it improves the performance a bit of this branch. Tested
+    if (WaveActiveAnyTrue(inRange)) {
+        finalColor += evaluatePunctualLightPBR(V, N, pixelWorldPosition.xyz, albedo, metallic, roughness, light);
+    }
+}
+```
 
 The result of applying the gbuffer gives this.
 ![map]({{site.baseurl}}/diagrams/ascendant/gbuffer_lit.png)
