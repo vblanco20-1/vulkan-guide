@@ -8,7 +8,7 @@ auto_comments: Project Ascendant
 
 The last chapter of the tutorial has a forward-renderer system, where we calculate lighting on the pixel shader of the object draws, and output to the renderer image. But for the Ascendant project, a lot more features are required: volumetrics, SSAO, tonemapper, dynamic lighting, and shadows. For this reason, the renderer was moved to a deferred system. The voxels and meshes drawn will write into a GBuffer, and then it applies all of the lighting features as compute passes on top of that. This required a big reorganization, and a system to keep track of all the required synchronization over the rendering images and intermediate targets. 
 
-## Synchronization
+# Synchronization
 In the tutorial, barriers are done as a call like ` vkutil::transition_image(cmd, new_image.image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);` . This directly encodes the barrier command. This was fine with the tutorial, as its sync needs weren't much. But now that we need to deal with gbuffers and indirect command buffers, we often see cases like encoding 8 barriers at a time into the commands. The GPU driver doesn't really like to handle barriers like this, and it performs better if it does a single VkCmdPipelineBarrier that does multiple barriers at a time, instead of multiple vkCmdPipelineBarrier calls. 
 
 To fix this, I've implemented a BarrierMerger utility class, which maintains the logic of the "instant" vkutil calls, but just batches all into a single VkCmdPipelineBarrier call.
@@ -30,7 +30,7 @@ struct BarrierMerger {
 
 The barriers across the frame were all modified to use this to improve performance a bit. The mechanics of transition_image and other calls are the same as seen in the tutorial.
 
-## RenderGraph
+# RenderGraph
 While the barrier merger is handy, it's still completely manual. And when one is developing an engine that has many compute and draw passes for various things, keeping track of all the barriers needed for everything gets out of hand very quickly. In the tutorial it wasn't a problem because we only had 3-4 steps, but even at that scale the barriers were already annoying and a common source of mistakes. To automate the barriers across render passes, I implemented the RenderPass system. This is a very simplified version of the framegraphs you see in AAA engines. For a look into a really good talk about that, you can check here [Frostbite Framegraph](https://www.gdcvault.com/play/1024612/FrameGraph-Extensible-Rendering-Architecture-in). The design here is a highly simplified version of a similar concept.
 
 Here is the API of the system. It has a Rendergraph::Builder which is the core of the system.
@@ -126,14 +126,14 @@ struct Pass {
 };
  ```
 
- ## Executing the RenderGraph
+ # Executing the RenderGraph
  
  Once this list of passes is generated, it needs to execute them in order. When the rendergraph execution begins, the first thing it does is go through all images, and pre-barrier the first usage of each image. This way we are batching things a bit. After that, it executes each pass one at a time. On each pass, it checks what image layouts and barriers the pass wants, and adds the barriers to the BarrierMerger seen above. This uses the read + write information seen on the pass. It then does a barrier flush to perform the barrier, and calls the execution lambda so that the Vulkan commands are executed. After the pass is executed, the information from the imageWrites sets some flags on those resources, which the next pass that uses them will keep in mind when calculating the needed barriers for the pass. 
 
  This system is going to be doing 1 barrier for most passes. More advanced rendergraph systems will reorder passes or calculate the barriers more accurately to try to "merge" passes without barriers between them. For this engine, I made sure that the passes are defined in a way that they don't share image reads/writes, which allows the system to skip barriers between passes at various points. 
 
 
- ## Deferred rendering
+ # Deferred rendering
 
  ![map]({{site.baseurl}}/diagrams/ascendant/gbuffer.png)
 
