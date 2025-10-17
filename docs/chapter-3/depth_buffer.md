@@ -1,15 +1,15 @@
 ---
 layout: default
-title: Setting up depth buffer
+title: Setting up depth attachment
 parent:  "3. Drawing meshes"
 grand_parent: Legacy VkGuide, Vulkan 1.1
 nav_order: 15
 ---
 
-When we created the renderpass in chapter 1, there is something we skipped to keep the code shorter, the depth buffer.
+When we created the renderpass in chapter 1, there is something we skipped to keep the code shorter, the depth attachment.
 
-In 3d graphics, to make sure that you don't render things that are behind other things on top, you use a depth buffer and use z-testing.
-By having a depth buffer bound to the renderpass, you can enable ztesting which will allow proper rendering of 3d objects.
+In 3d graphics, to make sure that you don't render things that are behind other things on top, you use a depth attachment and use z-testing.
+By having a depth attachment bound to the renderpass, you can enable z-testing which will allow proper rendering of 3d objects.
 
 We are going to refactor the code around the engine a little bit to enable this.
 
@@ -45,7 +45,7 @@ public:
 }
 ```
 
-In vulkan you can't use VkImages directly, the VkImages have to go through a VkImageView, which contains some information about how to treat the image. We are doing it in a similar way as the swapchain images, but instead of letting the Vkbootstrap library initialize them, we will do it ourselves.
+In vulkan you can't use VkImages directly, the VkImages have to go through a VkImageView, which contains some information about how to treat the image. We are doing it in a similar way as the swapchain images, but instead of letting the vk-bootstrap library initialize them, we will do it ourselves.
 
 We are going to need a new initializer for our vk_initializers file for the image create info and image view create info, so let's add it.
 
@@ -254,7 +254,7 @@ We also need to add the depth attachment to the attachment list in the renderpas
 
 Instead of storing only the color attachment in pAttachments, we add the depth attachment there too.
 
-Now we have to adjust the renderpass synchronization. Previously, it was possible that multiple frames were rendered simultaneously by the GPU. This is a problem when using depth buffers, because one frame could overwrite the depth buffer while a previous frame is still rendering to it.
+Now we have to adjust the renderpass synchronization. Previously, it was possible that multiple frames were rendered simultaneously by the GPU. This is a problem when using depth attachments, because one frame could overwrite the depth attachment while a previous frame is still rendering to it.
 
 We keep the subpass dependency for the color attachment we were already using:
 
@@ -311,7 +311,7 @@ for (int i = 0; i < swapchain_imagecount; i++) {
 ```
 Note how we are using the same depth image on each of the swapchain framebuffers. This is because we do not need to change the depth image between frames, we can just keep clearing and reusing the same depth image for every frame.
 
-The renderpass initialization for depth buffer is now done, so the last thing needed is to add depth-testing to our pipeline for the mesh.
+The renderpass initialization for depth attachment is now done, so the last thing needed is to add depth-testing to our pipeline for the mesh.
 
 We are going to add yet another initializer to the list, this time for `VkPipelineDepthStencilStateCreateInfo`, which holds the information about how to use depth-testing on a render pipeline.
 
@@ -340,7 +340,7 @@ Depth stencil create info is a bit more complicated than other initializers, so 
 depthTestEnable holds if we should do any z-culling at all. Set to `VK_FALSE` to draw on top of everything, and `VK_TRUE` to not draw on top of other objects.
 depthWriteEnable allows the depth to be written. While DepthTest and DepthWrite will both be true most of the time, there are cases where you might want to do depth write, but without doing depthtesting; it's sometimes used for some special effects.
 
-The depthCompareOp holds the depth-testing function. Set to `VK_COMPARE_OP_ALWAYS` to not do any depthtest at all. Other common depth compare OPs are `VK_COMPARE_OP_LESS` (Only draw if Z < whatever is on the depth buffer), or `VK_COMPARE_OP_EQUAL` (only draw if the depth z matches)
+The depthCompareOp holds the depth-testing function. Set to `VK_COMPARE_OP_ALWAYS` to not do any depthtest at all. Other common depth compare OPs are `VK_COMPARE_OP_LESS` (Only draw if Z < whatever is on the depth attachment), or `VK_COMPARE_OP_EQUAL` (only draw if the depth z matches)
 
 min and max depth bounds lets us cap the depth test. If the depth is outside of bounds, the pixel will be skipped.
 And last, we won't be using stencil test, so that's set to VK_FALSE by default.
@@ -412,7 +412,7 @@ VulkanEngine::draw(){
 	//other code ...
 ```
 
-We will clear the depth buffer at 1.0 (max depth), and add it to the clear values of the renderpass init info.
+We will clear the depth attachment at 1.0 (max depth), and add it to the clear values of the renderpass init info.
 
 If you now execute the application, and everything went well, you should be seeing a very beautiful spinning monkey head.
 

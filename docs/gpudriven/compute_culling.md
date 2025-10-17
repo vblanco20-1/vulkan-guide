@@ -96,10 +96,10 @@ If the checks pass, then all is good, and we can return visible to use when writ
 Frustrum culling will easily cut half the objects, but we can go much further.
 
 ## Occlusion Culling
-We want to avoid rendering objects that won't be visible at all due to them being behind other objects. To do that, we are going to implement occlusion culling using the depth buffer from the last frame. This is a very common technique with the downside of having 1 frame of latency. Some engines instead render a few bigger objects, and then use that depth buffer to do culling.
+We want to avoid rendering objects that won't be visible at all due to them being behind other objects. To do that, we are going to implement occlusion culling using the depth attachment from the last frame. This is a very common technique with the downside of having 1 frame of latency. Some engines instead render a few bigger objects, and then use that depth attachment to do culling.
 
-The normal depth buffer is too detailed for doing efficient culling, so we need to convert it into a depth pyramid.
-The idea of a depth pyramid is that we build a mipmap chain for the depth buffer in a way that the depth values are allways the maximum depth of that region. That way, we can look up directly into a mipmap so that pixel size is similar to object size, and it gives us a fairly accurate approximation.
+The normal depth attachment is too detailed for doing efficient culling, so we need to convert it into a depth pyramid.
+The idea of a depth pyramid is that we build a mipmap chain for the depth attachment in a way that the depth values are allways the maximum depth of that region. That way, we can look up directly into a mipmap so that pixel size is similar to object size, and it gives us a fairly accurate approximation.
 
 The first thing to do is that we need to store the depth image after the main renderpass in the same way as we do with shadow map, and then we copy it into the depth pyramid.
 

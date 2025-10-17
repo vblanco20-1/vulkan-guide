@@ -51,7 +51,7 @@ With the compute shaders for the cull executed, we do another barrier on the GPU
 
 We then execute the draw commands themselves. First shadow_pass() executes, which renders the scene depth from the sun location into a depth texture. Then the forward pass executes, and begins by rendering all of the opaque meshes, and then following by rendering all of the transparent meshes.
 
-Once the rendering ends, the depth buffer is converted into a depth pyramid, which is what will be used for the culling in the next frame.
+Once the rendering ends, the depth attachment is converted into a depth pyramid, which is what will be used for the culling in the next frame.
 
 Also we copy the rendered image into the swapchain to get it ready for presenting.
 
