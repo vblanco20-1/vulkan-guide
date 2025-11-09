@@ -253,7 +253,7 @@ When we call `ImGui::Render()`, that calculates the vertices/draws/etc that imgu
 
 # Dynamic Rendering
 Imgui will draw using actual gpu draws with meshes and shaders, it will not do a compute draw like we are doing at the moment.
-To draw geometry, it needs to be done withing a renderpass. But we are not using renderpasses as we will use dynamic rendering, a vulkan 1.3 feature. Instead of calling VkCmdBeginRenderpass, and giving it a VkRenderPass object, we call VkBeginRendering, with a VkRenderingInfo that contains the settings needed for the images to draw into.
+To draw geometry, it needs to be done within a renderpass. But we are not using renderpasses as we will use dynamic rendering, a vulkan 1.3 feature. Instead of calling VkCmdBeginRenderpass, and giving it a VkRenderPass object, we call VkBeginRendering, with a VkRenderingInfo that contains the settings needed for the images to draw into.
 
 The VkRenderingInfo points into multiple VkRenderingAttachmentInfo for our target images to draw into, so lets begin writing that one into the initializers.
 
