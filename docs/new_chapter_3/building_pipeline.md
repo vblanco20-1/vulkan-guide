@@ -47,7 +47,7 @@ Spec page for graphics pipeline can be found here, which can be used to check th
 
 `VkPipelineInputAssemblyStateCreateInfo` contains the configuration for triangle topology. We use this to set the pipeline to draw triangles, points, or lines.
 
-`VkPipelineTessellationStateCreateInfo` is configuration for fixed tesellation. We will not be using this and will leave it as null.
+`VkPipelineTessellationStateCreateInfo` is configuration for fixed tessellation. We will not be using this and will leave it as null.
 
 `VkPipelineViewportStateCreateInfo` contains information about the viewport the pixels will be rendered into. This lets you set what region of pixels will the pipeline draw. We will default it, because we will be using dynamic state for this. 
 
@@ -87,7 +87,7 @@ public:
     void clear();
 
     VkPipeline build_pipeline(VkDevice device);
-}
+};
 ```
 
 The pipeline builder will hold most of the state we need to track of. and an array of color attachment formats and shader stages. The actual CreateInfo structure will be fully filled from the build_pipeline() function. We have a clear() function that will set everything into empty/default properties. The constructor for the pipeline builder will call it, but its useful to have the clear function so we can call it manually when wanted.
@@ -148,7 +148,7 @@ VkPipeline PipelineBuilder::build_pipeline(VkDevice device)
 
     // completely clear VertexInputStateCreateInfo, as we have no need for it
     VkPipelineVertexInputStateCreateInfo _vertexInputInfo = { .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
-
+}
 ```
 
 We first fill `VkPipelineViewportStateCreateInfo` with just viewport count and nothing else. With dynamic viewport state we dont need to fill the viewport or stencil options here.
@@ -394,7 +394,7 @@ void main()
 
 
 
-In our vertex shader, we have a hardcoded array of positions, and we index into it from `gl_VertexIndex`. This works in a similar way to LocalThreadID on compute shaders worked. For every invocation of the vertex shader, this will be a different index, and we can use it to process out vertex, which will write into the fixed function gl_Position variable. As the array is only of lenght 3, if we tried to render more than 3 vertices (1 triangle) this will error.
+In our vertex shader, we have a hardcoded array of positions, and we index into it from `gl_VertexIndex`. This works in a similar way to LocalThreadID on compute shaders worked. For every invocation of the vertex shader, this will be a different index, and we can use it to process out vertex, which will write into the fixed function gl_Position variable. As the array is only of length 3, if we tried to render more than 3 vertices (1 triangle) this will error.
 
 In our fragment shader, we will declare an output at layout = 0 (this connects to the render attachments of the render pass), and we have a simple hardcoded red output.
 
@@ -412,7 +412,7 @@ void init_triangle_pipeline();
 
 We will call this `init_triangle_pipeline()` from `init_pipelines()` function. 
 
-Lets write that function We will start by loading the 2 shaders into VkShaderModules, like we did with the compute shader, but this time more shaders.
+Lets write that function. We will start by loading the 2 shaders into VkShaderModules, like we did with the compute shader, but this time more shaders.
 
 <!-- codegen from tag triangle_shaders on file E:\ProgrammingProjects\vulkan-guide-2\chapter-3/vk_engine.cpp --> 
 ```cpp
@@ -421,7 +421,7 @@ Lets write that function We will start by loading the 2 shaders into VkShaderMod
 		fmt::print("Error when building the triangle fragment shader module");
 	}
 	else {
-		fmt::print("Triangle fragment shader succesfully loaded");
+		fmt::print("Triangle fragment shader successfully loaded");
 	}
 
 	VkShaderModule triangleVertexShader;
@@ -429,7 +429,7 @@ Lets write that function We will start by loading the 2 shaders into VkShaderMod
 		fmt::print("Error when building the triangle vertex shader module");
 	}
 	else {
-		fmt::print("Triangle vertex shader succesfully loaded");
+		fmt::print("Triangle vertex shader successfully loaded");
 	}
 	
 	//build the pipeline layout that controls the inputs/outputs of the shader
