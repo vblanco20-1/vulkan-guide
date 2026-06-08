@@ -7,6 +7,10 @@ project ("vulkan_guide")
 
 
 find_package(Vulkan REQUIRED)
+find_package(simdjson QUIET)
+if (simdjson_FOUND)
+  set(FASTGLTF_DOWNLOAD_SIMDJSON OFF CACHE BOOL "" FORCE)
+endif()
 
 add_subdirectory(third_party)
 
