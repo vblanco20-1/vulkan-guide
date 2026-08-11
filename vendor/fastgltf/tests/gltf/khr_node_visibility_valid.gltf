@@ -1,0 +1,31 @@
+{
+    "asset": {
+        "version": "2.0"
+    },
+    "extensionsUsed": [
+        "KHR_node_visibility"
+    ],
+    "nodes": [
+        {
+            "name": "VisibleNode"
+        },
+        {
+            "name": "ExplicitlyVisibleNode",
+            "extensions": {
+                "KHR_node_visibility": {
+                    "visible": true
+                }
+            }
+        },
+        {
+            "name": "InvisibleNode",
+            "extensions": {
+                "KHR_node_visibility": {
+                    "visible": false
+                }
+            }
+        }
+    ],
+    "scene": 0,
+    "scenes": [{ "nodes": [0, 1, 2] }]
+}

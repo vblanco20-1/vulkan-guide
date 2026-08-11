@@ -1,0 +1,31 @@
+{
+    "asset": {
+        "version": "2.0"
+    },
+    "extensionsUsed": [
+        "KHR_node_hoverability"
+    ],
+    "nodes": [
+        {
+            "name": "HoverableNode"
+        },
+        {
+            "name": "ExplicitlyHoverableNode",
+            "extensions": {
+                "KHR_node_hoverability": {
+                    "hoverable": true
+                }
+            }
+        },
+        {
+            "name": "UnhoverableNode",
+            "extensions": {
+                "KHR_node_hoverability": {
+                    "hoverable": false
+                }
+            }
+        }
+    ],
+    "scene": 0,
+    "scenes": [{ "nodes": [0, 1, 2] }]
+}

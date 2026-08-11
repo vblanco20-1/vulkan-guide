@@ -1,0 +1,93 @@
+name: CI x64
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - '.github/workflows/**'
+      - '**.cpp'
+      - '**.hpp'
+      - '**.txt'
+  pull_request:
+    branches: [ "main" ]
+
+env:
+  BUILD_TYPE: Release
+  SAMPLE_ASSETS_LOCATION: tests/gltf/glTF-Sample-Assets
+  PHYSICS_SAMPLE_ASSETS_LOCATION: tests/gltf/glTF_Physics
+
+jobs:
+  build_windows:
+    strategy:
+      matrix:
+        cpp20: [NO, YES]
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Download cached sample assets
+        uses: actions/cache@v4
+        id: sample-assets-cache
+        with:
+          path: ${{ github.workspace }}/${{ env.SAMPLE_ASSETS_LOCATION }}
+          key: gltf-sample-assets
+
+      - name: Clone gltf-sample-assets
+        if: steps.sample-assets-cache.outputs.cache-hit != 'true'
+        run: git clone https://github.com/KhronosGroup/glTF-Sample-Assets ${{ github.workspace }}/${{ env.SAMPLE_ASSETS_LOCATION }}
+
+      - name: Configure CMake
+        run: cmake -B ${{ github.workspace }}/build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DFASTGLTF_ENABLE_TESTS=ON -DFASTGLTF_COMPILE_AS_CPP20=${{ matrix.cpp20 }}
+
+      - name: Build (Windows)
+        run: cmake --build ${{ github.workspace }}/build --config ${{ env.BUILD_TYPE }} --target tests/fastgltf_tests --verbose
+
+      - name: Run tests
+        run: ${{ github.workspace }}\build\tests\Release\fastgltf_tests.exe -d yes --order lex ~[gltf-benchmark]
+
+  build_linux:
+    strategy:
+      matrix:
+        c_compiler: [gcc-12, gcc-13, gcc-14, clang-16, clang-17, clang-18]
+        os: [ubuntu-24.04]
+        cpp20: [NO, YES]
+        include:
+          - cxx_compiler: g++-12
+            c_compiler: gcc-12
+          - cxx_compiler: g++-13
+            c_compiler: gcc-13
+          - cxx_compiler: g++-14
+            c_compiler: gcc-14
+          - cxx_compiler: clang++-16
+            c_compiler: clang-16
+          - cxx_compiler: clang++-17
+            c_compiler: clang-17
+          - cxx_compiler: clang++-18
+            c_compiler: clang-18
+
+    runs-on: ${{ matrix.os }}
+    env:
+      CC: ${{ matrix.c_compiler }}
+      CXX: ${{ matrix.cxx_compiler }}
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Download cached sample assets
+        uses: actions/cache@v4
+        id: sample-assets-cache
+        with:
+          path: ${{ github.workspace }}/${{ env.SAMPLE_ASSETS_LOCATION }}
+          key: gltf-sample-assets
+
+      - name: Clone gltf-sample-assets
+        if: steps.sample-assets-cache.outputs.cache-hit != 'true'
+        run: git clone https://github.com/KhronosGroup/glTF-Sample-Assets ${{ github.workspace }}/${{ env.SAMPLE_ASSETS_LOCATION }}
+
+      - name: Configure CMake
+        run: cmake -B ${{ github.workspace }}/build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DFASTGLTF_ENABLE_TESTS=ON -DFASTGLTF_COMPILE_AS_CPP20=${{ matrix.cpp20 }}
+
+      - name: Build
+        run: cmake --build ${{ github.workspace }}/build --config ${{ env.BUILD_TYPE }} --target fastgltf_tests --verbose
+
+      - name: Run tests
+        run: ${{ github.workspace }}/build/tests/fastgltf_tests -d yes --order lex ~[gltf-benchmark]
