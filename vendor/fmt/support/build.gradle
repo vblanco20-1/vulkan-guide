@@ -1,0 +1,130 @@
+import java.nio.file.Paths
+
+// General gradle arguments for root project
+buildscript {    
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath "com.android.tools.build:gradle:9.0.0"
+    }
+}
+repositories {
+    google()
+    mavenCentral()
+}
+
+// Project's root where CMakeLists.txt exists: rootDir/support/.cxx -> rootDir
+
+def rootDir = Paths.get(project.buildDir.getParent()).getParent()
+println("rootDir: ${rootDir}")
+
+// Output: Shared library (.so) for Android
+
+apply plugin: "com.android.library"
+android {
+    namespace = "dev.fmt"
+
+    compileSdk 36   // Target Android 16 (API 36).
+
+    /*  Target ABI
+      - This option controls target platform of module
+      - The platform might be limited by compiler's support
+        some can work with Clang(default), but some can work only with GCC...
+        if bad, both toolchains might not support it
+    */
+
+    ndkVersion = "28.2.13676358"
+
+    defaultConfig {
+        minSdk 21    // Android 5.0+
+        targetSdkVersion 36 // Follow Compile SDK
+        versionCode 34      // Follow release count
+        versionName "7.1.2" // Follow Official version
+
+        ndk{
+            abiFilters "arm64-v8a", "armeabi-v7a", "x86_64"
+        }
+
+        externalNativeBuild {
+            cmake {
+                arguments "-DANDROID_STL=c++_shared"    // Specify Android STL
+                arguments "-DBUILD_SHARED_LIBS=true"    // Build shared object
+                arguments "-DFMT_TEST=false"            // Skip test
+                arguments "-DFMT_DOC=false"             // Skip documentation
+                cppFlags  "-std=c++17"
+                targets   "fmt"
+            }
+        }
+        println(externalNativeBuild.cmake.cppFlags)
+        println(externalNativeBuild.cmake.arguments)
+    }
+
+    // External Native build
+    //  - Use existing CMakeList.txt
+    //  - Give path to CMake. This gradle file should be 
+    //    neighbor of the top level cmake
+    externalNativeBuild {
+        cmake {
+            version = "3.22.1"
+            path "${rootDir}/CMakeLists.txt"
+            // buildStagingDirectory "./build"  // Custom path for cmake output
+        }
+    }
+    
+    sourceSets{
+        // Android Manifest for Gradle
+        main {
+            manifest.srcFile "AndroidManifest.xml"
+        }
+    }
+
+    // https://developer.android.com/studio/build/native-dependencies#build_system_configuration
+    buildFeatures {
+        prefab = true
+        prefabPublishing = true
+    }
+    prefab {
+        fmt {
+            headers = "${rootDir}/include"
+        }
+    }
+}
+
+assemble.doLast
+{
+    /*
+    *- Instead of `ninja install`, Gradle will deploy the files.
+    *- We are doing this since FMT is dependent to the ANDROID_STL after build
+    */
+    copy {
+        from "build/intermediates/cmake"
+        into "${rootDir}/libs"
+    }
+    // Copy debug binaries
+    copy {
+        from "${rootDir}/libs/debug/obj"
+        into "${rootDir}/libs/debug"
+    }
+    // Copy Release binaries
+    copy {
+        from "${rootDir}/libs/release/obj"
+        into "${rootDir}/libs/release"
+    }
+    // Remove empty directory
+    delete "${rootDir}/libs/debug/obj"
+    delete "${rootDir}/libs/release/obj"
+
+    // Copy AAR files. Notice that the aar is named after the folder of this script.
+    copy {
+        from "build/outputs/aar/support-release.aar"
+        into "${rootDir}/libs"
+        rename "support-release.aar", "fmt-release.aar"
+    }
+    copy {
+        from "build/outputs/aar/support-debug.aar"
+        into "${rootDir}/libs"
+        rename "support-debug.aar", "fmt-debug.aar"
+    }
+}

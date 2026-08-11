@@ -1,0 +1,32 @@
+name: fuzz
+on: [pull_request]
+
+permissions:
+  contents: read
+
+jobs:
+  fuzz:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Build fuzzers
+      id: build
+      uses: google/oss-fuzz/infra/cifuzz/actions/build_fuzzers@92182553173581f871130c71c71b17f003d47b0a
+      with:
+        oss-fuzz-project-name: 'fmt'
+        dry-run: false
+        language: c++
+
+    - name: Run fuzzers
+      uses: google/oss-fuzz/infra/cifuzz/actions/run_fuzzers@92182553173581f871130c71c71b17f003d47b0a
+      with:
+        oss-fuzz-project-name: 'fmt'
+        fuzz-seconds: 300
+        dry-run: false
+        language: c++
+
+    - name: Upload crash
+      uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+      if: failure() && steps.build.outcome == 'success'
+      with:
+        name: artifacts
+        path: ./out/artifacts
