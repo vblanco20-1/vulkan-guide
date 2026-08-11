@@ -1,0 +1,1 @@
+Updated libraries and respective CMakeLists.txt to their modern versions, vendoring them using git subtree. Major library change includes the use of SDL3 rather than SDL2, this will create some differences when following the tutorial. It's recommended to reference the [SDL3 Wiki](https://wiki.libsdl.org/SDL3/FrontPage).

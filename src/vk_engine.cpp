@@ -1,8 +1,9 @@
 ﻿//> includes
 #include "vk_engine.h"
+#include "SDL3/SDL_events.h"
 
-#include <SDL.h>
-#include <SDL_vulkan.h>
+#include <SDL3/SDL.h>
+#include <SDL3/SDL_vulkan.h>
 
 #include <vk_initializers.h>
 #include <vk_types.h>
@@ -26,8 +27,6 @@ void VulkanEngine::init()
 
     _window = SDL_CreateWindow(
         "Vulkan Engine",
-        SDL_WINDOWPOS_UNDEFINED,
-        SDL_WINDOWPOS_UNDEFINED,
         _windowExtent.width,
         _windowExtent.height,
         window_flags);
@@ -62,16 +61,14 @@ void VulkanEngine::run()
         // Handle events on queue
         while (SDL_PollEvent(&e) != 0) {
             // close the window when user alt-f4s or clicks the X button
-            if (e.type == SDL_QUIT)
+            if (e.type == SDL_EVENT_QUIT)
                 bQuit = true;
 
-            if (e.type == SDL_WINDOWEVENT) {
-                if (e.window.event == SDL_WINDOWEVENT_MINIMIZED) {
-                    stop_rendering = true;
-                }
-                if (e.window.event == SDL_WINDOWEVENT_RESTORED) {
-                    stop_rendering = false;
-                }
+            if (e.type == SDL_EVENT_WINDOW_MINIMIZED) {
+                stop_rendering = true;
+            }
+            if (e.type == SDL_EVENT_WINDOW_RESTORED) {
+                stop_rendering = false;
             }
         }
 

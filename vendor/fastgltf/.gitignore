@@ -1,0 +1,55 @@
+# CMake and build folders.
+bin/*
+build/*
+lib/*
+out/*
+CMakeSettings.json
+CMakeUserPresets.json
+vcpkg_installed/*
+cmake-build-*/
+
+# IDE specific folders
+.idea/
+.vscode/
+.vs/
+.cache/
+
+# Binary files
+*.exe
+*.dll
+*.lib
+*.a
+*.dylib
+**/.DS_Store
+
+# Dependencies
+simdjson/
+deps/
+
+# Test files
+tests/gltf/intel_sponza
+tests/gltf/glTF-Sample-Models
+tests/gltf/glTF-Sample-Assets
+tests/gltf/glTF_Physics
+tests/gltf/good-froge
+tests/gltf/deccer-cubes
+tests/gltf/bistro
+tests/gltf_loaders/
+tests/gltf/export/
+tests/gltf/export_glb/
+tests/gltf/export_gltf/
+tests/gltf_validator
+
+# gltf Rust wrapper
+tests/gltf-rs/target
+tests/gltf-rs/Cargo.lock
+
+# Example files
+*.ngfx-proj
+SpirvTemp/
+
+# Docs
+docs/xml/
+docs/Doxyfile
+docs/conf.py
+docs/.venv/

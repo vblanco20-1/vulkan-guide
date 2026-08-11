@@ -1,0 +1,31 @@
+{
+    "asset": {
+        "version": "2.0"
+    },
+    "extensionsUsed": [
+        "KHR_node_selectability"
+    ],
+    "nodes": [
+        {
+            "name": "SelectableNode"
+        },
+        {
+            "name": "ExplicitlySelectableNode",
+            "extensions": {
+                "KHR_node_selectability": {
+                    "selectable": true
+                }
+            }
+        },
+        {
+            "name": "UnselectableNode",
+            "extensions": {
+                "KHR_node_selectability": {
+                    "selectable": false
+                }
+            }
+        }
+    ],
+    "scene": 0,
+    "scenes": [{ "nodes": [0, 1, 2] }]
+}
