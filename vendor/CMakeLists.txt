@@ -8,7 +8,7 @@ add_subdirectory(vkbootstrap)
 add_subdirectory(vma)
 add_subdirectory(volk)
 
-# Sdb
+# SDB Library
 add_library(stb INTERFACE)
 target_include_directories(stb INTERFACE stb)
 
