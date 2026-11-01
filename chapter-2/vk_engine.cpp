@@ -308,7 +308,7 @@ void VulkanEngine::run()
 			
 			ComputeEffect& selected = backgroundEffects[currentBackgroundEffect];
 		
-			ImGui::Text("Selected effect: ", selected.name);
+			ImGui::Text("Selected effect: %s", selected.name);
 		
 			ImGui::SliderInt("Effect Index", &currentBackgroundEffect,0, backgroundEffects.size() - 1);
 		
@@ -317,8 +317,8 @@ void VulkanEngine::run()
 			ImGui::InputFloat4("data3",(float*)& selected.data.data3);
 			ImGui::InputFloat4("data4",(float*)& selected.data.data4);
 		
-			ImGui::End();
 		}
+		ImGui::End();
 		ImGui::Render();
 
 //< imgui_bk
