@@ -229,7 +229,7 @@ Now we can add the imgui debug window for this. This goes on run() function. We 
 			
 			ComputeEffect& selected = backgroundEffects[currentBackgroundEffect];
 		
-			ImGui::Text("Selected effect: ", selected.name);
+			ImGui::Text("Selected effect: %s", selected.name);
 		
 			ImGui::SliderInt("Effect Index", &currentBackgroundEffect,0, backgroundEffects.size() - 1);
 		
