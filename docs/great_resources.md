@@ -18,9 +18,9 @@ This guide does not cover everything you could need, so this is a compilation of
 ## Talks/Slides
 - [Destiny's Multithreaded Rendering Architecture](https://www.youtube.com/watch?v=0nTDFLMLX9k). Advanced. Talks about the design and general architecture of the game engine for the game Destiny.
 - [The Devil is in the details](http://advances.realtimerendering.com/s2016/) Talk about the Doom 2016 render engine. Goes alongside its [graphics study](http://www.adriancourreges.com/blog/2016/09/09/doom-2016-graphics-study/)
-- [Rendering the Hellscape of Doom Eternal](http://advances.realtimerendering.com/s2020/index.htm). Advanced. Doom Eternal engine architecture, bleeding edge Vulkan usage. Goes with the [graphics study](https://simoncoenen.com/blog/programming/graphics/DoomEternalStudy.html) where the exact details are shown.
+- [Rendering the Hellscape of Doom Eternal](https://advances.realtimerendering.com/s2020/). Advanced. Doom Eternal engine architecture, bleeding edge Vulkan usage. Goes with the [graphics study](https://simoncoenen.com/blog/programming/graphics/DoomEternalStudy.html) where the exact details are shown.
 - [Vulkan Fast Paths, AMD](http://gpuopen.com/wp-content/uploads/2016/03/VulkanFastPaths.pdf). Intermediate. How vulkan structures map to the AMD GPUs, and whats the fastest approach to use.
-- [GPU Driven Rendering, NVidia](https://on-demand.gputechconf.com/gtc/2016/presentation/s6138-christoph-kubisch-pierre-boudier-gpu-driven-rendering.pdf) How to use vulkan to do very high object counts for CAD. Also talks about how NVidia gpus execute vulkan.
+- [GPU Driven Rendering, NVidia](https://web.archive.org/web/20160803204241/http://on-demand.gputechconf.com/gtc/2016/presentation/s6138-christoph-kubisch-pierre-boudier-gpu-driven-rendering.pdf) (Wayback Machine archive). How to use vulkan to do very high object counts for CAD. Also talks about how NVidia gpus execute vulkan.
 - [Vulkan and DX12, lessons learned](https://www.gdcvault.com/play/1024122/D3D12-Vulkan-Lessons). Best practises when using vulkan and directx12 for high performance games.
 - [Most common mistakes](https://gpuopen.com/wp-content/uploads/2016/05/Most-common-mistakes-in-Vulkan-apps.pdf). Slides by AMD talking about common errors by vulkan implementations and how to do them right.
 
@@ -36,8 +36,9 @@ This guide does not cover everything you could need, so this is a compilation of
 
 ## Debuggers/tools
 - [Renderdoc](https://renderdoc.org/). Vendor agnostic graphics debugger. 
-- [Nsight](https://developer.nvidia.com/nsight-visual-studio-edition) Nvidia profiler and debugger.
-- [Radeon tools](https://gpuopen.com/vulkan/). Profilers and debuggers from AMD.
+- [Nsight](https://developer.nvidia.com/tools-overview) Nvidia profiler and debugger tools suite.
+- [Radeon tools](https://gpuopen.com/vulkan/). Profilers and debuggers from AMD, and the GPUOpen Vulkan hub.
+- [GPU Open](https://gpuopen.com/). AMD graphics resources, tools and blogposts.
 - [Intel GPA](https://software.intel.com/content/www/us/en/develop/tools/graphics-performance-analyzers.html) Profiler and debugger from Intel.
 - [Tracy](https://github.com/wolfpld/tracy). Great profiler library for Cpp programs. It can also profile GPU executions.
 
@@ -45,8 +46,7 @@ This guide does not cover everything you could need, so this is a compilation of
 ## Blogs/websites
 - [Vulkan Spec](https://www.khronos.org/registry/vulkan/specs/1.2-extensions/html/index.html) Highly necessary resource for information about the API.
 - [Vulkan GPU Info](https://vulkan.gpuinfo.org/) Database of specifications for the different GPU vulkan implementations.
-- [GPU Open](https://gpuopen.com/) AMD graphics resources and blogposts.
-- [Nvidia gameworks](https://developer.nvidia.com/gameworks) Nvidia graphics resources and blogposts/tutorials.
+- [Nvidia game development](https://developer.nvidia.com/industries/game-development) Nvidia graphics resources and blogposts/tutorials.
 - [TheMaister blog](https://themaister.net/blog/2020/01/) Low level graphics programming blog. Lots of vulkan posts.
 - [Bitsquid engine blog](https://bitsquid.blogspot.com/) Blog of game engine development by the developers of Bitsquid/Stingray game engine. Can be a bit old.
-- [OurMachinery engine blog](https://ourmachinery.com/post/). From the same devs as bitsquid/stingray, their next development blog. A lot of vulkan related articles.
+- [OurMachinery engine blog](https://web.archive.org/web/20220529231010/https://ourmachinery.com/post/). From the same devs as bitsquid/stingray, their next development blog. A lot of vulkan related articles. Archived by the Wayback Machine.
