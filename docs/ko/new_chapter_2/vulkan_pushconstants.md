@@ -230,7 +230,7 @@ pipelines 함수를 수정했습니다. 기존의 파이프라인 레이아웃�
 			
 			ComputeEffect& selected = backgroundEffects[currentBackgroundEffect];
 		
-			ImGui::Text("Selected effect: ", selected.name);
+			ImGui::Text("Selected effect: %s", selected.name);
 		
 			ImGui::SliderInt("Effect Index", &currentBackgroundEffect,0, backgroundEffects.size() - 1);
 		
